@@ -19,7 +19,7 @@ from root_contract_marker_checks_common import (
 )
 from root_contract_integration_checks_common import evaluate_root_contract_integration
 from root_contract_verdict_common import project_root_contract_support_verdict
-from root_contract_row_validation_common import validate_contract_rows
+from root_contract_row_validation_common import validate_contract_row_batches
 from root_agent_handoff_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -39,7 +39,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 
 STATUS_KEY = "protocol_root_agent_handoff_status"
 ERR_REGISTRY = "IP-RAH-001"
@@ -261,50 +261,54 @@ def main() -> int:
     authority_projections = entry_authority_projections_from_doc(authority_doc) if authority_doc else ()
     routing_anchors = question_routing_anchor_checks_from_doc(routing_doc) if routing_doc else ()
     routing_projections = entry_question_projections_from_doc(routing_doc) if routing_doc else ()
-    row_family_projection_rows = [
-        project_row_family(
-            family_id="role_rows",
-            member_id_key="role_id",
-            actual_rows=role_rows,
-            expected_rows=EXPECTED_ROLE_ROWS,
-            id_attr="role_id",
+    row_family_projection_rows = project_row_families(
+        families=(
+            {
+                "family_id": "role_rows",
+                "member_id_key": "role_id",
+                "actual_rows": role_rows,
+                "expected_rows": EXPECTED_ROLE_ROWS,
+                "id_attr": "role_id",
+            },
+            {
+                "family_id": "payload_rows",
+                "member_id_key": "payload_field_id",
+                "actual_rows": payload_rows,
+                "expected_rows": EXPECTED_PAYLOAD_ROWS,
+                "id_attr": "row_id",
+            },
+            {
+                "family_id": "anchor_rows",
+                "member_id_key": "anchor_id",
+                "actual_rows": anchor_rows,
+                "expected_rows": EXPECTED_ANCHOR_ROWS,
+                "id_attr": "row_id",
+            },
+            {
+                "family_id": "handoff_proof_rows",
+                "member_id_key": "proof_id",
+                "actual_rows": handoff_proof_rows,
+                "expected_rows": EXPECTED_HANDOFF_PROOF_ROWS,
+                "id_attr": "proof_id",
+            },
+            {
+                "family_id": "handoff_limit_rows",
+                "member_id_key": "limit_id",
+                "actual_rows": handoff_limit_rows,
+                "expected_rows": EXPECTED_HANDOFF_LIMIT_ROWS,
+                "id_attr": "row_id",
+            },
+            {
+                "family_id": "collapse_rows",
+                "member_id_key": "collapse_id",
+                "actual_rows": collapse_rows,
+                "expected_rows": EXPECTED_COLLAPSE_ROWS,
+                "id_attr": "row_id",
+            },
         ),
-        project_row_family(
-            family_id="payload_rows",
-            member_id_key="payload_field_id",
-            actual_rows=payload_rows,
-            expected_rows=EXPECTED_PAYLOAD_ROWS,
-            id_attr="row_id",
-        ),
-        project_row_family(
-            family_id="anchor_rows",
-            member_id_key="anchor_id",
-            actual_rows=anchor_rows,
-            expected_rows=EXPECTED_ANCHOR_ROWS,
-            id_attr="row_id",
-        ),
-        project_row_family(
-            family_id="handoff_proof_rows",
-            member_id_key="proof_id",
-            actual_rows=handoff_proof_rows,
-            expected_rows=EXPECTED_HANDOFF_PROOF_ROWS,
-            id_attr="proof_id",
-        ),
-        project_row_family(
-            family_id="handoff_limit_rows",
-            member_id_key="limit_id",
-            actual_rows=handoff_limit_rows,
-            expected_rows=EXPECTED_HANDOFF_LIMIT_ROWS,
-            id_attr="row_id",
-        ),
-        project_row_family(
-            family_id="collapse_rows",
-            member_id_key="collapse_id",
-            actual_rows=collapse_rows,
-            expected_rows=EXPECTED_COLLAPSE_ROWS,
-            id_attr="row_id",
-        ),
-    ]
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     row_family_projection_by_id = {row["family_id"]: row for row in row_family_projection_rows}
 
     if not stale_reasons:
@@ -358,59 +362,53 @@ def main() -> int:
                 error_code = ERR_REGISTRY
 
     if not stale_reasons:
-        validate_contract_rows(
-            actual_rows=role_rows,
-            expected_rows=EXPECTED_ROLE_ROWS,
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": role_rows,
+                    "expected_rows": EXPECTED_ROLE_ROWS,
+                    "field_name": "required_role_rows",
+                    "id_attr": "role_id",
+                    "compare_fields": ("contract_heading", "handoff_role"),
+                },
+                {
+                    "actual_rows": payload_rows,
+                    "expected_rows": EXPECTED_PAYLOAD_ROWS,
+                    "field_name": "required_payload_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": anchor_rows,
+                    "expected_rows": EXPECTED_ANCHOR_ROWS,
+                    "field_name": "required_anchor_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": handoff_proof_rows,
+                    "expected_rows": EXPECTED_HANDOFF_PROOF_ROWS,
+                    "field_name": "required_handoff_proof_rows",
+                    "id_attr": "proof_id",
+                    "compare_fields": ("contract_heading", "proof_role"),
+                },
+                {
+                    "actual_rows": handoff_limit_rows,
+                    "expected_rows": EXPECTED_HANDOFF_LIMIT_ROWS,
+                    "field_name": "required_handoff_limit_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": collapse_rows,
+                    "expected_rows": EXPECTED_COLLAPSE_ROWS,
+                    "field_name": "required_collapse_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+            ),
             structure_violations=structure_violations,
             handoff_violations=handoff_violations,
-            field_name="required_role_rows",
-            id_attr="role_id",
-            compare_fields=("contract_heading", "handoff_role"),
-        )
-        validate_contract_rows(
-            actual_rows=payload_rows,
-            expected_rows=EXPECTED_PAYLOAD_ROWS,
-            structure_violations=structure_violations,
-            handoff_violations=handoff_violations,
-            field_name="required_payload_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=anchor_rows,
-            expected_rows=EXPECTED_ANCHOR_ROWS,
-            structure_violations=structure_violations,
-            handoff_violations=handoff_violations,
-            field_name="required_anchor_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=handoff_proof_rows,
-            expected_rows=EXPECTED_HANDOFF_PROOF_ROWS,
-            structure_violations=structure_violations,
-            handoff_violations=handoff_violations,
-            field_name="required_handoff_proof_rows",
-            id_attr="proof_id",
-            compare_fields=("contract_heading", "proof_role"),
-        )
-        validate_contract_rows(
-            actual_rows=handoff_limit_rows,
-            expected_rows=EXPECTED_HANDOFF_LIMIT_ROWS,
-            structure_violations=structure_violations,
-            handoff_violations=handoff_violations,
-            field_name="required_handoff_limit_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=collapse_rows,
-            expected_rows=EXPECTED_COLLAPSE_ROWS,
-            structure_violations=structure_violations,
-            handoff_violations=handoff_violations,
-            field_name="required_collapse_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
         )
 
         contract_file = str(handoff_doc.get("contract_file") or "").strip()

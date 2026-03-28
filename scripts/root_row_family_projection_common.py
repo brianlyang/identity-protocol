@@ -38,6 +38,22 @@ def project_row_family(
     }
 
 
+def project_row_families(
+    *,
+    families: Iterable[dict[str, Any]],
+    pass_status: str = STATUS_PASS_REQUIRED,
+    fail_status: str = STATUS_FAIL_REQUIRED,
+) -> list[dict[str, Any]]:
+    return [
+        project_row_family(
+            pass_status=pass_status,
+            fail_status=fail_status,
+            **family,
+        )
+        for family in families
+    ]
+
+
 def aggregate_row_family_status(
     row_family_projection_rows: list[dict[str, Any]],
     *,

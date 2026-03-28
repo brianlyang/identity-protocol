@@ -114,3 +114,22 @@ def validate_contract_rows(
                         "actual": actual_value,
                     }
                 )
+
+
+def validate_contract_row_batches(
+    *,
+    batches: Iterable[dict[str, Any]],
+    structure_violations: list[dict[str, Any]],
+    support_violations: list[dict[str, Any]] | None = None,
+    **kwargs: Any,
+) -> None:
+    resolved_support_violations = _resolve_support_violations(
+        support_violations=support_violations,
+        aliases=kwargs,
+    )
+    for batch in batches:
+        validate_contract_rows(
+            structure_violations=structure_violations,
+            support_violations=resolved_support_violations,
+            **batch,
+        )

@@ -19,7 +19,7 @@ from root_contract_marker_checks_common import (
 )
 from root_contract_integration_checks_common import evaluate_root_contract_integration
 from root_contract_verdict_common import project_root_contract_support_verdict
-from root_contract_row_validation_common import validate_contract_rows
+from root_contract_row_validation_common import validate_contract_row_batches
 from root_corpus_authority_common import authority_anchor_checks_from_doc, entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
@@ -28,7 +28,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_current_truth_epistemology_common import (
     epistemic_proof_rows_from_doc,
     load_root_current_truth_epistemology,
@@ -468,170 +468,144 @@ def main() -> int:
                 error_code = ERR_REGISTRY
 
     if not stale_reasons:
-        row_family_projection_rows = [
-            project_row_family(
-                family_id="required_surface_rows",
-                member_id_key="surface_id",
-                actual_rows=surface_rows,
-                expected_rows=EXPECTED_SURFACE_ROWS,
-                id_attr="surface_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
+        row_family_projection_rows = project_row_families(
+            families=(
+                {
+                    "family_id": "required_surface_rows",
+                    "member_id_key": "surface_id",
+                    "actual_rows": surface_rows,
+                    "expected_rows": EXPECTED_SURFACE_ROWS,
+                    "id_attr": "surface_id",
+                },
+                {
+                    "family_id": "required_support_memory_rows",
+                    "member_id_key": "support_id",
+                    "actual_rows": support_memory_rows,
+                    "expected_rows": EXPECTED_SUPPORT_MEMORY_ROWS,
+                    "id_attr": "support_id",
+                },
+                {
+                    "family_id": "required_support_limit_rows",
+                    "member_id_key": "limit_id",
+                    "actual_rows": support_limit_rows,
+                    "expected_rows": EXPECTED_SUPPORT_LIMIT_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_answer_claim_alignment_rows",
+                    "member_id_key": "claim_id",
+                    "actual_rows": answer_claim_alignment_rows,
+                    "expected_rows": EXPECTED_ANSWER_CLAIM_ALIGNMENT_ROWS,
+                    "id_attr": "claim_id",
+                },
+                {
+                    "family_id": "required_answer_claim_epistemic_alignment_rows",
+                    "member_id_key": "claim_id",
+                    "actual_rows": answer_claim_epistemic_alignment_rows,
+                    "expected_rows": EXPECTED_ANSWER_CLAIM_EPISTEMIC_ALIGNMENT_ROWS,
+                    "id_attr": "claim_id",
+                },
+                {
+                    "family_id": "required_answer_surface_proof_rows",
+                    "member_id_key": "proof_id",
+                    "actual_rows": answer_surface_proof_rows,
+                    "expected_rows": EXPECTED_ANSWER_SURFACE_PROOF_ROWS,
+                    "id_attr": "proof_id",
+                },
+                {
+                    "family_id": "required_answer_surface_limit_rows",
+                    "member_id_key": "limit_id",
+                    "actual_rows": answer_surface_limit_rows,
+                    "expected_rows": EXPECTED_ANSWER_SURFACE_LIMIT_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_boundary_rows",
+                    "member_id_key": "boundary_id",
+                    "actual_rows": boundary_rows,
+                    "expected_rows": EXPECTED_BOUNDARY_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_collapse_rows",
+                    "member_id_key": "collapse_id",
+                    "actual_rows": collapse_rows,
+                    "expected_rows": EXPECTED_COLLAPSE_ROWS,
+                    "id_attr": "row_id",
+                },
             ),
-            project_row_family(
-                family_id="required_support_memory_rows",
-                member_id_key="support_id",
-                actual_rows=support_memory_rows,
-                expected_rows=EXPECTED_SUPPORT_MEMORY_ROWS,
-                id_attr="support_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_support_limit_rows",
-                member_id_key="limit_id",
-                actual_rows=support_limit_rows,
-                expected_rows=EXPECTED_SUPPORT_LIMIT_ROWS,
-                id_attr="row_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_answer_claim_alignment_rows",
-                member_id_key="claim_id",
-                actual_rows=answer_claim_alignment_rows,
-                expected_rows=EXPECTED_ANSWER_CLAIM_ALIGNMENT_ROWS,
-                id_attr="claim_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_answer_claim_epistemic_alignment_rows",
-                member_id_key="claim_id",
-                actual_rows=answer_claim_epistemic_alignment_rows,
-                expected_rows=EXPECTED_ANSWER_CLAIM_EPISTEMIC_ALIGNMENT_ROWS,
-                id_attr="claim_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_answer_surface_proof_rows",
-                member_id_key="proof_id",
-                actual_rows=answer_surface_proof_rows,
-                expected_rows=EXPECTED_ANSWER_SURFACE_PROOF_ROWS,
-                id_attr="proof_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_answer_surface_limit_rows",
-                member_id_key="limit_id",
-                actual_rows=answer_surface_limit_rows,
-                expected_rows=EXPECTED_ANSWER_SURFACE_LIMIT_ROWS,
-                id_attr="row_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_boundary_rows",
-                member_id_key="boundary_id",
-                actual_rows=boundary_rows,
-                expected_rows=EXPECTED_BOUNDARY_ROWS,
-                id_attr="row_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_collapse_rows",
-                member_id_key="collapse_id",
-                actual_rows=collapse_rows,
-                expected_rows=EXPECTED_COLLAPSE_ROWS,
-                id_attr="row_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-        ]
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        )
 
-        validate_contract_rows(
-            actual_rows=surface_rows,
-            expected_rows=EXPECTED_SURFACE_ROWS,
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": surface_rows,
+                    "expected_rows": EXPECTED_SURFACE_ROWS,
+                    "field_name": "required_surface_rows",
+                    "id_attr": "surface_id",
+                    "compare_fields": ("contract_heading", "surface_role"),
+                },
+                {
+                    "actual_rows": support_memory_rows,
+                    "expected_rows": EXPECTED_SUPPORT_MEMORY_ROWS,
+                    "field_name": "required_support_memory_rows",
+                    "id_attr": "support_id",
+                    "compare_fields": ("contract_heading", "support_role"),
+                },
+                {
+                    "actual_rows": support_limit_rows,
+                    "expected_rows": EXPECTED_SUPPORT_LIMIT_ROWS,
+                    "field_name": "required_support_limit_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": answer_claim_alignment_rows,
+                    "expected_rows": EXPECTED_ANSWER_CLAIM_ALIGNMENT_ROWS,
+                    "field_name": "required_answer_claim_alignment_rows",
+                    "id_attr": "claim_id",
+                    "compare_fields": ("support_id", "decision_evidence_proof_id", "answer_claim_role"),
+                },
+                {
+                    "actual_rows": answer_claim_epistemic_alignment_rows,
+                    "expected_rows": EXPECTED_ANSWER_CLAIM_EPISTEMIC_ALIGNMENT_ROWS,
+                    "field_name": "required_answer_claim_epistemic_alignment_rows",
+                    "id_attr": "claim_id",
+                    "compare_fields": ("current_truth_proof_id", "claim_epistemic_role"),
+                },
+                {
+                    "actual_rows": answer_surface_proof_rows,
+                    "expected_rows": EXPECTED_ANSWER_SURFACE_PROOF_ROWS,
+                    "field_name": "required_answer_surface_proof_rows",
+                    "id_attr": "proof_id",
+                    "compare_fields": ("contract_heading", "proof_role"),
+                },
+                {
+                    "actual_rows": answer_surface_limit_rows,
+                    "expected_rows": EXPECTED_ANSWER_SURFACE_LIMIT_ROWS,
+                    "field_name": "required_answer_surface_limit_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": boundary_rows,
+                    "expected_rows": EXPECTED_BOUNDARY_ROWS,
+                    "field_name": "required_boundary_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": collapse_rows,
+                    "expected_rows": EXPECTED_COLLAPSE_ROWS,
+                    "field_name": "required_collapse_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+            ),
             structure_violations=structure_violations,
             answer_violations=answer_violations,
-            field_name="required_surface_rows",
-            id_attr="surface_id",
-            compare_fields=("contract_heading", "surface_role"),
-        )
-        validate_contract_rows(
-            actual_rows=support_memory_rows,
-            expected_rows=EXPECTED_SUPPORT_MEMORY_ROWS,
-            structure_violations=structure_violations,
-            answer_violations=answer_violations,
-            field_name="required_support_memory_rows",
-            id_attr="support_id",
-            compare_fields=("contract_heading", "support_role"),
-        )
-        validate_contract_rows(
-            actual_rows=support_limit_rows,
-            expected_rows=EXPECTED_SUPPORT_LIMIT_ROWS,
-            structure_violations=structure_violations,
-            answer_violations=answer_violations,
-            field_name="required_support_limit_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=answer_claim_alignment_rows,
-            expected_rows=EXPECTED_ANSWER_CLAIM_ALIGNMENT_ROWS,
-            structure_violations=structure_violations,
-            answer_violations=answer_violations,
-            field_name="required_answer_claim_alignment_rows",
-            id_attr="claim_id",
-            compare_fields=("support_id", "decision_evidence_proof_id", "answer_claim_role"),
-        )
-        validate_contract_rows(
-            actual_rows=answer_claim_epistemic_alignment_rows,
-            expected_rows=EXPECTED_ANSWER_CLAIM_EPISTEMIC_ALIGNMENT_ROWS,
-            structure_violations=structure_violations,
-            answer_violations=answer_violations,
-            field_name="required_answer_claim_epistemic_alignment_rows",
-            id_attr="claim_id",
-            compare_fields=("current_truth_proof_id", "claim_epistemic_role"),
-        )
-        validate_contract_rows(
-            actual_rows=answer_surface_proof_rows,
-            expected_rows=EXPECTED_ANSWER_SURFACE_PROOF_ROWS,
-            structure_violations=structure_violations,
-            answer_violations=answer_violations,
-            field_name="required_answer_surface_proof_rows",
-            id_attr="proof_id",
-            compare_fields=("contract_heading", "proof_role"),
-        )
-        validate_contract_rows(
-            actual_rows=answer_surface_limit_rows,
-            expected_rows=EXPECTED_ANSWER_SURFACE_LIMIT_ROWS,
-            structure_violations=structure_violations,
-            answer_violations=answer_violations,
-            field_name="required_answer_surface_limit_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=boundary_rows,
-            expected_rows=EXPECTED_BOUNDARY_ROWS,
-            structure_violations=structure_violations,
-            answer_violations=answer_violations,
-            field_name="required_boundary_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=collapse_rows,
-            expected_rows=EXPECTED_COLLAPSE_ROWS,
-            structure_violations=structure_violations,
-            answer_violations=answer_violations,
-            field_name="required_collapse_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
         )
 
         contract_file = str(answer_doc.get("contract_file") or "").strip()

@@ -19,7 +19,7 @@ from root_contract_marker_checks_common import (
 )
 from root_contract_integration_checks_common import evaluate_root_contract_integration
 from root_contract_verdict_common import project_root_contract_support_verdict
-from root_contract_row_validation_common import validate_contract_rows
+from root_contract_row_validation_common import validate_contract_row_batches
 from root_corpus_authority_common import authority_anchor_checks_from_doc, entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
@@ -28,7 +28,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_success_path_state_admissibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -367,116 +367,102 @@ def main() -> int:
                 error_code = ERR_REGISTRY
 
     if not stale_reasons:
-        row_family_projection_rows = [
-            project_row_family(
-                family_id="required_state_class_rows",
-                member_id_key="state_class_id",
-                actual_rows=state_class_rows,
-                expected_rows=EXPECTED_STATE_CLASS_ROWS,
-                id_attr="state_class_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
+        row_family_projection_rows = project_row_families(
+            families=(
+                {
+                    "family_id": "required_state_class_rows",
+                    "member_id_key": "state_class_id",
+                    "actual_rows": state_class_rows,
+                    "expected_rows": EXPECTED_STATE_CLASS_ROWS,
+                    "id_attr": "state_class_id",
+                },
+                {
+                    "family_id": "required_differentiation_rows",
+                    "member_id_key": "differentiation_id",
+                    "actual_rows": differentiation_rows,
+                    "expected_rows": EXPECTED_DIFFERENTIATION_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_state_admission_proof_rows",
+                    "member_id_key": "proof_id",
+                    "actual_rows": state_admission_proof_rows,
+                    "expected_rows": EXPECTED_STATE_ADMISSION_PROOF_ROWS,
+                    "id_attr": "proof_id",
+                },
+                {
+                    "family_id": "required_state_class_proof_alignment_rows",
+                    "member_id_key": "state_class_id",
+                    "actual_rows": state_class_proof_alignment_rows,
+                    "expected_rows": EXPECTED_STATE_CLASS_PROOF_ALIGNMENT_ROWS,
+                    "id_attr": "state_class_id",
+                },
+                {
+                    "family_id": "required_state_admission_limit_rows",
+                    "member_id_key": "limit_id",
+                    "actual_rows": state_admission_limit_rows,
+                    "expected_rows": EXPECTED_STATE_ADMISSION_LIMIT_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_collapse_rows",
+                    "member_id_key": "collapse_id",
+                    "actual_rows": collapse_rows,
+                    "expected_rows": EXPECTED_COLLAPSE_ROWS,
+                    "id_attr": "row_id",
+                },
             ),
-            project_row_family(
-                family_id="required_differentiation_rows",
-                member_id_key="differentiation_id",
-                actual_rows=differentiation_rows,
-                expected_rows=EXPECTED_DIFFERENTIATION_ROWS,
-                id_attr="row_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_state_admission_proof_rows",
-                member_id_key="proof_id",
-                actual_rows=state_admission_proof_rows,
-                expected_rows=EXPECTED_STATE_ADMISSION_PROOF_ROWS,
-                id_attr="proof_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_state_class_proof_alignment_rows",
-                member_id_key="state_class_id",
-                actual_rows=state_class_proof_alignment_rows,
-                expected_rows=EXPECTED_STATE_CLASS_PROOF_ALIGNMENT_ROWS,
-                id_attr="state_class_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_state_admission_limit_rows",
-                member_id_key="limit_id",
-                actual_rows=state_admission_limit_rows,
-                expected_rows=EXPECTED_STATE_ADMISSION_LIMIT_ROWS,
-                id_attr="row_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_collapse_rows",
-                member_id_key="collapse_id",
-                actual_rows=collapse_rows,
-                expected_rows=EXPECTED_COLLAPSE_ROWS,
-                id_attr="row_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-        ]
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        )
 
-        validate_contract_rows(
-            actual_rows=state_class_rows,
-            expected_rows=EXPECTED_STATE_CLASS_ROWS,
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": state_class_rows,
+                    "expected_rows": EXPECTED_STATE_CLASS_ROWS,
+                    "field_name": "required_state_class_rows",
+                    "id_attr": "state_class_id",
+                    "compare_fields": ("contract_heading", "state_role"),
+                },
+                {
+                    "actual_rows": differentiation_rows,
+                    "expected_rows": EXPECTED_DIFFERENTIATION_ROWS,
+                    "field_name": "required_differentiation_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": state_admission_proof_rows,
+                    "expected_rows": EXPECTED_STATE_ADMISSION_PROOF_ROWS,
+                    "field_name": "required_state_admission_proof_rows",
+                    "id_attr": "proof_id",
+                    "compare_fields": ("contract_heading", "proof_role"),
+                },
+                {
+                    "actual_rows": state_class_proof_alignment_rows,
+                    "expected_rows": EXPECTED_STATE_CLASS_PROOF_ALIGNMENT_ROWS,
+                    "field_name": "required_state_class_proof_alignment_rows",
+                    "id_attr": "state_class_id",
+                    "compare_fields": ("proof_id", "alignment_role"),
+                },
+                {
+                    "actual_rows": state_admission_limit_rows,
+                    "expected_rows": EXPECTED_STATE_ADMISSION_LIMIT_ROWS,
+                    "field_name": "required_state_admission_limit_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": collapse_rows,
+                    "expected_rows": EXPECTED_COLLAPSE_ROWS,
+                    "field_name": "required_collapse_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+            ),
             structure_violations=structure_violations,
             admissibility_violations=admissibility_violations,
-            field_name="required_state_class_rows",
-            id_attr="state_class_id",
-            compare_fields=("contract_heading", "state_role"),
-        )
-        validate_contract_rows(
-            actual_rows=differentiation_rows,
-            expected_rows=EXPECTED_DIFFERENTIATION_ROWS,
-            structure_violations=structure_violations,
-            admissibility_violations=admissibility_violations,
-            field_name="required_differentiation_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=state_admission_proof_rows,
-            expected_rows=EXPECTED_STATE_ADMISSION_PROOF_ROWS,
-            structure_violations=structure_violations,
-            admissibility_violations=admissibility_violations,
-            field_name="required_state_admission_proof_rows",
-            id_attr="proof_id",
-            compare_fields=("contract_heading", "proof_role"),
-        )
-        validate_contract_rows(
-            actual_rows=state_class_proof_alignment_rows,
-            expected_rows=EXPECTED_STATE_CLASS_PROOF_ALIGNMENT_ROWS,
-            structure_violations=structure_violations,
-            admissibility_violations=admissibility_violations,
-            field_name="required_state_class_proof_alignment_rows",
-            id_attr="state_class_id",
-            compare_fields=("proof_id", "alignment_role"),
-        )
-        validate_contract_rows(
-            actual_rows=state_admission_limit_rows,
-            expected_rows=EXPECTED_STATE_ADMISSION_LIMIT_ROWS,
-            structure_violations=structure_violations,
-            admissibility_violations=admissibility_violations,
-            field_name="required_state_admission_limit_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=collapse_rows,
-            expected_rows=EXPECTED_COLLAPSE_ROWS,
-            structure_violations=structure_violations,
-            admissibility_violations=admissibility_violations,
-            field_name="required_collapse_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
         )
 
         contract_file = str(state_doc.get("contract_file") or "").strip()
