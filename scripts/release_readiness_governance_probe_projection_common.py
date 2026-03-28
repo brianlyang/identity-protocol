@@ -47,6 +47,13 @@ RELEASE_READINESS_GOVERNANCE_PROBE_SPECS: tuple[ReleaseReadinessGovernanceProbeP
         keep_fields=("positive_validator_output",),
     ),
     ReleaseReadinessGovernanceProbeProjectionSpec(
+        script_rel="scripts/ci/run_release_readiness_one_look_topology_probes_ci.sh",
+        summary_key="release_readiness_one_look_topology_probe",
+        one_look_field="release_readiness_one_look_topology_probe_status",
+        status_fields=("release_readiness_one_look_topology_probe_status",),
+        keep_fields=("positive_validator_output",),
+    ),
+    ReleaseReadinessGovernanceProbeProjectionSpec(
         script_rel="scripts/ci/run_required_gate_surface_drift_probes_ci.sh",
         summary_key="required_gate_surface_drift_probe",
         one_look_field="required_gate_surface_drift_probe_status",

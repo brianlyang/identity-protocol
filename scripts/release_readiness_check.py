@@ -166,6 +166,8 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh"],
     ["bash", "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh"],
+    ["python3", "scripts/validate_release_readiness_one_look_topology.py", "--json-only"],
+    ["bash", "scripts/ci/run_release_readiness_one_look_topology_probes_ci.sh"],
     ["bash", "scripts/ci/run_three_plane_health_projection_probes_ci.sh"],
     ["bash", "scripts/ci/run_full_scan_required_gate_projection_probes_ci.sh"],
     ["bash", "scripts/ci/run_full_scan_health_projection_probes_ci.sh"],
