@@ -295,6 +295,10 @@ assert payload["protocol_root_decision_evidence_admissibility_status"] == "FAIL_
 assert payload["error_code"] == "IP-DEA-003", payload
 assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
 assert any(
+    reason.startswith("root_doc_anchor_violation:")
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
     row["rel_path"] == "identity/protocol/README.md"
     and row["reason"] == "required_marker_missing"
     and row["marker"] == "## Root decision-evidence admissibility completeness discipline"

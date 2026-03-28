@@ -286,6 +286,10 @@ assert payload["protocol_root_prompt_bootstrap_status"] == "FAIL_REQUIRED", payl
 assert payload["error_code"] == "IP-RPB-003", payload
 assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
 assert any(
+    reason.startswith("root_doc_anchor_violation:")
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
     row["rel_path"] == "identity/protocol/IDENTITY_RUNTIME.md"
     and row["reason"] == "required_marker_missing"
     and row["marker"] == "## Runtime prompt-bootstrap consumption boundary"

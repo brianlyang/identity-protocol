@@ -286,6 +286,10 @@ assert payload["protocol_root_truth_lifecycle_status"] == "FAIL_REQUIRED", paylo
 assert payload["error_code"] == "IP-RTLC-003", payload
 assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
 assert any(
+    reason.startswith("root_doc_anchor_violation:")
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
     row["rel_path"] == "identity/protocol/README.md"
     and row["reason"] == "required_marker_missing"
     and row["marker"] == "## Root truth-lifecycle completeness discipline"

@@ -40,6 +40,30 @@ def extend_violation_reason_projection(
         stale_reasons.append(f"{reason_prefix}:{field_value}:{reason_value}")
 
 
+def extend_root_doc_anchor_reason_projection(
+    stale_reasons: list[str],
+    *,
+    reason_prefix: str,
+    violations: Iterable[Any],
+    rel_path_field: str = "rel_path",
+    reason_key: str = "reason",
+    marker_field: str = "marker",
+) -> None:
+    for row in violations:
+        stale_reasons.append(
+            ":".join(
+                token
+                for token in (
+                    reason_prefix,
+                    _row_get(row, rel_path_field),
+                    _row_get(row, reason_key),
+                    _row_get(row, marker_field),
+                )
+                if token
+            )
+        )
+
+
 def project_root_contract_support_verdict(
     *,
     stale_reasons: list[str],
@@ -49,6 +73,11 @@ def project_root_contract_support_verdict(
     structure_error_code: str,
     support_error_code: str,
     support_reason_prefix: str = "",
+    anchor_violations: Iterable[Any] | None = None,
+    anchor_reason_prefix: str = "",
+    anchor_rel_path_field: str = "rel_path",
+    anchor_reason_key: str = "reason",
+    anchor_marker_field: str = "marker",
     structure_reason_prefix: str = "structure_violation",
     structure_field_name: str = "field",
     support_field_name: str = "field",
@@ -84,6 +113,15 @@ def project_root_contract_support_verdict(
             field_name=support_field_name,
             fallback_field=support_fallback_field,
             fallback_value=support_fallback_value,
+        )
+    if anchor_reason_prefix and anchor_violations is not None:
+        extend_root_doc_anchor_reason_projection(
+            stale_reasons,
+            reason_prefix=anchor_reason_prefix,
+            violations=tuple(anchor_violations),
+            rel_path_field=anchor_rel_path_field,
+            reason_key=anchor_reason_key,
+            marker_field=anchor_marker_field,
         )
 
     has_failure = bool(stale_reasons) or bool(structure_rows) or bool(support_rows)

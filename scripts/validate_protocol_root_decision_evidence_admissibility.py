@@ -655,6 +655,8 @@ def main() -> int:
         structure_error_code=ERR_STRUCTURE,
         support_error_code=ERR_ADMISSIBILITY,
         support_reason_prefix="decision_evidence_admissibility_violation",
+        anchor_violations=root_doc_anchor_violations,
+        anchor_reason_prefix="root_doc_anchor_violation",
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )

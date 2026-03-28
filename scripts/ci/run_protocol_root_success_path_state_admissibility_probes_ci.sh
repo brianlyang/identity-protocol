@@ -293,6 +293,10 @@ assert payload["protocol_root_success_path_state_admissibility_status"] == "FAIL
 assert payload["error_code"] == "IP-SPSA-003", payload
 assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
 assert any(
+    reason.startswith("root_doc_anchor_violation:")
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
     row["rel_path"] == "identity/protocol/README.md"
     and row["reason"] == "required_marker_missing"
     and row["marker"] == "## Root success-path state admissibility completeness discipline"
