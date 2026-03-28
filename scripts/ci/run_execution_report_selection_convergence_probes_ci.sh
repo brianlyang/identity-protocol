@@ -19,10 +19,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+from actor_session_common import actor_session_path, write_actor_binding_store
 from execution_report_selection_common import collect_reports
-from full_identity_protocol_scan import _latest_runtime_report as full_scan_latest_runtime_report
 from primary_execution_report_common import latest_primary_execution_report_from_roots
-from report_three_plane_status import _latest_report as three_plane_latest_report
 
 
 def _run_json(cmd: list[str], *, cwd: Path) -> dict[str, object]:
@@ -40,6 +39,33 @@ def _run_json(cmd: list[str], *, cwd: Path) -> dict[str, object]:
         return json.loads(proc.stdout.strip())
     except Exception as exc:
         raise AssertionError({"cmd": cmd, "stdout": proc.stdout, "stderr": proc.stderr, "error": str(exc)})
+
+
+def _run_json_with_rc(cmd: list[str], *, cwd: Path) -> tuple[int, dict[str, object]]:
+    proc = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, check=False)
+    try:
+        payload = json.loads(proc.stdout.strip())
+    except Exception as exc:
+        raise AssertionError(
+            {
+                "cmd": cmd,
+                "returncode": proc.returncode,
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+                "error": str(exc),
+            }
+        )
+    if not isinstance(payload, dict):
+        raise AssertionError(
+            {
+                "cmd": cmd,
+                "returncode": proc.returncode,
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+                "error": "json payload must be object",
+            }
+        )
+    return proc.returncode, payload
 
 
 def _run_ok(cmd: list[str], *, cwd: Path) -> str:
@@ -67,15 +93,65 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _three_plane_report_selected_path(payload: dict[str, object]) -> str:
+    instance_plane = payload.get("instance_plane_detail") or {}
+    if not isinstance(instance_plane, dict):
+        return ""
+    freshness = instance_plane.get("execution_report_freshness") or {}
+    if not isinstance(freshness, dict):
+        return ""
+    return str(freshness.get("report_selected_path", "")).strip()
+
+
+def _scan_report_selected_path(payload: dict[str, object], identity_id: str) -> str:
+    identity_rows: list[dict[str, object]] = []
+    direct_identities = payload.get("identities") or []
+    if isinstance(direct_identities, dict):
+        for key, value in direct_identities.items():
+            if isinstance(value, dict):
+                row = dict(value)
+                row.setdefault("identity_id", key)
+                identity_rows.append(row)
+    elif isinstance(direct_identities, list):
+        identity_rows.extend([item for item in direct_identities if isinstance(item, dict)])
+
+    catalogs = payload.get("catalogs") or []
+    if isinstance(catalogs, list):
+        for catalog in catalogs:
+            if not isinstance(catalog, dict):
+                continue
+            catalog_identities = catalog.get("identities") or []
+            if isinstance(catalog_identities, list):
+                identity_rows.extend([item for item in catalog_identities if isinstance(item, dict)])
+
+    target = next(
+        (
+            item for item in identity_rows
+            if str(item.get("identity_id", "")).strip() == identity_id
+        ),
+        {},
+    )
+    checks = target.get("checks") if isinstance(target, dict) else {}
+    if not isinstance(checks, dict):
+        return ""
+    freshness = checks.get("execution_report_freshness") or {}
+    if not isinstance(freshness, dict):
+        return ""
+    return str(freshness.get("report_selected_path", "")).strip()
+
+
 tmp_root = Path(sys.argv[1]).resolve()
 repo_root = Path(sys.argv[2]).resolve()
 workspace_root = (tmp_root / "workspace").resolve()
 identity_id = "probe-identity"
+actor_id = "assistant:codex"
+session_id = "run:probe-exec-report-selection"
 run_id = f"identity-upgrade-exec-{identity_id}-100"
 report_name = f"{run_id}.json"
 
 repo_catalog = (workspace_root / "identity" / "catalog" / "identities.yaml").resolve()
 local_catalog = (workspace_root / ".identity" / "catalog.local.yaml").resolve()
+global_catalog = (workspace_root / ".identity" / "global-catalog.local.yaml").resolve()
 pack_root = (workspace_root / ".identity" / identity_id).resolve()
 prompt_path = (pack_root / "IDENTITY_PROMPT.md").resolve()
 task_path = (pack_root / "CURRENT_TASK.json").resolve()
@@ -103,6 +179,7 @@ catalog_payload = {
 }
 _write_json(repo_catalog, catalog_payload)
 _write_json(local_catalog, catalog_payload)
+_write_json(global_catalog, {"identities": []})
 
 os.environ["PROJECT_ROOT"] = str(workspace_root)
 os.environ["CODEX_HOME"] = str(workspace_root)
@@ -110,6 +187,32 @@ os.environ["IDENTITY_HOME"] = str((workspace_root / ".identity").resolve())
 os.environ["IDENTITY_PROTOCOL_HOME"] = str(repo_root)
 os.environ["IDENTITY_CATALOG"] = str(local_catalog)
 os.environ["IDENTITY_SCOPE"] = "USER"
+os.environ["CODEX_ACTOR_ID"] = actor_id
+os.environ["CODEX_SESSION_ID"] = session_id
+
+write_actor_binding_store(
+    actor_session_path(local_catalog, actor_id),
+    {
+        "actor_id": actor_id,
+        "catalog_path": str(local_catalog),
+        "binding_version": 1,
+        "compare_token": "1",
+        "bindings": [
+            {
+                "actor_id": actor_id,
+                "catalog_path": str(local_catalog),
+                "identity_id": identity_id,
+                "session_id": session_id,
+                "run_id": session_id.removeprefix("run:"),
+                "binding_ref": f"{actor_id}:{identity_id}:{session_id}:v1",
+                "binding_version": 1,
+                "mutation_lane": "activate",
+                "bound_at": "2026-03-28T00:00:00Z",
+                "updated_at": "2026-03-28T00:00:00Z",
+            }
+        ],
+    },
+)
 
 head_sha = subprocess.run(
     ["git", "-C", str(repo_root), "rev-parse", "HEAD"],
@@ -295,17 +398,46 @@ experience_payload = _run_json(
     ],
     cwd=repo_root,
 )
-three_plane_selected_report = str(
-    three_plane_latest_report(
-        identity_id,
-        str((workspace_root / ".identity").resolve()),
-        str(pack_root),
-    )
-    or ""
-).strip()
-full_scan_selected_report = str(
-    full_scan_latest_runtime_report(identity_id, (pack_root / "runtime" / "reports").resolve()) or ""
-).strip()
+three_plane_out = (workspace_root / "three-plane.json").resolve()
+three_plane_cmd = [
+    sys.executable,
+    str(repo_root / "scripts" / "report_three_plane_status.py"),
+    "--identity-id",
+    identity_id,
+    "--actor-id",
+    actor_id,
+    "--session-id",
+    session_id,
+    "--catalog",
+    str(local_catalog),
+    "--repo-catalog",
+    str(repo_catalog),
+    "--out",
+    str(three_plane_out),
+]
+_run_ok(three_plane_cmd, cwd=repo_root)
+three_plane_payload = json.loads(three_plane_out.read_text(encoding="utf-8"))
+scan_out = (workspace_root / "full-scan.json").resolve()
+scan_cmd = [
+    sys.executable,
+    str(repo_root / "scripts" / "full_identity_protocol_scan.py"),
+    "--scan-mode",
+    "target",
+    "--identity-ids",
+    identity_id,
+    "--actor-id",
+    actor_id,
+    "--session-id",
+    session_id,
+    "--project-catalog",
+    str(local_catalog),
+    "--global-catalog",
+    str(global_catalog),
+    "--out",
+    str(scan_out),
+]
+_run_ok(scan_cmd, cwd=repo_root)
+scan_payload = json.loads(scan_out.read_text(encoding="utf-8"))
 
 _write_json(
     alternate_report_path,
@@ -322,12 +454,67 @@ preferred_selected = latest_primary_execution_report_from_roots(
     identity_id,
     preferred_prompt_sha=str(report_payload["identity_prompt_sha256"]),
 )
+three_plane_after_out = (workspace_root / "three-plane-after.json").resolve()
+three_plane_after_cmd = list(three_plane_cmd)
+three_plane_after_cmd[-1] = str(three_plane_after_out)
+_run_ok(three_plane_after_cmd, cwd=repo_root)
+three_plane_after_payload = json.loads(three_plane_after_out.read_text(encoding="utf-8"))
+scan_after_out = (workspace_root / "full-scan-after.json").resolve()
+scan_after_cmd = list(scan_cmd)
+scan_after_cmd[-1] = str(scan_after_out)
+_run_ok(scan_after_cmd, cwd=repo_root)
+scan_after_payload = json.loads(scan_after_out.read_text(encoding="utf-8"))
+pack_locator_after_payload = _run_json(
+    [
+        sys.executable,
+        str(repo_root / "scripts" / "resolve_latest_identity_upgrade_report.py"),
+        "--identity-id",
+        identity_id,
+        "--pack-root",
+        str(pack_root),
+        "--json-only",
+    ],
+    cwd=repo_root,
+)
+repair_prompt_rc, repair_prompt_payload = _run_json_with_rc(
+    [
+        sys.executable,
+        str(repo_root / "scripts" / "repair_identity_prompt_runtime_state.py"),
+        "--catalog",
+        str(local_catalog),
+        "--identity-id",
+        identity_id,
+        "--json-only",
+    ],
+    cwd=repo_root,
+)
+repair_postexec_rc, repair_postexec_payload = _run_json_with_rc(
+    [
+        sys.executable,
+        str(repo_root / "scripts" / "repair_identity_post_execution_mandatory.py"),
+        "--catalog",
+        str(local_catalog),
+        "--repo-catalog",
+        str(repo_catalog),
+        "--identity-id",
+        identity_id,
+        "--json-only",
+    ],
+    cwd=repo_root,
+)
 
 selected_freshness = str(freshness_payload.get("report_selected_path", "")).strip()
 selected_baseline = str(baseline_payload.get("report_selected_path", "")).strip()
 selected_run_id = str(run_id_payload.get("report_selected_path", "")).strip()
 selected_locator = str(locator_payload.get("selected_report_path", "")).strip()
 selected_experience = str(experience_payload.get("report_selected_path", "")).strip()
+selected_three_plane = _three_plane_report_selected_path(three_plane_payload)
+selected_three_plane_after = _three_plane_report_selected_path(three_plane_after_payload)
+selected_scan = _scan_report_selected_path(scan_payload, identity_id)
+selected_scan_after = _scan_report_selected_path(scan_after_payload, identity_id)
+selected_pack_locator_after = str(pack_locator_after_payload.get("selected_report_path", "")).strip()
+selected_repair_prompt = str(repair_prompt_payload.get("report_selected_path", "")).strip()
+selected_repair_postexec = str(repair_postexec_payload.get("report_selected_path", "")).strip()
 expected = str(report_path)
 
 assert selected_freshness == expected, {
@@ -357,17 +544,35 @@ assert selected_experience == expected, {
     "expected": expected,
     "payload": experience_payload,
 }
-assert three_plane_selected_report == expected, {
+assert selected_three_plane == expected, {
     "case": "three_plane_selects_primary_execution_report",
-    "selected": three_plane_selected_report,
+    "selected": selected_three_plane,
     "expected": expected,
-    "preferred_pack": str(pack_root),
+    "payload": three_plane_payload,
 }
-assert full_scan_selected_report == expected, {
-    "case": "full_scan_selects_primary_execution_report",
-    "selected": full_scan_selected_report,
+assert selected_three_plane_after == expected, {
+    "case": "three_plane_preserves_prompt_sha_preference",
+    "selected": selected_three_plane_after,
     "expected": expected,
-    "report_dir": str((pack_root / "runtime" / "reports").resolve()),
+    "payload": three_plane_after_payload,
+}
+assert selected_scan == expected, {
+    "case": "full_scan_selects_primary_execution_report",
+    "selected": selected_scan,
+    "expected": expected,
+    "payload": scan_payload,
+}
+assert selected_scan_after == expected, {
+    "case": "full_scan_preserves_prompt_sha_preference",
+    "selected": selected_scan_after,
+    "expected": expected,
+    "payload": scan_after_payload,
+}
+assert selected_pack_locator_after == expected, {
+    "case": "pack_root_locator_preserves_prompt_sha_preference",
+    "selected": selected_pack_locator_after,
+    "expected": expected,
+    "payload": pack_locator_after_payload,
 }
 assert preferred_selected == report_path, {
     "case": "shared_primitive_prefers_prompt_matching_report",
@@ -375,18 +580,43 @@ assert preferred_selected == report_path, {
     "expected": expected,
     "alternate_report": str(alternate_report_path),
 }
+assert selected_repair_prompt == expected, {
+    "case": "prompt_runtime_repair_selects_prompt_bound_primary_execution_report",
+    "selected": selected_repair_prompt,
+    "expected": expected,
+    "payload": repair_prompt_payload,
+}
+assert repair_prompt_rc in {0, 1}, {
+    "case": "prompt_runtime_repair_returns_machine_readable_status",
+    "rc": repair_prompt_rc,
+}
+assert selected_repair_postexec == expected, {
+    "case": "post_execution_repair_selects_prompt_bound_primary_execution_report",
+    "selected": selected_repair_postexec,
+    "expected": expected,
+    "payload": repair_postexec_payload,
+}
+assert repair_postexec_rc in {0, 1}, {
+    "case": "post_execution_repair_returns_machine_readable_status",
+    "rc": repair_postexec_rc,
+}
 assert "[OK] identity prompt activation validated:" in prompt_activation_stdout, prompt_activation_stdout
 assert "[OK] prompt lifecycle validated:" in prompt_lifecycle_stdout, prompt_lifecycle_stdout
 assert "[OK] permission state validated:" in permission_stdout, permission_stdout
-assert selected_freshness == selected_baseline == selected_run_id == selected_locator == selected_experience == three_plane_selected_report == full_scan_selected_report, {
+assert selected_freshness == selected_baseline == selected_run_id == selected_locator == selected_experience == selected_three_plane == selected_three_plane_after == selected_scan == selected_scan_after == selected_pack_locator_after == selected_repair_prompt == selected_repair_postexec, {
     "case": "selection_convergence",
     "freshness": selected_freshness,
     "baseline": selected_baseline,
     "run_id": selected_run_id,
     "locator": selected_locator,
     "experience_writeback": selected_experience,
-    "three_plane": three_plane_selected_report,
-    "full_scan": full_scan_selected_report,
+    "three_plane": selected_three_plane,
+    "three_plane_after": selected_three_plane_after,
+    "full_scan": selected_scan,
+    "full_scan_after": selected_scan_after,
+    "pack_locator_after": selected_pack_locator_after,
+    "repair_prompt_runtime_state": selected_repair_prompt,
+    "repair_post_execution_mandatory": selected_repair_postexec,
 }
 
 print(
@@ -404,7 +634,14 @@ print(
             "permission_state_selected_report": expected,
             "experience_writeback_selected_report": expected,
             "three_plane_selected_report": expected,
+            "three_plane_prompt_sha_selected_report": selected_three_plane_after,
             "full_scan_selected_report": expected,
+            "full_scan_prompt_sha_selected_report": selected_scan_after,
+            "pack_root_locator_selected_report": selected_pack_locator_after,
+            "repair_prompt_runtime_state_selected_report": selected_repair_prompt,
+            "repair_prompt_runtime_state_rc": repair_prompt_rc,
+            "repair_post_execution_mandatory_selected_report": selected_repair_postexec,
+            "repair_post_execution_mandatory_rc": repair_postexec_rc,
             "prompt_sha_preferred_selected_report": str(preferred_selected) if preferred_selected is not None else "",
         },
         ensure_ascii=False,

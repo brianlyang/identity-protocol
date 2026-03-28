@@ -8,7 +8,10 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from primary_execution_report_common import latest_primary_execution_report_from_roots
+from primary_execution_report_common import (
+    latest_primary_execution_report_from_roots,
+    prompt_file_sha,
+)
 
 ACTIVE_EXECUTION_POINTER_REL = Path("runtime/state/active_execution_report.json")
 TOOL_VENDOR_GOVERNANCE_REPORT_DIR_REL = Path("runtime/reports/tool-vendor-governance")
@@ -343,6 +346,7 @@ def _discover_latest_identity_upgrade_report(identity_id: str, pack_root: Path) 
     return latest_primary_execution_report_from_roots(
         _candidate_upgrade_report_roots(pack_root),
         identity_id,
+        preferred_prompt_sha=prompt_file_sha((pack_root / "IDENTITY_PROMPT.md").resolve()),
     )
 
 
