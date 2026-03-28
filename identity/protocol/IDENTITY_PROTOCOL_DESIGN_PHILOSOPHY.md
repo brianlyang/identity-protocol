@@ -1721,6 +1721,11 @@ Expected row identity set and emitted row identity set for each family must
 also remain machine-readable rather than being collapsed into aggregate counts
 or generic structure failure.
 
+README root protocol-instance responsibility completeness discipline must
+therefore stay congruent with admitted
+protocol-instance-responsibility-completeness rows rather than becoming a
+freehand completeness summary.
+
 The machine world must not finalize protocol-instance responsibility legality
 while required row identity drift remains known only internally.
 

@@ -746,6 +746,7 @@ These operator-answer-surface-completeness rules must remain bound to canonical 
 ## Root protocol-instance responsibility completeness discipline
 
 Protocol-instance responsibility law is not a soft prose bundle.
+These protocol-instance-responsibility-completeness rules must remain bound to canonical protocol-instance-responsibility-completeness rows rather than drifting into soft summary prose.
 
 1. required layer, responsibility, escalation-trigger, escalation-proof, escalation-limit, and boundary-collapse rows must remain explicit as separate machine-readable families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;

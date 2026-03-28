@@ -26,13 +26,74 @@ assert payload["escalation_trigger_count"] == 4, payload
 assert payload["escalation_proof_count"] == 4, payload
 assert payload["escalation_limit_count"] == 5, payload
 assert payload["boundary_collapse_count"] == 5, payload
+assert payload["protocol_instance_responsibility_completeness_row_count"] == 5, payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["protocol_instance_row_family_count"] == 6, payload
+assert payload["protocol_instance_row_family_count"] == 8, payload
 assert payload["protocol_instance_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["protocol_instance_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert payload["protocol_instance_responsibility_completeness_surface"]["entry_count"] == 5, payload
+assert payload["protocol_instance_responsibility_completeness_surface"]["extraction_violations"] == [], payload
+assert any(
+    row["family_id"] == "protocol_instance_responsibility_completeness_rows"
+    for row in payload["row_family_projection_rows"]
+), payload
+assert any(
+    row["family_id"] == "protocol_instance_responsibility_completeness_surface"
+    for row in payload["row_family_projection_rows"]
+), payload
+PY
+
+COMPLETENESS_ROW_REPO="${TMP_ROOT}/missing-completeness-row-repo"
+mirror_repo "${COMPLETENESS_ROW_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_REPO}/identity/protocol/mappings/root-protocol-instance-responsibility.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["protocol_instance_responsibility_completeness_rows"] = [
+    row for row in doc["protocol_instance_responsibility_completeness_rows"]
+    if row.get("completeness_id") != "explicit_protocol_instance_responsibility_row_families"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_JSON="${TMP_ROOT}/missing-completeness-row.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_protocol_instance_responsibility.py" \
+  --repo-root "${COMPLETENESS_ROW_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_JSON}"; then
+  echo "[FAIL] root protocol-instance responsibility validator unexpectedly passed missing completeness row"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_protocol_instance_responsibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RPIR-002", payload
+assert any(
+    row["field"] == "protocol_instance_responsibility_completeness_rows"
+    and row["reason"] == "missing_protocol_instance_responsibility_completeness_rows"
+    and "explicit_protocol_instance_responsibility_row_families" in row.get("completeness_ids", [])
+    for row in payload["structure_violations"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "protocol_instance_responsibility_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 4, payload
+assert completeness_row["missing_ids"] == ["explicit_protocol_instance_responsibility_row_families"], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -275,8 +336,8 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-old = "## Root protocol-instance responsibility completeness discipline"
-new = "## Root protocol-instance responsibility discipline"
+old = "These protocol-instance-responsibility-completeness rules must remain bound to canonical protocol-instance-responsibility-completeness rows rather than drifting into soft summary prose."
+new = "These protocol-instance responsibility rules may remain a soft summary prose bundle."
 assert old in text, text
 path.write_text(text.replace(old, new, 1), encoding="utf-8")
 PY
@@ -305,9 +366,70 @@ assert any(
 assert any(
     row["rel_path"] == "identity/protocol/README.md"
     and row["reason"] == "required_marker_missing"
-    and row["marker"] == "## Root protocol-instance responsibility completeness discipline"
+    and row["marker"] == "These protocol-instance-responsibility-completeness rules must remain bound to canonical protocol-instance-responsibility-completeness rows rather than drifting into soft summary prose."
     for row in payload["root_doc_anchor_violations"]
 ), payload
+PY
+
+COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/completeness-surface-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "4. runtime or validator code must not finalize protocol-instance responsibility legality while missing or unexpected row identities remain known only internally;"
+new = "4. runtime or validator code may finalize protocol-instance responsibility legality from aggregate summaries alone;"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_JSON="${TMP_ROOT}/completeness-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_protocol_instance_responsibility.py" \
+  --repo-root "${COMPLETENESS_SURFACE_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_JSON}"; then
+  echo "[FAIL] root protocol-instance responsibility validator unexpectedly passed completeness surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_protocol_instance_responsibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RPIR-002", payload
+assert any(
+    row["field"] == "protocol_instance_responsibility_completeness_surface"
+    and row["reason"] == "protocol_instance_responsibility_completeness_surface_phrase_order_mismatch"
+    for row in payload["responsibility_violations"]
+), payload
+assert any(
+    row["field"] == "protocol_instance_responsibility_completeness_surface"
+    and row["reason"] == "missing_protocol_instance_responsibility_completeness_surface_rows"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "protocol_instance_responsibility_completeness_surface"
+    and row["reason"] == "extra_protocol_instance_responsibility_completeness_surface_rows"
+    for row in payload["structure_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "protocol_instance_responsibility_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [
+    "runtime or validator code must not finalize protocol-instance responsibility legality while missing or unexpected row identities remain known only internally;"
+], payload
+assert surface_row["unexpected_ids"] == [
+    "runtime or validator code may finalize protocol-instance responsibility legality from aggregate summaries alone;"
+], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 AUTH_REPO="${TMP_ROOT}/authority-drift-repo"
