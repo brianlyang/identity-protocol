@@ -335,6 +335,108 @@ def _derive_overall_status(checks: list[dict[str, Any]]) -> tuple[str, bool, lis
     return STATUS_PASS_REQUIRED, True, reasons
 
 
+def _summary_from_checks(checks: list[dict[str, Any]]) -> dict[str, int]:
+    return {
+        "check_count": len(checks),
+        "fail_count": sum(1 for c in checks if c.get("status") == STATUS_FAIL_REQUIRED),
+        "warn_count": sum(1 for c in checks if c.get("status") == STATUS_WARN_NON_BLOCKING),
+        "pass_count": sum(1 for c in checks if c.get("status") == STATUS_PASS_REQUIRED),
+    }
+
+
+def _index_checks_by_name(checks: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    indexed: dict[str, dict[str, Any]] = {}
+    for row in checks:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("name", "")).strip()
+        if not name:
+            continue
+        indexed[name] = row
+    return indexed
+
+
+def _merge_selected_status_payload(
+    repo_root: Path,
+    *,
+    current_payload: dict[str, Any],
+    partial_payload: dict[str, Any],
+    selected_check_names: tuple[str, ...],
+) -> dict[str, Any]:
+    if not selected_check_names:
+        return partial_payload
+
+    current_checks = current_payload.get("checks")
+    partial_checks = partial_payload.get("checks")
+    if not isinstance(current_checks, list):
+        raise ValueError("partial_status_write_current_checks_missing")
+    if not isinstance(partial_checks, list):
+        raise ValueError("partial_status_write_partial_checks_missing")
+
+    ordered_names = tuple(spec.name for spec in _ordered_specs(repo_root))
+    selected_set = set(selected_check_names)
+    current_by_name = _index_checks_by_name(current_checks)
+    partial_by_name = _index_checks_by_name(partial_checks)
+
+    missing_partial_selected = [
+        name for name in selected_check_names if name not in partial_by_name
+    ]
+    if missing_partial_selected:
+        raise ValueError(
+            "partial_status_write_selected_checks_missing:"
+            + ",".join(missing_partial_selected)
+        )
+
+    missing_current_non_selected = [
+        name
+        for name in ordered_names
+        if name not in selected_set and name not in current_by_name
+    ]
+    if missing_current_non_selected:
+        raise ValueError(
+            "partial_status_write_current_file_incomplete:"
+            + ",".join(missing_current_non_selected)
+        )
+
+    merged_checks: list[dict[str, Any]] = []
+    merged_names: set[str] = set()
+    for name in ordered_names:
+        replacement = partial_by_name.get(name)
+        if replacement is not None:
+            merged_checks.append(replacement)
+            merged_names.add(name)
+            continue
+        current = current_by_name.get(name)
+        if current is not None:
+            merged_checks.append(current)
+            merged_names.add(name)
+
+    for name, row in current_by_name.items():
+        if name in merged_names:
+            continue
+        merged_checks.append(row)
+
+    overall_status, promotion_ready, reasons = _derive_overall_status(merged_checks)
+    merged_payload = dict(current_payload)
+    for key in (
+        "schema_version",
+        "status_version",
+        "generated_at_utc",
+        "git_head_short",
+        "machine_promotion_policy",
+        "surface_governance",
+    ):
+        if key in partial_payload:
+            merged_payload[key] = partial_payload[key]
+    merged_payload["checks"] = merged_checks
+    merged_payload["summary"] = _summary_from_checks(merged_checks)
+    merged_payload["control_plane_status"] = overall_status
+    merged_payload["promotion_ready"] = promotion_ready
+    merged_payload["promotion_block_reasons"] = reasons
+    merged_payload["selected_check_names"] = []
+    return merged_payload
+
+
 def build_status(
     repo_root: Path,
     *,
@@ -354,12 +456,7 @@ def build_status(
             "warnings_non_promotional": [STATUS_WARN_NON_BLOCKING],
         },
         "checks": checks,
-        "summary": {
-            "check_count": len(checks),
-            "fail_count": sum(1 for c in checks if c.get("status") == STATUS_FAIL_REQUIRED),
-            "warn_count": sum(1 for c in checks if c.get("status") == STATUS_WARN_NON_BLOCKING),
-            "pass_count": sum(1 for c in checks if c.get("status") == STATUS_PASS_REQUIRED),
-        },
+        "summary": _summary_from_checks(checks),
         "surface_governance": build_governed_runtime_summary_surface_payload("control_plane_status_artifact"),
         "control_plane_status": overall_status,
         "promotion_ready": promotion_ready,
@@ -377,10 +474,34 @@ def resolve_status_target(
     return _resolve_current_yaml_alias(repo_root, str(status_file))
 
 
-def persist_status_payload(status_file: Path, payload: dict[str, Any]) -> Path:
+def persist_status_payload(
+    status_file: Path,
+    payload: dict[str, Any],
+    *,
+    repo_root: Path | None = None,
+    include_check_names: tuple[str, ...] = (),
+) -> Path:
     target = Path(status_file).expanduser().resolve()
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    payload_to_write = payload
+    if include_check_names:
+        if repo_root is None:
+            raise ValueError("partial_status_write_requires_repo_root")
+        current_payload: dict[str, Any] = {}
+        if target.exists() and target.is_file():
+            current_payload = json.loads(target.read_text(encoding="utf-8"))
+            if not isinstance(current_payload, dict):
+                current_payload = {}
+        payload_to_write = _merge_selected_status_payload(
+            repo_root.resolve(),
+            current_payload=current_payload,
+            partial_payload=payload,
+            selected_check_names=include_check_names,
+        )
+    target.write_text(
+        json.dumps(payload_to_write, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     return target
 
 
@@ -421,7 +542,20 @@ def main() -> int:
     payload["status_file_alias_error"] = status_alias_error
 
     if args.write:
-        persist_status_payload(status_file, payload)
+        try:
+            persist_status_payload(
+                status_file,
+                payload,
+                repo_root=repo_root,
+                include_check_names=tuple(
+                    str(name).strip()
+                    for name in (args.check_name or [])
+                    if str(name).strip()
+                ),
+            )
+        except ValueError as exc:
+            print(f"[FAIL] {exc}")
+            return 1
 
     if args.json_only:
         print(json.dumps(payload, ensure_ascii=False))

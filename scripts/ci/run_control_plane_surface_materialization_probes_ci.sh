@@ -12,6 +12,9 @@ POSITIVE_JSON="${TMP_ROOT}/positive.json"
 NEGATIVE_SYNC_JSON="${TMP_ROOT}/negative-budget-sync.json"
 POSITIVE_BUDGET_SYNC_JSON="${TMP_ROOT}/positive-budget-sync.json"
 POSITIVE_STATUS_SYNC_JSON="${TMP_ROOT}/positive-status-sync.json"
+DIRECT_RENDER_JSON="${TMP_ROOT}/direct-render.json"
+DIRECT_RENDER_SYNC_JSON="${TMP_ROOT}/direct-render-sync.json"
+INCOMPLETE_STATUS_JSON="${TMP_ROOT}/incomplete-status.json"
 
 mkdir -p "${SHADOW_ROOT}"
 
@@ -176,6 +179,26 @@ if not bool(payload.get("write_applied", False)):
     raise SystemExit("materialization_should_report_write_applied")
 PY
 
+python3 - <<'PY' "${SHADOW_ROOT}/identity/protocol/mappings/control-plane-status.v1.6.json"
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+checks = payload.get("checks")
+if not isinstance(checks, list):
+    raise SystemExit("status_artifact_checks_missing_after_partial_materialization")
+names = [str(row.get("name", "")).strip() for row in checks if isinstance(row, dict)]
+if len(names) <= 2:
+    raise SystemExit("partial_materialization_should_not_truncate_status_artifact")
+if "control_plane_budget" not in names or "control_plane_budget_sync" not in names:
+    raise SystemExit("selected_checks_missing_after_partial_materialization")
+if "protocol_root_corpus_governance" not in names:
+    raise SystemExit("non_selected_check_missing_after_partial_materialization")
+if payload.get("selected_check_names") not in ([], None):
+    raise SystemExit("persisted_full_status_artifact_should_not_remain_subset_scoped")
+PY
+
 python3 "${SHADOW_ROOT}/scripts/validate_control_plane_budget_sync.py" \
   --repo-root "${SHADOW_ROOT}" \
   --json-only > "${POSITIVE_BUDGET_SYNC_JSON}"
@@ -201,6 +224,93 @@ if str(status.get("live_control_plane_status", "")).strip().upper() != "PASS_REQ
     raise SystemExit("positive_materialized_live_control_plane_not_green")
 if str(status.get("file_control_plane_status", "")).strip().upper() != "PASS_REQUIRED":
     raise SystemExit("positive_materialized_file_control_plane_not_green")
+PY
+
+python3 "${SHADOW_ROOT}/scripts/render_control_plane_status.py" \
+  --repo-root "${SHADOW_ROOT}" \
+  --check-name control_plane_budget \
+  --write \
+  --json-only > "${DIRECT_RENDER_JSON}"
+
+python3 - <<'PY' "${SHADOW_ROOT}/identity/protocol/mappings/control-plane-status.v1.6.json"
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+checks = payload.get("checks")
+if not isinstance(checks, list):
+    raise SystemExit("status_artifact_checks_missing_after_direct_partial_render")
+names = [str(row.get("name", "")).strip() for row in checks if isinstance(row, dict)]
+if len(names) <= 2:
+    raise SystemExit("direct_partial_render_should_not_truncate_status_artifact")
+if "control_plane_budget" not in names:
+    raise SystemExit("direct_partial_render_selected_check_missing")
+if "protocol_root_corpus_governance" not in names:
+    raise SystemExit("direct_partial_render_non_selected_check_missing")
+if payload.get("selected_check_names") not in ([], None):
+    raise SystemExit("direct_partial_render_should_persist_full_artifact_scope")
+PY
+
+python3 "${SHADOW_ROOT}/scripts/validate_control_plane_status_sync.py" \
+  --repo-root "${SHADOW_ROOT}" \
+  --json-only > "${DIRECT_RENDER_SYNC_JSON}"
+
+python3 - <<'PY' "${DIRECT_RENDER_SYNC_JSON}"
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if str(payload.get("control_plane_status_sync_status", "")).strip().upper() != "PASS_REQUIRED":
+    raise SystemExit("direct_partial_render_full_status_sync_not_green")
+PY
+
+python3 - <<'PY' "${SHADOW_ROOT}/identity/protocol/mappings/control-plane-status.v1.6.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+checks = payload.get("checks")
+if not isinstance(checks, list):
+    raise SystemExit("status_artifact_checks_missing_before_incomplete_fixture")
+payload["checks"] = [
+    row
+    for row in checks
+    if not (
+        isinstance(row, dict)
+        and str(row.get("name", "")).strip() == "protocol_root_corpus_governance"
+    )
+]
+path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+if python3 "${SHADOW_ROOT}/scripts/materialize_control_plane_surfaces.py" \
+  --repo-root "${SHADOW_ROOT}" \
+  --check-name control_plane_budget \
+  --allow-partial-status-write \
+  --write \
+  --json-only > "${INCOMPLETE_STATUS_JSON}"; then
+  echo "[FAIL] materializer unexpectedly passed incomplete-current-file partial status write"
+  exit 1
+fi
+
+python3 - <<'PY' "${INCOMPLETE_STATUS_JSON}"
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if str(payload.get("materialize_control_plane_surfaces_status", "")).strip().upper() != "FAIL_REQUIRED":
+    raise SystemExit("incomplete_current_file_partial_write_should_fail")
+reasons = payload.get("stale_reasons") or []
+if not any(
+    "status_write_failed:partial_status_write_current_file_incomplete:" in str(reason)
+    for reason in reasons
+):
+    raise SystemExit("incomplete_current_file_partial_write_failure_reason_missing")
 PY
 
 echo "[PASS] control-plane surface materialization probes passed"

@@ -171,7 +171,17 @@ def main() -> int:
     payload["control_plane_status"] = str(status_render.get("control_plane_status", "")).strip() or STATUS_FAIL_REQUIRED
     payload["promotion_ready"] = bool(status_render.get("promotion_ready", False))
     if args.write:
-        persist_status_payload(status_path, status_render)
+        try:
+            persist_status_payload(
+                status_path,
+                status_render,
+                repo_root=repo_root,
+                include_check_names=selected_check_names,
+            )
+        except ValueError as exc:
+            payload["stale_reasons"].append(f"status_write_failed:{exc}")
+            _emit(payload, json_only=args.json_only)
+            return 1
         payload["status_write_applied"] = True
     payload["write_applied"] = bool(payload["budget_write_applied"] or payload["status_write_applied"])
 
