@@ -41,6 +41,14 @@ assert payload["required_repo_rel_path_patterns"] == {
     "probe_script": r"^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\.sh$",
     "common_script": r"^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\.py$",
 }, payload
+assert payload["required_validator_surface_contract_fields"] == [
+    "validator_root_doc_anchor_contract",
+    "validator_row_projection_contract",
+], payload
+assert payload["required_validator_surface_contract_values"] == {
+    "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+    "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+}, payload
 assert payload["family_count"] == payload["family_status_row_count"], payload
 assert payload["registered_complete_family_count"] == payload["discovered_family_count"], payload
 assert payload["discovered_family_count"] == payload["family_status_row_count"], payload
@@ -48,7 +56,11 @@ assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["expected_family_status_row_count"] == payload["family_status_row_count"], payload
 assert payload["family_status_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["machine_registry_completeness_row_family_count"] == 2, payload
+assert payload["validator_surface_contract_row_count"] == payload["family_count"] * 2, payload
+assert payload["expected_family_validator_surface_contract_row_count"] == payload["family_count"] * 2, payload
+assert payload["validator_surface_contract_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["validator_surface_contract_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["machine_registry_completeness_row_family_count"] == 3, payload
 assert payload["machine_registry_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["machine_registry_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["family_ids"] == payload["family_status_row_ids"] == payload["discovered_family_ids"], payload
@@ -56,6 +68,8 @@ assert payload["registered_complete_family_ids"] == payload["discovered_family_i
 assert payload["missing_family_status_row_ids"] == [], payload
 assert payload["unexpected_family_status_row_ids"] == [], payload
 assert payload["family_status_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["missing_validator_surface_contract_row_ids"] == [], payload
+assert payload["unexpected_validator_surface_contract_row_ids"] == [], payload
 assert payload["structure_violation_count"] == 0, payload
 assert payload["completeness_violation_count"] == 0, payload
 assert payload["anchor_violation_count"] == 0, payload
@@ -65,6 +79,14 @@ assert payload["violation_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["family_status"] == "PASS_REQUIRED" for row in payload["family_status_rows"]), payload
 assert all(
     all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
+    for row in payload["family_status_rows"]
+), payload
+assert all(
+    all(cell["status"] == "PASS_REQUIRED" for cell in row.get("validator_surface_contract_rows", []))
+    for row in payload["family_status_rows"]
+), payload
+assert all(
+    len(row.get("validator_surface_contract_rows", [])) == 2
     for row in payload["family_status_rows"]
 ), payload
 assert all(
@@ -93,6 +115,7 @@ assert any(
 assert {row["family_id"] for row in payload["row_family_projection_rows"]} == {
     "registered_complete_root_mapping_families",
     "family_status_rows",
+    "family_validator_surface_contract_rows",
 }, payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
@@ -103,6 +126,10 @@ registered_row = next(
 status_row = next(
     row for row in payload["row_family_projection_rows"]
     if row["family_id"] == "family_status_rows"
+)
+contract_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "family_validator_surface_contract_rows"
 )
 assert registered_row["expected_count"] == payload["registered_complete_family_count"], payload
 assert registered_row["actual_count"] == payload["discovered_family_count"], payload
@@ -116,6 +143,128 @@ assert status_row["missing_ids"] == [], payload
 assert status_row["unexpected_ids"] == [], payload
 assert status_row["coverage_status"] == "PASS_REQUIRED", payload
 assert status_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert contract_row["expected_count"] == payload["expected_family_validator_surface_contract_row_count"], payload
+assert contract_row["actual_count"] == payload["validator_surface_contract_row_count"], payload
+assert contract_row["missing_ids"] == [], payload
+assert contract_row["unexpected_ids"] == [], payload
+assert contract_row["coverage_status"] == "PASS_REQUIRED", payload
+assert contract_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+SOURCE_POLICY_REPO="${TMP_ROOT}/source-policy-drift-repo"
+mirror_repo "${SOURCE_POLICY_REPO}"
+python3 - <<'PY' "${SOURCE_POLICY_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_validator_surface_contract_fields"] = ["validator_root_doc_anchor_contract"]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SOURCE_POLICY_JSON="${TMP_ROOT}/source-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${SOURCE_POLICY_REPO}" \
+  --json-only >"${SOURCE_POLICY_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed source validator-surface policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SOURCE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-001", payload
+assert "root_machine_registry_completeness_required_validator_surface_contract_fields_invalid" in payload["stale_reasons"], payload
+PY
+
+VALIDATOR_SURFACE_FIELD_REPO="${TMP_ROOT}/validator-surface-field-drift-repo"
+mirror_repo "${VALIDATOR_SURFACE_FIELD_REPO}"
+python3 - <<'PY' "${VALIDATOR_SURFACE_FIELD_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc.pop("validator_root_doc_anchor_contract", None)
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+VALIDATOR_SURFACE_FIELD_JSON="${TMP_ROOT}/validator-surface-field-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${VALIDATOR_SURFACE_FIELD_REPO}" \
+  --json-only >"${VALIDATOR_SURFACE_FIELD_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed missing validator-surface contract field drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${VALIDATOR_SURFACE_FIELD_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "validator_surface_contract_field_missing"
+    and row.get("family_id") == "root-corpus-authority"
+    and row.get("contract_field") == "validator_root_doc_anchor_contract"
+    for row in payload["completeness_violations"]
+), payload
+assert any(
+    row.get("family_id") == "root-corpus-authority"
+    and any(
+        cell.get("contract_field") == "validator_root_doc_anchor_contract"
+        and cell.get("status") == "FAIL_REQUIRED"
+        for cell in row.get("validator_surface_contract_rows", [])
+    )
+    for row in payload["family_status_rows"]
+), payload
+PY
+
+VALIDATOR_SURFACE_VALUE_REPO="${TMP_ROOT}/validator-surface-value-drift-repo"
+mirror_repo "${VALIDATOR_SURFACE_VALUE_REPO}"
+python3 - <<'PY' "${VALIDATOR_SURFACE_VALUE_REPO}/identity/protocol/mappings/root-corpus-ordering.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["validator_row_projection_contract"] = "advisory_only"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+VALIDATOR_SURFACE_VALUE_JSON="${TMP_ROOT}/validator-surface-value-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${VALIDATOR_SURFACE_VALUE_REPO}" \
+  --json-only >"${VALIDATOR_SURFACE_VALUE_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed validator-surface contract value drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${VALIDATOR_SURFACE_VALUE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "validator_surface_contract_value_mismatch"
+    and row.get("family_id") == "root-corpus-ordering"
+    and row.get("contract_field") == "validator_row_projection_contract"
+    and row.get("actual_value") == "advisory_only"
+    for row in payload["completeness_violations"]
+), payload
 PY
 
 ABSOLUTE_PATH_REPO="${TMP_ROOT}/absolute-path-drift-repo"
@@ -667,7 +816,9 @@ assert any(
     and row.get("family_id") == "root-shadow-lane"
     for row in payload["completeness_violations"]
 ), payload
-assert payload["machine_registry_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["validator_surface_contract_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["validator_surface_contract_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_registry_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
 assert payload["machine_registry_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 registered_row = next(
     row for row in payload["row_family_projection_rows"]
@@ -677,6 +828,10 @@ status_row = next(
     row for row in payload["row_family_projection_rows"]
     if row["family_id"] == "family_status_rows"
 )
+contract_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "family_validator_surface_contract_rows"
+)
 assert registered_row["expected_count"] == registered_row["actual_count"], payload
 assert registered_row["missing_ids"] == ["root-corpus-law-bundle"], payload
 assert registered_row["unexpected_ids"] == ["root-shadow-lane"], payload
@@ -684,6 +839,15 @@ assert registered_row["coverage_status"] == "PASS_REQUIRED", payload
 assert registered_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 assert status_row["coverage_status"] == "PASS_REQUIRED", payload
 assert status_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert contract_row["expected_count"] == payload["expected_family_validator_surface_contract_row_count"], payload
+assert contract_row["actual_count"] == payload["validator_surface_contract_row_count"], payload
+assert contract_row["missing_ids"] == [
+    "root-shadow-lane:validator_root_doc_anchor_contract",
+    "root-shadow-lane:validator_row_projection_contract",
+], payload
+assert contract_row["unexpected_ids"] == [], payload
+assert contract_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert contract_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 FAMILY_ROW_COVERAGE_REPO="${TMP_ROOT}/family-row-coverage-repo"

@@ -13,6 +13,8 @@ error_codes:
 - IP-RDQC-001
 - IP-RDQC-002
 - IP-RDQC-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
 anchor_checks:
   - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
     required_markers:

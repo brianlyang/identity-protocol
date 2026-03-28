@@ -967,6 +967,10 @@ A lawful root mapping family must therefore disclose the validator, probe,
 shared-common, emitted status-key, and emitted error-code surfaces that govern
 it.
 
+A lawful root mapping family must therefore also disclose its validator
+root-doc-anchor and row-projection contract surfaces as machine-readable
+surface rows rather than hidden validator folklore.
+
 Registered-complete root-mapping-family total and family-status-row total
 must therefore stay congruent under machine-readable coverage
 completeness rather than being left implicit.

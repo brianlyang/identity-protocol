@@ -12,6 +12,8 @@ error_codes:
 - IP-RCA-001
 - IP-RCA-002
 - IP-RCA-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
 authority_anchor_checks:
 - rel_path: identity/protocol/README.md
   required_markers:

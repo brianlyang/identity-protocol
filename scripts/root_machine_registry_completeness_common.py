@@ -80,6 +80,23 @@ def required_descriptor_field_modes_from_doc(doc: Mapping[str, Any]) -> dict[str
     return out
 
 
+def required_validator_surface_contract_fields_from_doc(doc: Mapping[str, Any]) -> tuple[str, ...]:
+    return _as_str_tuple(doc.get("required_validator_surface_contract_fields"))
+
+
+def required_validator_surface_contract_values_from_doc(doc: Mapping[str, Any]) -> dict[str, str]:
+    rows = doc.get("required_validator_surface_contract_values")
+    if not isinstance(rows, dict):
+        return {}
+    out: dict[str, str] = {}
+    for key, value in rows.items():
+        field = _norm_str(key)
+        contract = _norm_str(value)
+        if field and contract:
+            out[field] = contract
+    return out
+
+
 def repo_rel_path_scope_policy_from_doc(doc: Mapping[str, Any]) -> str:
     return _norm_str(doc.get("repo_rel_path_scope_policy"))
 

@@ -11,6 +11,8 @@ error_codes:
 - IP-RID-001
 - IP-RID-002
 - IP-RID-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
 registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
 ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
 authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml

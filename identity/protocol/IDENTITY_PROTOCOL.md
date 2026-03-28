@@ -143,6 +143,7 @@ Status transitions are controlled by governance/review, not by script commit alo
 3. A governed root mapping family must remain explicit as a current/version pair rather than hiding behind an unregistered file.
 4. Registry-completeness drift is a root-law failure, not a convenience-layer warning.
 5. Registry admission without discoverable validator/probe/common/status-key/error-code surfaces is still incomplete.
+5a. Registry admission without discoverable validator root-doc-anchor and row-projection contract surfaces is still incomplete.
 6. Repo-relative descriptor surfaces disclosed by an admitted family must remain repo-root relative and repo-contained; absolute-path or parent-escape capture is non-compliant.
 7. Repo-relative descriptor surfaces disclosed by an admitted family must also stay role-typed; validator, probe, and shared-common path classes are not interchangeable.
 8. Role-typed repo-relative descriptor surfaces disclosed by an admitted family must also stay cross-role coherent; validator/probe/common may not silently bind to different root surface stems.
