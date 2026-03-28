@@ -1322,6 +1322,10 @@ Missing or unexpected question identity must remain projected in fail-close
 machine output rather than being hidden behind row-count shorthand or
 summary-only verdict text.
 
+README root design-question closure completeness discipline must therefore stay
+congruent with admitted design-question-closure-completeness rows rather than
+becoming a freehand completeness summary.
+
 ### Machine-law primacy row-family completeness must stay explicit
 
 Machine-law primacy law is not a soft prose summary that may hide its machine

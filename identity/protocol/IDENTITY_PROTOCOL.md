@@ -255,6 +255,7 @@ implicit.
 3. Expected row identity set and emitted row identity set for each design-question closure family must also remain explicit; question identity drift may not be collapsed into summary-only counts.
 4. Protocol legality must not finalize design-question closure legality while missing or unexpected question identities remain known only inside validator logic.
 5. Fail-close design-question closure output must preserve missing/unexpected question identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+6. README root design-question closure completeness discipline rendered at protocol root must remain congruent with admitted design-question-closure-completeness rows rather than silently authoring an alternate completeness summary.
 
 ## Root machine-law primacy completeness boundary
 

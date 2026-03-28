@@ -24,21 +24,45 @@ anchor_checks:
         explicit as separate machine-readable row families.
       - The machine world must not finalize design-question closure legality while
         required question identity drift remains known only internally.
+      - README root design-question closure completeness discipline must therefore
+        stay congruent with admitted design-question-closure-completeness rows
+        rather than becoming a freehand completeness summary.
   - rel_path: identity/protocol/README.md
     required_markers:
       - '## Root design-question closure completeness discipline'
       - Design-question closure law is not a soft cross-reference bundle.
+      - These design-question-closure-completeness rules must remain bound to canonical
+        design-question-closure-completeness rows rather than drifting into soft
+        summary prose.
       - '1. required question-closure rows and emitted question-status rows must remain explicit as separate machine-readable row families;'
   - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
     required_markers:
       - '## Root design-question closure completeness boundary'
       - '1. Design-question closure law must remain machine-readable as separate required-question-closure and emitted-question-status row families.'
       - '4. Protocol legality must not finalize design-question closure legality while missing or unexpected question identities remain known only inside validator logic.'
+      - '6. README root design-question closure completeness discipline rendered at protocol root must remain congruent with admitted design-question-closure-completeness rows rather than silently authoring an alternate completeness summary.'
   - rel_path: identity/protocol/IDENTITY_RUNTIME.md
     required_markers:
       - '## Runtime design-question closure consumption boundary'
       - '1. Runtime consumes design-question closure law as separate required-question-closure and emitted-question-status row families rather than as undifferentiated design prose.'
       - '4. Runtime must not finalize design-question closure legality while missing or unexpected question identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root design-question closure completeness discipline as a governed completeness projection bound to admitted design-question-closure-completeness rows rather than as a freehand completeness summary.'
+design_question_closure_completeness_rows:
+  - order: 1
+    completeness_id: explicit_design_question_closure_row_families
+    contract_phrase: 'required question-closure rows and emitted question-status rows must remain explicit as separate machine-readable row families;'
+  - order: 2
+    completeness_id: congruent_design_question_closure_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_design_question_closure_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_design_question_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize design-question closure legality while missing or unexpected question identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_design_question_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected question identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'
 required_question_closure_rows:
   - order: 1
     question_id: ontology

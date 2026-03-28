@@ -18,8 +18,10 @@ from root_corpus_governance_common import find_missing_markers, load_root_corpus
 from root_design_question_closure_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
+    design_question_closure_completeness_rows_from_doc,
     load_root_design_question_closure,
     question_closure_rows_from_doc,
+    readme_design_question_closure_completeness_surface,
 )
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_stream_design_admissibility_common import load_root_stream_design_admissibility, required_question_rows_from_doc
@@ -106,6 +108,28 @@ EXPECTED_QUESTION_CLOSURE_ROWS = {
         ),
     },
 }
+EXPECTED_DESIGN_QUESTION_CLOSURE_COMPLETENESS_ROWS = {
+    "explicit_design_question_closure_row_families": {
+        "order": 1,
+        "contract_phrase": "required question-closure rows and emitted question-status rows must remain explicit as separate machine-readable row families;",
+    },
+    "congruent_design_question_closure_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_design_question_closure_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_design_question_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize design-question closure legality while missing or unexpected question identities remain known only internally;",
+    },
+    "fail_close_preserves_design_question_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected question identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_MAPPING_CHILDREN = (
     "root-design-question-closure.current.yaml",
     "root-design-question-closure.v1.yaml",
@@ -115,21 +139,25 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "### Design-question closure row-family completeness must stay explicit",
         "Required question-closure rows and emitted question-status rows must remain explicit as separate machine-readable row families.",
         "The machine world must not finalize design-question closure legality while required question identity drift remains known only internally.",
+        "README root design-question closure completeness discipline must therefore stay congruent with admitted design-question-closure-completeness rows rather than becoming a freehand completeness summary.",
     ),
     "identity/protocol/README.md": (
         "## Root design-question closure completeness discipline",
         "Design-question closure law is not a soft cross-reference bundle.",
+        "These design-question-closure-completeness rules must remain bound to canonical design-question-closure-completeness rows rather than drifting into soft summary prose.",
         "1. required question-closure rows and emitted question-status rows must remain explicit as separate machine-readable row families;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root design-question closure completeness boundary",
         "1. Design-question closure law must remain machine-readable as separate required-question-closure and emitted-question-status row families.",
         "4. Protocol legality must not finalize design-question closure legality while missing or unexpected question identities remain known only inside validator logic.",
+        "6. README root design-question closure completeness discipline rendered at protocol root must remain congruent with admitted design-question-closure-completeness rows rather than silently authoring an alternate completeness summary.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime design-question closure consumption boundary",
         "1. Runtime consumes design-question closure law as separate required-question-closure and emitted-question-status row families rather than as undifferentiated design prose.",
         "4. Runtime must not finalize design-question closure legality while missing or unexpected question identities remain known only inside validator machinery.",
+        "6. Runtime consumes README root design-question closure completeness discipline as a governed completeness projection bound to admitted design-question-closure-completeness rows rather than as a freehand completeness summary.",
     ),
 }
 
@@ -194,6 +222,10 @@ def main() -> int:
             error_code = ERR_REGISTRY
 
     closure_rows = question_closure_rows_from_doc(closure_doc) if closure_doc else ()
+    design_question_closure_completeness_rows = (
+        design_question_closure_completeness_rows_from_doc(closure_doc) if closure_doc else ()
+    )
+    design_question_closure_completeness_surface = readme_design_question_closure_completeness_surface(repo_root)
     root_doc_anchor_checks = root_doc_anchor_checks_from_doc(closure_doc) if closure_doc else ()
     admissibility_question_rows = required_question_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
@@ -221,6 +253,9 @@ def main() -> int:
                 error_code = ERR_REGISTRY
         if not closure_rows:
             stale_reasons.append("root_design_question_closure_rows_missing")
+            error_code = ERR_REGISTRY
+        if not design_question_closure_completeness_rows:
+            stale_reasons.append("root_design_question_closure_completeness_rows_missing")
             error_code = ERR_REGISTRY
         if append_expected_root_doc_anchor_stale_reasons(
             stale_reasons,
@@ -251,9 +286,42 @@ def main() -> int:
                     "non_contiguous_reason": "question_order_non_contiguous",
                     "extra_reason": "unexpected_rows",
                 },
+                {
+                    "actual_rows": design_question_closure_completeness_rows,
+                    "expected_rows": EXPECTED_DESIGN_QUESTION_CLOSURE_COMPLETENESS_ROWS,
+                    "field_name": "design_question_closure_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "duplicate_reason": "duplicate_design_question_closure_completeness_id",
+                    "non_contiguous_reason": "design_question_closure_completeness_row_order_non_contiguous",
+                    "missing_reason": "missing_design_question_closure_completeness_rows",
+                    "extra_reason": "extra_design_question_closure_completeness_rows",
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                    "order_reason": "design_question_closure_completeness_row_order_mismatch",
+                },
+                {
+                    "actual_rows": design_question_closure_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_DESIGN_QUESTION_CLOSURE_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "design_question_closure_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_design_question_closure_completeness_surface_phrase",
+                    "non_contiguous_reason": "design_question_closure_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_design_question_closure_completeness_surface_rows",
+                    "extra_reason": "extra_design_question_closure_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "design_question_closure_completeness_surface_order_mismatch",
+                },
             ),
             structure_violations=structure_violations,
-            support_violations=structure_violations,
+            support_violations=closure_violations,
         )
 
         row_map = {row.question_id: row for row in closure_rows}
@@ -269,6 +337,47 @@ def main() -> int:
                         "row_id": question_id,
                     }
                 )
+        expected_design_question_closure_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_DESIGN_QUESTION_CLOSURE_COMPLETENESS_ROWS.values()
+        ]
+        actual_design_question_closure_completeness_phrases = [
+            row.contract_phrase for row in design_question_closure_completeness_surface.rows
+        ]
+        expected_design_question_closure_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_DESIGN_QUESTION_CLOSURE_COMPLETENESS_ROWS.values()
+        ]
+        actual_design_question_closure_completeness_orders = [
+            row.order for row in design_question_closure_completeness_surface.rows
+        ]
+        for reason in design_question_closure_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "design_question_closure_completeness_surface",
+                    "reason": f"design_question_closure_completeness_surface_{reason}",
+                }
+            )
+        if actual_design_question_closure_completeness_phrases and tuple(
+            actual_design_question_closure_completeness_phrases
+        ) != tuple(expected_design_question_closure_completeness_phrases):
+            closure_violations.append(
+                {
+                    "field": "design_question_closure_completeness_surface",
+                    "reason": "design_question_closure_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_design_question_closure_completeness_phrases,
+                    "actual": actual_design_question_closure_completeness_phrases,
+                }
+            )
+        if actual_design_question_closure_completeness_orders and tuple(
+            actual_design_question_closure_completeness_orders
+        ) != tuple(expected_design_question_closure_completeness_orders):
+            closure_violations.append(
+                {
+                    "field": "design_question_closure_completeness_surface",
+                    "reason": "design_question_closure_completeness_surface_order_mismatch",
+                    "expected": expected_design_question_closure_completeness_orders,
+                    "actual": actual_design_question_closure_completeness_orders,
+                }
+            )
         if structure_violations:
             error_code = ERR_STRUCTURE
 
@@ -411,9 +520,13 @@ def main() -> int:
         if (closure_violations or root_doc_anchor_violations) and not error_code:
             error_code = ERR_CLOSURE
 
-    status = STATUS_PASS_REQUIRED
-    if stale_reasons or structure_violations or closure_violations or root_doc_anchor_violations:
-        status = STATUS_FAIL_REQUIRED
+    stale_reasons.extend(f"structure_violation:{row['field']}:{row['reason']}" for row in structure_violations)
+    stale_reasons.extend(f"closure_violation:{row['field']}:{row['reason']}" for row in closure_violations)
+    stale_reasons.extend(
+        f"anchor_violation:{row['rel_path']}:{row['reason']}" for row in root_doc_anchor_violations
+    )
+
+    status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
 
     row_family_projection_rows = project_row_families(
         families=(
@@ -431,6 +544,24 @@ def main() -> int:
                 "expected_rows": EXPECTED_QUESTION_CLOSURE_ROWS,
                 "id_attr": "question_id",
             },
+            {
+                "family_id": "design_question_closure_completeness_rows",
+                "member_id_key": "completeness_id",
+                "actual_rows": design_question_closure_completeness_rows,
+                "expected_rows": {
+                    completeness_id: {} for completeness_id in EXPECTED_DESIGN_QUESTION_CLOSURE_COMPLETENESS_ROWS
+                },
+                "id_attr": "completeness_id",
+            },
+            {
+                "family_id": "design_question_closure_completeness_surface",
+                "member_id_key": "contract_phrase",
+                "actual_rows": design_question_closure_completeness_surface.rows,
+                "expected_rows": {
+                    row["contract_phrase"]: {} for row in EXPECTED_DESIGN_QUESTION_CLOSURE_COMPLETENESS_ROWS.values()
+                },
+                "id_attr": "contract_phrase",
+            },
         ),
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
@@ -443,6 +574,7 @@ def main() -> int:
         "mapping_entry_file": str(closure_entry_path.relative_to(repo_root)),
         "mapping_active_file": str(closure_active_path.relative_to(repo_root)),
         "question_closure_count": len(closure_rows),
+        "design_question_closure_completeness_row_count": len(design_question_closure_completeness_rows),
         **project_root_contract_support_projection(
             prefix="design_question_closure",
             row_family_projection_rows=row_family_projection_rows,
@@ -453,6 +585,26 @@ def main() -> int:
         ),
         "row_family_projection_rows": row_family_projection_rows,
         "question_ids": [row.question_id for row in sorted(closure_rows, key=lambda item: item.order)],
+        "design_question_closure_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted(design_question_closure_completeness_rows, key=lambda item: item.order)
+        ],
+        "design_question_closure_completeness_surface": {
+            "rel_path": design_question_closure_completeness_surface.rel_path,
+            "entry_count": len(design_question_closure_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in design_question_closure_completeness_surface.rows
+            ],
+            "extraction_violations": list(design_question_closure_completeness_surface.extraction_violations),
+        },
         "question_status_rows": question_status_rows,
         "structure_violations": structure_violations,
         "closure_violations": closure_violations,

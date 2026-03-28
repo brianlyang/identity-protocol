@@ -205,6 +205,7 @@ implicit.
 3. Runtime must also keep expected row identity set and emitted row identity set for each design-question closure family explicit rather than collapsing question identity drift into summary-only counts.
 4. Runtime must not finalize design-question closure legality while missing or unexpected question identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected question identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+6. Runtime consumes README root design-question closure completeness discipline as a governed completeness projection bound to admitted design-question-closure-completeness rows rather than as a freehand completeness summary.
 
 ## Runtime machine-law primacy consumption boundary
 

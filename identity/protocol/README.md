@@ -540,6 +540,7 @@ These question-routing-completeness rules must remain bound to canonical questio
 ## Root design-question closure completeness discipline
 
 Design-question closure law is not a soft cross-reference bundle.
+These design-question-closure-completeness rules must remain bound to canonical design-question-closure-completeness rows rather than drifting into soft summary prose.
 
 1. required question-closure rows and emitted question-status rows must remain explicit as separate machine-readable row families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
