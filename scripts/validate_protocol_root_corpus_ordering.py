@@ -34,7 +34,9 @@ from root_corpus_ordering_common import (
     load_root_corpus_ordering,
     ordering_anchor_checks_from_doc,
     protocol_boundary_root_contract_projection_rows_from_doc,
+    readme_root_reading_order_surface,
     reading_order_rows_from_doc,
+    root_reading_order_stages_from_doc,
     source_order_rows_from_doc,
 )
 from root_corpus_precedence_common import load_root_corpus_precedence, precedence_profiles_from_doc
@@ -75,6 +77,7 @@ EXPECTED_ADJUDICATION_SURFACE_PROFILES = {
 }
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/README.md": (
+        "This root reading order must remain bound to canonical root-reading-order stage rows rather than becoming a freehand alternate entry ladder.",
         "## Root adjudication-surface discipline",
         "mappings admit applicable machine law and registry truth for current-turn legality;",
         "validators test legality against that admitted law rather than inventing new origin law;",
@@ -84,6 +87,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "this manual root-contract index is explanatory only and must remain congruent with the admitted `reading_order` root-contract sequence rather than becoming an independently authored alternate order.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "README root reading order must therefore stay congruent with admitted root-reading-order-stage rows rather than becoming a freehand alternate entry ladder.",
         "### Adjudication surfaces are phase-governed, not interchangeable",
         "mappings admit applicable law into the current-turn legality path;",
         "validators evaluate legality against admitted law rather than inventing new origin law;",
@@ -92,6 +96,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "receipts close the adjudicated verdict rather than back-authoring the earlier legality phases they summarize.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "README root reading order stages rendered at protocol root must remain congruent with admitted root-reading-order-stage rows rather than silently authoring an alternate entry ladder.",
         "## Root adjudication-surface boundary",
         "mappings admit machine-consumed law and registry truth into current-turn legality;",
         "validators evaluate legality against that admitted law rather than authoring new source law;",
@@ -101,6 +106,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "The manual root-contract enumeration carried by this constitution is an explanatory projection and must remain congruent with the admitted `reading_order` root-contract sequence and admitted root-contract projection labels rather than becoming an independently authored alternate root index or relabeling domain law.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
+        "Runtime consumes README root reading order as a governed stage projection bound to admitted root-reading-order-stage rows rather than as a freehand alternate entry ladder.",
         "## Runtime adjudication-surface consumption boundary",
         "Runtime consumes mappings as admissible law-resolution surfaces rather than as optional lookup hints.",
         "Runtime consumes validators as legality-evaluation surfaces rather than as replaceable commentary.",
@@ -108,6 +114,113 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "Runtime consumes runtime state as live-truth binding only after prior legality phases remain satisfied.",
         "Runtime consumes receipts as adjudicated verdict closure rather than as upstream law-authoring surfaces.",
     ),
+}
+EXPECTED_ROOT_READING_ORDER_STAGES = {
+    "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`": {
+        "order": 1,
+        "bound_reading_order_rel_paths": (
+            "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+        ),
+        "required_markers": (
+            "the bottom theory;",
+            "the generative reason the identity protocol exists at all;",
+            "the interpretive source for machine-law priorities, semantic singularity, fail-close preference, lifecycle closure, and shared-law vs instance-adaptation boundaries.",
+        ),
+    },
+    "`IDENTITY_PROTOCOL.md`": {
+        "order": 2,
+        "bound_reading_order_rel_paths": (
+            "identity/protocol/IDENTITY_PROTOCOL.md",
+        ),
+        "required_markers": (
+            "the protocol-law constitution;",
+            "the root protocol boundary, governance stack, and active stream framing.",
+        ),
+    },
+    "`IDENTITY_RUNTIME.md`": {
+        "order": 3,
+        "bound_reading_order_rel_paths": (
+            "identity/protocol/IDENTITY_RUNTIME.md",
+        ),
+        "required_markers": (
+            "the runtime constitution;",
+            "how protocol law is embodied in runtime integration, startup, execution checks, and active-runtime boundaries.",
+        ),
+    },
+    "root contract files": {
+        "order": 4,
+        "bound_reading_order_rel_paths": (
+            "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
+            "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
+            "identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md",
+            "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
+            "identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md",
+            "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
+            "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+            "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md",
+            "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
+            "identity/protocol/IDENTITY_DISCOVERY.md",
+            "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
+            "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
+            "identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md",
+            "identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md",
+            "identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md",
+            "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
+        ),
+        "required_markers": (
+            "`MACHINE_LAW_PRIMACY_CONTRACT.md`",
+            "`MACHINE_WORLD_ONTOLOGY_CONTRACT.md`",
+            "`CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md`",
+            "`DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md`",
+            "`SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md`",
+            "`ENTRY_SURFACE_LEGITIMACY_CONTRACT.md`",
+            "`ERROR_TERMINALITY_CONTRACT.md`",
+            "`ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md`",
+            "`IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`",
+            "`IDENTITY_DISCOVERY.md`",
+            "`AGENT_HANDOFF_CONTRACT.md`",
+            "`IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md`",
+            "`PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`",
+            "`STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`",
+            "`TRUTH_LIFECYCLE_CONTRACT.md`",
+            "`OPERATOR_ANSWER_SURFACE_CONTRACT.md`",
+            "this manual root-contract index is explanatory only and must remain congruent with the admitted `reading_order` root-contract sequence rather than becoming an independently authored alternate order.",
+            "explanatory root-contract summaries rendered elsewhere in the root corpus must remain congruent with admitted root-contract projection labels rather than relabeling domain law.",
+            "these freeze concrete contract law for their specific domains.",
+        ),
+    },
+    "machine-consumed registries and mappings": {
+        "order": 5,
+        "bound_reading_order_rel_paths": (
+            "identity/protocol/mappings",
+        ),
+        "required_markers": (
+            "`mappings/`",
+            "these freeze machine-facing rows, bindings, and registry truth.",
+        ),
+    },
+    "specialized subdomain protocol packs": {
+        "order": 6,
+        "bound_reading_order_rel_paths": (
+            "identity/protocol/broadcast",
+            "identity/protocol/plugins",
+        ),
+        "required_markers": (
+            "`broadcast/`",
+            "`plugins/`",
+            "these extend the root protocol into narrower governed surfaces.",
+        ),
+    },
+    "non-runtime or support material": {
+        "order": 7,
+        "bound_reading_order_rel_paths": (
+            "identity/protocol/fixtures",
+        ),
+        "required_markers": (
+            "`fixtures/`",
+            "these are never active-runtime truth.",
+        ),
+    },
 }
 
 
@@ -170,12 +283,14 @@ def main() -> int:
 
     source_rows = source_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
+    root_reading_order_stages = root_reading_order_stages_from_doc(ordering_doc) if ordering_doc else ()
     protocol_boundary_projection_rows = (
         protocol_boundary_root_contract_projection_rows_from_doc(ordering_doc) if ordering_doc else ()
     )
     adjudication_rows = adjudication_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     adjudication_surface_profiles = adjudication_surface_profiles_from_doc(ordering_doc) if ordering_doc else ()
     ordering_anchor_checks = ordering_anchor_checks_from_doc(ordering_doc) if ordering_doc else ()
+    root_reading_order_stage_surface = readme_root_reading_order_surface(repo_root)
     manual_root_contract_surfaces = manual_root_contract_index_surfaces(repo_root)
     manual_root_contract_surface_map = {surface.surface_id: surface for surface in manual_root_contract_surfaces}
     protocol_boundary_projection_surface = protocol_boundary_root_contract_projection_surface(repo_root)
@@ -225,6 +340,9 @@ def main() -> int:
         if not reading_rows:
             stale_reasons.append("root_corpus_ordering_reading_order_missing")
             error_code = ERR_REGISTRY
+        if not root_reading_order_stages:
+            stale_reasons.append("root_corpus_ordering_root_reading_order_stages_missing")
+            error_code = ERR_REGISTRY
         if not protocol_boundary_projection_rows:
             stale_reasons.append("root_corpus_ordering_protocol_boundary_root_contract_projections_missing")
             error_code = ERR_REGISTRY
@@ -260,6 +378,11 @@ def main() -> int:
     source_classes = [row.corpus_class for row in source_rows]
     reading_orders = [row.order for row in reading_rows]
     reading_paths = [row.rel_path for row in reading_rows]
+    root_reading_order_stage_map = {row.stage_label: row for row in root_reading_order_stages}
+    root_reading_order_stage_orders = [row.order for row in root_reading_order_stages]
+    root_reading_order_stage_surface_map = {row.stage_label: row for row in root_reading_order_stage_surface.rows}
+    root_reading_order_stage_surface_orders = [row.order for row in root_reading_order_stage_surface.rows]
+    root_reading_order_stage_surface_labels = [row.stage_label for row in root_reading_order_stage_surface.rows]
     protocol_boundary_projection_orders = [row.order for row in protocol_boundary_projection_rows]
     protocol_boundary_projection_paths = [row.rel_path for row in protocol_boundary_projection_rows]
     adjudication_orders = [row.order for row in adjudication_rows]
@@ -268,6 +391,7 @@ def main() -> int:
     adjudication_phase_orders = [row.phase_order for row in adjudication_surface_profiles]
     sorted_source_rows = sorted(source_rows, key=lambda item: item.order)
     sorted_reading_rows = sorted(reading_rows, key=lambda item: item.order)
+    sorted_root_reading_order_stages = sorted(root_reading_order_stages, key=lambda item: item.order)
     sorted_protocol_boundary_projection_rows = sorted(protocol_boundary_projection_rows, key=lambda item: item.order)
     sorted_adjudication_rows = sorted(adjudication_rows, key=lambda item: item.order)
     sorted_adjudication_surface_profiles = sorted(adjudication_surface_profiles, key=lambda item: item.phase_order)
@@ -286,6 +410,43 @@ def main() -> int:
             structure_violations.append({"field": "source_order", "reason": "root_index_must_not_be_generative_source"})
         if len(set(reading_orders)) != len(reading_orders) or not contiguous_orders(sorted(reading_orders)):
             structure_violations.append({"field": "reading_order", "reason": "reading_order_non_contiguous"})
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="root_reading_order_stages",
+            expected_ids=EXPECTED_ROOT_READING_ORDER_STAGES,
+            actual_ids=root_reading_order_stage_map,
+            payload_key="stage_labels",
+            missing_reason="missing_root_reading_order_stages",
+            extra_reason="extra_root_reading_order_stages",
+            duplicate_reason="duplicate_root_reading_order_stage",
+            actual_total_count=len(root_reading_order_stages),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="root_reading_order_stage_surface",
+            expected_ids=EXPECTED_ROOT_READING_ORDER_STAGES,
+            actual_ids=root_reading_order_stage_surface_map,
+            payload_key="stage_labels",
+            missing_reason="missing_root_reading_order_surface_stages",
+            extra_reason="extra_root_reading_order_surface_stages",
+            duplicate_reason="duplicate_root_reading_order_surface_stage",
+            actual_total_count=len(root_reading_order_stage_surface.rows),
+        )
+        if len(set(root_reading_order_stage_orders)) != len(root_reading_order_stage_orders) or not contiguous_orders(
+            sorted(root_reading_order_stage_orders)
+        ):
+            structure_violations.append(
+                {"field": "root_reading_order_stages", "reason": "root_reading_order_stage_order_non_contiguous"}
+            )
+        if len(set(root_reading_order_stage_surface_orders)) != len(root_reading_order_stage_surface_orders) or not contiguous_orders(
+            sorted(root_reading_order_stage_surface_orders)
+        ):
+            structure_violations.append(
+                {
+                    "field": "root_reading_order_stage_surface",
+                    "reason": "root_reading_order_surface_stage_order_non_contiguous",
+                }
+            )
         if len(set(protocol_boundary_projection_orders)) != len(protocol_boundary_projection_orders) or not contiguous_orders(
             sorted(protocol_boundary_projection_orders)
         ):
@@ -360,6 +521,102 @@ def main() -> int:
             duplicate_reason="reading_order_duplicate_rel_path",
             actual_total_count=len(reading_paths),
         )
+        expected_root_reading_order_stage_labels = list(EXPECTED_ROOT_READING_ORDER_STAGES.keys())
+        expected_root_reading_order_stage_orders = [
+            int(stage["order"]) for stage in EXPECTED_ROOT_READING_ORDER_STAGES.values()
+        ]
+        if root_reading_order_stage_surface_labels and tuple(root_reading_order_stage_surface_labels) != tuple(
+            expected_root_reading_order_stage_labels
+        ):
+            coverage_violations.append(
+                {
+                    "field": "root_reading_order_stage_surface",
+                    "reason": "root_reading_order_surface_label_order_mismatch",
+                    "expected": expected_root_reading_order_stage_labels,
+                    "actual": root_reading_order_stage_surface_labels,
+                }
+            )
+        if root_reading_order_stage_surface_orders and tuple(root_reading_order_stage_surface_orders) != tuple(
+            expected_root_reading_order_stage_orders
+        ):
+            coverage_violations.append(
+                {
+                    "field": "root_reading_order_stage_surface",
+                    "reason": "root_reading_order_surface_stage_order_mismatch",
+                    "expected": expected_root_reading_order_stage_orders,
+                    "actual": root_reading_order_stage_surface_orders,
+                }
+            )
+        for stage_label, expected in EXPECTED_ROOT_READING_ORDER_STAGES.items():
+            stage_row = root_reading_order_stage_map.get(stage_label)
+            if stage_row is not None:
+                if stage_row.order != int(expected["order"]):
+                    coverage_violations.append(
+                        {
+                            "field": "root_reading_order_stages",
+                            "reason": "stage_order_mismatch",
+                            "stage_label": stage_label,
+                            "expected": int(expected["order"]),
+                            "actual": stage_row.order,
+                        }
+                    )
+                if tuple(stage_row.bound_reading_order_rel_paths) != tuple(expected["bound_reading_order_rel_paths"]):
+                    coverage_violations.append(
+                        {
+                            "field": "root_reading_order_stages",
+                            "reason": "bound_reading_order_rel_paths_mismatch",
+                            "stage_label": stage_label,
+                            "expected": list(expected["bound_reading_order_rel_paths"]),
+                            "actual": list(stage_row.bound_reading_order_rel_paths),
+                        }
+                    )
+                if tuple(stage_row.required_markers) != tuple(expected["required_markers"]):
+                    coverage_violations.append(
+                        {
+                            "field": "root_reading_order_stages",
+                            "reason": "required_markers_mismatch",
+                            "stage_label": stage_label,
+                            "expected": list(expected["required_markers"]),
+                            "actual": list(stage_row.required_markers),
+                        }
+                    )
+            surface_row = root_reading_order_stage_surface_map.get(stage_label)
+            if surface_row is not None:
+                surface_text = "\n".join(surface_row.body_lines)
+                for marker in expected["required_markers"]:
+                    if marker not in surface_text:
+                        coverage_violations.append(
+                            {
+                                "field": "root_reading_order_stage_surface",
+                                "reason": "required_marker_missing",
+                                "stage_label": stage_label,
+                                "marker": marker,
+                            }
+                        )
+        for reason in root_reading_order_stage_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "root_reading_order_stage_surface",
+                    "reason": f"root_reading_order_surface_{reason}",
+                }
+            )
+        grouped_root_reading_order_rel_paths = tuple(
+            rel_path
+            for row in sorted_root_reading_order_stages
+            for rel_path in row.bound_reading_order_rel_paths
+        )
+        canonical_root_reading_order_rel_paths = tuple(
+            row.rel_path for row in sorted_reading_rows if row.rel_path != root_index_entry
+        )
+        if grouped_root_reading_order_rel_paths != canonical_root_reading_order_rel_paths:
+            coverage_violations.append(
+                {
+                    "field": "root_reading_order_stages",
+                    "reason": "bound_reading_order_rel_paths_sequence_mismatch",
+                    "expected": list(canonical_root_reading_order_rel_paths),
+                    "actual": list(grouped_root_reading_order_rel_paths),
+                }
+            )
         append_membership_delta_violations(
             coverage_violations,
             field_name="protocol_boundary_root_contract_projections",
@@ -647,6 +904,20 @@ def main() -> int:
                 "id_attr": "rel_path",
             },
             {
+                "family_id": "root_reading_order_stages",
+                "member_id_key": "stage_label",
+                "actual_rows": root_reading_order_stages,
+                "expected_rows": EXPECTED_ROOT_READING_ORDER_STAGES,
+                "id_attr": "stage_label",
+            },
+            {
+                "family_id": "root_reading_order_stage_surface",
+                "member_id_key": "stage_label",
+                "actual_rows": root_reading_order_stage_surface.rows,
+                "expected_rows": EXPECTED_ROOT_READING_ORDER_STAGES,
+                "id_attr": "stage_label",
+            },
+            {
                 "family_id": README_ROOT_CONTRACT_INDEX_SURFACE_ID,
                 "member_id_key": "rel_path",
                 "actual_rows": manual_root_contract_surface_map.get(README_ROOT_CONTRACT_INDEX_SURFACE_ID).rows
@@ -738,6 +1009,29 @@ def main() -> int:
             }
             for row in sorted_reading_rows
         ],
+        "root_reading_order_stage_count": len(root_reading_order_stages),
+        "root_reading_order_stages": [
+            {
+                "order": row.order,
+                "stage_label": row.stage_label,
+                "bound_reading_order_rel_paths": list(row.bound_reading_order_rel_paths),
+                "required_markers": list(row.required_markers),
+            }
+            for row in sorted_root_reading_order_stages
+        ],
+        "root_reading_order_stage_surface": {
+            "rel_path": root_reading_order_stage_surface.rel_path,
+            "entry_count": len(root_reading_order_stage_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "stage_label": row.stage_label,
+                    "body_lines": list(row.body_lines),
+                }
+                for row in root_reading_order_stage_surface.rows
+            ],
+            "extraction_violations": list(root_reading_order_stage_surface.extraction_violations),
+        },
         "canonical_root_contract_entry_count": len(canonical_root_contract_entry_paths),
         "canonical_root_contract_entry_paths": list(canonical_root_contract_entry_paths),
         "manual_root_contract_index_surfaces": [

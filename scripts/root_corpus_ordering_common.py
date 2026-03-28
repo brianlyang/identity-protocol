@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
@@ -13,6 +14,11 @@ from root_contract_anchor_checks_common import RootDocAnchorCheck, root_doc_anch
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_CORPUS_ORDERING_CURRENT = "identity/protocol/mappings/root-corpus-ordering.current.yaml"
+ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
+ROOT_READING_ORDER_SECTION_MARKER = "## Root reading order"
+ORDERED_BOLD_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+\*\*(.*?)\*\*")
+HEADING_RE = re.compile(r"^##\s+")
+HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
 
 
 @dataclass(frozen=True)
@@ -28,6 +34,28 @@ class ReadingOrderRow:
     order: int
     rel_path: str
     entry_role: str
+
+
+@dataclass(frozen=True)
+class RootReadingOrderStage:
+    order: int
+    stage_label: str
+    bound_reading_order_rel_paths: tuple[str, ...] = field(default_factory=tuple)
+    required_markers: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class RootReadingOrderStageSurfaceRow:
+    order: int
+    stage_label: str
+    body_lines: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class RootReadingOrderStageSurface:
+    rel_path: str
+    rows: tuple[RootReadingOrderStageSurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -62,6 +90,12 @@ def _as_str_tuple(value: Any) -> tuple[str, ...]:
     if not isinstance(value, list):
         return ()
     return tuple(token for token in (str(item or "").strip() for item in value) if token)
+
+
+def _as_path_tuple(value: Any) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(token for token in (_norm_str(item) for item in value) if token)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -143,6 +177,32 @@ def reading_order_rows_from_doc(ordering_doc: Mapping[str, Any]) -> tuple[Readin
     return tuple(out)
 
 
+def root_reading_order_stages_from_doc(ordering_doc: Mapping[str, Any]) -> tuple[RootReadingOrderStage, ...]:
+    rows = ordering_doc.get("root_reading_order_stages")
+    if not isinstance(rows, list):
+        return ()
+    out: list[RootReadingOrderStage] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        stage_label = str(row.get("stage_label") or "").strip()
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not stage_label:
+            continue
+        out.append(
+            RootReadingOrderStage(
+                order=order,
+                stage_label=stage_label,
+                bound_reading_order_rel_paths=_as_path_tuple(row.get("bound_reading_order_rel_paths")),
+                required_markers=_as_str_tuple(row.get("required_markers")),
+            )
+        )
+    return tuple(out)
+
+
 def protocol_boundary_root_contract_projection_rows_from_doc(
     ordering_doc: Mapping[str, Any],
 ) -> tuple[ProtocolBoundaryRootContractProjectionRow, ...]:
@@ -215,3 +275,75 @@ def adjudication_surface_profiles_from_doc(ordering_doc: Mapping[str, Any]) -> t
             )
         )
     return tuple(out)
+
+
+def readme_root_reading_order_surface(repo_root: Path) -> RootReadingOrderStageSurface:
+    path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
+    if not path.exists() or not path.is_file():
+        return RootReadingOrderStageSurface(
+            rel_path=ROOT_PROTOCOL_README_REL_PATH,
+            rows=(),
+            extraction_violations=("target_missing",),
+        )
+
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    section_found = False
+    rows: list[RootReadingOrderStageSurfaceRow] = []
+    current_order = 0
+    current_label = ""
+    current_body_lines: list[str] = []
+
+    def flush_current() -> None:
+        nonlocal current_order, current_label, current_body_lines
+        if current_order <= 0 or not current_label:
+            return
+        rows.append(
+            RootReadingOrderStageSurfaceRow(
+                order=current_order,
+                stage_label=current_label,
+                body_lines=tuple(line for line in current_body_lines if line),
+            )
+        )
+        current_order = 0
+        current_label = ""
+        current_body_lines = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == ROOT_READING_ORDER_SECTION_MARKER:
+            section_found = True
+            continue
+        if not section_found:
+            continue
+        if HEADING_RE.match(stripped) or HORIZONTAL_RULE_RE.match(stripped):
+            break
+        match = ORDERED_BOLD_ITEM_RE.match(stripped)
+        if match:
+            flush_current()
+            current_order = int(match.group(1))
+            current_label = match.group(2).strip()
+            continue
+        if current_order <= 0:
+            continue
+        if stripped.startswith("- "):
+            current_body_lines.append(stripped[2:].strip())
+        elif stripped and line.startswith((" ", "\t")):
+            current_body_lines.append(stripped)
+        elif stripped:
+            flush_current()
+            break
+    flush_current()
+
+    violations: list[str] = []
+    if not section_found:
+        violations.append("section_marker_missing")
+    elif not rows:
+        violations.append("stage_rows_missing")
+    elif any(not row.body_lines for row in rows):
+        violations.append("stage_body_missing")
+
+    return RootReadingOrderStageSurface(
+        rel_path=ROOT_PROTOCOL_README_REL_PATH,
+        rows=tuple(rows),
+        extraction_violations=tuple(violations),
+    )

@@ -147,6 +147,7 @@ For the machine world, at least three different orders must remain explicit:
    - this answers where protocol law comes from.
 2. **root reading-order**
    - philosophy → constitution → runtime → root contracts → mappings/registries → specialized packs;
+   - README root reading order must stay bound to canonical root-reading-order stage rows rather than becoming a freehand alternate entry ladder;
    - this answers how a machine-governed participant should enter the root corpus without semantic confusion.
 3. **adjudication-order**
    - current machine verdict must still resolve from machine-consumed enforcement surfaces such as frozen contracts, mappings, validators, probes, runtime state, and receipts;
@@ -1205,9 +1206,10 @@ verdict text.
 Ordering law is not a soft prose summary that may hide its machine rows
 behind aggregate counts.
 
-Required source-order, reading-order, adjudication-order, and
-adjudication-surface-profile families must remain explicit as separate
-machine-readable row families.
+Required source-order, reading-order, root-reading-order-stage,
+root-reading-order-stage-surface, explanatory root-contract
+index/projection, adjudication-order, and adjudication-surface-profile
+families must remain explicit as separate machine-readable row families.
 
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left
@@ -1218,11 +1220,14 @@ also remain machine-readable rather than being collapsed into aggregate counts
 or generic structure failure.
 
 The machine world must not finalize ordering legality while required source,
-entry, or adjudication-surface identity drift remains known only internally.
+entry, root-reading-order-stage, manual-root-contract, or
+adjudication-surface identity drift remains known only internally.
 
 Missing or unexpected row identity must remain projected in fail-close machine
 output rather than being hidden behind row-count shorthand or summary-only
 verdict text.
+
+README root reading order must therefore stay congruent with admitted root-reading-order-stage rows rather than becoming a freehand alternate entry ladder.
 
 ### Question-routing row-family completeness must stay explicit
 

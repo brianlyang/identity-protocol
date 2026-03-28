@@ -20,6 +20,8 @@ probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required
 ordering_anchor_checks:
 - rel_path: identity/protocol/README.md
   required_markers:
+  - This root reading order must remain bound to canonical root-reading-order
+    stage rows rather than becoming a freehand alternate entry ladder.
   - '## Root adjudication-surface discipline'
   - mappings admit applicable machine law and registry truth for current-turn legality;
   - validators test legality against that admitted law rather than inventing new
@@ -34,6 +36,8 @@ ordering_anchor_checks:
     an independently authored alternate order.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
+  - README root reading order must therefore stay congruent with admitted root-reading-order-stage
+    rows rather than becoming a freehand alternate entry ladder.
   - '### Adjudication surfaces are phase-governed, not interchangeable'
   - mappings admit applicable law into the current-turn legality path;
   - validators evaluate legality against admitted law rather than inventing new
@@ -45,6 +49,9 @@ ordering_anchor_checks:
     legality phases they summarize.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
+  - README root reading order stages rendered at protocol root must remain congruent
+    with admitted root-reading-order-stage rows rather than silently authoring
+    an alternate entry ladder.
   - '## Root adjudication-surface boundary'
   - mappings admit machine-consumed law and registry truth into current-turn legality;
   - validators evaluate legality against that admitted law rather than authoring
@@ -59,6 +66,9 @@ ordering_anchor_checks:
     an independently authored alternate root index or relabeling domain law.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
+  - Runtime consumes README root reading order as a governed stage projection
+    bound to admitted root-reading-order-stage rows rather than as a freehand
+    alternate entry ladder.
   - '## Runtime adjudication-surface consumption boundary'
   - Runtime consumes mappings as admissible law-resolution surfaces rather than
     as optional lookup hints.
@@ -172,6 +182,98 @@ reading_order:
 - order: 24
   rel_path: identity/protocol/fixtures
   entry_role: demoted_support_entry
+root_reading_order_stages:
+- order: 1
+  stage_label: '`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`'
+  bound_reading_order_rel_paths:
+  - identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+  required_markers:
+  - the bottom theory;
+  - the generative reason the identity protocol exists at all;
+  - the interpretive source for machine-law priorities, semantic singularity,
+    fail-close preference, lifecycle closure, and shared-law vs instance-adaptation
+    boundaries.
+- order: 2
+  stage_label: '`IDENTITY_PROTOCOL.md`'
+  bound_reading_order_rel_paths:
+  - identity/protocol/IDENTITY_PROTOCOL.md
+  required_markers:
+  - the protocol-law constitution;
+  - the root protocol boundary, governance stack, and active stream framing.
+- order: 3
+  stage_label: '`IDENTITY_RUNTIME.md`'
+  bound_reading_order_rel_paths:
+  - identity/protocol/IDENTITY_RUNTIME.md
+  required_markers:
+  - the runtime constitution;
+  - how protocol law is embodied in runtime integration, startup, execution checks,
+    and active-runtime boundaries.
+- order: 4
+  stage_label: root contract files
+  bound_reading_order_rel_paths:
+  - identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
+  - identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md
+  - identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md
+  - identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md
+  - identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md
+  - identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md
+  - identity/protocol/ERROR_TERMINALITY_CONTRACT.md
+  - identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md
+  - identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
+  - identity/protocol/IDENTITY_DISCOVERY.md
+  - identity/protocol/AGENT_HANDOFF_CONTRACT.md
+  - identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md
+  - identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md
+  - identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
+  - identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md
+  - identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
+  required_markers:
+  - '`MACHINE_LAW_PRIMACY_CONTRACT.md`'
+  - '`MACHINE_WORLD_ONTOLOGY_CONTRACT.md`'
+  - '`CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md`'
+  - '`DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md`'
+  - '`SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md`'
+  - '`ENTRY_SURFACE_LEGITIMACY_CONTRACT.md`'
+  - '`ERROR_TERMINALITY_CONTRACT.md`'
+  - '`ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md`'
+  - '`IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`'
+  - '`IDENTITY_DISCOVERY.md`'
+  - '`AGENT_HANDOFF_CONTRACT.md`'
+  - '`IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md`'
+  - '`PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`'
+  - '`STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`'
+  - '`TRUTH_LIFECYCLE_CONTRACT.md`'
+  - '`OPERATOR_ANSWER_SURFACE_CONTRACT.md`'
+  - this manual root-contract index is explanatory only and must remain congruent
+    with the admitted `reading_order` root-contract sequence rather than becoming
+    an independently authored alternate order.
+  - explanatory root-contract summaries rendered elsewhere in the root corpus
+    must remain congruent with admitted root-contract projection labels rather
+    than relabeling domain law.
+  - these freeze concrete contract law for their specific domains.
+- order: 5
+  stage_label: machine-consumed registries and mappings
+  bound_reading_order_rel_paths:
+  - identity/protocol/mappings
+  required_markers:
+  - '`mappings/`'
+  - these freeze machine-facing rows, bindings, and registry truth.
+- order: 6
+  stage_label: specialized subdomain protocol packs
+  bound_reading_order_rel_paths:
+  - identity/protocol/broadcast
+  - identity/protocol/plugins
+  required_markers:
+  - '`broadcast/`'
+  - '`plugins/`'
+  - these extend the root protocol into narrower governed surfaces.
+- order: 7
+  stage_label: non-runtime or support material
+  bound_reading_order_rel_paths:
+  - identity/protocol/fixtures
+  required_markers:
+  - '`fixtures/`'
+  - these are never active-runtime truth.
 protocol_boundary_root_contract_projections:
 - order: 1
   rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md

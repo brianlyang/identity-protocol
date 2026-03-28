@@ -224,12 +224,13 @@ implicit.
 
 ## Root ordering completeness boundary
 
-1. Ordering law must remain machine-readable as separate source-order, reading-order, README-root-contract-index, protocol-boundary-root-contract-index, adjudication-order, and adjudication-surface-profile row families.
+1. Ordering law must remain machine-readable as separate source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface, README-root-contract-index, protocol-boundary-root-contract-index, protocol-boundary-root-contract-projection, protocol-boundary-root-contract-projection-surface, adjudication-order, and adjudication-surface-profile row families.
 2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
-3. Expected row identity set and emitted row identity set for each ordering family must also remain explicit; source, entry, manual-root-contract, or adjudication-surface identity drift may not be collapsed into summary-only counts.
-4. Protocol legality must not finalize ordering legality while missing or unexpected source, entry, manual-root-contract, or adjudication-surface identities remain known only inside validator logic.
+3. Expected row identity set and emitted row identity set for each ordering family must also remain explicit; source, entry, root-reading-order-stage, manual-root-contract, or adjudication-surface identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize ordering legality while missing or unexpected source, entry, root-reading-order-stage, manual-root-contract, or adjudication-surface identities remain known only inside validator logic.
 5. Fail-close ordering output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
 6. Explanatory root-contract indices rendered in root docs must remain congruent with admitted `reading_order` root-contract entries rather than silently authoring an alternate order.
+7. README root reading order stages rendered at protocol root must remain congruent with admitted root-reading-order-stage rows rather than silently authoring an alternate entry ladder.
 
 ## Root question-routing completeness boundary
 

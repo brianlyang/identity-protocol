@@ -21,6 +21,7 @@ This file is not a runtime truth source, not a machine-consumed contract row, an
 ## Root reading order
 
 When entering `identity/protocol/`, read in this order:
+This root reading order must remain bound to canonical root-reading-order stage rows rather than becoming a freehand alternate entry ladder.
 
 1. **`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`**
    - the bottom theory;
@@ -168,6 +169,7 @@ These three orders must remain distinct for the machine world:
    - answers: where protocol law comes from.
 2. **root reading-order**
    - the entry sequence defined at the top of this file
+   - the README entry ladder must remain congruent with admitted root-reading-order stage rows rather than becoming a freehand alternate order
    - answers: how to enter the root corpus without semantic confusion.
 3. **adjudication-order**
    - governance/review docs, mappings, validators, probes, runtime state, and receipts
