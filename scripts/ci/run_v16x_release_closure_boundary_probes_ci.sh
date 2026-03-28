@@ -13,18 +13,16 @@ SHADOW_ROOT="${TMP_ROOT}/shadow-repo"
 printf '[RUN] positive release-closure boundary validation\n'
 python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_boundary.py" --repo-root "${REPO_ROOT}" --json-only > "${POSITIVE_JSON}"
 
-mkdir -p \
-  "${SHADOW_ROOT}/identity/protocol" \
-  "${SHADOW_ROOT}/docs/workbook" \
-  "${SHADOW_ROOT}/docs/governance" \
-  "${SHADOW_ROOT}/docs/review"
-
-cp "${REPO_ROOT}/identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md" "${SHADOW_ROOT}/identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md"
-cp "${REPO_ROOT}/identity/protocol/IDENTITY_PROTOCOL.md" "${SHADOW_ROOT}/identity/protocol/IDENTITY_PROTOCOL.md"
-cp "${REPO_ROOT}/identity/protocol/IDENTITY_RUNTIME.md" "${SHADOW_ROOT}/identity/protocol/IDENTITY_RUNTIME.md"
-cp "${REPO_ROOT}/docs/workbook/protocol-issue-register-v1.6.md" "${SHADOW_ROOT}/docs/workbook/protocol-issue-register-v1.6.md"
-cp "${REPO_ROOT}/docs/governance/identity-v1.6x-release-closure-governance.md" "${SHADOW_ROOT}/docs/governance/identity-v1.6x-release-closure-governance.md"
-cp "${REPO_ROOT}/docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md" "${SHADOW_ROOT}/docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md"
+python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
+  --repo-root "${REPO_ROOT}" \
+  --shadow-root "${SHADOW_ROOT}" \
+  --copy-file identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md \
+  --copy-file identity/protocol/IDENTITY_PROTOCOL.md \
+  --copy-file identity/protocol/IDENTITY_RUNTIME.md \
+  --copy-file docs/workbook/protocol-issue-register-v1.6.md \
+  --copy-file docs/governance/identity-v1.6x-release-closure-governance.md \
+  --copy-file docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md \
+  --json-only > /dev/null
 
 python3 - <<'PY' "${SHADOW_ROOT}/docs/governance/identity-v1.6x-release-closure-governance.md"
 from pathlib import Path

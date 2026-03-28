@@ -13,15 +13,15 @@ SHADOW_ROOT="${TMP_ROOT}/shadow-repo"
 printf '[RUN] positive release-doc surface governance validation\n'
 python3 "${REPO_ROOT}/scripts/validate_release_doc_surface_governance.py" --repo-root "${REPO_ROOT}" --json-only > "${POSITIVE_JSON}"
 
-mkdir -p \
-  "${SHADOW_ROOT}/identity/protocol/mappings" \
-  "${SHADOW_ROOT}/docs/release"
-
-cp "${REPO_ROOT}/identity/protocol/mappings/stream-doc-registry.current.yaml" "${SHADOW_ROOT}/identity/protocol/mappings/stream-doc-registry.current.yaml"
-cp "${REPO_ROOT}/identity/protocol/mappings/stream-doc-registry.v1.6.yaml" "${SHADOW_ROOT}/identity/protocol/mappings/stream-doc-registry.v1.6.yaml"
-cp "${REPO_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" "${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md"
-cp "${REPO_ROOT}/docs/release/v1-roadmap.md" "${SHADOW_ROOT}/docs/release/v1-roadmap.md"
-cp "${REPO_ROOT}/docs/release/v1.0.0-release-notes.md" "${SHADOW_ROOT}/docs/release/v1.0.0-release-notes.md"
+python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
+  --repo-root "${REPO_ROOT}" \
+  --shadow-root "${SHADOW_ROOT}" \
+  --copy-file identity/protocol/mappings/stream-doc-registry.current.yaml \
+  --copy-file identity/protocol/mappings/stream-doc-registry.v1.6.yaml \
+  --copy-file docs/release/identity-v1.6x-release-closure-summary.md \
+  --copy-file docs/release/v1-roadmap.md \
+  --copy-file docs/release/v1.0.0-release-notes.md \
+  --json-only > /dev/null
 
 python3 - <<'PY' "${SHADOW_ROOT}/identity/protocol/mappings/stream-doc-registry.v1.6.yaml" "${SHADOW_ROOT}/docs/release/v1-roadmap.md"
 from pathlib import Path

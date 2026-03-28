@@ -11,17 +11,16 @@ SHADOW_ROOT="${TMP_ROOT}/shadow-repo"
 printf '[RUN] positive audit snapshot index governance validation\n'
 python3 "${REPO_ROOT}/scripts/validate_audit_snapshot_index.py" --repo-root "${REPO_ROOT}" >/dev/null
 
-mkdir -p "${SHADOW_ROOT}/docs/governance/templates" "${SHADOW_ROOT}/scripts"
-
-cp "${REPO_ROOT}/scripts/validate_audit_snapshot_index.py" "${SHADOW_ROOT}/scripts/validate_audit_snapshot_index.py"
-cp "${REPO_ROOT}/scripts/repo_root_resolution_common.py" "${SHADOW_ROOT}/scripts/repo_root_resolution_common.py"
-cp "${REPO_ROOT}/docs/governance/AUDIT_SNAPSHOT_INDEX.md" "${SHADOW_ROOT}/docs/governance/AUDIT_SNAPSHOT_INDEX.md"
-cp "${REPO_ROOT}/docs/governance/audit-snapshot-policy-v1.2.11.md" "${SHADOW_ROOT}/docs/governance/audit-snapshot-policy-v1.2.11.md"
-cp "${REPO_ROOT}/docs/governance/templates/audit-snapshot-template.md" "${SHADOW_ROOT}/docs/governance/templates/audit-snapshot-template.md"
-
-while IFS= read -r file; do
-  cp "${REPO_ROOT}/docs/governance/${file}" "${SHADOW_ROOT}/docs/governance/${file}"
-done < <(cd "${REPO_ROOT}/docs/governance" && ls audit-snapshot-*.md)
+python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
+  --repo-root "${REPO_ROOT}" \
+  --shadow-root "${SHADOW_ROOT}" \
+  --copy-file scripts/validate_audit_snapshot_index.py \
+  --copy-file scripts/repo_root_resolution_common.py \
+  --copy-file docs/governance/AUDIT_SNAPSHOT_INDEX.md \
+  --copy-file docs/governance/audit-snapshot-policy-v1.2.11.md \
+  --copy-file docs/governance/templates/audit-snapshot-template.md \
+  --copy-glob "docs/governance/audit-snapshot-*.md" \
+  --json-only > /dev/null
 
 python3 - <<'PY' "${SHADOW_ROOT}/docs/governance/AUDIT_SNAPSHOT_INDEX.md"
 from pathlib import Path
