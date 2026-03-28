@@ -146,6 +146,7 @@ assert summary_targeted_subset_excluded['release_readiness_repo_global_closure_t
 assert summary_targeted_subset_excluded['release_readiness_active_runtime_closure_topology_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['release_readiness_terminal_truth_bridge_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['release_readiness_governance_probe_topology_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['release_readiness_post_closure_adjudication_topology_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['required_gate_surface_drift_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['active_execution_report_pointer_locality_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['strict_live_active_pointer_locality_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
@@ -313,6 +314,10 @@ summary_release_projection = {
     'release_readiness_governance_probe_topology_probe': {
         'status': 'PASS_REQUIRED',
     },
+    'release_readiness_post_closure_adjudication_topology_probe': {
+        'status': 'PASS_REQUIRED',
+        'positive_validator_output': '/tmp/release-readiness-post-closure-adjudication-topology-positive.json',
+    },
     'required_gate_surface_drift_probe': {
         'status': 'PASS_REQUIRED',
     },
@@ -440,6 +445,7 @@ assert summary_release_projection['one_look']['release_readiness_repo_global_clo
 assert summary_release_projection['one_look']['release_readiness_active_runtime_closure_topology_probe_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['release_readiness_terminal_truth_bridge_probe_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['release_readiness_governance_probe_topology_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['release_readiness_post_closure_adjudication_topology_probe_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['release_readiness_summary_binding_probe_status'] == 'PASS_REQUIRED', summary_release_projection
 for summary_key, one_look_field in RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SUMMARY_BINDINGS:
     assert summary_release_projection['one_look'][one_look_field] == 'PASS_REQUIRED', summary_release_projection

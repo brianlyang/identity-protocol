@@ -181,6 +181,8 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh"],
     ["python3", "scripts/validate_release_readiness_governance_probe_topology.py", "--json-only"],
     ["bash", "scripts/ci/run_release_readiness_governance_probe_topology_probes_ci.sh"],
+    ["python3", "scripts/validate_release_readiness_post_closure_adjudication_topology.py", "--json-only"],
+    ["bash", "scripts/ci/run_release_readiness_post_closure_adjudication_topology_probes_ci.sh"],
     ["bash", "scripts/ci/run_three_plane_health_projection_probes_ci.sh"],
     ["bash", "scripts/ci/run_full_scan_required_gate_projection_probes_ci.sh"],
     ["bash", "scripts/ci/run_full_scan_health_projection_probes_ci.sh"],
