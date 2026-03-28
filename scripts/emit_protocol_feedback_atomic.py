@@ -8,7 +8,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from protocol_feedback_archival_common import materialize_feedback_outbox_batch
+from protocol_feedback_contract_common import canonical_dirs, rel_to_feedback_root
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
+
+INSPECTION_OUTBOX_SYNC_SKIP_OPERATIONS = {"scan", "three-plane", "inspection"}
 
 
 def _now_iso() -> str:
@@ -36,6 +40,8 @@ def main() -> int:
     ap.add_argument("--operation", default="update")
     ap.add_argument("--transaction-id", default="")
     ap.add_argument("--payload-json", default="")
+    ap.add_argument("--force-outbox-sync", action="store_true")
+    ap.add_argument("--skip-outbox-sync", action="store_true")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
@@ -54,6 +60,8 @@ def main() -> int:
     tx = str(args.transaction_id).strip() or f"pf-{uuid.uuid4().hex}"
     now = _now_iso()
     atomic_root = (pack_path / "runtime" / "protocol-feedback" / "atomic").resolve()
+    feedback_root = atomic_root.parent.resolve()
+    canonical = canonical_dirs(feedback_root)
     batch_path = (atomic_root / f"{tx}.batch.json").resolve()
     index_path = (atomic_root / f"{tx}.index.json").resolve()
     receipt_path = (atomic_root / f"{tx}.receipt.json").resolve()
@@ -128,6 +136,90 @@ def main() -> int:
             print(json.dumps(fail_payload, ensure_ascii=False, indent=2))
         return 1
 
+    normalized_operation = str(args.operation or "").strip().lower()
+    outbox_sync_payload: dict[str, Any] = {}
+    outbox_sync_status = "SKIPPED_BY_FLAG"
+    if args.skip_outbox_sync:
+        outbox_sync_payload = {
+            "reason": "skip_outbox_sync_flag",
+            "operation": normalized_operation,
+        }
+    elif not args.force_outbox_sync and normalized_operation in INSPECTION_OUTBOX_SYNC_SKIP_OPERATIONS:
+        outbox_sync_status = "SKIPPED_NOT_REQUIRED"
+        outbox_sync_payload = {
+            "reason": "inspection_operation_default_no_outbox_sync",
+            "operation": normalized_operation,
+        }
+    else:
+        atomic_batch_rel = rel_to_feedback_root(batch_path, feedback_root)
+        atomic_index_rel = rel_to_feedback_root(index_path, feedback_root)
+        atomic_receipt_rel = rel_to_feedback_root(receipt_path, feedback_root)
+        markdown_body = "\n".join(
+            [
+                f"transaction_id: {tx}",
+                f"identity_id: {args.identity_id}",
+                f"operation: {args.operation}",
+                f"observed_at_utc: {now}",
+                f"atomic_batch_ref: {atomic_batch_rel}",
+                f"atomic_index_ref: {atomic_index_rel}",
+                f"atomic_receipt_ref: {atomic_receipt_rel}",
+                "",
+                "## Atomic payload",
+                "```json",
+                json.dumps(raw_payload, ensure_ascii=False, indent=2),
+                "```",
+                "",
+            ]
+        )
+        outbox_sync_payload = materialize_feedback_outbox_batch(
+            feedback_root=feedback_root,
+            outbox_dir=canonical["outbox_dir"],
+            index_path=canonical["index_path"],
+            identity_id=str(args.identity_id or "").strip(),
+            catalog_path=str(catalog_path),
+            body=markdown_body,
+            title="Protocol feedback atomic transaction",
+            slug=f"atomic-{tx}",
+            summary_payload={
+                "identity_id": str(args.identity_id or "").strip(),
+                "transaction_id": tx,
+                "operation": str(args.operation or "").strip(),
+                "observed_at_utc": now,
+                "atomic_batch_ref": atomic_batch_rel,
+                "atomic_index_ref": atomic_index_rel,
+                "atomic_receipt_ref": atomic_receipt_rel,
+            },
+            section_title="Protocol feedback linkage auto",
+            extra_receipt_fields={
+                "source_mode": "atomic_transaction",
+                "atomic_transaction_id": tx,
+                "atomic_batch_ref": atomic_batch_rel,
+                "atomic_index_ref": atomic_index_rel,
+                "atomic_receipt_ref": atomic_receipt_rel,
+            },
+        )
+        outbox_sync_status = str(outbox_sync_payload.get("protocol_feedback_emit_status", "")).strip() or "FAIL_REQUIRED"
+        if outbox_sync_status != "PASS_REQUIRED":
+            fail_payload = {
+                "transaction_id": tx,
+                "identity_id": args.identity_id,
+                "operation": args.operation,
+                "atomic_emit_status": "FAIL_REQUIRED",
+                "error_code": "IP-PFAT-006",
+                "rollback_performed": False,
+                "error_reason": "atomic_emit_outbox_sync_failed",
+                "batch_ref": str(batch_path),
+                "index_ref": str(index_path),
+                "receipt_ref": str(receipt_path),
+                "outbox_sync_status": outbox_sync_status,
+                "outbox_sync_payload": outbox_sync_payload,
+            }
+            if args.json_only:
+                print(json.dumps(fail_payload, ensure_ascii=False))
+            else:
+                print(json.dumps(fail_payload, ensure_ascii=False, indent=2))
+            return 1
+
     payload = {
         "transaction_id": tx,
         "identity_id": args.identity_id,
@@ -139,6 +231,8 @@ def main() -> int:
         "index_ref": str(index_path),
         "receipt_ref": str(receipt_path),
         "evidence_ref": str(receipt_path),
+        "outbox_sync_status": outbox_sync_status,
+        "outbox_sync_payload": outbox_sync_payload,
     }
     if args.json_only:
         print(json.dumps(payload, ensure_ascii=False))

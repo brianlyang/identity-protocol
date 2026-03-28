@@ -71,6 +71,21 @@ def resolve_feedback_root(pack_path: Path, feedback_root: str = "") -> Path:
     return (pack_path / PROTOCOL_FEEDBACK_ROOT_REL).resolve()
 
 
+def resolve_feedback_contract_path(pack_path: Path, feedback_root: Path, path_value: str, *, default_leaf: str = "") -> Path:
+    token = str(path_value or "").strip()
+    if not token:
+        if str(default_leaf or "").strip():
+            return (feedback_root / str(default_leaf).strip()).resolve()
+        return feedback_root.resolve()
+    path = Path(token).expanduser()
+    if path.is_absolute():
+        return path.resolve()
+    as_posix = path.as_posix()
+    if as_posix == PROTOCOL_FEEDBACK_ROOT or as_posix.startswith(f"{PROTOCOL_FEEDBACK_ROOT}/"):
+        return (pack_path / path).resolve()
+    return (feedback_root / path).resolve()
+
+
 def canonical_dirs(feedback_root: Path) -> dict[str, Path]:
     outbox_dir = (feedback_root / "outbox-to-protocol").resolve()
     inbox_dir = (feedback_root / "inbox-from-protocol").resolve()

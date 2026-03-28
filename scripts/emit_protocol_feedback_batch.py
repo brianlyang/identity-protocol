@@ -3,17 +3,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from protocol_feedback_contract_common import (
-    canonical_dirs,
-    ensure_index_linkage,
-    rel_to_feedback_root,
-    resolve_feedback_root,
-)
+from protocol_feedback_archival_common import materialize_feedback_channel_artifacts
+from protocol_feedback_contract_common import canonical_dirs, resolve_feedback_contract_path, resolve_feedback_root
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -22,25 +16,8 @@ LANE_OUTBOX = "outbox"
 LANE_INBOX = "inbox"
 
 
-def _utc_token() -> str:
-    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-
-
-def _safe_slug(value: str) -> str:
-    token = re.sub(r"[^A-Za-z0-9._-]+", "-", str(value or "").strip().lower()).strip("-._")
-    return token or "batch"
-
-
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="ignore")
-
-
-def _write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    normalized = str(text or "")
-    if not normalized.endswith("\n"):
-        normalized += "\n"
-    path.write_text(normalized, encoding="utf-8")
 
 
 def _load_outbox_contract(task: dict[str, Any]) -> dict[str, Any]:
@@ -119,65 +96,41 @@ def main() -> int:
     if lane == LANE_OUTBOX:
         outbox_dir_rel = str(outbox_contract.get("outbox_dir", "")).strip()
         if outbox_dir_rel:
-            channel_dir = (feedback_root / outbox_dir_rel).resolve()
+            channel_dir = resolve_feedback_contract_path(pack_path, feedback_root, outbox_dir_rel)
     else:
         inbox_dir_rel = str(inbox_contract.get("inbox_dir", "")).strip()
         if inbox_dir_rel:
-            channel_dir = (feedback_root / inbox_dir_rel).resolve()
-
-    token = _utc_token()
-    slug = _safe_slug(args.slug or args.title or body_path.stem)
-    if lane == LANE_OUTBOX:
-        batch_name = f"FEEDBACK_BATCH_{token}_{slug}.md"
-        receipt_name = f"PROTOCOL_FEEDBACK_RECEIPT_{token}_{slug}.json"
-        summary_name = f"SUMMARY_{token}_{slug}.json"
-    else:
-        batch_name = f"PROTOCOL_INBOX_{token}_{slug}.md"
-        receipt_name = f"PROTOCOL_INBOX_RECEIPT_{token}_{slug}.json"
-        summary_name = f"INBOX_SUMMARY_{token}_{slug}.json"
-    batch_path = (channel_dir / batch_name).resolve()
-    batch_rel = rel_to_feedback_root(batch_path, feedback_root)
-    receipt_path = (channel_dir / receipt_name).resolve()
-    receipt_rel = rel_to_feedback_root(receipt_path, feedback_root)
+            channel_dir = resolve_feedback_contract_path(pack_path, feedback_root, inbox_dir_rel)
 
     body = _read_text(body_path)
     header_title = str(args.title or "").strip()
-    if header_title and not body.lstrip().startswith("#"):
-        body = f"# {header_title}\n\n{body}"
-    _write_text(batch_path, body)
-
-    summary_ref = ""
+    summary_payload: dict[str, Any] | None = None
     if summary_path is not None:
-        summary_target = (channel_dir / summary_name).resolve()
-        summary_target.parent.mkdir(parents=True, exist_ok=True)
-        summary_target.write_text(_read_text(summary_path), encoding="utf-8")
-        summary_ref = rel_to_feedback_root(summary_target, feedback_root)
+        try:
+            loaded = json.loads(_read_text(summary_path))
+            if isinstance(loaded, dict):
+                summary_payload = loaded
+        except Exception:
+            summary_payload = {
+                "summary_text": _read_text(summary_path),
+            }
 
-    receipt = {
-        "identity_id": str(args.identity_id).strip(),
-        "catalog_path": str(catalog_path),
-        "resolved_pack_path": str(pack_path),
-        "feedback_root": str(feedback_root),
-        "lane": lane,
-        "channel_dir": str(channel_dir),
-        "batch_path": str(batch_path),
-        "batch_ref": batch_rel,
-        "summary_ref": summary_ref,
-        "receipt_ref": receipt_rel,
-        "protocol_feedback_emit_status": STATUS_PASS_REQUIRED,
-        "error_code": "",
-        "stale_reasons": [],
-        "generated_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
-    }
-    receipt_path.parent.mkdir(parents=True, exist_ok=True)
-    receipt_path.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-    _, linked = ensure_index_linkage(
-        index_path,
-        refs=[batch_rel, receipt_rel] + ([summary_ref] if summary_ref else []),
+    materialized = materialize_feedback_channel_artifacts(
+        feedback_root=feedback_root,
+        channel_dir=channel_dir,
+        index_path=index_path,
+        identity_id=str(args.identity_id).strip(),
+        catalog_path=str(catalog_path),
+        body=body,
+        title=header_title,
+        slug=str(args.slug or args.title or body_path.stem),
+        lane=lane,
+        summary_payload=summary_payload,
         section_title="Protocol feedback linkage auto",
+        extra_receipt_fields={
+            "resolved_pack_path": str(pack_path),
+        },
     )
-
     payload = {
         "identity_id": str(args.identity_id).strip(),
         "catalog_path": str(catalog_path),
@@ -185,16 +138,16 @@ def main() -> int:
         "feedback_root": str(feedback_root),
         "lane": lane,
         "channel_dir": str(channel_dir),
-        "batch_path": str(batch_path),
-        "receipt_path": str(receipt_path),
+        "batch_path": str(materialized.get("batch_path", "")).strip(),
+        "receipt_path": str(materialized.get("receipt_path", "")).strip(),
         "index_path": str(index_path),
-        "index_linked": bool(linked),
-        "protocol_feedback_emit_status": STATUS_PASS_REQUIRED if linked else STATUS_FAIL_REQUIRED,
-        "error_code": "" if linked else "IP-GOV-FEEDBACK-002",
-        "stale_reasons": [] if linked else ["feedback_index_linkage_missing"],
+        "index_linked": bool(materialized.get("index_linked", False)),
+        "protocol_feedback_emit_status": str(materialized.get("protocol_feedback_emit_status", "")).strip() or STATUS_FAIL_REQUIRED,
+        "error_code": str(materialized.get("error_code", "")).strip(),
+        "stale_reasons": [str(item).strip() for item in (materialized.get("stale_reasons") or []) if str(item).strip()],
     }
     _emit(payload, json_only=args.json_only)
-    return 0 if linked else 1
+    return 0 if payload["protocol_feedback_emit_status"] == STATUS_PASS_REQUIRED else 1
 
 
 if __name__ == "__main__":
