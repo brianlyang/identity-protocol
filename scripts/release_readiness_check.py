@@ -137,6 +137,7 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_execution_report_selection_convergence_probes_ci.sh"],
     ["bash", "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh"],
     ["bash", "scripts/ci/run_strict_live_active_pointer_locality_probes_ci.sh"],
+    ["bash", "scripts/ci/run_strict_live_contract_resolution_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_update_preflight_terminal_truth_split_probes_ci.sh"],
     ["bash", "scripts/ci/run_terminal_truth_boundary_projection_probes_ci.sh"],
     ["bash", "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh"],

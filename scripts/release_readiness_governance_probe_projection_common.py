@@ -166,6 +166,31 @@ RELEASE_READINESS_GOVERNANCE_PROBE_SPECS: tuple[ReleaseReadinessGovernanceProbeP
         ),
     ),
     ReleaseReadinessGovernanceProbeProjectionSpec(
+        script_rel="scripts/ci/run_strict_live_contract_resolution_probes_ci.sh",
+        summary_key="strict_live_contract_resolution_probe",
+        one_look_field="strict_live_contract_resolution_probe_status",
+        status_fields=("strict_live_contract_resolution_probe_status",),
+        keep_fields=(
+            "locality_false_green_block_status",
+            "sample_green_failclose_status",
+            "backfill_canonicalization_status",
+        ),
+        one_look_passthrough_fields=(
+            (
+                "locality_false_green_block_status",
+                "strict_live_contract_resolution_locality_false_green_block_status",
+            ),
+            (
+                "sample_green_failclose_status",
+                "strict_live_contract_resolution_sample_green_failclose_status",
+            ),
+            (
+                "backfill_canonicalization_status",
+                "strict_live_contract_resolution_backfill_canonicalization_status",
+            ),
+        ),
+    ),
+    ReleaseReadinessGovernanceProbeProjectionSpec(
         script_rel="scripts/ci/run_execution_report_selection_convergence_probes_ci.sh",
         summary_key="execution_report_selection_convergence_probe",
         one_look_field="execution_report_selection_convergence_probe_status",
@@ -289,6 +314,9 @@ RELEASE_READINESS_GOVERNANCE_PROBE_DETAIL_FIELDS: tuple[str, ...] = (
     "one_look.strict_live_active_pointer_external_resolution_mode",
     "one_look.strict_live_active_pointer_rehome_resolution_mode",
     "one_look.strict_live_active_pointer_candidate_root_resolution_mode",
+    "one_look.strict_live_contract_resolution_locality_false_green_block_status",
+    "one_look.strict_live_contract_resolution_sample_green_failclose_status",
+    "one_look.strict_live_contract_resolution_backfill_canonicalization_status",
     "one_look.identity_codex_launcher_convergence_probe_context_status",
     "one_look.identity_codex_launcher_convergence_metadata_hygiene_apply_status",
     "one_look.identity_codex_launcher_convergence_truth_sync_apply_status",

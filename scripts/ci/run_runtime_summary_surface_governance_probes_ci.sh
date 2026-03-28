@@ -432,6 +432,18 @@ cp docs/release/identity-v1.6x-release-closure-summary.md "$tmpdir/docs/release/
 
 mutate_probe_literal \
   "$tmpdir/docs/release/identity-v1.6x-release-closure-summary.md" \
+  "one_look.strict_live_contract_resolution_sample_green_failclose_status"
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-strict-live-contract-resolution-detail-doc.json; then
+  echo "[FAIL] negative strict-live contract-resolution detail governance projection doc probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative strict-live contract-resolution detail governance projection doc probe fail-closed as expected"
+
+cp docs/release/identity-v1.6x-release-closure-summary.md "$tmpdir/docs/release/"
+
+mutate_probe_literal \
+  "$tmpdir/docs/release/identity-v1.6x-release-closure-summary.md" \
   "one_look.execution_report_selection_convergence_candidate_count"
 
 if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-exec-report-convergence-detail-doc.json; then

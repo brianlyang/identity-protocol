@@ -85,6 +85,13 @@ REQUIRED_STRICT_LIVE_ACTIVE_POINTER_LOCALITY_MARKERS = (
     "pointer_report_name_rehomed_candidate_root",
     "external_pointer_report_rejected",
 )
+REQUIRED_STRICT_LIVE_CONTRACT_RESOLUTION_MARKERS = (
+    "scripts/ci/run_strict_live_contract_resolution_probes_ci.sh",
+    "strict-live contract resolution",
+    "strict_live_current_run_required_but_unproven",
+    "sample-green fail-close",
+    "pack-relative contract paths",
+)
 REQUIRED_WEAK_LIVE_POINTER_ABSORPTION_MARKERS = (
     "scripts/ci/run_identity_weak_live_linkage_pointer_locality_probes_ci.sh",
     "validate_identity_weak_live_linkage.py",
@@ -249,6 +256,9 @@ def main() -> int:
         for marker in REQUIRED_STRICT_LIVE_ACTIVE_POINTER_LOCALITY_MARKERS:
             if marker not in text:
                 stale_reasons.append(f"{label}_missing_strict_live_active_pointer_locality_marker:{marker}")
+        for marker in REQUIRED_STRICT_LIVE_CONTRACT_RESOLUTION_MARKERS:
+            if marker not in text:
+                stale_reasons.append(f"{label}_missing_strict_live_contract_resolution_marker:{marker}")
         for marker in REQUIRED_WEAK_LIVE_POINTER_ABSORPTION_MARKERS:
             if marker not in text:
                 stale_reasons.append(f"{label}_missing_weak_live_pointer_absorption_marker:{marker}")

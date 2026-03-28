@@ -121,6 +121,7 @@ assert summary_targeted_subset_excluded['runtime_summary_surface_governance_prob
 assert summary_targeted_subset_excluded['required_gate_surface_drift_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['active_execution_report_pointer_locality_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['strict_live_active_pointer_locality_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['strict_live_contract_resolution_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['execution_report_selection_convergence_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['identity_codex_launcher_convergence_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['identity_transport_fleet_closure_convergence_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
@@ -164,6 +165,10 @@ assert summary_targeted_subset_excluded['one_look']['strict_live_active_pointer_
 assert summary_targeted_subset_excluded['one_look']['strict_live_active_pointer_external_resolution_mode'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['strict_live_active_pointer_rehome_resolution_mode'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['strict_live_active_pointer_candidate_root_resolution_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['strict_live_contract_resolution_probe_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['strict_live_contract_resolution_locality_false_green_block_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['strict_live_contract_resolution_sample_green_failclose_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['strict_live_contract_resolution_backfill_canonicalization_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['execution_report_selection_convergence_probe_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['execution_report_selection_convergence_candidate_count'] == 0, summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['execution_report_selection_convergence_freshness_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
@@ -340,6 +345,12 @@ summary_release_projection = {
         'rehome_resolution_mode': 'pointer_report_name_rehomed_candidate_root',
         'candidate_root_resolution_mode': 'pointer_candidate_root_report',
     },
+    'strict_live_contract_resolution_probe': {
+        'status': 'PASS_REQUIRED',
+        'locality_false_green_block_status': 'PASS_REQUIRED',
+        'sample_green_failclose_status': 'PASS_REQUIRED',
+        'backfill_canonicalization_status': 'PASS_REQUIRED',
+    },
     'execution_report_selection_convergence_probe': {
         'status': 'PASS_REQUIRED',
         'selected_report_path': '/tmp/probe-report.json',
@@ -475,6 +486,10 @@ assert summary_release_projection['one_look']['strict_live_active_pointer_candid
 assert summary_release_projection['one_look']['strict_live_active_pointer_external_resolution_mode'] == 'external_pointer_report_rejected', summary_release_projection
 assert summary_release_projection['one_look']['strict_live_active_pointer_rehome_resolution_mode'] == 'pointer_report_name_rehomed_candidate_root', summary_release_projection
 assert summary_release_projection['one_look']['strict_live_active_pointer_candidate_root_resolution_mode'] == 'pointer_candidate_root_report', summary_release_projection
+assert summary_release_projection['one_look']['strict_live_contract_resolution_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['strict_live_contract_resolution_locality_false_green_block_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['strict_live_contract_resolution_sample_green_failclose_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['strict_live_contract_resolution_backfill_canonicalization_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['execution_report_selection_convergence_probe_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['execution_report_selection_convergence_candidate_count'] == 1, summary_release_projection
 assert summary_release_projection['one_look']['execution_report_selection_convergence_freshness_status'] == 'PASS_REQUIRED', summary_release_projection
