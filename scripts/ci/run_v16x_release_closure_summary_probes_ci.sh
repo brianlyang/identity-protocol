@@ -220,7 +220,7 @@ text = text.replace(
 text = text.replace(terminal_truth_bridge_case_marker, "terminal_truth_bridge_case=review_required_execution")
 text = text.replace(
     active_runtime_projection_marker,
-    "active_runtime_projection=one_look.identity_codex_launcher_status",
+    "active_runtime_closure_projection=one_look.identity_codex_launcher_status",
 )
 text = text.replace(
     active_runtime_terminal_truth_class_marker,
@@ -289,6 +289,10 @@ if "summary_doc_missing_workspace_runtime_closure_command_convergence_marker:scr
 expected_active_runtime_projection_reason = f"summary_doc_missing_active_runtime_closure_projection_marker:{sys.argv[7]}"
 if expected_active_runtime_projection_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect active-runtime closure projection drift")
+if "summary_doc_active_runtime_closure_projection_line_not_canonical" not in reasons:
+    raise SystemExit(
+        "negative release-closure summary must detect active-runtime closure projection line drift"
+    )
 expected_release_cloud_evidence_reason = f"summary_doc_missing_release_readiness_release_cloud_evidence_marker:{sys.argv[8]}"
 if expected_release_cloud_evidence_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect release-cloud evidence projection drift")

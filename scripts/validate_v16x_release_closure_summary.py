@@ -31,6 +31,9 @@ from release_closure_foundational_marker_common import (
     collect_release_closure_philosophy_order_stale_reasons,
     collect_release_closure_terminal_truth_split_stale_reasons,
 )
+from release_closure_active_runtime_projection_common import (
+    collect_release_closure_active_runtime_projection_stale_reasons,
+)
 from release_closure_narrative_marker_common import (
     collect_release_closure_narrative_stale_reasons,
 )
@@ -242,6 +245,12 @@ def main() -> int:
     )
     stale_reasons.extend(
         collect_release_closure_repo_global_projection_stale_reasons(
+            summary_text,
+            label="summary_doc",
+        )
+    )
+    stale_reasons.extend(
+        collect_release_closure_active_runtime_projection_stale_reasons(
             summary_text,
             label="summary_doc",
         )

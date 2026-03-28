@@ -119,7 +119,7 @@ text = text.replace("caller cwd", "caller working directory")
 text = text.replace("scripts/run_workspace_runtime_closure_checks.py", "scripts/run_workspace_runtime_pack_checks.py")
 text = text.replace(
     repo_global_projection_marker,
-    "repo_global_projection=one_look.executable_surface_runtime_literal_lock_status|one_look.repo_global_drift_marker",
+    "repo_global_closure_projection=one_look.executable_surface_runtime_literal_lock_status|one_look.repo_global_drift_marker",
 )
 text = text.replace(
     repo_global_checked_count_marker,
@@ -160,7 +160,7 @@ text = text.replace(
 )
 text = text.replace(
     active_runtime_projection_marker,
-    "active_runtime_projection=one_look.identity_codex_launcher_status",
+    "active_runtime_closure_projection=one_look.identity_codex_launcher_status",
 )
 text = text.replace(
     active_runtime_terminal_truth_class_marker,
@@ -218,6 +218,10 @@ if "governance_doc_missing_workspace_runtime_closure_command_convergence_marker:
 expected_repo_global_reason = f"governance_doc_missing_repo_global_closure_boundary_marker:{repo_global_projection_marker}"
 if expected_repo_global_reason not in reasons:
     raise SystemExit("negative release-closure boundary must detect repo-global closure projection drift")
+if "governance_doc_repo_global_closure_projection_line_not_canonical" not in reasons:
+    raise SystemExit(
+        "negative release-closure boundary must detect repo-global closure projection line drift"
+    )
 expected_repo_global_checked_count_reason = f"governance_doc_missing_repo_global_closure_boundary_marker:{repo_global_checked_count_marker}"
 if expected_repo_global_checked_count_reason not in reasons:
     raise SystemExit("negative release-closure boundary must detect repo-global proof-strength companion drift")
@@ -229,6 +233,10 @@ if "governance_doc_stale_issue_horizon:ISSUE-038" not in reasons:
 expected_active_runtime_projection_reason = f"governance_doc_missing_active_runtime_closure_projection_marker:{active_runtime_projection_marker}"
 if expected_active_runtime_projection_reason not in reasons:
     raise SystemExit("negative release-closure boundary must detect active-runtime closure projection drift")
+if "governance_doc_active_runtime_closure_projection_line_not_canonical" not in reasons:
+    raise SystemExit(
+        "negative release-closure boundary must detect active-runtime closure projection line drift"
+    )
 expected_terminal_truth_bridge_surface_reason = f"governance_doc_missing_terminal_truth_bridge_marker:{terminal_truth_bridge_surface_marker}"
 if expected_terminal_truth_bridge_surface_reason not in reasons:
     raise SystemExit("negative release-closure boundary must detect terminal-truth bridge surface drift")
