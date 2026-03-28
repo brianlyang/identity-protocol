@@ -397,6 +397,19 @@ def main() -> int:
     stale_reasons.extend(
         f"forbidden_content:{item['rel_path']}:{item['class_id']}:{item['line_no']}" for item in forbidden_hits
     )
+    stale_reasons.extend(
+        ":".join(
+            token
+            for token in (
+                "root_doc_anchor_violation",
+                item["rel_path"],
+                item["reason"],
+                item.get("marker", ""),
+            )
+            if token
+        )
+        for item in root_doc_anchor_violations
+    )
 
     status = (
         STATUS_PASS_REQUIRED

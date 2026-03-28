@@ -441,6 +441,10 @@ assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", pay
 assert payload["error_code"] == "IP-RCG-002", payload
 assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
 assert any(
+    reason == "root_doc_anchor_violation:identity/protocol/README.md:required_marker_missing:## Root governance completeness discipline"
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
     row["rel_path"] == "identity/protocol/README.md"
     and row["reason"] == "required_marker_missing"
     and row["marker"] == "## Root governance completeness discipline"
