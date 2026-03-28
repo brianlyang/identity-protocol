@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from primary_execution_report_common import latest_primary_execution_report_from_roots
+from primary_execution_report_common import latest_prompt_bound_primary_execution_report_from_roots
 from tool_vendor_governance_common import (
     IDENTITY_UPGRADE_REPORT_AUTHORITY_CLASS_EXPLICIT_REPORT_OVERRIDE,
     IDENTITY_UPGRADE_REPORT_AUTHORITY_CLASS_NONE,
@@ -80,7 +80,7 @@ def main() -> int:
             "search_roots": [str(root) for root in search_roots],
         }
     else:
-        selected = latest_primary_execution_report_from_roots(
+        selected = latest_prompt_bound_primary_execution_report_from_roots(
             search_roots,
             args.identity_id,
         )

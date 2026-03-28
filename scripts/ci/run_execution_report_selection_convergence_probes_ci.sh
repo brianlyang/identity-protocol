@@ -467,6 +467,18 @@ scan_after_cmd = list(scan_cmd)
 scan_after_cmd[-1] = str(scan_after_out)
 _run_ok(scan_after_cmd, cwd=repo_root)
 scan_after_payload = json.loads(scan_after_out.read_text(encoding="utf-8"))
+search_root_locator_after_payload = _run_json(
+    [
+        sys.executable,
+        str(repo_root / "scripts" / "resolve_latest_identity_upgrade_report.py"),
+        "--identity-id",
+        identity_id,
+        "--search-root",
+        str((pack_root / "runtime" / "reports").resolve()),
+        "--json-only",
+    ],
+    cwd=repo_root,
+)
 pack_locator_after_payload = _run_json(
     [
         sys.executable,
@@ -518,6 +530,7 @@ selected_three_plane = _three_plane_report_selected_path(three_plane_payload)
 selected_three_plane_after = _three_plane_report_selected_path(three_plane_after_payload)
 selected_scan = _scan_report_selected_path(scan_payload, identity_id)
 selected_scan_after = _scan_report_selected_path(scan_after_payload, identity_id)
+selected_search_root_locator_after = str(search_root_locator_after_payload.get("selected_report_path", "")).strip()
 selected_pack_locator_after = str(pack_locator_after_payload.get("selected_report_path", "")).strip()
 selected_repair_prompt = str(repair_prompt_payload.get("report_selected_path", "")).strip()
 selected_repair_postexec = str(repair_postexec_payload.get("report_selected_path", "")).strip()
@@ -586,6 +599,12 @@ assert selected_scan_after == expected, {
     "expected": expected,
     "payload": scan_after_payload,
 }
+assert selected_search_root_locator_after == expected, {
+    "case": "search_root_locator_preserves_prompt_sha_preference",
+    "selected": selected_search_root_locator_after,
+    "expected": expected,
+    "payload": search_root_locator_after_payload,
+}
 assert selected_pack_locator_after == expected, {
     "case": "pack_root_locator_preserves_prompt_sha_preference",
     "selected": selected_pack_locator_after,
@@ -639,7 +658,7 @@ assert repair_postexec_rc in {0, 1}, {
 assert "[OK] identity prompt activation validated:" in prompt_activation_stdout, prompt_activation_stdout
 assert "[OK] prompt lifecycle validated:" in prompt_lifecycle_stdout, prompt_lifecycle_stdout
 assert "[OK] permission state validated:" in permission_stdout, permission_stdout
-assert selected_freshness == selected_baseline == selected_run_id == selected_locator == selected_experience == selected_three_plane == selected_three_plane_after == selected_scan == selected_scan_after == selected_pack_locator_after == selected_prompt_activation_after == selected_prompt_lifecycle_after == selected_permission_after == selected_repair_prompt == selected_repair_postexec, {
+assert selected_freshness == selected_baseline == selected_run_id == selected_locator == selected_experience == selected_three_plane == selected_three_plane_after == selected_scan == selected_scan_after == selected_search_root_locator_after == selected_pack_locator_after == selected_prompt_activation_after == selected_prompt_lifecycle_after == selected_permission_after == selected_repair_prompt == selected_repair_postexec, {
     "case": "selection_convergence",
     "freshness": selected_freshness,
     "baseline": selected_baseline,
@@ -650,6 +669,7 @@ assert selected_freshness == selected_baseline == selected_run_id == selected_lo
     "three_plane_after": selected_three_plane_after,
     "full_scan": selected_scan,
     "full_scan_after": selected_scan_after,
+    "search_root_locator_after": selected_search_root_locator_after,
     "pack_locator_after": selected_pack_locator_after,
     "prompt_activation_after": selected_prompt_activation_after,
     "prompt_lifecycle_after": selected_prompt_lifecycle_after,
@@ -676,6 +696,7 @@ print(
             "three_plane_prompt_sha_selected_report": selected_three_plane_after,
             "full_scan_selected_report": expected,
             "full_scan_prompt_sha_selected_report": selected_scan_after,
+            "search_root_locator_prompt_sha_selected_report": selected_search_root_locator_after,
             "pack_root_locator_selected_report": selected_pack_locator_after,
             "prompt_activation_prompt_sha_selected_report": selected_prompt_activation_after,
             "prompt_lifecycle_prompt_sha_selected_report": selected_prompt_lifecycle_after,
