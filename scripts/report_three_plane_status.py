@@ -35,7 +35,7 @@ from required_gate_bundle_projection_common import (
 from release_cloud_evidence_projection_common import (
     build_projection_profile_excluded_release_cloud_evidence_adapter,
 )
-from resolve_release_plane_cloud_evidence import resolve_release_cloud_evidence
+from resolve_release_plane_cloud_evidence import resolve_release_plane_runtime_inputs
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import resolve_identity
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
@@ -2060,6 +2060,10 @@ def _instance_plane_status(
             str(args.run_workflow_file_sha or ""),
             "--checks-json",
             str(args.checks_json or ""),
+            "--jobs-json",
+            str(args.jobs_json or ""),
+            "--gh-runs-json",
+            str(args.gh_runs_json or ""),
             "--operation",
             "three-plane",
             "--json-only",
@@ -4120,6 +4124,12 @@ def _instance_plane_status(
             "target_branch": release_cloud_payload.get("target_branch", ""),
             "release_head_sha": release_cloud_payload.get("release_head_sha", ""),
             "required_gates_run_id": release_cloud_payload.get("required_gates_run_id", ""),
+            "run_url": release_cloud_payload.get("run_url", ""),
+            "checks_json": release_cloud_payload.get("checks_json", ""),
+            "jobs_json": release_cloud_payload.get("jobs_json", ""),
+            "gh_runs_json": release_cloud_payload.get("gh_runs_json", ""),
+            "release_plane_context_requested": bool(getattr(args, "_release_plane_context_requested", False)),
+            "release_plane_context_sources": list(getattr(args, "_release_plane_context_sources", []) or []),
             "stale_reasons": release_cloud_payload.get("stale_reasons", []),
             "evidence_ref": release_cloud_payload.get("evidence_ref", ""),
         },
@@ -5436,6 +5446,7 @@ def main() -> int:
     ap.add_argument("--run-workflow-file-sha", default="")
     ap.add_argument("--checks-json", default="")
     ap.add_argument("--jobs-json", default="")
+    ap.add_argument("--gh-runs-json", default="")
     ap.add_argument(
         "--projection-profile",
         choices=three_plane_projection_profile_choices(),
@@ -5535,29 +5546,35 @@ def main() -> int:
         print(f"[FAIL] unable to resolve identity context: {exc}")
         return 2
 
-    if not args.target_branch:
-        args.target_branch = _git_current_branch()
-    if not args.release_head_sha:
-        args.release_head_sha = _git_head_sha()
-    if not args.workflow_file_sha:
-        args.workflow_file_sha = args.release_head_sha
-    if not args.run_head_sha:
-        args.run_head_sha = args.release_head_sha
-    if not args.run_workflow_file_sha:
-        args.run_workflow_file_sha = args.workflow_file_sha
-    adapter_payload = resolve_release_cloud_evidence(
+    release_runtime_inputs = resolve_release_plane_runtime_inputs(
         identity_id=args.identity_id,
         operation="three-plane",
-        required_gates_run_id=str(args.required_gates_run_id or "").strip(),
-        run_url=str(args.run_url or "").strip(),
-        checks_json=str(args.checks_json or "").strip(),
-        jobs_json=str(args.jobs_json or "").strip(),
+        explicit_target_branch=str(args.target_branch or "").strip(),
+        explicit_release_head_sha=str(args.release_head_sha or "").strip(),
+        explicit_required_gates_run_id=str(args.required_gates_run_id or "").strip(),
+        explicit_run_url=str(args.run_url or "").strip(),
+        explicit_workflow_file_sha=str(args.workflow_file_sha or "").strip(),
+        explicit_run_head_sha=str(args.run_head_sha or "").strip(),
+        explicit_run_workflow_file_sha=str(args.run_workflow_file_sha or "").strip(),
+        explicit_checks_json=str(args.checks_json or "").strip(),
+        explicit_jobs_json=str(args.jobs_json or "").strip(),
+        explicit_gh_runs_json=str(args.gh_runs_json or "").strip(),
+        default_target_branch=_git_current_branch(),
+        default_release_head_sha=_git_head_sha(),
     )
-    args.required_gates_run_id = str(
-        adapter_payload.get("required_gates_run_id", "") or str(args.required_gates_run_id or "")
-    ).strip()
-    args.run_url = str(adapter_payload.get("run_url", "") or str(args.run_url or "")).strip()
-    args.checks_json = str(adapter_payload.get("checks_json_path", "") or str(args.checks_json or "")).strip()
+    adapter_payload = dict(release_runtime_inputs.get("release_adapter_payload") or {})
+    args.target_branch = str(release_runtime_inputs.get("target_branch", "") or "").strip()
+    args.release_head_sha = str(release_runtime_inputs.get("release_head_sha", "") or "").strip()
+    args.required_gates_run_id = str(release_runtime_inputs.get("required_gates_run_id", "") or "").strip()
+    args.run_url = str(release_runtime_inputs.get("run_url", "") or "").strip()
+    args.workflow_file_sha = str(release_runtime_inputs.get("workflow_file_sha", "") or "").strip()
+    args.run_head_sha = str(release_runtime_inputs.get("run_head_sha", "") or "").strip()
+    args.run_workflow_file_sha = str(release_runtime_inputs.get("run_workflow_file_sha", "") or "").strip()
+    args.checks_json = str(release_runtime_inputs.get("checks_json", "") or "").strip()
+    args.jobs_json = str(release_runtime_inputs.get("jobs_json", "") or "").strip()
+    args.gh_runs_json = str(release_runtime_inputs.get("gh_runs_json", "") or "").strip()
+    setattr(args, "_release_plane_context_requested", bool(release_runtime_inputs.get("release_plane_context_requested", False)))
+    setattr(args, "_release_plane_context_sources", list(release_runtime_inputs.get("release_plane_context_sources") or []))
 
     preferred_pack = str(resolved.get("resolved_pack_path") or resolved.get("pack_path") or "")
     report_path = Path(args.execution_report).expanduser().resolve() if args.execution_report else _latest_report(
@@ -5601,6 +5618,10 @@ def main() -> int:
         "run_url": args.run_url,
         "workflow_file_sha": args.workflow_file_sha,
         "checks_json": args.checks_json,
+        "jobs_json": args.jobs_json,
+        "gh_runs_json": args.gh_runs_json,
+        "release_plane_context_requested": bool(release_runtime_inputs.get("release_plane_context_requested", False)),
+        "release_plane_context_sources": list(release_runtime_inputs.get("release_plane_context_sources") or []),
         "required_checks_set": release_detail.get("required_checks_set", []),
         "instance_plane_status": instance_status,
         "repo_plane_status": repo_status,

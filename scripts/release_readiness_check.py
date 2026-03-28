@@ -79,10 +79,7 @@ from release_readiness_selected_check_scope_common import (
 )
 from required_contract_coverage_projection_common import build_required_contract_coverage_projection
 from required_gate_bundle_projection_common import build_required_gate_bundle_target_projection
-from resolve_release_plane_cloud_evidence import (
-    resolve_release_cloud_evidence,
-    resolve_release_plane_context,
-)
+from resolve_release_plane_cloud_evidence import resolve_release_plane_runtime_inputs
 from response_stamp_common import (
     DEFAULT_WORK_LAYER,
     EXECUTION_REPLY_IDENTITY_COHERENCE_VALIDATOR_ID,
@@ -1981,7 +1978,10 @@ def main() -> int:
 
     base = args.base.strip() or _git_rev("HEAD~1")
     head = args.head.strip() or _git_rev("HEAD")
-    release_context = resolve_release_plane_context(
+    identity_id = args.identity_id.strip()
+    release_runtime_inputs = resolve_release_plane_runtime_inputs(
+        identity_id=identity_id,
+        operation="readiness",
         explicit_target_branch=str(args.target_branch or "").strip(),
         explicit_release_head_sha=str(args.release_head_sha or "").strip(),
         explicit_required_gates_run_id=str(args.required_gates_run_id or "").strip(),
@@ -1991,36 +1991,21 @@ def main() -> int:
         explicit_run_workflow_file_sha=str(args.run_workflow_file_sha or "").strip(),
         explicit_checks_json=str(args.checks_json or "").strip(),
         explicit_jobs_json=str(args.jobs_json or "").strip(),
+        explicit_gh_runs_json=str(args.gh_runs_json or "").strip(),
         default_target_branch="main",
         default_release_head_sha=head,
     )
-    target_branch = str(release_context.get("target_branch", "")).strip()
-    release_head_sha = str(release_context.get("release_head_sha", "")).strip()
-    required_gates_run_id = str(release_context.get("required_gates_run_id", "")).strip()
-    run_url = str(release_context.get("run_url", "")).strip()
-    workflow_file_sha = str(release_context.get("workflow_file_sha", "")).strip()
-    run_head_sha = str(release_context.get("run_head_sha", "")).strip()
-    run_workflow_file_sha = str(release_context.get("run_workflow_file_sha", "")).strip()
-    checks_json = str(release_context.get("checks_json", "")).strip()
-    jobs_json = str(release_context.get("jobs_json", "")).strip()
-    gh_runs_json = str(args.gh_runs_json or "").strip()
-    identity_id = args.identity_id.strip()
-    release_adapter_payload = resolve_release_cloud_evidence(
-        identity_id=identity_id,
-        operation="readiness",
-        target_branch=target_branch,
-        release_head_sha=release_head_sha,
-        required_gates_run_id=required_gates_run_id,
-        run_url=run_url,
-        checks_json=checks_json,
-        jobs_json=jobs_json,
-        gh_runs_json=gh_runs_json,
-    )
-    required_gates_run_id = str(
-        release_adapter_payload.get("required_gates_run_id", "") or required_gates_run_id
-    ).strip()
-    run_url = str(release_adapter_payload.get("run_url", "") or run_url).strip()
-    checks_json = str(release_adapter_payload.get("checks_json_path", "") or checks_json).strip()
+    target_branch = str(release_runtime_inputs.get("target_branch", "")).strip()
+    release_head_sha = str(release_runtime_inputs.get("release_head_sha", "")).strip()
+    required_gates_run_id = str(release_runtime_inputs.get("required_gates_run_id", "")).strip()
+    run_url = str(release_runtime_inputs.get("run_url", "")).strip()
+    workflow_file_sha = str(release_runtime_inputs.get("workflow_file_sha", "")).strip()
+    run_head_sha = str(release_runtime_inputs.get("run_head_sha", "")).strip()
+    run_workflow_file_sha = str(release_runtime_inputs.get("run_workflow_file_sha", "")).strip()
+    checks_json = str(release_runtime_inputs.get("checks_json", "")).strip()
+    jobs_json = str(release_runtime_inputs.get("jobs_json", "")).strip()
+    gh_runs_json = str(release_runtime_inputs.get("gh_runs_json", "")).strip()
+    release_adapter_payload = dict(release_runtime_inputs.get("release_adapter_payload") or {})
     scope = args.scope.strip().upper()
     layer_intent_text = args.layer_intent_text.strip()
     expected_work_layer = args.expected_work_layer.strip().lower()

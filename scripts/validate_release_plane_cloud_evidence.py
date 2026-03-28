@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from release_cloud_evidence_projection_common import build_release_cloud_evidence_adapter_projection
-from resolve_release_plane_cloud_evidence import resolve_release_cloud_evidence
+from resolve_release_plane_cloud_evidence import resolve_release_plane_runtime_inputs
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -178,20 +178,33 @@ def main() -> int:
     checks_json = str(args.checks_json or contract.get("checks_json", "")).strip()
     jobs_json = str(args.jobs_json or contract.get("jobs_json", "")).strip()
     gh_runs_json = str(args.gh_runs_json or contract.get("gh_runs_json", "")).strip()
-    adapter_payload = resolve_release_cloud_evidence(
+    release_runtime_inputs = resolve_release_plane_runtime_inputs(
         identity_id=args.identity_id,
         operation=args.operation,
-        target_branch=target_branch,
-        release_head_sha=release_head_sha,
-        required_gates_run_id=required_gates_run_id,
-        run_url=run_url,
-        checks_json=checks_json,
-        jobs_json=jobs_json,
-        gh_runs_json=gh_runs_json,
+        explicit_target_branch=target_branch,
+        explicit_release_head_sha=release_head_sha,
+        explicit_required_gates_run_id=required_gates_run_id,
+        explicit_run_url=run_url,
+        explicit_workflow_file_sha=workflow_file_sha,
+        explicit_run_head_sha=run_head_sha,
+        explicit_run_workflow_file_sha=run_workflow_file_sha,
+        explicit_checks_json=checks_json,
+        explicit_jobs_json=jobs_json,
+        explicit_gh_runs_json=gh_runs_json,
     )
-    required_gates_run_id = str(adapter_payload.get("required_gates_run_id", "") or required_gates_run_id).strip()
-    run_url = str(adapter_payload.get("run_url", "") or run_url).strip()
-    checks_json = str(adapter_payload.get("checks_json_path", "") or checks_json).strip()
+    adapter_payload = dict(release_runtime_inputs.get("release_adapter_payload") or {})
+    target_branch = str(release_runtime_inputs.get("target_branch", "") or target_branch).strip()
+    release_head_sha = str(release_runtime_inputs.get("release_head_sha", "") or release_head_sha).strip()
+    required_gates_run_id = str(release_runtime_inputs.get("required_gates_run_id", "") or required_gates_run_id).strip()
+    run_url = str(release_runtime_inputs.get("run_url", "") or run_url).strip()
+    workflow_file_sha = str(release_runtime_inputs.get("workflow_file_sha", "") or workflow_file_sha).strip()
+    run_head_sha = str(release_runtime_inputs.get("run_head_sha", "") or run_head_sha).strip()
+    run_workflow_file_sha = str(
+        release_runtime_inputs.get("run_workflow_file_sha", "") or run_workflow_file_sha
+    ).strip()
+    checks_json = str(release_runtime_inputs.get("checks_json", "") or checks_json).strip()
+    jobs_json = str(release_runtime_inputs.get("jobs_json", "") or jobs_json).strip()
+    gh_runs_json = str(release_runtime_inputs.get("gh_runs_json", "") or gh_runs_json).strip()
     has_release_baseline = _has_release_baseline(
         target_branch=target_branch,
         release_head_sha=release_head_sha,

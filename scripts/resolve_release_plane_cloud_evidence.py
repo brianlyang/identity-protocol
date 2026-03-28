@@ -296,6 +296,7 @@ def _fetch_gh_run_list(
     github_repository: str,
     target_branch: str,
     release_head_sha: str,
+    env: dict[str, str] | None = None,
 ) -> tuple[list[dict[str, Any]], str]:
     repository = _normalize_repository_token(github_repository)
     branch = str(target_branch or "").strip()
@@ -318,12 +319,16 @@ def _fetch_gh_run_list(
     ]
     if repository:
         cmd.extend(["--repo", repository])
-    shell_path = str(os.environ.get("SHELL", "")).strip() or "/bin/sh"
+    merged_env = dict(os.environ)
+    if isinstance(env, dict):
+        merged_env.update({str(k): str(v) for k, v in env.items()})
+    shell_path = str(merged_env.get("SHELL", "")).strip() or "/bin/sh"
     proc = subprocess.run(
         [shell_path, "-lc", shlex.join(cmd)],
         capture_output=True,
         text=True,
         check=False,
+        env=merged_env,
     )
     if proc.returncode != 0:
         err = str(proc.stderr or proc.stdout or "").strip().splitlines()
@@ -412,6 +417,124 @@ def resolve_release_plane_context(
         "checks_json": str(explicit_checks_json or "").strip(),
         "jobs_json": str(explicit_jobs_json or "").strip(),
     }
+
+
+def _default_release_cloud_evidence_adapter_payload(
+    *,
+    identity_id: str,
+    operation: str,
+    github_token_env: str = "GITHUB_TOKEN",
+) -> dict[str, Any]:
+    return {
+        "release_cloud_evidence_adapter_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "identity_id": identity_id,
+        "operation": operation,
+        "target_branch": "",
+        "release_head_sha": "",
+        "required_gates_run_id": "",
+        "run_url": "",
+        "checks_json_path": "",
+        "gh_runs_json_path": "",
+        "adapter_source_kind": "",
+        "adapter_acquisition_mode": "",
+        "adapter_fetch_transport": "",
+        "adapter_local_dev_canonical": False,
+        "adapter_best_effort_fetch": False,
+        "semantic_consumption_mode": "",
+        "github_repository": "",
+        "github_server_url": "",
+        "github_api_url": "",
+        "github_token_env": github_token_env,
+        "required_checks_count": 0,
+        "stale_reasons": [],
+        "adapter_http_status": "",
+        "github_rate_limit_remaining": "",
+        "github_rate_limit_reset_epoch": "",
+    }
+
+
+def resolve_release_plane_runtime_inputs(
+    *,
+    identity_id: str,
+    operation: str,
+    explicit_target_branch: str = "",
+    explicit_release_head_sha: str = "",
+    explicit_required_gates_run_id: str = "",
+    explicit_run_url: str = "",
+    explicit_workflow_file_sha: str = "",
+    explicit_run_head_sha: str = "",
+    explicit_run_workflow_file_sha: str = "",
+    explicit_checks_json: str = "",
+    explicit_jobs_json: str = "",
+    explicit_gh_runs_json: str = "",
+    default_target_branch: str = "",
+    default_release_head_sha: str = "",
+    github_repository: str = "",
+    github_server_url: str = "",
+    github_api_url: str = "",
+    github_token_env: str = "GITHUB_TOKEN",
+    env: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    release_context = resolve_release_plane_context(
+        explicit_target_branch=str(explicit_target_branch or "").strip(),
+        explicit_release_head_sha=str(explicit_release_head_sha or "").strip(),
+        explicit_required_gates_run_id=str(explicit_required_gates_run_id or "").strip(),
+        explicit_run_url=str(explicit_run_url or "").strip(),
+        explicit_workflow_file_sha=str(explicit_workflow_file_sha or "").strip(),
+        explicit_run_head_sha=str(explicit_run_head_sha or "").strip(),
+        explicit_run_workflow_file_sha=str(explicit_run_workflow_file_sha or "").strip(),
+        explicit_checks_json=str(explicit_checks_json or "").strip(),
+        explicit_jobs_json=str(explicit_jobs_json or "").strip(),
+        default_target_branch=str(default_target_branch or "").strip(),
+        default_release_head_sha=str(default_release_head_sha or "").strip(),
+        env=env,
+    )
+    gh_runs_json = str(explicit_gh_runs_json or "").strip()
+    payload: dict[str, Any] = {
+        "release_plane_context_requested": bool(release_context.get("release_plane_context_requested", False)),
+        "release_plane_context_sources": list(release_context.get("release_plane_context_sources") or []),
+        "target_branch": str(release_context.get("target_branch", "") or "").strip(),
+        "release_head_sha": str(release_context.get("release_head_sha", "") or "").strip(),
+        "required_gates_run_id": str(release_context.get("required_gates_run_id", "") or "").strip(),
+        "run_url": str(release_context.get("run_url", "") or "").strip(),
+        "workflow_file_sha": str(release_context.get("workflow_file_sha", "") or "").strip(),
+        "run_head_sha": str(release_context.get("run_head_sha", "") or "").strip(),
+        "run_workflow_file_sha": str(release_context.get("run_workflow_file_sha", "") or "").strip(),
+        "checks_json": str(release_context.get("checks_json", "") or "").strip(),
+        "jobs_json": str(release_context.get("jobs_json", "") or "").strip(),
+        "gh_runs_json": gh_runs_json,
+    }
+    if not payload["release_plane_context_requested"]:
+        payload["release_adapter_payload"] = _default_release_cloud_evidence_adapter_payload(
+            identity_id=identity_id,
+            operation=operation,
+            github_token_env=github_token_env,
+        )
+        return payload
+
+    adapter_payload = resolve_release_cloud_evidence(
+        identity_id=identity_id,
+        operation=operation,
+        target_branch=payload["target_branch"],
+        release_head_sha=payload["release_head_sha"],
+        required_gates_run_id=payload["required_gates_run_id"],
+        run_url=payload["run_url"],
+        checks_json=payload["checks_json"],
+        jobs_json=payload["jobs_json"],
+        gh_runs_json=payload["gh_runs_json"],
+        github_repository=github_repository,
+        github_server_url=github_server_url,
+        github_api_url=github_api_url,
+        github_token_env=github_token_env,
+        env=env,
+    )
+    payload["release_adapter_payload"] = adapter_payload
+    payload["required_gates_run_id"] = str(
+        adapter_payload.get("required_gates_run_id", "") or payload["required_gates_run_id"]
+    ).strip()
+    payload["run_url"] = str(adapter_payload.get("run_url", "") or payload["run_url"]).strip()
+    payload["checks_json"] = str(adapter_payload.get("checks_json_path", "") or payload["checks_json"]).strip()
+    return payload
 
 
 def _classify_github_http_status(status_code: int, headers: dict[str, Any] | None = None) -> tuple[str, dict[str, Any]]:
@@ -520,19 +643,24 @@ def resolve_release_cloud_evidence(
     github_server_url: str = "",
     github_api_url: str = "",
     github_token_env: str = "GITHUB_TOKEN",
+    env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
+    env_map = dict(os.environ)
+    if isinstance(env, dict):
+        env_map.update({str(k): str(v) for k, v in env.items()})
     resolved_repository, inferred_server_url = _infer_github_repo_context(
         explicit_repository=github_repository,
         explicit_server_url=github_server_url,
+        env=env_map,
     )
-    resolved_run_id = str(required_gates_run_id or "").strip() or str(os.environ.get("GITHUB_RUN_ID", "")).strip()
-    resolved_server_url = inferred_server_url or str(os.environ.get("GITHUB_SERVER_URL", "")).strip().rstrip("/") or "https://github.com"
-    resolved_api_url = str(github_api_url or "").strip() or str(os.environ.get("GITHUB_API_URL", "")).strip() or _default_github_api_url(resolved_server_url)
+    resolved_run_id = str(required_gates_run_id or "").strip() or str(env_map.get("GITHUB_RUN_ID", "")).strip()
+    resolved_server_url = inferred_server_url or str(env_map.get("GITHUB_SERVER_URL", "")).strip().rstrip("/") or "https://github.com"
+    resolved_api_url = str(github_api_url or "").strip() or str(env_map.get("GITHUB_API_URL", "")).strip() or _default_github_api_url(resolved_server_url)
     resolved_run_url = str(run_url or "").strip() or _default_run_url(resolved_server_url, resolved_repository, resolved_run_id)
     explicit_checks_json = str(checks_json or "").strip()
-    explicit_jobs_json = str(jobs_json or "").strip() or str(os.environ.get("GITHUB_RUN_JOBS_JSON", "")).strip()
-    explicit_gh_runs_json = str(gh_runs_json or "").strip() or str(os.environ.get("GITHUB_RUN_LIST_JSON", "")).strip()
-    github_token = str(os.environ.get(github_token_env, "")).strip()
+    explicit_jobs_json = str(jobs_json or "").strip() or str(env_map.get("GITHUB_RUN_JOBS_JSON", "")).strip()
+    explicit_gh_runs_json = str(gh_runs_json or "").strip() or str(env_map.get("GITHUB_RUN_LIST_JSON", "")).strip()
+    github_token = str(env_map.get(github_token_env, "")).strip()
     target_branch_token = str(target_branch or "").strip()
     release_head_sha_token = str(release_head_sha or "").strip()
 
@@ -660,6 +788,7 @@ def resolve_release_cloud_evidence(
         github_repository=resolved_repository,
         target_branch=target_branch_token,
         release_head_sha=release_head_sha_token,
+        env=env_map,
     )
     gh_release_checks = build_release_checks_from_gh_run_rows(
         run_rows=gh_run_rows,
