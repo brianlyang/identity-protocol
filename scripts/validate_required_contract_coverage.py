@@ -42,10 +42,11 @@ from required_contract_coverage_projection_common import build_required_contract
 from resolve_identity_context import resolve_repo_catalog_path
 from strict_live_evidence_resolution_common import resolve_current_round_report_context
 from tool_vendor_governance_common import (
+    build_report_path_resolution_projection,
     contract_required,
     load_json,
     resolve_pack_and_task,
-    resolve_report_path,
+    resolve_report_path_selection,
 )
 
 
@@ -1437,9 +1438,14 @@ def main() -> int:
             lane_floor_target and target.validator_script in FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS
         )
 
-        report_pattern = str(contract.get("report_path_pattern", "")).strip()
-        evidence = (
-            resolve_report_path(
+        report_pattern = ""
+        for field in ("report_path_pattern", "evidence_path_pattern", "source_pattern"):
+            token = str(contract.get(field, "")).strip()
+            if token:
+                report_pattern = token
+                break
+        report_resolution = (
+            resolve_report_path_selection(
                 report="",
                 pattern=report_pattern,
                 pack_root=pack_path,
@@ -1448,7 +1454,20 @@ def main() -> int:
             if report_pattern
             else None
         )
+        evidence = report_resolution.selected_path if report_resolution is not None else None
         evidence_ref = str(evidence) if evidence else ""
+        evidence_projection = (
+            build_report_path_resolution_projection(report_resolution, field_prefix="evidence")
+            if report_resolution is not None
+            else {
+                "evidence_selected_path": "",
+                "evidence_logical_identity_key": "",
+                "evidence_selection_mode": "",
+                "evidence_selected_authority_class": "",
+                "evidence_pointer_resolution_mode": "",
+                "evidence_pointer_path": "",
+            }
+        )
 
         rc, out, err = _run_validator(
             target.validator_script,
@@ -1595,6 +1614,18 @@ def main() -> int:
                 "auto_required_signal": (payload.get("auto_required_signal") if isinstance(payload, dict) else False),
                 "reason_code": reason_code,
                 "evidence_ref": evidence_ref,
+                "evidence_logical_identity_key": str(
+                    evidence_projection.get("evidence_logical_identity_key", "") or ""
+                ).strip(),
+                "evidence_selected_path": str(evidence_projection.get("evidence_selected_path", "") or "").strip(),
+                "evidence_selection_mode": str(evidence_projection.get("evidence_selection_mode", "") or "").strip(),
+                "evidence_selected_authority_class": str(
+                    evidence_projection.get("evidence_selected_authority_class", "") or ""
+                ).strip(),
+                "evidence_pointer_resolution_mode": str(
+                    evidence_projection.get("evidence_pointer_resolution_mode", "") or ""
+                ).strip(),
+                "evidence_pointer_path": str(evidence_projection.get("evidence_pointer_path", "") or "").strip(),
                 "validator_rc": rc,
                 "operation": args.operation,
                 "validator_tail": (out.splitlines()[-1] if out else (err.splitlines()[-1] if err else "")),

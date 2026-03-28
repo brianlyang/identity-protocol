@@ -10,6 +10,7 @@ from typing import Any
 import yaml
 from primary_execution_report_common import (
     latest_prompt_bound_primary_execution_report_from_roots,
+    report_logical_identity_key,
 )
 
 ACTIVE_EXECUTION_POINTER_REL = Path("runtime/state/active_execution_report.json")
@@ -67,6 +68,30 @@ class IdentityUpgradeEvidenceSelectionResolution:
     pointer_resolution_mode: str
     pointer_path: Path | None
     evidence_kind: str
+
+
+@dataclass(frozen=True)
+class ReportPathResolution:
+    selected_path: Path | None
+    selection_mode: str
+    selected_authority_class: str
+    pointer_resolution_mode: str
+    pointer_path: Path | None
+
+
+REPORT_PATH_SELECTION_MODE_PATTERN_PRIMARY_EXECUTION_REPORT_FAMILY = (
+    "pattern_primary_execution_report_family_prompt_bound"
+)
+REPORT_PATH_SELECTION_MODE_PATTERN_GLOB_LATEST_MATCH = "pattern_glob_latest_match"
+REPORT_PATH_SELECTION_MODE_PATTERN_DIRECT_PATH = "pattern_direct_path"
+REPORT_PATH_SELECTION_MODE_NONE = "no_admissible_report_path"
+
+REPORT_PATH_AUTHORITY_CLASS_PATTERN_PRIMARY_EXECUTION_REPORT_FAMILY = (
+    "pattern_primary_execution_report_family_prompt_bound"
+)
+REPORT_PATH_AUTHORITY_CLASS_PATTERN_GLOB_LATEST_MATCH = "pattern_glob_latest_match"
+REPORT_PATH_AUTHORITY_CLASS_PATTERN_DIRECT_PATH = "pattern_direct_path"
+REPORT_PATH_AUTHORITY_CLASS_NONE = "no_selected_report_path"
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -150,6 +175,74 @@ def _has_glob_magic(raw: str) -> bool:
     return any(ch in token for ch in ["*", "?", "["])
 
 
+def _workspace_root_from_pack(root: Path) -> Path | None:
+    for marker in (".identity", ".agents"):
+        marker_path = _find_parent_marker(root, marker)
+        if marker_path is not None:
+            return marker_path.parent.resolve()
+    return None
+
+
+def _dedupe_resolution_candidates(rows: list[tuple[Path, str]]) -> list[tuple[Path, str]]:
+    dedup: list[tuple[Path, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for base_root, rel_pattern in rows:
+        key = (
+            base_root.expanduser().resolve().as_posix(),
+            str(rel_pattern or "").strip(),
+        )
+        if not key[1] or key in seen:
+            continue
+        seen.add(key)
+        dedup.append((base_root.expanduser().resolve(), key[1]))
+    return dedup
+
+
+def _relative_resolution_candidates(root: Path, raw_pattern: str) -> list[tuple[Path, str]]:
+    normalized = str(raw_pattern or "").strip().replace("\\", "/")
+    workspace_root = _workspace_root_from_pack(root)
+    candidates: list[tuple[Path, str]] = [(root.resolve(), normalized)]
+
+    if normalized.startswith("identity/runtime/"):
+        candidates.append((root.resolve(), normalized[len("identity/") :]))
+        return _dedupe_resolution_candidates(candidates)
+
+    if normalized.startswith("runtime/"):
+        return _dedupe_resolution_candidates(candidates)
+
+    if normalized.startswith("resource/"):
+        if workspace_root is not None:
+            candidates.append((workspace_root, normalized))
+        return _dedupe_resolution_candidates(candidates)
+
+    if normalized.startswith("identity/"):
+        candidates.append((root.resolve(), normalized[len("identity/") :]))
+
+    if workspace_root is not None:
+        candidates.append((workspace_root, normalized))
+
+    candidates.append((Path.cwd().resolve(), normalized))
+    return _dedupe_resolution_candidates(candidates)
+
+
+def _search_root_for_pattern(base_root: Path, rel_pattern: str) -> Path | None:
+    normalized = str(rel_pattern or "").strip().replace("\\", "/")
+    if not normalized:
+        return None
+    segments = [segment for segment in normalized.split("/") if segment]
+    prefix_segments: list[str] = []
+    for segment in segments:
+        if _has_glob_magic(segment):
+            break
+        prefix_segments.append(segment)
+    candidate = base_root.expanduser().resolve()
+    if prefix_segments:
+        candidate = candidate.joinpath(*prefix_segments)
+    if candidate.suffix == ".json":
+        candidate = candidate.parent
+    return candidate.resolve()
+
+
 def _pattern_targets_primary_execution_report_family(
     pattern: str,
     *,
@@ -170,85 +263,42 @@ def _pattern_targets_primary_execution_report_family(
     )
 
 
-def resolve_report_path(
+def resolve_report_path_selection(
     *,
     report: str,
     pattern: str,
     pack_root: Path,
     identity_id: str = "",
-) -> Path | None:
+) -> ReportPathResolution:
     if report.strip():
         p = Path(report.strip()).expanduser().resolve()
-        return p if p.exists() else None
+        if p.exists():
+            return ReportPathResolution(
+                selected_path=p,
+                selection_mode=IDENTITY_UPGRADE_REPORT_SELECTION_MODE_EXPLICIT_REPORT_OVERRIDE,
+                selected_authority_class=IDENTITY_UPGRADE_REPORT_AUTHORITY_CLASS_EXPLICIT_REPORT_OVERRIDE,
+                pointer_resolution_mode=IDENTITY_UPGRADE_REPORT_POINTER_RESOLUTION_MODE_EXPLICIT_REPORT_OVERRIDE,
+                pointer_path=None,
+            )
+        return ReportPathResolution(
+            selected_path=None,
+            selection_mode=IDENTITY_UPGRADE_REPORT_SELECTION_MODE_EXPLICIT_REPORT_OVERRIDE,
+            selected_authority_class=IDENTITY_UPGRADE_REPORT_AUTHORITY_CLASS_EXPLICIT_REPORT_OVERRIDE,
+            pointer_resolution_mode=IDENTITY_UPGRADE_REPORT_POINTER_RESOLUTION_MODE_EXPLICIT_REPORT_OVERRIDE_MISSING,
+            pointer_path=None,
+        )
 
     raw = str(pattern or "").strip()
     if not raw:
-        return None
+        return ReportPathResolution(
+            selected_path=None,
+            selection_mode=REPORT_PATH_SELECTION_MODE_NONE,
+            selected_authority_class=REPORT_PATH_AUTHORITY_CLASS_NONE,
+            pointer_resolution_mode="",
+            pointer_path=None,
+        )
     p = Path(raw).expanduser()
-    has_magic = any(ch in raw for ch in ["*", "?", "["])
-
-    def _workspace_root_from_pack(root: Path) -> Path | None:
-        for marker in (".identity", ".agents"):
-            marker_path = _find_parent_marker(root, marker)
-            if marker_path is not None:
-                return marker_path.parent.resolve()
-        return None
-
-    def _dedupe_resolution_candidates(rows: list[tuple[Path, str]]) -> list[tuple[Path, str]]:
-        dedup: list[tuple[Path, str]] = []
-        seen: set[tuple[str, str]] = set()
-        for base_root, rel_pattern in rows:
-            key = (base_root.expanduser().resolve().as_posix(), str(rel_pattern or "").strip())
-            if not key[1] or key in seen:
-                continue
-            seen.add(key)
-            dedup.append((base_root.expanduser().resolve(), key[1]))
-        return dedup
-
-    def _relative_resolution_candidates(root: Path, raw_pattern: str) -> list[tuple[Path, str]]:
-        normalized = str(raw_pattern or "").strip().replace("\\", "/")
-        workspace_root = _workspace_root_from_pack(root)
-        candidates: list[tuple[Path, str]] = [(root.resolve(), normalized)]
-
-        if normalized.startswith("identity/runtime/"):
-            # `identity/runtime/**` is a pack-scoped namespace in CURRENT_TASK contracts.
-            # It must resolve to `<pack>/runtime/**`, not drift into repo fixture/demo paths.
-            candidates.append((root.resolve(), normalized[len("identity/") :]))
-            return _dedupe_resolution_candidates(candidates)
-
-        if normalized.startswith("runtime/"):
-            return _dedupe_resolution_candidates(candidates)
-
-        if normalized.startswith("resource/"):
-            if workspace_root is not None:
-                candidates.append((workspace_root, normalized))
-            return _dedupe_resolution_candidates(candidates)
-
-        if normalized.startswith("identity/"):
-            candidates.append((root.resolve(), normalized[len("identity/") :]))
-
-        if workspace_root is not None:
-            candidates.append((workspace_root, normalized))
-
-        candidates.append((Path.cwd().resolve(), normalized))
-        return _dedupe_resolution_candidates(candidates)
-
-    def _search_root_for_pattern(base_root: Path, rel_pattern: str) -> Path | None:
-        normalized = str(rel_pattern or "").strip().replace("\\", "/")
-        if not normalized:
-            return None
-        segments = [segment for segment in normalized.split("/") if segment]
-        prefix_segments: list[str] = []
-        for segment in segments:
-            if _has_glob_magic(segment):
-                break
-            prefix_segments.append(segment)
-        candidate = base_root.expanduser().resolve()
-        if prefix_segments:
-            candidate = candidate.joinpath(*prefix_segments)
-        if candidate.suffix == ".json":
-            candidate = candidate.parent
-        return candidate.resolve()
+    has_magic = _has_glob_magic(raw)
 
     clean_identity_id = str(identity_id or "").strip()
     if _pattern_targets_primary_execution_report_family(raw, identity_id=clean_identity_id):
@@ -279,18 +329,48 @@ def resolve_report_path(
             explicit_pack_root=pack_root,
         )
         if selected is not None:
-            return selected
+            return ReportPathResolution(
+                selected_path=selected,
+                selection_mode=REPORT_PATH_SELECTION_MODE_PATTERN_PRIMARY_EXECUTION_REPORT_FAMILY,
+                selected_authority_class=REPORT_PATH_AUTHORITY_CLASS_PATTERN_PRIMARY_EXECUTION_REPORT_FAMILY,
+                pointer_resolution_mode="",
+                pointer_path=None,
+            )
 
     if p.is_absolute():
         if has_magic:
             hits = [Path(x).expanduser().resolve() for x in glob.glob(str(p))]
             if not hits:
-                return None
+                return ReportPathResolution(
+                    selected_path=None,
+                    selection_mode=REPORT_PATH_SELECTION_MODE_NONE,
+                    selected_authority_class=REPORT_PATH_AUTHORITY_CLASS_NONE,
+                    pointer_resolution_mode="",
+                    pointer_path=None,
+                )
             hits.sort(key=lambda x: x.stat().st_mtime)
-            return hits[-1]
+            return ReportPathResolution(
+                selected_path=hits[-1],
+                selection_mode=REPORT_PATH_SELECTION_MODE_PATTERN_GLOB_LATEST_MATCH,
+                selected_authority_class=REPORT_PATH_AUTHORITY_CLASS_PATTERN_GLOB_LATEST_MATCH,
+                pointer_resolution_mode="",
+                pointer_path=None,
+            )
         if p.exists():
-            return p.resolve()
-        return None
+            return ReportPathResolution(
+                selected_path=p.resolve(),
+                selection_mode=REPORT_PATH_SELECTION_MODE_PATTERN_DIRECT_PATH,
+                selected_authority_class=REPORT_PATH_AUTHORITY_CLASS_PATTERN_DIRECT_PATH,
+                pointer_resolution_mode="",
+                pointer_path=None,
+            )
+        return ReportPathResolution(
+            selected_path=None,
+            selection_mode=REPORT_PATH_SELECTION_MODE_NONE,
+            selected_authority_class=REPORT_PATH_AUTHORITY_CLASS_NONE,
+            pointer_resolution_mode="",
+            pointer_path=None,
+        )
 
     for base_root, rel_pattern in _relative_resolution_candidates(pack_root, raw):
         if has_magic:
@@ -298,11 +378,128 @@ def resolve_report_path(
             if not hits:
                 continue
             hits.sort(key=lambda x: x.stat().st_mtime)
-            return hits[-1]
+            return ReportPathResolution(
+                selected_path=hits[-1],
+                selection_mode=REPORT_PATH_SELECTION_MODE_PATTERN_GLOB_LATEST_MATCH,
+                selected_authority_class=REPORT_PATH_AUTHORITY_CLASS_PATTERN_GLOB_LATEST_MATCH,
+                pointer_resolution_mode="",
+                pointer_path=None,
+            )
         candidate = (base_root / rel_pattern).resolve()
         if candidate.exists():
-            return candidate
-    return None
+            return ReportPathResolution(
+                selected_path=candidate,
+                selection_mode=REPORT_PATH_SELECTION_MODE_PATTERN_DIRECT_PATH,
+                selected_authority_class=REPORT_PATH_AUTHORITY_CLASS_PATTERN_DIRECT_PATH,
+                pointer_resolution_mode="",
+                pointer_path=None,
+            )
+    return ReportPathResolution(
+        selected_path=None,
+        selection_mode=REPORT_PATH_SELECTION_MODE_NONE,
+        selected_authority_class=REPORT_PATH_AUTHORITY_CLASS_NONE,
+        pointer_resolution_mode="",
+        pointer_path=None,
+    )
+
+
+def build_report_path_resolution_projection(
+    resolution: ReportPathResolution,
+    *,
+    field_prefix: str = "report",
+) -> dict[str, Any]:
+    prefix = str(field_prefix or "").strip() or "report"
+    logical_identity_key = ""
+    if resolution.selected_path is not None:
+        logical_identity_key = report_logical_identity_key(resolution.selected_path)
+    return {
+        f"{prefix}_selected_path": (
+            str(resolution.selected_path) if resolution.selected_path is not None else ""
+        ),
+        f"{prefix}_logical_identity_key": logical_identity_key,
+        f"{prefix}_selection_mode": str(resolution.selection_mode or "").strip(),
+        f"{prefix}_selected_authority_class": str(
+            resolution.selected_authority_class or ""
+        ).strip(),
+        f"{prefix}_pointer_resolution_mode": str(
+            resolution.pointer_resolution_mode or ""
+        ).strip(),
+        f"{prefix}_pointer_path": (
+            str(resolution.pointer_path) if resolution.pointer_path is not None else ""
+        ),
+    }
+
+
+def build_report_path_evidence_selection(
+    resolution: ReportPathResolution,
+    *,
+    evidence_kind: str = IDENTITY_UPGRADE_EVIDENCE_KIND_REPORT,
+) -> IdentityUpgradeEvidenceSelectionResolution:
+    return IdentityUpgradeEvidenceSelectionResolution(
+        selected_path=resolution.selected_path,
+        selection_mode=str(resolution.selection_mode or "").strip(),
+        selected_authority_class=str(resolution.selected_authority_class or "").strip(),
+        pointer_resolution_mode=str(resolution.pointer_resolution_mode or "").strip(),
+        pointer_path=resolution.pointer_path,
+        evidence_kind=str(evidence_kind or "").strip() if resolution.selected_path is not None else "",
+    )
+
+
+def resolve_report_path(
+    *,
+    report: str,
+    pattern: str,
+    pack_root: Path,
+    identity_id: str = "",
+) -> Path | None:
+    return resolve_report_path_selection(
+        report=report,
+        pattern=pattern,
+        pack_root=pack_root,
+        identity_id=identity_id,
+    ).selected_path
+
+
+def resolve_report_evidence_selection(
+    *,
+    report: str,
+    pattern: str,
+    pack_root: Path,
+    identity_id: str = "",
+    fallback_to_identity_upgrade_report: bool = True,
+) -> IdentityUpgradeEvidenceSelectionResolution:
+    path_resolution = resolve_report_path_selection(
+        report=report,
+        pattern=pattern,
+        pack_root=pack_root,
+        identity_id=identity_id,
+    )
+    if str(report or "").strip():
+        return build_report_path_evidence_selection(path_resolution)
+    if path_resolution.selected_path is not None:
+        return build_report_path_evidence_selection(path_resolution)
+    if not fallback_to_identity_upgrade_report:
+        return build_report_path_evidence_selection(path_resolution)
+
+    fallback_resolution = resolve_identity_upgrade_report_selection(
+        str(identity_id or "").strip(),
+        pack_root,
+    )
+    evidence_kind = (
+        IDENTITY_UPGRADE_EVIDENCE_KIND_REPORT
+        if fallback_resolution.selected_report is not None
+        else ""
+    )
+    return IdentityUpgradeEvidenceSelectionResolution(
+        selected_path=fallback_resolution.selected_report,
+        selection_mode=str(fallback_resolution.selection_mode or "").strip(),
+        selected_authority_class=str(
+            fallback_resolution.selected_report_authority_class or ""
+        ).strip(),
+        pointer_resolution_mode=str(fallback_resolution.pointer_resolution_mode or "").strip(),
+        pointer_path=fallback_resolution.pointer_path,
+        evidence_kind=evidence_kind,
+    )
 
 
 def materialize_report_path(
@@ -502,10 +699,14 @@ def build_identity_upgrade_report_selection_projection(
     field_prefix: str = "report",
 ) -> dict[str, Any]:
     prefix = str(field_prefix or "").strip() or "report"
+    logical_identity_key = ""
+    if resolution.selected_report is not None:
+        logical_identity_key = report_logical_identity_key(resolution.selected_report)
     return {
         f"{prefix}_selected_path": (
             str(resolution.selected_report) if resolution.selected_report is not None else ""
         ),
+        f"{prefix}_logical_identity_key": logical_identity_key,
         f"{prefix}_selection_mode": str(resolution.selection_mode or "").strip(),
         f"{prefix}_selected_authority_class": str(
             resolution.selected_report_authority_class or ""
@@ -576,10 +777,17 @@ def build_identity_upgrade_evidence_selection_projection(
     field_prefix: str = "evidence",
 ) -> dict[str, Any]:
     prefix = str(field_prefix or "").strip() or "evidence"
+    logical_identity_key = ""
+    if (
+        resolution.selected_path is not None
+        and str(resolution.evidence_kind or "").strip() == IDENTITY_UPGRADE_EVIDENCE_KIND_REPORT
+    ):
+        logical_identity_key = report_logical_identity_key(resolution.selected_path)
     return {
         f"{prefix}_selected_path": (
             str(resolution.selected_path) if resolution.selected_path is not None else ""
         ),
+        f"{prefix}_logical_identity_key": logical_identity_key,
         f"{prefix}_selection_mode": str(resolution.selection_mode or "").strip(),
         f"{prefix}_selected_authority_class": str(
             resolution.selected_authority_class or ""
