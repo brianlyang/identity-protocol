@@ -29,6 +29,9 @@ ordering_anchor_checks:
     have remained lawful;
   - receipts close the adjudicated verdict and must not back-author earlier legality
     phases.
+  - this manual root-contract index is explanatory only and must remain congruent
+    with the admitted `reading_order` root-contract sequence rather than becoming
+    an independently authored alternate order.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
   - '### Adjudication surfaces are phase-governed, not interchangeable'
@@ -50,6 +53,9 @@ ordering_anchor_checks:
   - runtime state binds live truth only after prior legality phases remain satisfied;
   - receipts close the adjudicated verdict and do not replace the earlier legality
     phases they report.
+  - The manual root-contract enumeration carried by this constitution is an explanatory
+    projection and must remain congruent with the admitted `reading_order` root-contract
+    sequence rather than becoming an independently authored alternate root index.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime adjudication-surface consumption boundary'

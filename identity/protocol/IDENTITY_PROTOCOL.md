@@ -59,11 +59,15 @@ Status transitions are controlled by governance/review, not by script commit alo
 11. The root-domain entry-surface legitimacy law for which entry surfaces are lawful, which may drive active execution, and which must remain helper-only, recovery-only, or demoted is frozen separately in `identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md`.
 12. The root-domain error terminality law for which errors must fail-close, redirect into governed recovery, or remain explicitly non-blocking is frozen separately in `identity/protocol/ERROR_TERMINALITY_CONTRACT.md`.
 13. The root-domain artifact-family admissibility law for which governed families may accept which artifacts, which artifacts remain merely compatible, and which must redirect or stay demoted is frozen separately in `identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md`.
-14. The root-domain admissibility law for new protocol streams and shared strengthenings is frozen separately in `identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`.
-15. The root-domain responsibility and escalation boundary between protocol law and instance adaptation is frozen separately in `identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`.
-16. The root-domain truth lifecycle law for existence, discoverability, admissibility, run-binding, and next-hop consumption is frozen separately in `identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md`.
-17. The root-domain operator answer-surface and law-preserving compression boundary is frozen separately in `identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md`.
-18. The root-domain instance self-judgement law for who I am, what I can do, how I do it, and when I must not decide alone is frozen separately in `identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md`.
+14. The root-domain prompt-bootstrap law for lawful identity prompt activation and bootstrap discipline is frozen separately in `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`.
+15. The root-domain identity-discovery law for how lawful identity surfaces are discovered and bound is frozen separately in `identity/protocol/IDENTITY_DISCOVERY.md`.
+16. The root-domain agent-handoff law for lawful cross-agent responsibility transfer and closure is frozen separately in `identity/protocol/AGENT_HANDOFF_CONTRACT.md`.
+17. The root-domain instance self-judgement law for who I am, what I can do, how I do it, and when I must not decide alone is frozen separately in `identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md`.
+18. The root-domain responsibility and escalation boundary between protocol law and instance adaptation is frozen separately in `identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`.
+19. The root-domain admissibility law for new protocol streams and shared strengthenings is frozen separately in `identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`.
+20. The root-domain truth lifecycle law for existence, discoverability, admissibility, run-binding, and next-hop consumption is frozen separately in `identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md`.
+21. The root-domain operator answer-surface and law-preserving compression boundary is frozen separately in `identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md`.
+22. The manual root-contract enumeration carried by this constitution is an explanatory projection and must remain congruent with the admitted `reading_order` root-contract sequence rather than becoming an independently authored alternate root index.
 
 ## Constitutional derivation discipline
 
@@ -220,11 +224,12 @@ implicit.
 
 ## Root ordering completeness boundary
 
-1. Ordering law must remain machine-readable as separate source-order, reading-order, adjudication-order, and adjudication-surface-profile row families.
+1. Ordering law must remain machine-readable as separate source-order, reading-order, README-root-contract-index, protocol-boundary-root-contract-index, adjudication-order, and adjudication-surface-profile row families.
 2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
-3. Expected row identity set and emitted row identity set for each ordering family must also remain explicit; source, entry, or adjudication-surface identity drift may not be collapsed into summary-only counts.
-4. Protocol legality must not finalize ordering legality while missing or unexpected source, entry, or adjudication-surface identities remain known only inside validator logic.
+3. Expected row identity set and emitted row identity set for each ordering family must also remain explicit; source, entry, manual-root-contract, or adjudication-surface identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize ordering legality while missing or unexpected source, entry, manual-root-contract, or adjudication-surface identities remain known only inside validator logic.
 5. Fail-close ordering output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+6. Explanatory root-contract indices rendered in root docs must remain congruent with admitted `reading_order` root-contract entries rather than silently authoring an alternate order.
 
 ## Root question-routing completeness boundary
 

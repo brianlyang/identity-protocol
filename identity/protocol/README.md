@@ -49,6 +49,7 @@ When entering `identity/protocol/`, read in this order:
    - `STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`
    - `TRUTH_LIFECYCLE_CONTRACT.md`
    - `OPERATOR_ANSWER_SURFACE_CONTRACT.md`
+   - this manual root-contract index is explanatory only and must remain congruent with the admitted `reading_order` root-contract sequence rather than becoming an independently authored alternate order.
    - these freeze concrete contract law for their specific domains.
 5. **machine-consumed registries and mappings**
    - `mappings/`

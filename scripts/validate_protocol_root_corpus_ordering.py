@@ -13,6 +13,12 @@ from root_contract_anchor_checks_common import (
 from root_contract_integration_checks_common import append_membership_delta_violations
 from root_contract_row_validation_common import contiguous_orders
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
+from root_corpus_contract_list_sync_common import (
+    PROTOCOL_BOUNDARY_ROOT_CONTRACT_INDEX_SURFACE_ID,
+    README_ROOT_CONTRACT_INDEX_SURFACE_ID,
+    canonical_root_contract_rel_paths,
+    manual_root_contract_index_surfaces,
+)
 from root_corpus_governance_common import (
     load_root_corpus_registry,
     root_corpus_entries_from_registry,
@@ -71,6 +77,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "probes negate drift by fail-closing weakened or hidden legality assumptions;",
         "runtime state binds live current-turn truth only after prior legality phases have remained lawful;",
         "receipts close the adjudicated verdict and must not back-author earlier legality phases.",
+        "this manual root-contract index is explanatory only and must remain congruent with the admitted `reading_order` root-contract sequence rather than becoming an independently authored alternate order.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "### Adjudication surfaces are phase-governed, not interchangeable",
@@ -87,6 +94,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "probes fail-close hidden drift instead of softening legality expectations;",
         "runtime state binds live truth only after prior legality phases remain satisfied;",
         "receipts close the adjudicated verdict and do not replace the earlier legality phases they report.",
+        "The manual root-contract enumeration carried by this constitution is an explanatory projection and must remain congruent with the admitted `reading_order` root-contract sequence rather than becoming an independently authored alternate root index.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime adjudication-surface consumption boundary",
@@ -158,6 +166,8 @@ def main() -> int:
     adjudication_rows = adjudication_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     adjudication_surface_profiles = adjudication_surface_profiles_from_doc(ordering_doc) if ordering_doc else ()
     ordering_anchor_checks = ordering_anchor_checks_from_doc(ordering_doc) if ordering_doc else ()
+    manual_root_contract_surfaces = manual_root_contract_index_surfaces(repo_root)
+    manual_root_contract_surface_map = {surface.surface_id: surface for surface in manual_root_contract_surfaces}
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     adjudication_redirect = adjudication_redirect_from_doc(question_routing_doc) if question_routing_doc else adjudication_redirect_from_doc({})
     precedence_profiles = precedence_profiles_from_doc(precedence_doc) if precedence_doc else ()
@@ -244,6 +254,7 @@ def main() -> int:
     sorted_reading_rows = sorted(reading_rows, key=lambda item: item.order)
     sorted_adjudication_rows = sorted(adjudication_rows, key=lambda item: item.order)
     sorted_adjudication_surface_profiles = sorted(adjudication_surface_profiles, key=lambda item: item.phase_order)
+    canonical_root_contract_entry_paths = canonical_root_contract_rel_paths(sorted_reading_rows)
     root_index_entry = str(ordering_doc.get("root_index_entry") or "").strip()
     precedence_profile_map = {row.conflict_class: row for row in precedence_profiles}
     precedence_legality_profile = precedence_profile_map.get(CURRENT_TURN_LEGALITY_CONFLICT)
@@ -465,6 +476,37 @@ def main() -> int:
                 )
             previous_rank = current_rank
 
+        for surface in manual_root_contract_surfaces:
+            actual_manual_rel_paths = [row.rel_path for row in surface.rows]
+            for reason in surface.extraction_violations:
+                coverage_violations.append(
+                    {
+                        "field": surface.surface_id,
+                        "reason": f"manual_root_contract_index_{reason}",
+                        "rel_path": surface.rel_path,
+                    }
+                )
+            append_membership_delta_violations(
+                coverage_violations,
+                field_name=surface.surface_id,
+                expected_ids=canonical_root_contract_entry_paths,
+                actual_ids=actual_manual_rel_paths,
+                payload_key="rel_paths",
+                missing_reason="missing_manual_root_contract_entries",
+                extra_reason="extra_manual_root_contract_entries",
+                duplicate_reason="manual_root_contract_index_duplicate_rel_path",
+                actual_total_count=len(actual_manual_rel_paths),
+            )
+            if actual_manual_rel_paths and tuple(actual_manual_rel_paths) != canonical_root_contract_entry_paths:
+                coverage_violations.append(
+                    {
+                        "field": surface.surface_id,
+                        "reason": "manual_root_contract_order_mismatch",
+                        "expected": list(canonical_root_contract_entry_paths),
+                        "actual": list(actual_manual_rel_paths),
+                    }
+                )
+
         anchor_violations.extend(
             evaluate_root_doc_anchor_checks(
                 repo_root,
@@ -502,6 +544,24 @@ def main() -> int:
                 "member_id_key": "rel_path",
                 "actual_rows": reading_rows,
                 "expected_rows": {rel_path: {} for rel_path in registry_paths},
+                "id_attr": "rel_path",
+            },
+            {
+                "family_id": README_ROOT_CONTRACT_INDEX_SURFACE_ID,
+                "member_id_key": "rel_path",
+                "actual_rows": manual_root_contract_surface_map.get(README_ROOT_CONTRACT_INDEX_SURFACE_ID).rows
+                if manual_root_contract_surface_map.get(README_ROOT_CONTRACT_INDEX_SURFACE_ID)
+                else (),
+                "expected_rows": {rel_path: {} for rel_path in canonical_root_contract_entry_paths},
+                "id_attr": "rel_path",
+            },
+            {
+                "family_id": PROTOCOL_BOUNDARY_ROOT_CONTRACT_INDEX_SURFACE_ID,
+                "member_id_key": "rel_path",
+                "actual_rows": manual_root_contract_surface_map.get(PROTOCOL_BOUNDARY_ROOT_CONTRACT_INDEX_SURFACE_ID).rows
+                if manual_root_contract_surface_map.get(PROTOCOL_BOUNDARY_ROOT_CONTRACT_INDEX_SURFACE_ID)
+                else (),
+                "expected_rows": {rel_path: {} for rel_path in canonical_root_contract_entry_paths},
                 "id_attr": "rel_path",
             },
             {
@@ -563,6 +623,24 @@ def main() -> int:
                 "corpus_class": registry_entry_class_map.get(row.rel_path, ""),
             }
             for row in sorted_reading_rows
+        ],
+        "canonical_root_contract_entry_count": len(canonical_root_contract_entry_paths),
+        "canonical_root_contract_entry_paths": list(canonical_root_contract_entry_paths),
+        "manual_root_contract_index_surfaces": [
+            {
+                "surface_id": surface.surface_id,
+                "rel_path": surface.rel_path,
+                "entry_count": len(surface.rows),
+                "entries": [
+                    {
+                        "order": row.order,
+                        "rel_path": row.rel_path,
+                    }
+                    for row in surface.rows
+                ],
+                "extraction_violations": list(surface.extraction_violations),
+            }
+            for surface in manual_root_contract_surfaces
         ],
         "adjudication_order": [
             {
