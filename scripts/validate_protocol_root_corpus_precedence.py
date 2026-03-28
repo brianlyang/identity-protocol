@@ -12,7 +12,7 @@ from root_contract_anchor_checks_common import (
     validate_expected_root_doc_anchor_checks,
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
-from root_contract_row_validation_common import validate_contract_rows
+from root_contract_row_validation_common import validate_contract_row_batches
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_authority_common import load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
@@ -316,37 +316,39 @@ def main() -> int:
                     "reason": reason,
                 }
             )
-        validate_contract_rows(
-            actual_rows=conflict_handling_rules,
-            expected_rows=EXPECTED_CONFLICT_HANDLING_RULES,
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": conflict_handling_rules,
+                    "expected_rows": EXPECTED_CONFLICT_HANDLING_RULES,
+                    "field_name": "conflict_handling_rules",
+                    "id_attr": "rule_text",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_conflict_handling_rule",
+                    "non_contiguous_reason": "conflict_handling_rule_order_non_contiguous",
+                    "missing_reason": "missing_conflict_handling_rules",
+                    "extra_reason": "extra_conflict_handling_rules",
+                    "missing_ids_key": "rule_texts",
+                    "extra_ids_key": "rule_texts",
+                    "violation_id_key": "rule_text",
+                },
+                {
+                    "actual_rows": conflict_handling_rule_surface.rows,
+                    "expected_rows": EXPECTED_CONFLICT_HANDLING_RULES,
+                    "field_name": "conflict_handling_rule_surface",
+                    "id_attr": "rule_text",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_conflict_handling_rule_surface_text",
+                    "non_contiguous_reason": "conflict_handling_rule_surface_order_non_contiguous",
+                    "missing_reason": "missing_conflict_handling_rule_surface_rows",
+                    "extra_reason": "extra_conflict_handling_rule_surface_rows",
+                    "missing_ids_key": "rule_texts",
+                    "extra_ids_key": "rule_texts",
+                    "violation_id_key": "rule_text",
+                },
+            ),
             structure_violations=structure_violations,
             support_violations=precedence_violations,
-            field_name="conflict_handling_rules",
-            id_attr="rule_text",
-            compare_fields=(),
-            duplicate_reason="duplicate_conflict_handling_rule",
-            non_contiguous_reason="conflict_handling_rule_order_non_contiguous",
-            missing_reason="missing_conflict_handling_rules",
-            extra_reason="extra_conflict_handling_rules",
-            missing_ids_key="rule_texts",
-            extra_ids_key="rule_texts",
-            violation_id_key="rule_text",
-        )
-        validate_contract_rows(
-            actual_rows=conflict_handling_rule_surface.rows,
-            expected_rows=EXPECTED_CONFLICT_HANDLING_RULES,
-            structure_violations=structure_violations,
-            support_violations=precedence_violations,
-            field_name="conflict_handling_rule_surface",
-            id_attr="rule_text",
-            compare_fields=(),
-            duplicate_reason="duplicate_conflict_handling_rule_surface_text",
-            non_contiguous_reason="conflict_handling_rule_surface_order_non_contiguous",
-            missing_reason="missing_conflict_handling_rule_surface_rows",
-            extra_reason="extra_conflict_handling_rule_surface_rows",
-            missing_ids_key="rule_texts",
-            extra_ids_key="rule_texts",
-            violation_id_key="rule_text",
         )
 
         for row in precedence_profiles:

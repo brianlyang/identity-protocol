@@ -13,7 +13,7 @@ from root_contract_anchor_checks_common import (
     validate_expected_root_doc_anchor_checks,
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
-from root_contract_row_validation_common import contiguous_orders, validate_contract_rows
+from root_contract_row_validation_common import contiguous_orders, validate_contract_row_batches
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_governance_common import (
     STATUS_FAIL_REQUIRED,
@@ -270,21 +270,25 @@ def main() -> int:
             structure_violations.append(
                 {"field": "root_index_class_projection_surface", "reason": "projection_order_non_contiguous"}
             )
-        validate_contract_rows(
-            actual_rows=root_maintenance_guardrails,
-            expected_rows=EXPECTED_ROOT_MAINTENANCE_GUARDRAILS,
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": root_maintenance_guardrails,
+                    "expected_rows": EXPECTED_ROOT_MAINTENANCE_GUARDRAILS,
+                    "field_name": "root_maintenance_guardrails",
+                    "id_attr": "guardrail_label",
+                    "compare_fields": ("required_markers",),
+                    "duplicate_reason": "duplicate_guardrail_label",
+                    "non_contiguous_reason": "guardrail_order_non_contiguous",
+                    "missing_reason": "missing_root_maintenance_guardrails",
+                    "extra_reason": "extra_root_maintenance_guardrails",
+                    "missing_ids_key": "guardrail_labels",
+                    "extra_ids_key": "guardrail_labels",
+                    "violation_id_key": "guardrail_label",
+                },
+            ),
             structure_violations=structure_violations,
             support_violations=structure_violations,
-            field_name="root_maintenance_guardrails",
-            id_attr="guardrail_label",
-            compare_fields=("required_markers",),
-            duplicate_reason="duplicate_guardrail_label",
-            non_contiguous_reason="guardrail_order_non_contiguous",
-            missing_reason="missing_root_maintenance_guardrails",
-            extra_reason="extra_root_maintenance_guardrails",
-            missing_ids_key="guardrail_labels",
-            extra_ids_key="guardrail_labels",
-            violation_id_key="guardrail_label",
         )
         if guardrail_surface_orders and (
             len(set(guardrail_surface_orders)) != len(guardrail_surface_orders)
