@@ -7,14 +7,94 @@ TMP_ROOT="$(mktemp -d)"
 trap 'rm -rf "${TMP_ROOT}"' EXIT
 
 POSITIVE_JSON="${TMP_ROOT}/positive.json"
-NEGATIVE_JSON="${TMP_ROOT}/negative.json"
+POSITIVE_SYNC_JSON="${TMP_ROOT}/positive-sync.json"
+NEGATIVE_SYNC_JSON="${TMP_ROOT}/negative-sync.json"
 SHADOW_ROOT="${TMP_ROOT}/shadow-repo"
 
-printf '[RUN] positive release-closure control-plane status projection\n'
-python3 "${REPO_ROOT}/scripts/materialize_control_plane_surfaces.py" \
-  --repo-root "${REPO_ROOT}" \
+mkdir -p "${SHADOW_ROOT}"
+
+python3 - <<'PY' "${REPO_ROOT}" "${SHADOW_ROOT}"
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[1]).resolve()
+shadow_root = Path(sys.argv[2]).resolve()
+
+for child in repo_root.iterdir():
+    if child.name in {"identity", "scripts"}:
+        continue
+    target = shadow_root / child.name
+    if target.exists():
+        continue
+    target.symlink_to(child, target_is_directory=child.is_dir())
+
+scripts_src = repo_root / "scripts"
+scripts_dst = shadow_root / "scripts"
+scripts_dst.mkdir(parents=True, exist_ok=True)
+copied_scripts = {
+    "materialize_control_plane_surfaces.py",
+    "render_control_plane_budget.py",
+    "render_control_plane_status.py",
+    "validate_control_plane_budget.py",
+    "validate_control_plane_budget_sync.py",
+    "validate_control_plane_status_sync.py",
+    "repo_root_resolution_common.py",
+}
+for child in scripts_src.iterdir():
+    target = scripts_dst / child.name
+    if child.name in copied_scripts:
+        target.write_text(child.read_text(encoding="utf-8"), encoding="utf-8")
+        continue
+    if target.exists():
+        continue
+    target.symlink_to(child, target_is_directory=child.is_dir())
+
+identity_src = repo_root / "identity"
+identity_dst = shadow_root / "identity"
+identity_dst.mkdir(parents=True, exist_ok=True)
+for child in identity_src.iterdir():
+    if child.name == "protocol":
+        continue
+    target = identity_dst / child.name
+    if target.exists():
+        continue
+    target.symlink_to(child, target_is_directory=child.is_dir())
+
+protocol_src = identity_src / "protocol"
+protocol_dst = identity_dst / "protocol"
+protocol_dst.mkdir(parents=True, exist_ok=True)
+for child in protocol_src.iterdir():
+    if child.name == "mappings":
+        continue
+    target = protocol_dst / child.name
+    if target.exists():
+        continue
+    target.symlink_to(child, target_is_directory=child.is_dir())
+
+mappings_src = protocol_src / "mappings"
+mappings_dst = protocol_dst / "mappings"
+mappings_dst.mkdir(parents=True, exist_ok=True)
+copied_files = {
+    "control-plane-budget.current.yaml",
+    "control-plane-budget.v1.6.yaml",
+    "control-plane-status.current.yaml",
+    "control-plane-status.v1.6.json",
+}
+for child in mappings_src.iterdir():
+    target = mappings_dst / child.name
+    if child.name in copied_files:
+        target.write_text(child.read_text(encoding="utf-8"), encoding="utf-8")
+        continue
+    if target.exists():
+        continue
+    target.symlink_to(child, target_is_directory=child.is_dir())
+PY
+
+printf '[RUN] positive release-closure control-plane status projection (shadow repo)\n'
+python3 "${SHADOW_ROOT}/scripts/materialize_control_plane_surfaces.py" \
+  --repo-root "${SHADOW_ROOT}" \
   --write \
-  --json-only > "${POSITIVE_JSON}" || true
+  --json-only > "${POSITIVE_JSON}"
 
 python3 - <<'PY' "${POSITIVE_JSON}"
 import json
@@ -47,34 +127,26 @@ for name in (
         raise SystemExit(f"control_plane_release_closure_check_not_green:{name}")
 PY
 
-mkdir -p "${SHADOW_ROOT}"
+python3 "${SHADOW_ROOT}/scripts/validate_control_plane_status_sync.py" \
+  --repo-root "${SHADOW_ROOT}" \
+  --json-only > "${POSITIVE_SYNC_JSON}"
 
-python3 - <<'PY' "${REPO_ROOT}" "${SHADOW_ROOT}"
+python3 - <<'PY' "${POSITIVE_SYNC_JSON}"
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if str(payload.get("control_plane_status_sync_status", "")).strip().upper() != "PASS_REQUIRED":
+    raise SystemExit("positive_release_closure_status_sync_not_green")
+PY
+
+python3 - <<'PY' "${SHADOW_ROOT}/scripts/render_control_plane_status.py"
 from pathlib import Path
 import sys
 
-repo_root = Path(sys.argv[1]).resolve()
-shadow_root = Path(sys.argv[2]).resolve()
-
-for child in repo_root.iterdir():
-    if child.name == "scripts":
-        continue
-    target = shadow_root / child.name
-    if target.exists():
-        continue
-    target.symlink_to(child, target_is_directory=child.is_dir())
-
-scripts_dir = shadow_root / "scripts"
-scripts_dir.mkdir(parents=True, exist_ok=True)
-for child in (repo_root / "scripts").iterdir():
-    if child.name == "render_control_plane_status.py":
-        continue
-    target = scripts_dir / child.name
-    if target.exists():
-        continue
-    target.symlink_to(child, target_is_directory=child.is_dir())
-target = scripts_dir / "render_control_plane_status.py"
-source_lines = (repo_root / "scripts" / "render_control_plane_status.py").read_text(encoding="utf-8").splitlines()
+path = Path(sys.argv[1])
+source_lines = path.read_text(encoding="utf-8").splitlines()
 updated_lines: list[str] = []
 candidate_block: list[str] | None = None
 remove_candidate = False
@@ -104,39 +176,32 @@ for line in source_lines:
     updated_lines.append(line)
 if removed != 1:
     raise SystemExit("probe_setup_failed:missing_v16x_release_closure_summary_check_block")
-target.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
+path.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
 PY
 
-printf '[RUN] negative release-closure control-plane status projection\n'
-python3 "${SHADOW_ROOT}/scripts/render_control_plane_status.py" \
+printf '[RUN] negative release-closure control-plane status sync drift (shadow repo)\n'
+if python3 "${SHADOW_ROOT}/scripts/validate_control_plane_status_sync.py" \
   --repo-root "${SHADOW_ROOT}" \
-  --json-only > "${NEGATIVE_JSON}" || true
+  --json-only > "${NEGATIVE_SYNC_JSON}"; then
+  echo "[FAIL] release-closure control-plane status sync unexpectedly passed missing-check drift"
+  exit 1
+fi
 
-python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}"
+python3 - <<'PY' "${NEGATIVE_SYNC_JSON}"
 import json
 import sys
 from pathlib import Path
 
-positive = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
-negative = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
-
-positive_checks = {
-    str(row.get("name", "")).strip(): row
-    for row in (positive.get("status_render") or {}).get("checks") or []
-    if isinstance(row, dict) and str(row.get("name", "")).strip()
-}
-negative_checks = {
-    str(row.get("name", "")).strip(): row
-    for row in negative.get("checks") or []
-    if isinstance(row, dict) and str(row.get("name", "")).strip()
-}
-
-if "v16x_release_closure_summary" not in positive_checks:
-    raise SystemExit("positive control-plane projection missing v16x_release_closure_summary")
-if "v16x_release_closure_summary" in negative_checks:
-    raise SystemExit("negative control-plane projection must lose v16x_release_closure_summary after drift fixture")
-if "v16x_release_closure_boundary" not in negative_checks:
-    raise SystemExit("negative control-plane projection should keep neighboring release-closure checks")
+payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+if str(payload.get("control_plane_status_sync_status", "")).strip().upper() != "FAIL_REQUIRED":
+    raise SystemExit("negative_release_closure_status_sync_should_fail")
+mismatches = payload.get("mismatches") or []
+if not any(
+    str(row.get("field", "")).strip() == "checks.name_set"
+    and str(row.get("reason", "")).strip() == "check_set_drift"
+    for row in mismatches
+):
+    raise SystemExit("negative_release_closure_status_sync_missing_check_set_drift")
 PY
 
 echo "[PASS] release-closure control-plane status probes passed"
