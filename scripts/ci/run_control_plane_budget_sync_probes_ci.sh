@@ -7,87 +7,48 @@ TMP_ROOT="$(mktemp -d)"
 trap 'rm -rf "${TMP_ROOT}"' EXIT
 
 POSITIVE_JSON="${TMP_ROOT}/positive.json"
+BASELINE_RENDER_JSON="${TMP_ROOT}/baseline-render.json"
 HYGIENE_BASELINE_JSON="${TMP_ROOT}/hygiene-baseline.json"
 HYGIENE_UNTRACKED_JSON="${TMP_ROOT}/hygiene-untracked.json"
 HYGIENE_PARTIAL_JSON="${TMP_ROOT}/hygiene-partial.json"
+TOPOLOGY_NEGATIVE_JSON="${TMP_ROOT}/negative-topology.json"
 NEGATIVE_JSON="${TMP_ROOT}/negative.json"
 SHADOW_ROOT="${TMP_ROOT}/shadow-repo"
 
-printf '[RUN] positive control-plane budget sync validation\n'
-python3 "${REPO_ROOT}/scripts/validate_control_plane_budget_sync.py" \
+mkdir -p "${SHADOW_ROOT}"
+python3 "${REPO_ROOT}/scripts/control_plane_probe_shadow_common.py" \
   --repo-root "${REPO_ROOT}" \
+  --shadow-root "${SHADOW_ROOT}" \
+  --copy-script render_control_plane_budget.py \
+  --copy-script validate_control_plane_budget.py \
+  --copy-script validate_control_plane_budget_sync.py \
+  --copy-script repo_root_resolution_common.py \
+  --copy-mapping control-plane-budget.current.yaml \
+  --copy-mapping control-plane-budget.v1.6.yaml \
+  --json-only > /dev/null
+
+printf '[RUN] shadow baseline render control-plane budget\n'
+python3 "${SHADOW_ROOT}/scripts/render_control_plane_budget.py" \
+  --repo-root "${SHADOW_ROOT}" \
+  --write \
+  --json-only > "${BASELINE_RENDER_JSON}"
+
+printf '[RUN] positive control-plane budget sync validation (shadow repo)\n'
+python3 "${SHADOW_ROOT}/scripts/validate_control_plane_budget_sync.py" \
+  --repo-root "${SHADOW_ROOT}" \
   --json-only > "${POSITIVE_JSON}"
 
-python3 - <<'PY' "${POSITIVE_JSON}"
+python3 - <<'PY' "${BASELINE_RENDER_JSON}" "${POSITIVE_JSON}"
 import json
 import sys
 from pathlib import Path
 
-payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-if str(payload.get("control_plane_budget_sync_status", "")).strip().upper() != "PASS_REQUIRED":
+render_payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+positive_payload = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+if not bool(render_payload.get("write_applied")):
+    raise SystemExit("shadow_budget_render_write_not_applied")
+if str(positive_payload.get("control_plane_budget_sync_status", "")).strip().upper() != "PASS_REQUIRED":
     raise SystemExit("positive_control_plane_budget_sync_not_green")
-PY
-
-mkdir -p "${SHADOW_ROOT}"
-
-python3 - <<'PY' "${REPO_ROOT}" "${SHADOW_ROOT}"
-from pathlib import Path
-import sys
-
-repo_root = Path(sys.argv[1]).resolve()
-shadow_root = Path(sys.argv[2]).resolve()
-
-for child in repo_root.iterdir():
-    if child.name in {"identity", "scripts"}:
-        continue
-    target = shadow_root / child.name
-    if target.exists():
-        continue
-    target.symlink_to(child, target_is_directory=child.is_dir())
-
-scripts_src = repo_root / "scripts"
-scripts_dst = shadow_root / "scripts"
-scripts_dst.mkdir(parents=True, exist_ok=True)
-for child in scripts_src.iterdir():
-    target = scripts_dst / child.name
-    if target.exists():
-        continue
-    target.symlink_to(child, target_is_directory=child.is_dir())
-
-identity_src = repo_root / "identity"
-identity_dst = shadow_root / "identity"
-identity_dst.mkdir(parents=True, exist_ok=True)
-for child in identity_src.iterdir():
-    if child.name == "protocol":
-        continue
-    target = identity_dst / child.name
-    if target.exists():
-        continue
-    target.symlink_to(child, target_is_directory=child.is_dir())
-
-protocol_src = identity_src / "protocol"
-protocol_dst = identity_dst / "protocol"
-protocol_dst.mkdir(parents=True, exist_ok=True)
-for child in protocol_src.iterdir():
-    if child.name == "mappings":
-        continue
-    target = protocol_dst / child.name
-    if target.exists():
-        continue
-    target.symlink_to(child, target_is_directory=child.is_dir())
-
-mappings_src = protocol_src / "mappings"
-mappings_dst = protocol_dst / "mappings"
-mappings_dst.mkdir(parents=True, exist_ok=True)
-
-for child in mappings_src.iterdir():
-    target = mappings_dst / child.name
-    if target.exists():
-        continue
-    if child.name in {"control-plane-budget.current.yaml", "control-plane-budget.v1.6.yaml"}:
-        target.write_text(child.read_text(encoding="utf-8"), encoding="utf-8")
-        continue
-    target.symlink_to(child, target_is_directory=child.is_dir())
 PY
 
 printf '[RUN] metric hygiene baseline validation\n'
@@ -144,6 +105,9 @@ base_observed = baseline.get("observed") or {}
 untracked_observed = untracked.get("observed") or {}
 partial_observed = partial.get("observed") or {}
 
+if str(baseline.get("control_plane_budget_status", "")).strip().upper() != "PASS_REQUIRED":
+    raise SystemExit("baseline_budget_probe_should_be_green")
+
 if str(untracked.get("control_plane_budget_status", "")).strip().upper() != "PASS_REQUIRED":
     raise SystemExit("untracked_validator_probe_should_remain_green")
 if int(base_observed.get("validator_scripts", -1)) != int(untracked_observed.get("validator_scripts", -2)):
@@ -162,6 +126,54 @@ ignored_tokens = set(str(item) for item in (partial_observed.get("ignored_partia
 if "IP-BUDGET-HYGIENE-" not in ignored_tokens:
     raise SystemExit("partial_prefix_probe_not_projected")
 PY
+
+printf '[RUN] topology negative control-plane budget validation\n'
+python3 "${SHADOW_ROOT}/scripts/render_control_plane_budget.py" \
+  --repo-root "${SHADOW_ROOT}" \
+  --write \
+  --json-only > /dev/null
+
+python3 - <<'PY' "${SHADOW_ROOT}"
+from pathlib import Path
+import sys
+import yaml
+
+shadow_root = Path(sys.argv[1]).resolve()
+active_dst = shadow_root / "identity" / "protocol" / "mappings" / "control-plane-budget.v1.6.yaml"
+doc = yaml.safe_load(active_dst.read_text(encoding="utf-8")) or {}
+if not isinstance(doc, dict):
+    raise SystemExit("topology_probe_setup_failed:budget_doc_not_mapping")
+budgets = doc.get("budgets") or {}
+direct = budgets.get("direct_validate_calls") or {}
+if "scripts/release_readiness_check.py" not in direct:
+    raise SystemExit("topology_probe_setup_failed:strict_surface_missing")
+del direct["scripts/release_readiness_check.py"]
+budgets["direct_validate_calls"] = direct
+doc["budgets"] = budgets
+active_dst.write_text(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True), encoding="utf-8")
+PY
+
+python3 "${SHADOW_ROOT}/scripts/validate_control_plane_budget.py" \
+  --repo-root "${SHADOW_ROOT}" \
+  --json-only > "${TOPOLOGY_NEGATIVE_JSON}" || true
+
+python3 - <<'PY' "${TOPOLOGY_NEGATIVE_JSON}"
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if str(payload.get("control_plane_budget_status", "")).strip().upper() != "FAIL_REQUIRED":
+    raise SystemExit("topology_negative_budget_probe_should_fail")
+reasons = {str(item.get("reason", "")) for item in (payload.get("fail_violations") or []) if isinstance(item, dict)}
+if "strict_surface_budget_topology_drift" not in reasons:
+    raise SystemExit("topology_negative_budget_probe_missing_reason")
+PY
+
+python3 "${SHADOW_ROOT}/scripts/render_control_plane_budget.py" \
+  --repo-root "${SHADOW_ROOT}" \
+  --write \
+  --json-only > /dev/null
 
 python3 - <<'PY' "${REPO_ROOT}" "${SHADOW_ROOT}"
 from pathlib import Path

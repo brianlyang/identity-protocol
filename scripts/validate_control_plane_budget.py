@@ -10,6 +10,10 @@ from typing import Any
 
 import yaml
 
+from control_plane_budget_contract_common import (
+    build_budget_topology_summary,
+    build_budget_topology_violations,
+)
 from control_plane_metric_scope_common import (
     TRACKED_ERROR_CODE_METRIC_SCOPE,
     TRACKED_VALIDATOR_METRIC_SCOPE,
@@ -289,6 +293,11 @@ def main() -> int:
     convergence_guard = budget_doc.get("convergence_guard") or {}
     if not isinstance(convergence_guard, dict):
         convergence_guard = {}
+    budget_topology = build_budget_topology_summary(
+        budgets=budgets,
+        convergence_guard=convergence_guard,
+        strict_surfaces=STRICT_SURFACES,
+    )
     tracked_validator_paths = tracked_validator_script_paths(repo_root)
     untracked_validator_paths = untracked_validator_script_paths(repo_root)
     observed_validator_scripts = len(tracked_validator_paths)
@@ -313,6 +322,13 @@ def main() -> int:
 
     warn_violations: list[dict[str, Any]] = []
     fail_violations: list[dict[str, Any]] = []
+    fail_violations.extend(
+        build_budget_topology_violations(
+            budgets=budgets,
+            convergence_guard=convergence_guard,
+            strict_surfaces=STRICT_SURFACES,
+        )
+    )
 
     v_warn, v_fail = _parse_threshold(budgets.get("validator_scripts"))
     if v_warn is not None and observed_validator_scripts > v_warn:
@@ -573,6 +589,7 @@ def main() -> int:
             "required_gate_delegate_inclusive_unique_python_scripts": observed_required_gate_delegate_inclusive_unique_python_scripts,
         },
         "budgets": budgets,
+        "budget_topology": budget_topology,
         "offload_budget": {
             "source_file": GITHUB_OFFLOAD_CURRENT_REL,
             "resolved_plan_path": offload_plan_path,

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from control_plane_budget_contract_common import BUDGET_SCALAR_FALLBACK_DELTAS
 from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
 from repo_root_resolution_common import resolve_repo_root
 
@@ -77,18 +78,12 @@ def _build_next_budget(*, current_doc: dict[str, Any], observed: dict[str, Any])
 
     budgets = dict(next_doc.get("budgets") or {})
 
-    budgets["validator_scripts"] = _threshold_pair(
-        budgets.get("validator_scripts"), int(observed["validator_scripts"]), fallback_delta=3
-    )
-    budgets["error_codes"] = _threshold_pair(
-        budgets.get("error_codes"), int(observed["error_codes"]), fallback_delta=6
-    )
-    budgets["error_code_families"] = _threshold_pair(
-        budgets.get("error_code_families"), int(observed["error_code_families"]), fallback_delta=6
-    )
-    budgets["mapping_rows_missing_in_bundle"] = _threshold_pair(
-        budgets.get("mapping_rows_missing_in_bundle"), int(observed["mapping_rows_missing_in_bundle"]), fallback_delta=1
-    )
+    for key, fallback_delta in BUDGET_SCALAR_FALLBACK_DELTAS.items():
+        budgets[key] = _threshold_pair(
+            budgets.get(key),
+            int(observed[key]),
+            fallback_delta=fallback_delta,
+        )
 
     existing_direct = budgets.get("direct_validate_calls") or {}
     next_direct: dict[str, dict[str, int]] = {}

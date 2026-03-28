@@ -17,83 +17,21 @@ RELEASE_CHECK_NAMES=(
 )
 
 mkdir -p "${SHADOW_ROOT}"
-
-python3 - <<'PY' "${REPO_ROOT}" "${SHADOW_ROOT}"
-from pathlib import Path
-import sys
-
-repo_root = Path(sys.argv[1]).resolve()
-shadow_root = Path(sys.argv[2]).resolve()
-
-for child in repo_root.iterdir():
-    if child.name in {"identity", "scripts"}:
-        continue
-    target = shadow_root / child.name
-    if target.exists():
-        continue
-    target.symlink_to(child, target_is_directory=child.is_dir())
-
-scripts_src = repo_root / "scripts"
-scripts_dst = shadow_root / "scripts"
-scripts_dst.mkdir(parents=True, exist_ok=True)
-copied_scripts = {
-    "materialize_control_plane_surfaces.py",
-    "render_control_plane_budget.py",
-    "render_control_plane_status.py",
-    "validate_control_plane_budget.py",
-    "validate_control_plane_budget_sync.py",
-    "validate_control_plane_status_sync.py",
-    "repo_root_resolution_common.py",
-}
-for child in scripts_src.iterdir():
-    target = scripts_dst / child.name
-    if child.name in copied_scripts:
-        target.write_text(child.read_text(encoding="utf-8"), encoding="utf-8")
-        continue
-    if target.exists():
-        continue
-    target.symlink_to(child, target_is_directory=child.is_dir())
-
-identity_src = repo_root / "identity"
-identity_dst = shadow_root / "identity"
-identity_dst.mkdir(parents=True, exist_ok=True)
-for child in identity_src.iterdir():
-    if child.name == "protocol":
-        continue
-    target = identity_dst / child.name
-    if target.exists():
-        continue
-    target.symlink_to(child, target_is_directory=child.is_dir())
-
-protocol_src = identity_src / "protocol"
-protocol_dst = identity_dst / "protocol"
-protocol_dst.mkdir(parents=True, exist_ok=True)
-for child in protocol_src.iterdir():
-    if child.name == "mappings":
-        continue
-    target = protocol_dst / child.name
-    if target.exists():
-        continue
-    target.symlink_to(child, target_is_directory=child.is_dir())
-
-mappings_src = protocol_src / "mappings"
-mappings_dst = protocol_dst / "mappings"
-mappings_dst.mkdir(parents=True, exist_ok=True)
-copied_files = {
-    "control-plane-budget.current.yaml",
-    "control-plane-budget.v1.6.yaml",
-    "control-plane-status.current.yaml",
-    "control-plane-status.v1.6.json",
-}
-for child in mappings_src.iterdir():
-    target = mappings_dst / child.name
-    if child.name in copied_files:
-        target.write_text(child.read_text(encoding="utf-8"), encoding="utf-8")
-        continue
-    if target.exists():
-        continue
-    target.symlink_to(child, target_is_directory=child.is_dir())
-PY
+python3 "${REPO_ROOT}/scripts/control_plane_probe_shadow_common.py" \
+  --repo-root "${REPO_ROOT}" \
+  --shadow-root "${SHADOW_ROOT}" \
+  --copy-script materialize_control_plane_surfaces.py \
+  --copy-script render_control_plane_budget.py \
+  --copy-script render_control_plane_status.py \
+  --copy-script validate_control_plane_budget.py \
+  --copy-script validate_control_plane_budget_sync.py \
+  --copy-script validate_control_plane_status_sync.py \
+  --copy-script repo_root_resolution_common.py \
+  --copy-mapping control-plane-budget.current.yaml \
+  --copy-mapping control-plane-budget.v1.6.yaml \
+  --copy-mapping control-plane-status.current.yaml \
+  --copy-mapping control-plane-status.v1.6.json \
+  --json-only > /dev/null
 
 printf '[RUN] positive release-closure control-plane status projection (shadow repo)\n'
 python3 "${SHADOW_ROOT}/scripts/materialize_control_plane_surfaces.py" \
