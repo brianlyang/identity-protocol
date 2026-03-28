@@ -13,6 +13,11 @@ from release_closure_doc_common import (
     parse_release_closure_issue_register,
     resolve_release_closure_doc_paths,
 )
+from release_closure_foundational_marker_common import (
+    collect_release_closure_closure_class_stale_reasons,
+    collect_release_closure_philosophy_order_stale_reasons,
+    collect_release_closure_terminal_truth_split_stale_reasons,
+)
 from release_closure_narrative_marker_common import (
     collect_release_closure_narrative_stale_reasons,
 )
@@ -37,12 +42,6 @@ from release_readiness_runtime_closure_convergence_common import (
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_RELEASE_CLOSURE = "IP-RCLOS-001"
-REQUIRED_TERMINAL_TRUTH_SPLIT_MARKERS = (
-    "repair lane",
-    "terminal-truth observation lane",
-    "creator/update admission lane",
-    "repair success != clean terminal truth",
-)
 REQUIRED_OUTER_SURFACE_E2E_BOUNDARY_MARKERS = (
     "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh",
     "terminal_truth_boundary_projection",
@@ -129,8 +128,7 @@ def main() -> int:
 
     stale_reasons: list[str] = []
 
-    if "source-order" not in philosophy_text or "reading-order" not in philosophy_text or "adjudication-order" not in philosophy_text:
-        stale_reasons.append("philosophy_root_order_markers_missing")
+    stale_reasons.extend(collect_release_closure_philosophy_order_stale_reasons(philosophy_text))
 
     for label, text in (
         ("governance_doc", governance_text),
@@ -142,11 +140,10 @@ def main() -> int:
             stale_reasons.append(f"{label}_missing_protocol_anchor")
         if RELEASE_CLOSURE_DOC_REL_PATHS.runtime_doc not in text:
             stale_reasons.append(f"{label}_missing_runtime_anchor")
-        if "root-closed" not in text or "machine-closed" not in text or "runtime-closed" not in text:
-            stale_reasons.append(f"{label}_missing_root_machine_runtime_closure_markers")
-        for marker in REQUIRED_TERMINAL_TRUTH_SPLIT_MARKERS:
-            if marker not in text:
-                stale_reasons.append(f"{label}_missing_terminal_truth_split_marker:{marker}")
+        stale_reasons.extend(collect_release_closure_closure_class_stale_reasons(text, label=label))
+        stale_reasons.extend(
+            collect_release_closure_terminal_truth_split_stale_reasons(text, label=label)
+        )
         for marker in REQUIRED_OUTER_SURFACE_E2E_BOUNDARY_MARKERS:
             if marker not in text:
                 stale_reasons.append(f"{label}_missing_outer_surface_e2e_marker:{marker}")

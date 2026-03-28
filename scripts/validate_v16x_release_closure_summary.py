@@ -17,6 +17,11 @@ from release_closure_doc_common import (
     parse_release_closure_issue_register,
     resolve_release_closure_doc_paths,
 )
+from release_closure_foundational_marker_common import (
+    collect_release_closure_closure_class_stale_reasons,
+    collect_release_closure_philosophy_order_stale_reasons,
+    collect_release_closure_terminal_truth_split_stale_reasons,
+)
 from release_closure_narrative_marker_common import (
     collect_release_closure_narrative_stale_reasons,
 )
@@ -47,12 +52,6 @@ ERR_RELEASE_SUMMARY = "IP-RCSUM-001"
 FORBIDDEN_STALE_MARKERS = (
     "Workspace-local core-role required closure: **Go**",
     "workspace-local core release scope is now green on required closure",
-)
-REQUIRED_TERMINAL_TRUTH_SPLIT_MARKERS = (
-    "repair lane",
-    "terminal-truth observation lane",
-    "creator/update admission lane",
-    "repair success != clean terminal truth",
 )
 REQUIRED_OUTER_SURFACE_E2E_MARKERS = (
     "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh",
@@ -166,8 +165,7 @@ def main() -> int:
 
     stale_reasons: list[str] = []
 
-    if "source-order" not in philosophy_text or "reading-order" not in philosophy_text or "adjudication-order" not in philosophy_text:
-        stale_reasons.append("philosophy_root_order_markers_missing")
+    stale_reasons.extend(collect_release_closure_philosophy_order_stale_reasons(philosophy_text))
 
     for required_ref in (
         RELEASE_CLOSURE_DOC_REL_PATHS.philosophy_doc,
@@ -188,8 +186,9 @@ def main() -> int:
 
     if "Question class and authoritative answer surfaces" not in summary_text:
         stale_reasons.append("summary_doc_missing_question_class_section")
-    if "root-closed" not in summary_text or "machine-closed" not in summary_text or "runtime-closed" not in summary_text:
-        stale_reasons.append("summary_doc_missing_root_machine_runtime_closure_markers")
+    stale_reasons.extend(
+        collect_release_closure_closure_class_stale_reasons(summary_text, label="summary_doc")
+    )
     if not contains_release_closure_issue_horizon(summary_text, highest_issue):
         stale_reasons.append("summary_doc_issue_horizon_mismatch")
     for target_issue in collect_release_closure_issue_horizon_targets(summary_text):
@@ -205,9 +204,12 @@ def main() -> int:
         stale_reasons.append("summary_doc_missing_scope_separation_markers")
     if "not declare a release tag" not in summary_text:
         stale_reasons.append("summary_doc_missing_release_tag_boundary")
-    for marker in REQUIRED_TERMINAL_TRUTH_SPLIT_MARKERS:
-        if marker not in summary_text:
-            stale_reasons.append(f"summary_doc_missing_terminal_truth_split_marker:{marker}")
+    stale_reasons.extend(
+        collect_release_closure_terminal_truth_split_stale_reasons(
+            summary_text,
+            label="summary_doc",
+        )
+    )
     for marker in REQUIRED_OUTER_SURFACE_E2E_MARKERS:
         if marker not in summary_text:
             stale_reasons.append(f"summary_doc_missing_outer_surface_e2e_marker:{marker}")
