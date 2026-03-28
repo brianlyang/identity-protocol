@@ -566,6 +566,7 @@ These machine-law-primacy-completeness rules must remain bound to canonical mach
 ## Root machine-world ontology completeness discipline
 
 Machine-world ontology law is not a soft prose bundle.
+These machine-world-ontology-completeness rules must remain bound to canonical machine-world-ontology-completeness rows rather than drifting into soft summary prose.
 
 1. required strata, object, ontology-proof, ontology-limit, and collapse rows must remain explicit as separate machine-readable families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;

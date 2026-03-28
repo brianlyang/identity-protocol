@@ -33,21 +33,45 @@ anchor_checks:
       - '### Machine-world ontology row-family completeness must stay explicit'
       - 'Required strata, object, ontology-proof, ontology-limit, and collapse families must remain explicit as separate machine-readable row families.'
       - 'The machine world must not finalize machine-world ontology legality while required row identity drift remains known only internally.'
+      - README root machine-world ontology completeness discipline must therefore
+        stay congruent with admitted machine-world-ontology-completeness rows
+        rather than becoming a freehand completeness summary.
   - rel_path: identity/protocol/README.md
     required_markers:
       - '## Root machine-world ontology completeness discipline'
       - 'Machine-world ontology law is not a soft prose bundle.'
+      - These machine-world-ontology-completeness rules must remain bound to
+        canonical machine-world-ontology-completeness rows rather than drifting
+        into soft summary prose.
       - '1. required strata, object, ontology-proof, ontology-limit, and collapse rows must remain explicit as separate machine-readable families;'
   - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
     required_markers:
       - '## Root machine-world ontology completeness boundary'
       - '1. Machine-world ontology law must remain machine-readable as separate strata, object, ontology-proof, ontology-limit, and collapse row families.'
       - '4. Protocol legality must not finalize machine-world ontology legality while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root machine-world ontology completeness discipline rendered at protocol root must remain congruent with admitted machine-world-ontology-completeness rows rather than silently authoring an alternate completeness summary.'
   - rel_path: identity/protocol/IDENTITY_RUNTIME.md
     required_markers:
       - '## Runtime machine-world ontology consumption boundary'
       - '1. Runtime consumes machine-world ontology law as separate strata, object, ontology-proof, ontology-limit, and collapse row families rather than as undifferentiated naming prose.'
       - '4. Runtime must not finalize machine-world ontology legality while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root machine-world ontology completeness discipline as a governed completeness projection bound to admitted machine-world-ontology-completeness rows rather than as a freehand completeness summary.'
+machine_world_ontology_completeness_rows:
+  - order: 1
+    completeness_id: explicit_machine_world_ontology_row_families
+    contract_phrase: 'required strata, object, ontology-proof, ontology-limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - order: 2
+    completeness_id: congruent_machine_world_ontology_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_machine_world_ontology_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_machine_world_ontology_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize machine-world ontology legality while missing or unexpected row identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_machine_world_ontology_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'
 required_strata_rows:
   - order: 1
     stratum_id: identity_resolution_objects

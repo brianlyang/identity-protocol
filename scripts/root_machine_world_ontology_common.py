@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -12,6 +13,11 @@ from registry_alias_control_plane_common import resolve_current_yaml_alias
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_MACHINE_WORLD_ONTOLOGY_CURRENT = "identity/protocol/mappings/root-machine-world-ontology.current.yaml"
+ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
+MACHINE_WORLD_ONTOLOGY_COMPLETENESS_SECTION_MARKER = "## Root machine-world ontology completeness discipline"
+ORDERED_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+(.*\S)\s*$")
+HEADING_RE = re.compile(r"^##\s+")
+HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
 
 
 @dataclass(frozen=True)
@@ -35,6 +41,26 @@ class OntologyProofRow:
     proof_id: str
     contract_heading: str
     proof_role: str
+
+
+@dataclass(frozen=True)
+class MachineWorldOntologyCompletenessRow:
+    order: int
+    completeness_id: str
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class MachineWorldOntologyCompletenessSurfaceRow:
+    order: int
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class MachineWorldOntologyCompletenessSurface:
+    rel_path: str
+    rows: tuple[MachineWorldOntologyCompletenessSurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
 
 
 def _norm_str(value: Any) -> str:
@@ -145,3 +171,78 @@ def ontology_limit_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...
 
 def collapse_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:
     return _phrase_rows_from_field(doc, "required_collapse_rows", row_key="collapse_id")
+
+
+def machine_world_ontology_completeness_rows_from_doc(
+    doc: Mapping[str, Any],
+) -> tuple[MachineWorldOntologyCompletenessRow, ...]:
+    rows = doc.get("machine_world_ontology_completeness_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[MachineWorldOntologyCompletenessRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        completeness_id = _norm_str(row.get("completeness_id"))
+        contract_phrase = str(row.get("contract_phrase") or "").strip()
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not completeness_id or not contract_phrase:
+            continue
+        out.append(
+            MachineWorldOntologyCompletenessRow(
+                order=order,
+                completeness_id=completeness_id,
+                contract_phrase=contract_phrase,
+            )
+        )
+    return tuple(out)
+
+
+def readme_machine_world_ontology_completeness_surface(
+    repo_root: Path,
+) -> MachineWorldOntologyCompletenessSurface:
+    path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
+    if not path.exists() or not path.is_file():
+        return MachineWorldOntologyCompletenessSurface(
+            rel_path=ROOT_PROTOCOL_README_REL_PATH,
+            rows=(),
+            extraction_violations=("target_missing",),
+        )
+
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    section_found = False
+    rows: list[MachineWorldOntologyCompletenessSurfaceRow] = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == MACHINE_WORLD_ONTOLOGY_COMPLETENESS_SECTION_MARKER:
+            section_found = True
+            continue
+        if not section_found:
+            continue
+        if HEADING_RE.match(stripped) or HORIZONTAL_RULE_RE.match(stripped):
+            break
+        match = ORDERED_ITEM_RE.match(stripped)
+        if not match:
+            continue
+        rows.append(
+            MachineWorldOntologyCompletenessSurfaceRow(
+                order=int(match.group(1)),
+                contract_phrase=match.group(2).strip(),
+            )
+        )
+
+    violations: list[str] = []
+    if not section_found:
+        violations.append("section_marker_missing")
+    elif not rows:
+        violations.append("completeness_rows_missing")
+
+    return MachineWorldOntologyCompletenessSurface(
+        rel_path=ROOT_PROTOCOL_README_REL_PATH,
+        rows=tuple(rows),
+        extraction_violations=tuple(violations),
+    )

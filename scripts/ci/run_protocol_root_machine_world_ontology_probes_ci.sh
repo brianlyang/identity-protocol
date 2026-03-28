@@ -25,13 +25,68 @@ assert payload["object_count"] == 17, payload
 assert payload["ontology_proof_count"] == 5, payload
 assert payload["ontology_limit_count"] == 5, payload
 assert payload["collapse_count"] == 6, payload
+assert payload["machine_world_ontology_completeness_row_count"] == 5, payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["machine_world_ontology_row_family_count"] == 5, payload
+assert payload["machine_world_ontology_row_family_count"] == 7, payload
 assert payload["machine_world_ontology_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["machine_world_ontology_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["machine_world_ontology_completeness_surface"]["entry_count"] == 5, payload
+assert payload["machine_world_ontology_completeness_surface"]["extraction_violations"] == [], payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "machine_world_ontology_completeness_rows" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "machine_world_ontology_completeness_surface" for row in payload["row_family_projection_rows"]), payload
+PY
+
+COMPLETENESS_ROW_REPO="${TMP_ROOT}/missing-completeness-row-repo"
+mirror_repo "${COMPLETENESS_ROW_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_REPO}/identity/protocol/mappings/root-machine-world-ontology.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["machine_world_ontology_completeness_rows"] = [
+    row for row in doc["machine_world_ontology_completeness_rows"]
+    if row.get("completeness_id") != "explicit_machine_world_ontology_row_families"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_JSON="${TMP_ROOT}/missing-completeness-row.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_world_ontology.py" \
+  --repo-root "${COMPLETENESS_ROW_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_JSON}"; then
+  echo "[FAIL] root machine-world ontology validator unexpectedly passed missing completeness row"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_world_ontology_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMWO-002", payload
+assert any(
+    row["field"] == "machine_world_ontology_completeness_rows"
+    and row["reason"] == "missing_machine_world_ontology_completeness_rows"
+    and "explicit_machine_world_ontology_row_families" in row.get("completeness_ids", [])
+    for row in payload["structure_violations"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "machine_world_ontology_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 4, payload
+assert completeness_row["missing_ids"] == ["explicit_machine_world_ontology_row_families"], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -274,8 +329,8 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-old = "## Root machine-world ontology completeness discipline"
-new = "## Root machine-world ontology discipline"
+old = "These machine-world-ontology-completeness rules must remain bound to canonical machine-world-ontology-completeness rows rather than drifting into soft summary prose."
+new = "These machine-world ontology rules may be narrated as a soft summary when convenient."
 assert old in text, text
 path.write_text(text.replace(old, new, 1), encoding="utf-8")
 PY
@@ -304,9 +359,54 @@ assert any(
 assert any(
     row["rel_path"] == "identity/protocol/README.md"
     and row["reason"] == "required_marker_missing"
-    and row["marker"] == "## Root machine-world ontology completeness discipline"
+    and row["marker"] == "These machine-world-ontology-completeness rules must remain bound to canonical machine-world-ontology-completeness rows rather than drifting into soft summary prose."
     for row in payload["root_doc_anchor_violations"]
 ), payload
+PY
+
+COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/completeness-surface-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "4. runtime or validator code must not finalize machine-world ontology legality while missing or unexpected row identities remain known only internally;"
+new = "4. runtime or validator code must not finalize machine-world ontology legality while missing row identities remain known only internally;"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_JSON="${TMP_ROOT}/completeness-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_world_ontology.py" \
+  --repo-root "${COMPLETENESS_SURFACE_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_JSON}"; then
+  echo "[FAIL] root machine-world ontology validator unexpectedly passed completeness surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+expected_phrase = "runtime or validator code must not finalize machine-world ontology legality while missing or unexpected row identities remain known only internally;"
+assert payload["protocol_root_machine_world_ontology_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMWO-002", payload
+assert any(
+    reason == "machine_world_ontology_violation:machine_world_ontology_completeness_surface:machine_world_ontology_completeness_surface_phrase_order_mismatch"
+    for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "machine_world_ontology_completeness_surface"
+)
+assert expected_phrase in surface_row["missing_ids"], payload
+assert "runtime or validator code must not finalize machine-world ontology legality while missing row identities remain known only internally;" in surface_row["unexpected_ids"], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 ROUTING_REPO="${TMP_ROOT}/routing-drift-repo"
