@@ -89,6 +89,21 @@
     newly appended repo-global one-look lanes fail-close automatically in the
     probe layer instead of waiting for manual probe literal refresh.
 
+- **shared active-runtime probe literal hardening**:
+  - `scripts/ci/run_v16x_release_closure_summary_probes_ci.sh` and
+    `scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh` now resolve
+    the bounded active-runtime closure projection literal plus companion
+    `one_look.identity_terminal_truth_class` marker from
+    `scripts/release_readiness_active_runtime_closure_projection_common.py`
+    instead of mutating probe-local literal copies.
+  - this keeps summary/boundary negative probes aligned with the shared
+    active-runtime one-look contract, so future active-runtime lane additions
+    fail-close automatically in the probe layer rather than waiting for manual
+    literal refresh.
+  - release-closure governance/review docs now freeze the stronger rule that
+    summary/boundary validators and their paired probes must consume the shared
+    active-runtime projection bundle rather than probe-local literal copies.
+
 - **nested gateway wrapper timeout budget propagation**:
   - hardened `scripts/gateway_wrapper_enforcement.py` so pack-local nested
     ingress/session wrapper subprocesses inherit the stronger timeout profile of
