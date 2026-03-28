@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-28T09:22:00Z",
-  "git_head_short": "8b656c2",
+  "generated_at_utc": "2026-03-28T11:04:32Z",
+  "git_head_short": "ef4a69c",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -302,7 +302,7 @@
           "error_codes": 718,
           "error_code_families": 249,
           "error_code_metric_scope": "tracked_python_scripts_canonical_tokens_only",
-          "tracked_python_script_count": 494,
+          "tracked_python_script_count": 497,
           "ignored_partial_error_code_tokens": [
             "IP-ACTOR-",
             "IP-ASB-",
@@ -492,8 +492,8 @@
         "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_alias_error": "",
-        "current_last_updated_utc": "2026-03-28T09:21:23Z",
-        "live_last_updated_utc": "2026-03-28T09:21:27Z",
+        "current_last_updated_utc": "2026-03-28T11:04:05Z",
+        "live_last_updated_utc": "2026-03-28T11:04:08Z",
         "mismatch_count": 0,
         "mismatches": [],
         "observed": {
@@ -755,7 +755,7 @@
           "error_codes": 718,
           "error_code_families": 249,
           "error_code_metric_scope": "tracked_python_scripts_canonical_tokens_only",
-          "tracked_python_script_count": 494,
+          "tracked_python_script_count": 497,
           "ignored_partial_error_code_tokens": [
             "IP-ACTOR-",
             "IP-ASB-",
@@ -1615,10 +1615,10 @@
         ],
         "pack_scan_globs": [],
         "active_pack_identity_ids": [],
-        "repo_scan_file_count": 619,
+        "repo_scan_file_count": 622,
         "active_pack_scan_file_count": 0,
         "extra_scan_file_count": 0,
-        "scan_file_count": 619,
+        "scan_file_count": 622,
         "scan_files": [
           ".github/workflows/_identity-required-gates.yml",
           ".github/workflows/identity-protocol-ci.yml",
@@ -1857,13 +1857,16 @@
           "scripts/release_cloud_evidence_projection_common.py",
           "scripts/release_readiness_active_runtime_closure_projection_common.py",
           "scripts/release_readiness_check.py",
+          "scripts/release_readiness_foundational_projection_common.py",
           "scripts/release_readiness_governance_probe_projection_common.py",
           "scripts/release_readiness_one_look_projection_common.py",
+          "scripts/release_readiness_one_look_topology_common.py",
           "scripts/release_readiness_repo_global_closure_projection_common.py",
           "scripts/release_readiness_required_gate_bundle_projection_common.py",
           "scripts/release_readiness_required_gate_bundle_scope_common.py",
           "scripts/release_readiness_runtime_closure_convergence_common.py",
           "scripts/release_readiness_selected_check_scope_common.py",
+          "scripts/release_readiness_support_preflight_projection_common.py",
           "scripts/render_active_workbook_projections.py",
           "scripts/render_control_plane_budget.py",
           "scripts/render_control_plane_status.py",
@@ -2830,7 +2833,7 @@
           "root_contract",
           "runtime_constitution"
         ],
-        "ordering_row_family_count": 8,
+        "ordering_row_family_count": 12,
         "ordering_row_coverage_status": "PASS_REQUIRED",
         "ordering_row_identity_projection_status": "PASS_REQUIRED",
         "root_doc_anchor_check_count": 4,
@@ -2920,6 +2923,102 @@
               "identity/protocol/fixtures",
               "identity/protocol/mappings",
               "identity/protocol/plugins"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          },
+          {
+            "family_id": "root_reading_order_stages",
+            "member_id_key": "stage_label",
+            "expected_count": 7,
+            "actual_count": 7,
+            "expected_ids": [
+              "`IDENTITY_PROTOCOL.md`",
+              "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`",
+              "`IDENTITY_RUNTIME.md`",
+              "machine-consumed registries and mappings",
+              "non-runtime or support material",
+              "root contract files",
+              "specialized subdomain protocol packs"
+            ],
+            "actual_ids": [
+              "`IDENTITY_PROTOCOL.md`",
+              "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`",
+              "`IDENTITY_RUNTIME.md`",
+              "machine-consumed registries and mappings",
+              "non-runtime or support material",
+              "root contract files",
+              "specialized subdomain protocol packs"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          },
+          {
+            "family_id": "root_reading_order_stage_surface",
+            "member_id_key": "stage_label",
+            "expected_count": 7,
+            "actual_count": 7,
+            "expected_ids": [
+              "`IDENTITY_PROTOCOL.md`",
+              "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`",
+              "`IDENTITY_RUNTIME.md`",
+              "machine-consumed registries and mappings",
+              "non-runtime or support material",
+              "root contract files",
+              "specialized subdomain protocol packs"
+            ],
+            "actual_ids": [
+              "`IDENTITY_PROTOCOL.md`",
+              "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`",
+              "`IDENTITY_RUNTIME.md`",
+              "machine-consumed registries and mappings",
+              "non-runtime or support material",
+              "root contract files",
+              "specialized subdomain protocol packs"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          },
+          {
+            "family_id": "order_plane_stages",
+            "member_id_key": "stage_label",
+            "expected_count": 3,
+            "actual_count": 3,
+            "expected_ids": [
+              "adjudication-order",
+              "root reading-order",
+              "source-order / generative-order"
+            ],
+            "actual_ids": [
+              "adjudication-order",
+              "root reading-order",
+              "source-order / generative-order"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          },
+          {
+            "family_id": "order_plane_stage_surface",
+            "member_id_key": "stage_label",
+            "expected_count": 3,
+            "actual_count": 3,
+            "expected_ids": [
+              "adjudication-order",
+              "root reading-order",
+              "source-order / generative-order"
+            ],
+            "actual_ids": [
+              "adjudication-order",
+              "root reading-order",
+              "source-order / generative-order"
             ],
             "missing_ids": [],
             "unexpected_ids": [],
@@ -3349,6 +3448,282 @@
             "corpus_class": "demoted_support_directory"
           }
         ],
+        "root_reading_order_stage_count": 7,
+        "order_plane_stage_count": 3,
+        "root_reading_order_stages": [
+          {
+            "order": 1,
+            "stage_label": "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`",
+            "bound_reading_order_rel_paths": [
+              "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md"
+            ],
+            "required_markers": [
+              "the bottom theory;",
+              "the generative reason the identity protocol exists at all;",
+              "the interpretive source for machine-law priorities, semantic singularity, fail-close preference, lifecycle closure, and shared-law vs instance-adaptation boundaries."
+            ]
+          },
+          {
+            "order": 2,
+            "stage_label": "`IDENTITY_PROTOCOL.md`",
+            "bound_reading_order_rel_paths": [
+              "identity/protocol/IDENTITY_PROTOCOL.md"
+            ],
+            "required_markers": [
+              "the protocol-law constitution;",
+              "the root protocol boundary, governance stack, and active stream framing."
+            ]
+          },
+          {
+            "order": 3,
+            "stage_label": "`IDENTITY_RUNTIME.md`",
+            "bound_reading_order_rel_paths": [
+              "identity/protocol/IDENTITY_RUNTIME.md"
+            ],
+            "required_markers": [
+              "the runtime constitution;",
+              "how protocol law is embodied in runtime integration, startup, execution checks, and active-runtime boundaries."
+            ]
+          },
+          {
+            "order": 4,
+            "stage_label": "root contract files",
+            "bound_reading_order_rel_paths": [
+              "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
+              "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
+              "identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md",
+              "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
+              "identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md",
+              "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
+              "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+              "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md",
+              "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
+              "identity/protocol/IDENTITY_DISCOVERY.md",
+              "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
+              "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
+              "identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md",
+              "identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md",
+              "identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md",
+              "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md"
+            ],
+            "required_markers": [
+              "`MACHINE_LAW_PRIMACY_CONTRACT.md`",
+              "`MACHINE_WORLD_ONTOLOGY_CONTRACT.md`",
+              "`CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md`",
+              "`DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md`",
+              "`SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md`",
+              "`ENTRY_SURFACE_LEGITIMACY_CONTRACT.md`",
+              "`ERROR_TERMINALITY_CONTRACT.md`",
+              "`ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md`",
+              "`IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`",
+              "`IDENTITY_DISCOVERY.md`",
+              "`AGENT_HANDOFF_CONTRACT.md`",
+              "`IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md`",
+              "`PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`",
+              "`STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`",
+              "`TRUTH_LIFECYCLE_CONTRACT.md`",
+              "`OPERATOR_ANSWER_SURFACE_CONTRACT.md`",
+              "this manual root-contract index is explanatory only and must remain congruent with the admitted `reading_order` root-contract sequence rather than becoming an independently authored alternate order.",
+              "explanatory root-contract summaries rendered elsewhere in the root corpus must remain congruent with admitted root-contract projection labels rather than relabeling domain law.",
+              "these freeze concrete contract law for their specific domains."
+            ]
+          },
+          {
+            "order": 5,
+            "stage_label": "machine-consumed registries and mappings",
+            "bound_reading_order_rel_paths": [
+              "identity/protocol/mappings"
+            ],
+            "required_markers": [
+              "`mappings/`",
+              "these freeze machine-facing rows, bindings, and registry truth."
+            ]
+          },
+          {
+            "order": 6,
+            "stage_label": "specialized subdomain protocol packs",
+            "bound_reading_order_rel_paths": [
+              "identity/protocol/broadcast",
+              "identity/protocol/plugins"
+            ],
+            "required_markers": [
+              "`broadcast/`",
+              "`plugins/`",
+              "these extend the root protocol into narrower governed surfaces."
+            ]
+          },
+          {
+            "order": 7,
+            "stage_label": "non-runtime or support material",
+            "bound_reading_order_rel_paths": [
+              "identity/protocol/fixtures"
+            ],
+            "required_markers": [
+              "`fixtures/`",
+              "these are never active-runtime truth."
+            ]
+          }
+        ],
+        "root_reading_order_stage_surface": {
+          "rel_path": "identity/protocol/README.md",
+          "entry_count": 7,
+          "entries": [
+            {
+              "order": 1,
+              "stage_label": "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`",
+              "body_lines": [
+                "the bottom theory;",
+                "the generative reason the identity protocol exists at all;",
+                "the interpretive source for machine-law priorities, semantic singularity, fail-close preference, lifecycle closure, and shared-law vs instance-adaptation boundaries."
+              ]
+            },
+            {
+              "order": 2,
+              "stage_label": "`IDENTITY_PROTOCOL.md`",
+              "body_lines": [
+                "the protocol-law constitution;",
+                "the root protocol boundary, governance stack, and active stream framing."
+              ]
+            },
+            {
+              "order": 3,
+              "stage_label": "`IDENTITY_RUNTIME.md`",
+              "body_lines": [
+                "the runtime constitution;",
+                "how protocol law is embodied in runtime integration, startup, execution checks, and active-runtime boundaries."
+              ]
+            },
+            {
+              "order": 4,
+              "stage_label": "root contract files",
+              "body_lines": [
+                "`MACHINE_LAW_PRIMACY_CONTRACT.md`",
+                "`MACHINE_WORLD_ONTOLOGY_CONTRACT.md`",
+                "`CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md`",
+                "`DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md`",
+                "`SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md`",
+                "`ENTRY_SURFACE_LEGITIMACY_CONTRACT.md`",
+                "`ERROR_TERMINALITY_CONTRACT.md`",
+                "`ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md`",
+                "`IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`",
+                "`IDENTITY_DISCOVERY.md`",
+                "`AGENT_HANDOFF_CONTRACT.md`",
+                "`IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md`",
+                "`PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`",
+                "`STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`",
+                "`TRUTH_LIFECYCLE_CONTRACT.md`",
+                "`OPERATOR_ANSWER_SURFACE_CONTRACT.md`",
+                "this manual root-contract index is explanatory only and must remain congruent with the admitted `reading_order` root-contract sequence rather than becoming an independently authored alternate order.",
+                "explanatory root-contract summaries rendered elsewhere in the root corpus must remain congruent with admitted root-contract projection labels rather than relabeling domain law.",
+                "these freeze concrete contract law for their specific domains."
+              ]
+            },
+            {
+              "order": 5,
+              "stage_label": "machine-consumed registries and mappings",
+              "body_lines": [
+                "`mappings/`",
+                "these freeze machine-facing rows, bindings, and registry truth."
+              ]
+            },
+            {
+              "order": 6,
+              "stage_label": "specialized subdomain protocol packs",
+              "body_lines": [
+                "`broadcast/`",
+                "`plugins/`",
+                "these extend the root protocol into narrower governed surfaces."
+              ]
+            },
+            {
+              "order": 7,
+              "stage_label": "non-runtime or support material",
+              "body_lines": [
+                "`fixtures/`",
+                "these are never active-runtime truth."
+              ]
+            }
+          ],
+          "extraction_violations": []
+        },
+        "order_plane_stages": [
+          {
+            "order": 1,
+            "stage_label": "source-order / generative-order",
+            "bound_row_families": [
+              "source_order"
+            ],
+            "required_markers": [
+              "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`",
+              "`IDENTITY_PROTOCOL.md` / `IDENTITY_RUNTIME.md`",
+              "root contract files",
+              "machine-consumed enforcement surfaces",
+              "answers: where protocol law comes from."
+            ]
+          },
+          {
+            "order": 2,
+            "stage_label": "root reading-order",
+            "bound_row_families": [
+              "root_reading_order_stages",
+              "root_reading_order_stage_surface"
+            ],
+            "required_markers": [
+              "the entry sequence defined at the top of this file",
+              "the README entry ladder must remain congruent with admitted root-reading-order stage rows rather than becoming a freehand alternate order",
+              "answers: how to enter the root corpus without semantic confusion."
+            ]
+          },
+          {
+            "order": 3,
+            "stage_label": "adjudication-order",
+            "bound_row_families": [
+              "adjudication_order",
+              "adjudication_surface_profiles"
+            ],
+            "required_markers": [
+              "governance/review docs, mappings, validators, probes, runtime state, and receipts",
+              "the terminal machine chain stays explicit as mappings → validators → probes → runtime state → receipts",
+              "answers: how current-turn legality and machine verdict are determined."
+            ]
+          }
+        ],
+        "order_plane_stage_surface": {
+          "rel_path": "identity/protocol/README.md",
+          "entry_count": 3,
+          "entries": [
+            {
+              "order": 1,
+              "stage_label": "source-order / generative-order",
+              "body_lines": [
+                "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`",
+                "`IDENTITY_PROTOCOL.md` / `IDENTITY_RUNTIME.md`",
+                "root contract files",
+                "machine-consumed enforcement surfaces",
+                "answers: where protocol law comes from."
+              ]
+            },
+            {
+              "order": 2,
+              "stage_label": "root reading-order",
+              "body_lines": [
+                "the entry sequence defined at the top of this file",
+                "the README entry ladder must remain congruent with admitted root-reading-order stage rows rather than becoming a freehand alternate order",
+                "answers: how to enter the root corpus without semantic confusion."
+              ]
+            },
+            {
+              "order": 3,
+              "stage_label": "adjudication-order",
+              "body_lines": [
+                "governance/review docs, mappings, validators, probes, runtime state, and receipts",
+                "the terminal machine chain stays explicit as mappings → validators → probes → runtime state → receipts",
+                "answers: how current-turn legality and machine verdict are determined."
+              ]
+            }
+          ],
+          "extraction_violations": []
+        },
         "canonical_root_contract_entry_count": 16,
         "canonical_root_contract_entry_paths": [
           "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
@@ -3786,13 +4161,14 @@
         "ordering_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
         "root_dir": "identity/protocol",
         "root_index_entry": "identity/protocol/README.md",
-        "authority_anchor_check_count": 18,
+        "authority_anchor_check_count": 20,
         "authority_class_profile_count": 8,
         "entry_authority_projection_count": 24,
-        "authority_row_family_count": 2,
+        "authority_layer_stage_count": 3,
+        "authority_row_family_count": 4,
         "authority_row_coverage_status": "PASS_REQUIRED",
         "authority_row_identity_projection_status": "PASS_REQUIRED",
-        "root_doc_anchor_check_count": 18,
+        "root_doc_anchor_check_count": 20,
         "root_doc_anchor_status": "PASS_REQUIRED",
         "row_family_projection_rows": [
           {
@@ -3881,6 +4257,46 @@
               "identity/protocol/fixtures",
               "identity/protocol/mappings",
               "identity/protocol/plugins"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          },
+          {
+            "family_id": "authority_layer_stages",
+            "member_id_key": "stage_label",
+            "expected_count": 3,
+            "actual_count": 3,
+            "expected_ids": [
+              "bottom-theory primacy",
+              "constitutional / contract authority",
+              "machine-consumed enforcement authority"
+            ],
+            "actual_ids": [
+              "bottom-theory primacy",
+              "constitutional / contract authority",
+              "machine-consumed enforcement authority"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          },
+          {
+            "family_id": "authority_layer_stage_surface",
+            "member_id_key": "stage_label",
+            "expected_count": 3,
+            "actual_count": 3,
+            "expected_ids": [
+              "bottom-theory primacy",
+              "constitutional / contract authority",
+              "machine-consumed enforcement authority"
+            ],
+            "actual_ids": [
+              "bottom-theory primacy",
+              "constitutional / contract authority",
+              "machine-consumed enforcement authority"
             ],
             "missing_ids": [],
             "unexpected_ids": [],
@@ -4092,6 +4508,109 @@
             "authority_mode": "demoted_support_only"
           }
         ],
+        "authority_layer_stages": [
+          {
+            "order": 1,
+            "stage_label": "bottom-theory primacy",
+            "bound_corpus_classes": [
+              "bottom_theory"
+            ],
+            "bound_authority_roles": [
+              "interpretive_bottom_theory"
+            ],
+            "bound_machine_surfaces": [],
+            "required_markers": [
+              "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`",
+              "explains *why* protocol law has the shape it has."
+            ]
+          },
+          {
+            "order": 2,
+            "stage_label": "constitutional / contract authority",
+            "bound_corpus_classes": [
+              "constitution",
+              "runtime_constitution",
+              "root_contract"
+            ],
+            "bound_authority_roles": [
+              "constitutional_protocol_law",
+              "constitutional_runtime_law",
+              "root_domain_contract_law"
+            ],
+            "bound_machine_surfaces": [],
+            "required_markers": [
+              "`IDENTITY_PROTOCOL.md`",
+              "`IDENTITY_RUNTIME.md`",
+              "root contract files such as machine-law primacy, machine-world ontology, current-truth epistemology, decision-evidence admissibility, success-path state admissibility, entry-surface legitimacy, error terminality, artifact-family admissibility, prompt bootstrap, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth-lifecycle, and operator answer-surface contracts",
+              "these define *what law is concretely frozen*."
+            ]
+          },
+          {
+            "order": 3,
+            "stage_label": "machine-consumed enforcement authority",
+            "bound_corpus_classes": [
+              "machine_registry_directory"
+            ],
+            "bound_authority_roles": [
+              "machine_consumed_registry_family"
+            ],
+            "bound_machine_surfaces": [
+              "governance_review_docs",
+              "mappings",
+              "validators",
+              "probes",
+              "runtime_state",
+              "receipts"
+            ],
+            "required_markers": [
+              "governance/review docs",
+              "mappings",
+              "validators",
+              "probes",
+              "runtime state",
+              "receipts",
+              "these determine *current machine truth and pass/fail authority*."
+            ]
+          }
+        ],
+        "authority_layer_stage_surface": {
+          "rel_path": "identity/protocol/README.md",
+          "entry_count": 3,
+          "entries": [
+            {
+              "order": 1,
+              "stage_label": "bottom-theory primacy",
+              "body_lines": [
+                "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`",
+                "explains *why* protocol law has the shape it has."
+              ]
+            },
+            {
+              "order": 2,
+              "stage_label": "constitutional / contract authority",
+              "body_lines": [
+                "`IDENTITY_PROTOCOL.md`",
+                "`IDENTITY_RUNTIME.md`",
+                "root contract files such as machine-law primacy, machine-world ontology, current-truth epistemology, decision-evidence admissibility, success-path state admissibility, entry-surface legitimacy, error terminality, artifact-family admissibility, prompt bootstrap, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth-lifecycle, and operator answer-surface contracts",
+                "these define *what law is concretely frozen*."
+              ]
+            },
+            {
+              "order": 3,
+              "stage_label": "machine-consumed enforcement authority",
+              "body_lines": [
+                "governance/review docs",
+                "mappings",
+                "validators",
+                "probes",
+                "runtime state",
+                "receipts",
+                "these determine *current machine truth and pass/fail authority*."
+              ]
+            }
+          ],
+          "extraction_violations": []
+        },
         "structure_violations": [],
         "authority_violations": [],
         "anchor_violations": [],
@@ -10590,7 +11109,7 @@
           },
           {
             "rel_path": "scripts/validate_protocol_root_corpus_authority.py",
-            "lineno": 479,
+            "lineno": 684,
             "module": "root_row_family_projection_common",
             "primitive_name": "project_row_families",
             "primitive_class": "row_family_projection",
@@ -10644,7 +11163,7 @@
           },
           {
             "rel_path": "scripts/validate_protocol_root_corpus_ordering.py",
-            "lineno": 633,
+            "lineno": 1046,
             "module": "root_row_family_projection_common",
             "primitive_name": "project_row_families",
             "primitive_class": "row_family_projection",
@@ -11021,7 +11540,7 @@
           },
           {
             "rel_path": "scripts/validate_protocol_root_corpus_authority.py",
-            "lineno": 186,
+            "lineno": 248,
             "target": "row_family_projection_rows",
             "assignment_mode": "initializer_empty_list",
             "binding": "List",
@@ -11030,7 +11549,7 @@
           },
           {
             "rel_path": "scripts/validate_protocol_root_corpus_authority.py",
-            "lineno": 479,
+            "lineno": 684,
             "target": "row_family_projection_rows",
             "assignment_mode": "shared_primitive_call",
             "binding": "project_row_families",
@@ -11117,7 +11636,7 @@
           },
           {
             "rel_path": "scripts/validate_protocol_root_corpus_ordering.py",
-            "lineno": 142,
+            "lineno": 292,
             "target": "row_family_projection_rows",
             "assignment_mode": "initializer_empty_list",
             "binding": "List",
@@ -11126,7 +11645,7 @@
           },
           {
             "rel_path": "scripts/validate_protocol_root_corpus_ordering.py",
-            "lineno": 633,
+            "lineno": 1046,
             "target": "row_family_projection_rows",
             "assignment_mode": "shared_primitive_call",
             "binding": "project_row_families",
