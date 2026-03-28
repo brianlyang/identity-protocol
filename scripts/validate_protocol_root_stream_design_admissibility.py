@@ -12,7 +12,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     root_doc_anchor_checks_from_doc,
 )
-from root_contract_row_validation_common import contiguous_orders, validate_contract_rows
+from root_contract_row_validation_common import contiguous_orders, validate_contract_row_batches
 from root_contract_marker_checks_common import (
     contract_required_markers_from_doc,
     contract_text_marker_checks_from_rows,
@@ -29,7 +29,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_stream_design_admissibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -292,98 +292,92 @@ def main() -> int:
                 error_code = ERR_REGISTRY
 
     if not stale_reasons:
-        row_family_projection_rows = [
-            project_row_family(
-                family_id="required_question_rows",
-                member_id_key="question_id",
-                actual_rows=question_rows,
-                expected_rows=EXPECTED_QUESTION_ROWS,
-                id_attr="question_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
+        row_family_projection_rows = project_row_families(
+            families=(
+                {
+                    "family_id": "required_question_rows",
+                    "member_id_key": "question_id",
+                    "actual_rows": question_rows,
+                    "expected_rows": EXPECTED_QUESTION_ROWS,
+                    "id_attr": "question_id",
+                },
+                {
+                    "family_id": "required_admissibility_proof_rows",
+                    "member_id_key": "proof_id",
+                    "actual_rows": proof_rows,
+                    "expected_rows": EXPECTED_ADMISSIBILITY_PROOF_ROWS,
+                    "id_attr": "proof_id",
+                },
+                {
+                    "family_id": "required_admissibility_limit_rows",
+                    "member_id_key": "limit_id",
+                    "actual_rows": limit_rows,
+                    "expected_rows": EXPECTED_ADMISSIBILITY_LIMIT_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "admissibility_outcome_rows",
+                    "member_id_key": "outcome_class",
+                    "actual_rows": outcome_rows,
+                    "expected_rows": {outcome_class: {"order": idx} for idx, outcome_class in enumerate(EXPECTED_OUTCOME_CLASSES, start=1)},
+                    "id_attr": "outcome_class",
+                },
+                {
+                    "family_id": "required_projection_surfaces",
+                    "member_id_key": "surface_id",
+                    "actual_rows": projection_surface_rows,
+                    "expected_rows": {surface_id: {"order": idx} for idx, surface_id in enumerate(EXPECTED_PROJECTION_SURFACES, start=1)},
+                    "id_attr": "surface_id",
+                },
             ),
-            project_row_family(
-                family_id="required_admissibility_proof_rows",
-                member_id_key="proof_id",
-                actual_rows=proof_rows,
-                expected_rows=EXPECTED_ADMISSIBILITY_PROOF_ROWS,
-                id_attr="proof_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_admissibility_limit_rows",
-                member_id_key="limit_id",
-                actual_rows=limit_rows,
-                expected_rows=EXPECTED_ADMISSIBILITY_LIMIT_ROWS,
-                id_attr="row_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="admissibility_outcome_rows",
-                member_id_key="outcome_class",
-                actual_rows=outcome_rows,
-                expected_rows={outcome_class: {"order": idx} for idx, outcome_class in enumerate(EXPECTED_OUTCOME_CLASSES, start=1)},
-                id_attr="outcome_class",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_projection_surfaces",
-                member_id_key="surface_id",
-                actual_rows=projection_surface_rows,
-                expected_rows={surface_id: {"order": idx} for idx, surface_id in enumerate(EXPECTED_PROJECTION_SURFACES, start=1)},
-                id_attr="surface_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-        ]
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        )
         outcome_orders = [row.order for row in outcome_rows]
-        validate_contract_rows(
-            actual_rows=question_rows,
-            expected_rows=EXPECTED_QUESTION_ROWS,
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": question_rows,
+                    "expected_rows": EXPECTED_QUESTION_ROWS,
+                    "field_name": "required_question_rows",
+                    "id_attr": "question_id",
+                    "compare_fields": ("contract_heading", "normative_focus"),
+                    "non_contiguous_reason": "question_order_non_contiguous",
+                    "missing_reason": "missing_expected_questions",
+                    "extra_reason": "extra_questions",
+                    "missing_ids_key": "question_ids",
+                    "extra_ids_key": "question_ids",
+                    "violation_id_key": "question_id",
+                    "order_reason": "question_order_mismatch",
+                },
+                {
+                    "actual_rows": proof_rows,
+                    "expected_rows": EXPECTED_ADMISSIBILITY_PROOF_ROWS,
+                    "field_name": "required_admissibility_proof_rows",
+                    "id_attr": "proof_id",
+                    "compare_fields": ("contract_heading", "proof_role"),
+                    "non_contiguous_reason": "proof_order_non_contiguous",
+                    "missing_ids_key": "proof_ids",
+                    "extra_ids_key": "proof_ids",
+                    "violation_id_key": "proof_id",
+                    "order_reason": "proof_order_mismatch",
+                },
+                {
+                    "actual_rows": limit_rows,
+                    "expected_rows": EXPECTED_ADMISSIBILITY_LIMIT_ROWS,
+                    "field_name": "required_admissibility_limit_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                    "duplicate_reason": "duplicate_limit_id",
+                    "non_contiguous_reason": "limit_order_non_contiguous",
+                    "missing_ids_key": "limit_ids",
+                    "extra_ids_key": "limit_ids",
+                    "violation_id_key": "limit_id",
+                    "order_reason": "limit_order_mismatch",
+                },
+            ),
             structure_violations=structure_violations,
             admissibility_violations=admissibility_violations,
-            field_name="required_question_rows",
-            id_attr="question_id",
-            compare_fields=("contract_heading", "normative_focus"),
-            non_contiguous_reason="question_order_non_contiguous",
-            missing_reason="missing_expected_questions",
-            extra_reason="extra_questions",
-            missing_ids_key="question_ids",
-            extra_ids_key="question_ids",
-            violation_id_key="question_id",
-            order_reason="question_order_mismatch",
-        )
-        validate_contract_rows(
-            actual_rows=proof_rows,
-            expected_rows=EXPECTED_ADMISSIBILITY_PROOF_ROWS,
-            structure_violations=structure_violations,
-            admissibility_violations=admissibility_violations,
-            field_name="required_admissibility_proof_rows",
-            id_attr="proof_id",
-            compare_fields=("contract_heading", "proof_role"),
-            non_contiguous_reason="proof_order_non_contiguous",
-            missing_ids_key="proof_ids",
-            extra_ids_key="proof_ids",
-            violation_id_key="proof_id",
-            order_reason="proof_order_mismatch",
-        )
-        validate_contract_rows(
-            actual_rows=limit_rows,
-            expected_rows=EXPECTED_ADMISSIBILITY_LIMIT_ROWS,
-            structure_violations=structure_violations,
-            admissibility_violations=admissibility_violations,
-            field_name="required_admissibility_limit_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-            duplicate_reason="duplicate_limit_id",
-            non_contiguous_reason="limit_order_non_contiguous",
-            missing_ids_key="limit_ids",
-            extra_ids_key="limit_ids",
-            violation_id_key="limit_id",
-            order_reason="limit_order_mismatch",
         )
 
         if len(set(outcome_orders)) != len(outcome_orders) or not contiguous_orders(sorted(outcome_orders)):

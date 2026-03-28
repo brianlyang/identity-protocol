@@ -19,7 +19,7 @@ from root_contract_marker_checks_common import (
 )
 from root_contract_integration_checks_common import evaluate_root_contract_integration
 from root_contract_verdict_common import project_root_contract_support_verdict
-from root_contract_row_validation_common import validate_contract_rows
+from root_contract_row_validation_common import validate_contract_row_batches
 from root_corpus_authority_common import authority_anchor_checks_from_doc, entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
@@ -28,7 +28,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_prompt_bootstrap_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -299,73 +299,103 @@ def main() -> int:
                 error_code = ERR_REGISTRY
 
     if not stale_reasons:
-        row_family_projection_rows = [
-            project_row_family(
-                family_id="required_anchor_rows",
-                member_id_key="anchor_id",
-                actual_rows=anchor_rows,
-                expected_rows=EXPECTED_ANCHOR_ROWS,
-                id_attr="anchor_id",
+        row_family_projection_rows = project_row_families(
+            families=(
+                {
+                    "family_id": "required_anchor_rows",
+                    "member_id_key": "anchor_id",
+                    "actual_rows": anchor_rows,
+                    "expected_rows": EXPECTED_ANCHOR_ROWS,
+                    "id_attr": "anchor_id",
+                },
+                {
+                    "family_id": "required_output_field_rows",
+                    "member_id_key": "output_field_id",
+                    "actual_rows": output_field_rows,
+                    "expected_rows": EXPECTED_OUTPUT_FIELD_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_binding_field_rows",
+                    "member_id_key": "binding_field_id",
+                    "actual_rows": binding_field_rows,
+                    "expected_rows": EXPECTED_BINDING_FIELD_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_prompt_bootstrap_proof_rows",
+                    "member_id_key": "proof_id",
+                    "actual_rows": prompt_bootstrap_proof_rows,
+                    "expected_rows": EXPECTED_PROMPT_BOOTSTRAP_PROOF_ROWS,
+                    "id_attr": "proof_id",
+                },
+                {
+                    "family_id": "required_prompt_bootstrap_limit_rows",
+                    "member_id_key": "limit_id",
+                    "actual_rows": prompt_bootstrap_limit_rows,
+                    "expected_rows": EXPECTED_PROMPT_BOOTSTRAP_LIMIT_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_native_literal_rows",
+                    "member_id_key": "native_literal_id",
+                    "actual_rows": native_literal_rows,
+                    "expected_rows": EXPECTED_NATIVE_LITERAL_ROWS,
+                    "id_attr": "row_id",
+                },
             ),
-            project_row_family(
-                family_id="required_output_field_rows",
-                member_id_key="output_field_id",
-                actual_rows=output_field_rows,
-                expected_rows=EXPECTED_OUTPUT_FIELD_ROWS,
-                id_attr="row_id",
-            ),
-            project_row_family(
-                family_id="required_binding_field_rows",
-                member_id_key="binding_field_id",
-                actual_rows=binding_field_rows,
-                expected_rows=EXPECTED_BINDING_FIELD_ROWS,
-                id_attr="row_id",
-            ),
-            project_row_family(
-                family_id="required_prompt_bootstrap_proof_rows",
-                member_id_key="proof_id",
-                actual_rows=prompt_bootstrap_proof_rows,
-                expected_rows=EXPECTED_PROMPT_BOOTSTRAP_PROOF_ROWS,
-                id_attr="proof_id",
-            ),
-            project_row_family(
-                family_id="required_prompt_bootstrap_limit_rows",
-                member_id_key="limit_id",
-                actual_rows=prompt_bootstrap_limit_rows,
-                expected_rows=EXPECTED_PROMPT_BOOTSTRAP_LIMIT_ROWS,
-                id_attr="row_id",
-            ),
-            project_row_family(
-                family_id="required_native_literal_rows",
-                member_id_key="native_literal_id",
-                actual_rows=native_literal_rows,
-                expected_rows=EXPECTED_NATIVE_LITERAL_ROWS,
-                id_attr="row_id",
-            ),
-        ]
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        )
 
-        validate_contract_rows(actual_rows=anchor_rows, expected_rows=EXPECTED_ANCHOR_ROWS, structure_violations=structure_violations, prompt_violations=prompt_violations, field_name="required_anchor_rows", id_attr="anchor_id", compare_fields=("contract_heading",))
-        validate_contract_rows(actual_rows=output_field_rows, expected_rows=EXPECTED_OUTPUT_FIELD_ROWS, structure_violations=structure_violations, prompt_violations=prompt_violations, field_name="required_output_field_rows", id_attr="row_id", compare_fields=("contract_phrase",))
-        validate_contract_rows(actual_rows=binding_field_rows, expected_rows=EXPECTED_BINDING_FIELD_ROWS, structure_violations=structure_violations, prompt_violations=prompt_violations, field_name="required_binding_field_rows", id_attr="row_id", compare_fields=("contract_phrase",))
-        validate_contract_rows(
-            actual_rows=prompt_bootstrap_proof_rows,
-            expected_rows=EXPECTED_PROMPT_BOOTSTRAP_PROOF_ROWS,
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": anchor_rows,
+                    "expected_rows": EXPECTED_ANCHOR_ROWS,
+                    "field_name": "required_anchor_rows",
+                    "id_attr": "anchor_id",
+                    "compare_fields": ("contract_heading",),
+                },
+                {
+                    "actual_rows": output_field_rows,
+                    "expected_rows": EXPECTED_OUTPUT_FIELD_ROWS,
+                    "field_name": "required_output_field_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": binding_field_rows,
+                    "expected_rows": EXPECTED_BINDING_FIELD_ROWS,
+                    "field_name": "required_binding_field_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": prompt_bootstrap_proof_rows,
+                    "expected_rows": EXPECTED_PROMPT_BOOTSTRAP_PROOF_ROWS,
+                    "field_name": "required_prompt_bootstrap_proof_rows",
+                    "id_attr": "proof_id",
+                    "compare_fields": ("contract_heading", "proof_role"),
+                },
+                {
+                    "actual_rows": prompt_bootstrap_limit_rows,
+                    "expected_rows": EXPECTED_PROMPT_BOOTSTRAP_LIMIT_ROWS,
+                    "field_name": "required_prompt_bootstrap_limit_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": native_literal_rows,
+                    "expected_rows": EXPECTED_NATIVE_LITERAL_ROWS,
+                    "field_name": "required_native_literal_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+            ),
             structure_violations=structure_violations,
             prompt_violations=prompt_violations,
-            field_name="required_prompt_bootstrap_proof_rows",
-            id_attr="proof_id",
-            compare_fields=("contract_heading", "proof_role"),
         )
-        validate_contract_rows(
-            actual_rows=prompt_bootstrap_limit_rows,
-            expected_rows=EXPECTED_PROMPT_BOOTSTRAP_LIMIT_ROWS,
-            structure_violations=structure_violations,
-            prompt_violations=prompt_violations,
-            field_name="required_prompt_bootstrap_limit_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(actual_rows=native_literal_rows, expected_rows=EXPECTED_NATIVE_LITERAL_ROWS, structure_violations=structure_violations, prompt_violations=prompt_violations, field_name="required_native_literal_rows", id_attr="row_id", compare_fields=("contract_phrase",))
 
         contract_file = str(prompt_doc.get("contract_file") or "").strip()
         contract_path = (repo_root / contract_file).resolve()
