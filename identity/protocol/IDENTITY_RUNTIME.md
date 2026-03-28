@@ -177,13 +177,14 @@ implicit.
 
 ## Runtime ordering consumption boundary
 
-1. Runtime consumes ordering law as separate source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface, order-plane-stage, order-plane-stage-surface, protocol-boundary root-contract projection families, adjudication-order, and adjudication-surface-profile row families rather than as undifferentiated ordering prose.
+1. Runtime consumes ordering law as separate source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface, order-plane-stage, order-plane-stage-surface, README-root-contract-index, protocol-boundary-root-contract-index, protocol-boundary-root-contract-projection, protocol-boundary-root-contract-projection-surface, adjudication-order, and adjudication-surface-profile row families rather than as undifferentiated ordering prose.
 2. Runtime must keep expected row-family total and emitted row-family total congruent under machine-readable coverage completeness rather than relying on aggregate green shorthand.
-3. Runtime must also keep expected row identity set and emitted row identity set for each ordering family explicit rather than collapsing source, entry, root-reading-order-stage, order-plane-stage, or adjudication-surface identity drift into summary-only counts.
-4. Runtime must not finalize ordering legality while missing or unexpected source, entry, root-reading-order-stage, order-plane-stage, or adjudication-surface identities remain known only inside validator machinery.
+3. Runtime must also keep expected row identity set and emitted row identity set for each ordering family explicit rather than collapsing source, entry, root-reading-order-stage, order-plane-stage, manual-root-contract, or adjudication-surface identity drift into summary-only counts.
+4. Runtime must not finalize ordering legality while missing or unexpected source, entry, root-reading-order-stage, order-plane-stage, manual-root-contract, or adjudication-surface identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
-6. Runtime consumes README root reading order as a governed stage projection bound to admitted root-reading-order-stage rows rather than as a freehand alternate entry ladder.
-7. Runtime consumes README source-order / reading-order / adjudication-order distinctions as a governed stage projection bound to admitted order-plane-stage rows rather than as a freehand semantic triad.
+6. Runtime consumes README root ordering completeness discipline as a governed completeness projection bound to admitted ordering-completeness rows rather than as a freehand completeness summary.
+7. Runtime consumes README root reading order as a governed stage projection bound to admitted root-reading-order-stage rows rather than as a freehand alternate entry ladder.
+8. Runtime consumes README source-order / reading-order / adjudication-order distinctions as a governed stage projection bound to admitted order-plane-stage rows rather than as a freehand semantic triad.
 
 ## Runtime question-routing consumption boundary
 

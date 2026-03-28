@@ -1231,9 +1231,12 @@ behind aggregate counts.
 
 Required source-order, reading-order, root-reading-order-stage,
 root-reading-order-stage-surface, order-plane-stage,
-order-plane-stage-surface, explanatory root-contract index/projection,
-adjudication-order, and adjudication-surface-profile families must
-remain explicit as separate machine-readable row families.
+order-plane-stage-surface, README-root-contract-index,
+protocol-boundary-root-contract-index,
+protocol-boundary-root-contract-projection,
+protocol-boundary-root-contract-projection-surface, adjudication-order,
+and adjudication-surface-profile families must remain explicit as
+separate machine-readable row families.
 
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left
@@ -1250,6 +1253,10 @@ or adjudication-surface identity drift remains known only internally.
 Missing or unexpected row identity must remain projected in fail-close machine
 output rather than being hidden behind row-count shorthand or summary-only
 verdict text.
+
+README root ordering-completeness discipline must therefore stay congruent
+with admitted ordering-completeness rows rather than becoming a freehand
+completeness summary.
 
 README root reading order must therefore stay congruent with admitted root-reading-order-stage rows rather than becoming a freehand alternate entry ladder.
 

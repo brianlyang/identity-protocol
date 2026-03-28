@@ -17,6 +17,8 @@ ROOT_CORPUS_ORDERING_CURRENT = "identity/protocol/mappings/root-corpus-ordering.
 ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
 ROOT_READING_ORDER_SECTION_MARKER = "## Root reading order"
 ORDER_PLANE_SECTION_MARKER = "## Source-order, reading-order, and adjudication-order"
+ORDERING_COMPLETENESS_SECTION_MARKER = "## Root ordering completeness discipline"
+ORDERED_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+(.*\S)\s*$")
 ORDERED_BOLD_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+\*\*(.*?)\*\*")
 HEADING_RE = re.compile(r"^##\s+")
 HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
@@ -78,6 +80,26 @@ class OrderPlaneStageSurfaceRow:
 class OrderPlaneStageSurface:
     rel_path: str
     rows: tuple[OrderPlaneStageSurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class OrderingCompletenessRow:
+    order: int
+    completeness_id: str
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class OrderingCompletenessSurfaceRow:
+    order: int
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class OrderingCompletenessSurface:
+    rel_path: str
+    rows: tuple[OrderingCompletenessSurfaceRow, ...]
     extraction_violations: tuple[str, ...]
 
 
@@ -252,6 +274,32 @@ def order_plane_stages_from_doc(ordering_doc: Mapping[str, Any]) -> tuple[OrderP
     return tuple(out)
 
 
+def ordering_completeness_rows_from_doc(ordering_doc: Mapping[str, Any]) -> tuple[OrderingCompletenessRow, ...]:
+    rows = ordering_doc.get("ordering_completeness_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[OrderingCompletenessRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        completeness_id = _norm_str(row.get("completeness_id"))
+        contract_phrase = str(row.get("contract_phrase") or "").strip()
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not completeness_id or not contract_phrase:
+            continue
+        out.append(
+            OrderingCompletenessRow(
+                order=order,
+                completeness_id=completeness_id,
+                contract_phrase=contract_phrase,
+            )
+        )
+    return tuple(out)
+
+
 def protocol_boundary_root_contract_projection_rows_from_doc(
     ordering_doc: Mapping[str, Any],
 ) -> tuple[ProtocolBoundaryRootContractProjectionRow, ...]:
@@ -415,4 +463,49 @@ def readme_order_plane_surface(repo_root: Path) -> OrderPlaneStageSurface:
             for order, stage_label, body_lines in rows
         ),
         extraction_violations=violations,
+    )
+
+
+def readme_ordering_completeness_surface(repo_root: Path) -> OrderingCompletenessSurface:
+    path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
+    if not path.exists() or not path.is_file():
+        return OrderingCompletenessSurface(
+            rel_path=ROOT_PROTOCOL_README_REL_PATH,
+            rows=(),
+            extraction_violations=("target_missing",),
+        )
+
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    section_found = False
+    rows: list[OrderingCompletenessSurfaceRow] = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == ORDERING_COMPLETENESS_SECTION_MARKER:
+            section_found = True
+            continue
+        if not section_found:
+            continue
+        if HEADING_RE.match(stripped) or HORIZONTAL_RULE_RE.match(stripped):
+            break
+        match = ORDERED_ITEM_RE.match(stripped)
+        if not match:
+            continue
+        rows.append(
+            OrderingCompletenessSurfaceRow(
+                order=int(match.group(1)),
+                contract_phrase=match.group(2).strip(),
+            )
+        )
+
+    violations: list[str] = []
+    if not section_found:
+        violations.append("section_marker_missing")
+    elif not rows:
+        violations.append("completeness_rows_missing")
+
+    return OrderingCompletenessSurface(
+        rel_path=ROOT_PROTOCOL_README_REL_PATH,
+        rows=tuple(rows),
+        extraction_violations=tuple(violations),
     )

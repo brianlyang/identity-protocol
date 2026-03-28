@@ -54,7 +54,7 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_ordering_status"] == "PASS_REQUIRED", payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["ordering_row_family_count"] == 12, payload
+assert payload["ordering_row_family_count"] == 14, payload
 assert payload["ordering_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["ordering_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
@@ -74,6 +74,13 @@ assert payload["order_plane_stage_surface"]["entry_count"] == 3, payload
 assert payload["order_plane_stage_surface"]["entries"][0]["stage_label"] == "source-order / generative-order", payload
 assert payload["order_plane_stage_surface"]["entries"][-1]["stage_label"] == "adjudication-order", payload
 assert payload["order_plane_stage_surface"]["extraction_violations"] == [], payload
+assert payload["ordering_completeness_row_count"] == 5, payload
+assert payload["ordering_completeness_rows"][0]["completeness_id"] == "explicit_ordering_row_families", payload
+assert payload["ordering_completeness_rows"][-1]["completeness_id"] == "fail_close_preserves_ordering_identity_projection", payload
+assert payload["ordering_completeness_surface"]["entry_count"] == 5, payload
+assert payload["ordering_completeness_surface"]["entries"][0]["contract_phrase"].startswith("required source-order, reading-order"), payload
+assert payload["ordering_completeness_surface"]["entries"][-1]["contract_phrase"].startswith("fail-close machine output must preserve"), payload
+assert payload["ordering_completeness_surface"]["extraction_violations"] == [], payload
 assert payload["source_order"][0]["corpus_class"] == "bottom_theory", payload
 assert payload["canonical_root_contract_entry_count"] == 16, payload
 assert payload["canonical_root_contract_entry_paths"][0] == "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md", payload
@@ -91,6 +98,8 @@ assert {row["family_id"] for row in payload["row_family_projection_rows"]} == {
     "root_reading_order_stage_surface",
     "order_plane_stages",
     "order_plane_stage_surface",
+    "ordering_completeness_rows",
+    "ordering_completeness_surface",
     "readme_root_contract_index",
     "protocol_boundary_root_contract_index",
     "protocol_boundary_root_contract_projections",
@@ -103,6 +112,116 @@ assert payload["adjudication_order"][-1]["machine_surface"] == "receipts", paylo
 assert payload["adjudication_surface_profile_count"] == 5, payload
 assert payload["adjudication_surface_profiles"][0]["surface_role"] == "admissible_law_resolution", payload
 assert payload["adjudication_surface_profiles"][-1]["closure_terminal"] is True, payload
+PY
+
+ORDERING_COMPLETENESS_REPO="${TMP_ROOT}/missing-ordering-completeness-row-repo"
+mirror_repo "${ORDERING_COMPLETENESS_REPO}"
+python3 - <<'PY' "${ORDERING_COMPLETENESS_REPO}/identity/protocol/mappings/root-corpus-ordering.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["ordering_completeness_rows"] = [
+    row for row in doc["ordering_completeness_rows"]
+    if row.get("completeness_id") != "hidden_ordering_identity_drift_forbidden"
+]
+for idx, row in enumerate(doc["ordering_completeness_rows"], start=1):
+    row["order"] = idx
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ORDERING_COMPLETENESS_JSON="${TMP_ROOT}/missing-ordering-completeness-row.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
+  --repo-root "${ORDERING_COMPLETENESS_REPO}" \
+  --json-only >"${ORDERING_COMPLETENESS_JSON}"; then
+  echo "[FAIL] root corpus ordering validator unexpectedly passed missing ordering-completeness row"
+  exit 1
+fi
+
+python3 - <<'PY' "${ORDERING_COMPLETENESS_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_ordering_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCO-002", payload
+assert any(
+    "structure_violation:ordering_completeness_rows:missing_ordering_completeness_rows" == reason
+    for reason in payload["stale_reasons"]
+), payload
+row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "ordering_completeness_rows"
+)
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "ordering_completeness_surface"
+)
+assert row["expected_count"] == 5, payload
+assert row["actual_count"] == 4, payload
+assert row["missing_ids"] == ["hidden_ordering_identity_drift_forbidden"], payload
+assert row["unexpected_ids"] == [], payload
+assert row["coverage_status"] == "FAIL_REQUIRED", payload
+assert row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+ORDERING_COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/ordering-completeness-surface-drift-repo"
+mirror_repo "${ORDERING_COMPLETENESS_SURFACE_REPO}"
+python3 - <<'PY' "${ORDERING_COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "1. required source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface, order-plane-stage, order-plane-stage-surface, explanatory root-contract index/projection, adjudication-order, and adjudication-surface-profile rows must remain explicit as separate machine-readable row families;"
+new = "1. required source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface, order-plane-stage, order-plane-stage-surface, manual root-contract index/projection, adjudication-order, and adjudication-surface-profile rows must remain explicit as separate machine-readable row families;"
+assert old in text, text[:3000]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+ORDERING_COMPLETENESS_SURFACE_JSON="${TMP_ROOT}/ordering-completeness-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
+  --repo-root "${ORDERING_COMPLETENESS_SURFACE_REPO}" \
+  --json-only >"${ORDERING_COMPLETENESS_SURFACE_JSON}"; then
+  echo "[FAIL] root corpus ordering validator unexpectedly passed ordering-completeness surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ORDERING_COMPLETENESS_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_ordering_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCO-002", payload
+assert any(
+    "structure_violation:ordering_completeness_surface:missing_ordering_completeness_surface_rows" == reason
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
+    "structure_violation:ordering_completeness_surface:extra_ordering_completeness_surface_rows" == reason
+    for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "ordering_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert surface_row["missing_ids"] == [
+    "required source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface, order-plane-stage, order-plane-stage-surface, explanatory root-contract index/projection, adjudication-order, and adjudication-surface-profile rows must remain explicit as separate machine-readable row families;"
+], payload
+assert surface_row["unexpected_ids"] == [
+    "required source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface, order-plane-stage, order-plane-stage-surface, manual root-contract index/projection, adjudication-order, and adjudication-surface-profile rows must remain explicit as separate machine-readable row families;"
+], payload
 PY
 
 ORDER_PLANE_REPO="${TMP_ROOT}/missing-order-plane-stage-repo"

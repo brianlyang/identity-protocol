@@ -234,6 +234,7 @@ implicit.
 6. Explanatory root-contract indices rendered in root docs must remain congruent with admitted `reading_order` root-contract entries rather than silently authoring an alternate order.
 7. README root reading order stages rendered at protocol root must remain congruent with admitted root-reading-order-stage rows rather than silently authoring an alternate entry ladder.
 8. README source-order / reading-order / adjudication-order distinctions rendered at protocol root must remain congruent with admitted order-plane-stage rows rather than silently authoring an alternate semantic triad.
+9. README root ordering completeness discipline rendered at protocol root must remain congruent with admitted ordering-completeness rows rather than silently authoring an alternate completeness summary.
 
 ## Root question-routing completeness boundary
 

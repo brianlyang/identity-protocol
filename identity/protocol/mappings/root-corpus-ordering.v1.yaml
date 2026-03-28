@@ -20,6 +20,17 @@ probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required
 ordering_anchor_checks:
 - rel_path: identity/protocol/README.md
   required_markers:
+  - '## Root ordering completeness discipline'
+  - These ordering-completeness rules must remain bound to canonical ordering-completeness
+    rows rather than drifting into soft summary prose.
+  - required source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface,
+    order-plane-stage, order-plane-stage-surface, explanatory root-contract index/projection,
+    adjudication-order, and adjudication-surface-profile rows must remain explicit
+    as separate machine-readable row families;
+  - runtime or validator code must not finalize ordering legality while missing
+    or unexpected source, entry, root-reading-order-stage, order-plane-stage,
+    manual-root-contract, or adjudication-surface identities remain known only
+    internally;
   - These order distinctions must remain bound to canonical order-plane stage
     rows rather than becoming a freehand semantic triad.
   - This root reading order must remain bound to canonical root-reading-order
@@ -38,6 +49,10 @@ ordering_anchor_checks:
     an independently authored alternate order.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
+  - '### Ordering row-family completeness must stay explicit'
+  - README root ordering-completeness discipline must therefore stay congruent
+    with admitted ordering-completeness rows rather than becoming a freehand
+    completeness summary.
   - README root reading order must therefore stay congruent with admitted root-reading-order-stage
     rows rather than becoming a freehand alternate entry ladder.
   - README source-order / reading-order / adjudication-order distinctions must
@@ -54,6 +69,10 @@ ordering_anchor_checks:
     legality phases they summarize.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
+  - '## Root ordering completeness boundary'
+  - README root ordering completeness discipline rendered at protocol root must
+    remain congruent with admitted ordering-completeness rows rather than silently
+    authoring an alternate completeness summary.
   - README root reading order stages rendered at protocol root must remain congruent
     with admitted root-reading-order-stage rows rather than silently authoring
     an alternate entry ladder.
@@ -74,6 +93,10 @@ ordering_anchor_checks:
     an independently authored alternate root index or relabeling domain law.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
+  - '## Runtime ordering consumption boundary'
+  - Runtime consumes README root ordering completeness discipline as a governed
+    completeness projection bound to admitted ordering-completeness rows rather
+    than as a freehand completeness summary.
   - Runtime consumes README root reading order as a governed stage projection
     bound to admitted root-reading-order-stage rows rather than as a freehand
     alternate entry ladder.
@@ -366,6 +389,22 @@ adjudication_surface_profiles:
   phase_order: 5
   surface_role: adjudicated_verdict_closure
   closure_terminal: true
+ordering_completeness_rows:
+- order: 1
+  completeness_id: explicit_ordering_row_families
+  contract_phrase: required source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface, order-plane-stage, order-plane-stage-surface, explanatory root-contract index/projection, adjudication-order, and adjudication-surface-profile rows must remain explicit as separate machine-readable row families;
+- order: 2
+  completeness_id: congruent_ordering_row_family_totals
+  contract_phrase: expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+- order: 3
+  completeness_id: explicit_ordering_row_identity_sets
+  contract_phrase: expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+- order: 4
+  completeness_id: hidden_ordering_identity_drift_forbidden
+  contract_phrase: runtime or validator code must not finalize ordering legality while missing or unexpected source, entry, root-reading-order-stage, order-plane-stage, manual-root-contract, or adjudication-surface identities remain known only internally;
+- order: 5
+  completeness_id: fail_close_preserves_ordering_identity_projection
+  contract_phrase: fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
 order_plane_stages:
 - order: 1
   stage_label: source-order / generative-order

@@ -12,7 +12,7 @@ from root_contract_anchor_checks_common import (
     validate_expected_root_doc_anchor_checks,
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
-from root_contract_row_validation_common import contiguous_orders
+from root_contract_row_validation_common import contiguous_orders, validate_contract_row_batches
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_contract_list_sync_common import (
     PROTOCOL_BOUNDARY_ROOT_CONTRACT_INDEX_SURFACE_ID,
@@ -32,9 +32,11 @@ from root_corpus_ordering_common import (
     adjudication_order_rows_from_doc,
     adjudication_surface_profiles_from_doc,
     load_root_corpus_ordering,
+    ordering_completeness_rows_from_doc,
     order_plane_stages_from_doc,
     ordering_anchor_checks_from_doc,
     protocol_boundary_root_contract_projection_rows_from_doc,
+    readme_ordering_completeness_surface,
     readme_order_plane_surface,
     readme_root_reading_order_surface,
     reading_order_rows_from_doc,
@@ -79,6 +81,10 @@ EXPECTED_ADJUDICATION_SURFACE_PROFILES = {
 }
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/README.md": (
+        "## Root ordering completeness discipline",
+        "These ordering-completeness rules must remain bound to canonical ordering-completeness rows rather than drifting into soft summary prose.",
+        "required source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface, order-plane-stage, order-plane-stage-surface, explanatory root-contract index/projection, adjudication-order, and adjudication-surface-profile rows must remain explicit as separate machine-readable row families;",
+        "runtime or validator code must not finalize ordering legality while missing or unexpected source, entry, root-reading-order-stage, order-plane-stage, manual-root-contract, or adjudication-surface identities remain known only internally;",
         "These order distinctions must remain bound to canonical order-plane stage rows rather than becoming a freehand semantic triad.",
         "This root reading order must remain bound to canonical root-reading-order stage rows rather than becoming a freehand alternate entry ladder.",
         "## Root adjudication-surface discipline",
@@ -90,6 +96,8 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "this manual root-contract index is explanatory only and must remain congruent with the admitted `reading_order` root-contract sequence rather than becoming an independently authored alternate order.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Ordering row-family completeness must stay explicit",
+        "README root ordering-completeness discipline must therefore stay congruent with admitted ordering-completeness rows rather than becoming a freehand completeness summary.",
         "README root reading order must therefore stay congruent with admitted root-reading-order-stage rows rather than becoming a freehand alternate entry ladder.",
         "README source-order / reading-order / adjudication-order distinctions must therefore stay congruent with admitted order-plane-stage rows rather than becoming a freehand semantic triad.",
         "### Adjudication surfaces are phase-governed, not interchangeable",
@@ -100,6 +108,8 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "receipts close the adjudicated verdict rather than back-authoring the earlier legality phases they summarize.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root ordering completeness boundary",
+        "README root ordering completeness discipline rendered at protocol root must remain congruent with admitted ordering-completeness rows rather than silently authoring an alternate completeness summary.",
         "README root reading order stages rendered at protocol root must remain congruent with admitted root-reading-order-stage rows rather than silently authoring an alternate entry ladder.",
         "README source-order / reading-order / adjudication-order distinctions rendered at protocol root must remain congruent with admitted order-plane-stage rows rather than silently authoring an alternate semantic triad.",
         "## Root adjudication-surface boundary",
@@ -111,6 +121,8 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "The manual root-contract enumeration carried by this constitution is an explanatory projection and must remain congruent with the admitted `reading_order` root-contract sequence and admitted root-contract projection labels rather than becoming an independently authored alternate root index or relabeling domain law.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime ordering consumption boundary",
+        "Runtime consumes README root ordering completeness discipline as a governed completeness projection bound to admitted ordering-completeness rows rather than as a freehand completeness summary.",
         "Runtime consumes README root reading order as a governed stage projection bound to admitted root-reading-order-stage rows rather than as a freehand alternate entry ladder.",
         "Runtime consumes README source-order / reading-order / adjudication-order distinctions as a governed stage projection bound to admitted order-plane-stage rows rather than as a freehand semantic triad.",
         "## Runtime adjudication-surface consumption boundary",
@@ -228,6 +240,28 @@ EXPECTED_ROOT_READING_ORDER_STAGES = {
         ),
     },
 }
+EXPECTED_ORDERING_COMPLETENESS_ROWS = {
+    "explicit_ordering_row_families": {
+        "order": 1,
+        "contract_phrase": "required source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface, order-plane-stage, order-plane-stage-surface, explanatory root-contract index/projection, adjudication-order, and adjudication-surface-profile rows must remain explicit as separate machine-readable row families;",
+    },
+    "congruent_ordering_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_ordering_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_ordering_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize ordering legality while missing or unexpected source, entry, root-reading-order-stage, order-plane-stage, manual-root-contract, or adjudication-surface identities remain known only internally;",
+    },
+    "fail_close_preserves_ordering_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_ORDER_PLANE_STAGES = {
     "source-order / generative-order": {
         "order": 1,
@@ -322,6 +356,7 @@ def main() -> int:
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     root_reading_order_stages = root_reading_order_stages_from_doc(ordering_doc) if ordering_doc else ()
     order_plane_stages = order_plane_stages_from_doc(ordering_doc) if ordering_doc else ()
+    ordering_completeness_rows = ordering_completeness_rows_from_doc(ordering_doc) if ordering_doc else ()
     protocol_boundary_projection_rows = (
         protocol_boundary_root_contract_projection_rows_from_doc(ordering_doc) if ordering_doc else ()
     )
@@ -330,6 +365,7 @@ def main() -> int:
     ordering_anchor_checks = ordering_anchor_checks_from_doc(ordering_doc) if ordering_doc else ()
     root_reading_order_stage_surface = readme_root_reading_order_surface(repo_root)
     order_plane_stage_surface = readme_order_plane_surface(repo_root)
+    ordering_completeness_surface = readme_ordering_completeness_surface(repo_root)
     manual_root_contract_surfaces = manual_root_contract_index_surfaces(repo_root)
     manual_root_contract_surface_map = {surface.surface_id: surface for surface in manual_root_contract_surfaces}
     protocol_boundary_projection_surface = protocol_boundary_root_contract_projection_surface(repo_root)
@@ -385,6 +421,9 @@ def main() -> int:
         if not order_plane_stages:
             stale_reasons.append("root_corpus_ordering_order_plane_stages_missing")
             error_code = ERR_REGISTRY
+        if not ordering_completeness_rows:
+            stale_reasons.append("root_corpus_ordering_ordering_completeness_rows_missing")
+            error_code = ERR_REGISTRY
         if not protocol_boundary_projection_rows:
             stale_reasons.append("root_corpus_ordering_protocol_boundary_root_contract_projections_missing")
             error_code = ERR_REGISTRY
@@ -430,6 +469,8 @@ def main() -> int:
     order_plane_stage_surface_map = {row.stage_label: row for row in order_plane_stage_surface.rows}
     order_plane_stage_surface_orders = [row.order for row in order_plane_stage_surface.rows]
     order_plane_stage_surface_labels = [row.stage_label for row in order_plane_stage_surface.rows]
+    ordering_completeness_surface_orders = [row.order for row in ordering_completeness_surface.rows]
+    ordering_completeness_surface_phrases = [row.contract_phrase for row in ordering_completeness_surface.rows]
     protocol_boundary_projection_orders = [row.order for row in protocol_boundary_projection_rows]
     protocol_boundary_projection_paths = [row.rel_path for row in protocol_boundary_projection_rows]
     adjudication_orders = [row.order for row in adjudication_rows]
@@ -439,6 +480,7 @@ def main() -> int:
     sorted_source_rows = sorted(source_rows, key=lambda item: item.order)
     sorted_reading_rows = sorted(reading_rows, key=lambda item: item.order)
     sorted_root_reading_order_stages = sorted(root_reading_order_stages, key=lambda item: item.order)
+    sorted_ordering_completeness_rows = sorted(ordering_completeness_rows, key=lambda item: item.order)
     sorted_protocol_boundary_projection_rows = sorted(protocol_boundary_projection_rows, key=lambda item: item.order)
     sorted_adjudication_rows = sorted(adjudication_rows, key=lambda item: item.order)
     sorted_adjudication_surface_profiles = sorted(adjudication_surface_profiles, key=lambda item: item.phase_order)
@@ -754,6 +796,78 @@ def main() -> int:
                 {
                     "field": "order_plane_stage_surface",
                     "reason": f"order_plane_surface_{reason}",
+                }
+            )
+        for reason in ordering_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "ordering_completeness_surface",
+                    "reason": f"ordering_completeness_surface_{reason}",
+                }
+            )
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": ordering_completeness_rows,
+                    "expected_rows": EXPECTED_ORDERING_COMPLETENESS_ROWS,
+                    "field_name": "ordering_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "duplicate_reason": "duplicate_ordering_completeness_id",
+                    "non_contiguous_reason": "ordering_completeness_row_order_non_contiguous",
+                    "missing_reason": "missing_ordering_completeness_rows",
+                    "extra_reason": "extra_ordering_completeness_rows",
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                },
+                {
+                    "actual_rows": ordering_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_ORDERING_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "ordering_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_ordering_completeness_surface_phrase",
+                    "non_contiguous_reason": "ordering_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_ordering_completeness_surface_rows",
+                    "extra_reason": "extra_ordering_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                },
+            ),
+            structure_violations=structure_violations,
+            support_violations=coverage_violations,
+        )
+        expected_ordering_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_ORDERING_COMPLETENESS_ROWS.values()
+        ]
+        expected_ordering_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_ORDERING_COMPLETENESS_ROWS.values()
+        ]
+        if ordering_completeness_surface_phrases and tuple(ordering_completeness_surface_phrases) != tuple(
+            expected_ordering_completeness_phrases
+        ):
+            coverage_violations.append(
+                {
+                    "field": "ordering_completeness_surface",
+                    "reason": "ordering_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_ordering_completeness_phrases,
+                    "actual": ordering_completeness_surface_phrases,
+                }
+            )
+        if ordering_completeness_surface_orders and tuple(ordering_completeness_surface_orders) != tuple(
+            expected_ordering_completeness_orders
+        ):
+            coverage_violations.append(
+                {
+                    "field": "ordering_completeness_surface",
+                    "reason": "ordering_completeness_surface_order_mismatch",
+                    "expected": expected_ordering_completeness_orders,
+                    "actual": ordering_completeness_surface_orders,
                 }
             )
         grouped_root_reading_order_rel_paths = tuple(
@@ -1088,6 +1202,23 @@ def main() -> int:
                 "id_attr": "stage_label",
             },
             {
+                "family_id": "ordering_completeness_rows",
+                "member_id_key": "completeness_id",
+                "actual_rows": ordering_completeness_rows,
+                "expected_rows": EXPECTED_ORDERING_COMPLETENESS_ROWS,
+                "id_attr": "completeness_id",
+            },
+            {
+                "family_id": "ordering_completeness_surface",
+                "member_id_key": "contract_phrase",
+                "actual_rows": ordering_completeness_surface.rows,
+                "expected_rows": {
+                    row["contract_phrase"]: {}
+                    for row in EXPECTED_ORDERING_COMPLETENESS_ROWS.values()
+                },
+                "id_attr": "contract_phrase",
+            },
+            {
                 "family_id": README_ROOT_CONTRACT_INDEX_SURFACE_ID,
                 "member_id_key": "rel_path",
                 "actual_rows": manual_root_contract_surface_map.get(README_ROOT_CONTRACT_INDEX_SURFACE_ID).rows
@@ -1181,6 +1312,7 @@ def main() -> int:
         ],
         "root_reading_order_stage_count": len(root_reading_order_stages),
         "order_plane_stage_count": len(order_plane_stages),
+        "ordering_completeness_row_count": len(ordering_completeness_rows),
         "root_reading_order_stages": [
             {
                 "order": row.order,
@@ -1224,6 +1356,26 @@ def main() -> int:
                 for row in order_plane_stage_surface.rows
             ],
             "extraction_violations": list(order_plane_stage_surface.extraction_violations),
+        },
+        "ordering_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted_ordering_completeness_rows
+        ],
+        "ordering_completeness_surface": {
+            "rel_path": ordering_completeness_surface.rel_path,
+            "entry_count": len(ordering_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in ordering_completeness_surface.rows
+            ],
+            "extraction_violations": list(ordering_completeness_surface.extraction_violations),
         },
         "canonical_root_contract_entry_count": len(canonical_root_contract_entry_paths),
         "canonical_root_contract_entry_paths": list(canonical_root_contract_entry_paths),
