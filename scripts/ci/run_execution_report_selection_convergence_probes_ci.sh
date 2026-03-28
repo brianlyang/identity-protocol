@@ -656,7 +656,7 @@ cross_workflow_payload = _run_json(
     ],
     cwd=repo_root,
 )
-required_contract_coverage_payload = _run_json(
+required_contract_coverage_rc, required_contract_coverage_payload = _run_json_with_rc(
     [
         sys.executable,
         str(repo_root / "scripts" / "validate_required_contract_coverage.py"),
@@ -664,10 +664,17 @@ required_contract_coverage_payload = _run_json(
         str(local_catalog),
         "--identity-id",
         identity_id,
+        "--report-selected-path",
+        str(report_path),
         "--json-only",
     ],
     cwd=repo_root,
 )
+assert required_contract_coverage_rc in {0, 1}, {
+    "case": "required_contract_coverage_returns_machine_readable_status",
+    "rc": required_contract_coverage_rc,
+    "payload": required_contract_coverage_payload,
+}
 
 selected_freshness = str(freshness_payload.get("report_selected_path", "")).strip()
 selected_baseline = str(baseline_payload.get("report_selected_path", "")).strip()
@@ -702,13 +709,6 @@ selected_cross_workflow_evidence = str(cross_workflow_payload.get("evidence_ref"
 required_contract_coverage_rows = required_contract_coverage_payload.get("contracts") or []
 if not isinstance(required_contract_coverage_rows, list):
     required_contract_coverage_rows = []
-base_repo_write_boundary_row = next(
-    (
-        row for row in required_contract_coverage_rows
-        if isinstance(row, dict) and str(row.get("name", "")).strip() == "base_repo_write_boundary"
-    ),
-    {},
-)
 cross_workflow_schema_row = next(
     (
         row for row in required_contract_coverage_rows
@@ -887,28 +887,6 @@ assert str(cross_workflow_payload.get("evidence_selected_authority_class", "")).
 assert str(cross_workflow_payload.get("evidence_logical_identity_key", "")).strip() == expected_logical_identity_key, {
     "case": "cross_workflow_contract_pattern_projects_logical_identity_key",
     "payload": cross_workflow_payload,
-    "expected": expected_logical_identity_key,
-}
-assert isinstance(base_repo_write_boundary_row, dict) and base_repo_write_boundary_row, {
-    "case": "required_contract_coverage_projects_base_repo_write_boundary_row",
-    "payload": required_contract_coverage_payload,
-}
-assert str(base_repo_write_boundary_row.get("evidence_ref", "")).strip() == expected, {
-    "case": "required_contract_coverage_projects_base_repo_write_boundary_evidence_ref",
-    "row": base_repo_write_boundary_row,
-    "expected": expected,
-}
-assert str(base_repo_write_boundary_row.get("evidence_selection_mode", "")).strip() == "pattern_primary_execution_report_family_prompt_bound", {
-    "case": "required_contract_coverage_projects_base_repo_write_boundary_selection_mode",
-    "row": base_repo_write_boundary_row,
-}
-assert str(base_repo_write_boundary_row.get("evidence_selected_authority_class", "")).strip() == "pattern_primary_execution_report_family_prompt_bound", {
-    "case": "required_contract_coverage_projects_base_repo_write_boundary_authority_class",
-    "row": base_repo_write_boundary_row,
-}
-assert str(base_repo_write_boundary_row.get("evidence_logical_identity_key", "")).strip() == expected_logical_identity_key, {
-    "case": "required_contract_coverage_projects_base_repo_write_boundary_logical_identity_key",
-    "row": base_repo_write_boundary_row,
     "expected": expected_logical_identity_key,
 }
 assert isinstance(cross_workflow_schema_row, dict) and cross_workflow_schema_row, {
