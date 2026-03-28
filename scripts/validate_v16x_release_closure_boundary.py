@@ -7,6 +7,9 @@ import re
 from pathlib import Path
 from typing import Any
 
+from release_closure_narrative_marker_common import (
+    collect_release_closure_narrative_stale_reasons,
+)
 from repo_root_resolution_common import resolve_protocol_repo_root
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
@@ -66,48 +69,6 @@ REQUIRED_REPO_GLOBAL_CLOSURE_OWNER_LANE_MARKERS = RELEASE_READINESS_REPO_GLOBAL_
 REQUIRED_REPO_GLOBAL_CLOSURE_PROOF_STRENGTH_MARKERS = (
     *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS,
 )
-REQUIRED_ACTIVE_REPORT_POINTER_LOCALITY_MARKERS = (
-    "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh",
-    "active_execution_report pointer",
-    "cross-pack absolute pointer drift",
-    "pack-local candidate roots",
-    "latest_identity_upgrade_report()",
-    "selected_report_authority_class",
-    "selection_mode",
-    "active_execution_pointer_pack_local_report",
-    "candidate_root_latest_pack_local_report",
-)
-REQUIRED_STRICT_LIVE_ACTIVE_POINTER_LOCALITY_MARKERS = (
-    "scripts/ci/run_strict_live_active_pointer_locality_probes_ci.sh",
-    "strict-live current-run pointer",
-    "resolve_active_execution_context()",
-    "pointer_candidate_root_report",
-    "pointer_report_name_rehomed_candidate_root",
-    "external_pointer_report_rejected",
-)
-REQUIRED_STRICT_LIVE_CONTRACT_RESOLUTION_MARKERS = (
-    "scripts/ci/run_strict_live_contract_resolution_probes_ci.sh",
-    "strict-live contract resolution",
-    "strict_live_current_run_required_but_unproven",
-    "sample-green fail-close",
-    "pack-relative contract paths",
-)
-REQUIRED_WEAK_LIVE_POINTER_ABSORPTION_MARKERS = (
-    "scripts/ci/run_identity_weak_live_linkage_pointer_locality_probes_ci.sh",
-    "validate_identity_weak_live_linkage.py",
-    "current_run_pointer_resolution_mode",
-    "external_pointer_report_rejected",
-)
-REQUIRED_EXECUTION_REPORT_SELECTION_CONVERGENCE_MARKERS = (
-    "scripts/ci/run_execution_report_selection_convergence_probes_ci.sh",
-    "execution_report_selection_common.py",
-    "primary execution report selection",
-    "derivative report artifacts",
-    "validate_execution_report_freshness.py",
-    "validate_identity_protocol_baseline_freshness.py",
-    "validate_run_id_report_selection.py",
-)
-
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
@@ -250,21 +211,7 @@ def main() -> int:
                 stale_reasons.append(
                     f"{label}_missing_repo_global_closure_proof_strength_marker:{marker}"
                 )
-        for marker in REQUIRED_ACTIVE_REPORT_POINTER_LOCALITY_MARKERS:
-            if marker not in text:
-                stale_reasons.append(f"{label}_missing_active_report_pointer_locality_marker:{marker}")
-        for marker in REQUIRED_STRICT_LIVE_ACTIVE_POINTER_LOCALITY_MARKERS:
-            if marker not in text:
-                stale_reasons.append(f"{label}_missing_strict_live_active_pointer_locality_marker:{marker}")
-        for marker in REQUIRED_STRICT_LIVE_CONTRACT_RESOLUTION_MARKERS:
-            if marker not in text:
-                stale_reasons.append(f"{label}_missing_strict_live_contract_resolution_marker:{marker}")
-        for marker in REQUIRED_WEAK_LIVE_POINTER_ABSORPTION_MARKERS:
-            if marker not in text:
-                stale_reasons.append(f"{label}_missing_weak_live_pointer_absorption_marker:{marker}")
-        for marker in REQUIRED_EXECUTION_REPORT_SELECTION_CONVERGENCE_MARKERS:
-            if marker not in text:
-                stale_reasons.append(f"{label}_missing_execution_report_selection_convergence_marker:{marker}")
+        stale_reasons.extend(collect_release_closure_narrative_stale_reasons(text, label=label))
         for marker in RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS:
             if marker not in text:
                 stale_reasons.append(f"{label}_missing_transport_fleet_closure_convergence_marker:{marker}")
