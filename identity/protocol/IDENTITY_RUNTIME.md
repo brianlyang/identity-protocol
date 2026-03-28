@@ -158,11 +158,12 @@ implicit.
 
 ## Runtime authority consumption boundary
 
-1. Runtime consumes authority law as separate authority-class-profile and entry-authority-projection row families rather than as undifferentiated authority prose.
+1. Runtime consumes authority law as separate authority-class-profile, entry-authority-projection, authority-layer-stage, and authority-layer-stage-surface row families rather than as undifferentiated authority prose.
 2. Runtime must keep expected row-family total and emitted row-family total congruent under machine-readable coverage completeness rather than relying on aggregate green shorthand.
-3. Runtime must also keep expected row identity set and emitted row identity set for each authority family explicit rather than collapsing corpus-class or entry identity drift into summary-only counts.
-4. Runtime must not finalize authority legality while missing or unexpected corpus-class or entry identities remain known only inside validator machinery.
+3. Runtime must also keep expected row identity set and emitted row identity set for each authority family explicit rather than collapsing corpus-class, entry, or authority-layer-stage identity drift into summary-only counts.
+4. Runtime must not finalize authority legality while missing or unexpected corpus-class, entry, or authority-layer-stage identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+6. Runtime consumes README authority layering as a governed stage projection bound to admitted authority-layer-stage rows rather than as a freehand alternate authority ladder.
 
 ## Runtime conflict-precedence consumption boundary
 

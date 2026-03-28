@@ -208,11 +208,12 @@ implicit.
 
 ## Root authority completeness boundary
 
-1. Authority law must remain machine-readable as separate authority-class-profile and entry-authority-projection row families.
+1. Authority law must remain machine-readable as separate authority-class-profile, entry-authority-projection, authority-layer-stage, and authority-layer-stage-surface row families.
 2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
-3. Expected row identity set and emitted row identity set for each authority family must also remain explicit; corpus-class or entry identity drift may not be collapsed into summary-only counts.
-4. Protocol legality must not finalize authority legality while missing or unexpected corpus-class or entry identities remain known only inside validator logic.
+3. Expected row identity set and emitted row identity set for each authority family must also remain explicit; corpus-class, entry, or authority-layer-stage identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize authority legality while missing or unexpected corpus-class, entry, or authority-layer-stage identities remain known only inside validator logic.
 5. Fail-close authority output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+6. README authority layering stages rendered at protocol root must remain congruent with admitted authority-layer-stage rows rather than silently authoring an alternate authority ladder.
 
 ## Root conflict-precedence completeness boundary
 

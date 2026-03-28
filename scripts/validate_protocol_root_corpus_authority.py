@@ -18,8 +18,10 @@ from root_corpus_authority_common import (
     STATUS_PASS_REQUIRED,
     authority_anchor_checks_from_doc,
     authority_class_profiles_from_doc,
+    authority_layer_stages_from_doc,
     entry_authority_projections_from_doc,
     load_root_corpus_authority,
+    readme_authority_layer_surface,
 )
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
@@ -90,12 +92,22 @@ ALLOWED_AUTHORITY_MODES = {
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/README.md": (
         "## Authority layering",
+        "This authority layering must remain bound to canonical authority-layer stage rows rather than becoming a freehand alternate authority ladder.",
         "machine-consumed enforcement authority",
         "Philosophical primacy, however, is not the same as runtime-source primacy.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "philosophical primacy does not mean runtime-source primacy",
         "machine-consumed authority still lives in frozen contracts, mappings, validators, runtime state, and receipts",
+        "README authority layering must therefore stay congruent with admitted authority-layer-stage rows rather than becoming a freehand alternate authority ladder.",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root authority completeness boundary",
+        "README authority layering stages rendered at protocol root must remain congruent with admitted authority-layer-stage rows rather than silently authoring an alternate authority ladder.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime authority consumption boundary",
+        "Runtime consumes README authority layering as a governed stage projection bound to admitted authority-layer-stage rows rather than as a freehand alternate authority ladder.",
     ),
     "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md": (
         "## Runtime adjudication boundary",
@@ -162,6 +174,56 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "Current-turn answer-surface legality must still resolve from machine-consumed enforcement surfaces",
     ),
 }
+EXPECTED_AUTHORITY_LAYER_STAGES = {
+    "bottom-theory primacy": {
+        "order": 1,
+        "bound_corpus_classes": ("bottom_theory",),
+        "bound_authority_roles": ("interpretive_bottom_theory",),
+        "bound_machine_surfaces": (),
+        "required_markers": (
+            "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`",
+            "explains *why* protocol law has the shape it has.",
+        ),
+    },
+    "constitutional / contract authority": {
+        "order": 2,
+        "bound_corpus_classes": ("constitution", "runtime_constitution", "root_contract"),
+        "bound_authority_roles": (
+            "constitutional_protocol_law",
+            "constitutional_runtime_law",
+            "root_domain_contract_law",
+        ),
+        "bound_machine_surfaces": (),
+        "required_markers": (
+            "`IDENTITY_PROTOCOL.md`",
+            "`IDENTITY_RUNTIME.md`",
+            "root contract files such as machine-law primacy, machine-world ontology, current-truth epistemology, decision-evidence admissibility, success-path state admissibility, entry-surface legitimacy, error terminality, artifact-family admissibility, prompt bootstrap, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth-lifecycle, and operator answer-surface contracts",
+            "these define *what law is concretely frozen*.",
+        ),
+    },
+    "machine-consumed enforcement authority": {
+        "order": 3,
+        "bound_corpus_classes": ("machine_registry_directory",),
+        "bound_authority_roles": ("machine_consumed_registry_family",),
+        "bound_machine_surfaces": (
+            "governance_review_docs",
+            "mappings",
+            "validators",
+            "probes",
+            "runtime_state",
+            "receipts",
+        ),
+        "required_markers": (
+            "governance/review docs",
+            "mappings",
+            "validators",
+            "probes",
+            "runtime state",
+            "receipts",
+            "these determine *current machine truth and pass/fail authority*.",
+        ),
+    },
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -210,8 +272,10 @@ def main() -> int:
     anchor_checks = authority_anchor_checks_from_doc(authority_doc) if authority_doc else ()
     class_profiles = authority_class_profiles_from_doc(authority_doc) if authority_doc else ()
     entry_projections = entry_authority_projections_from_doc(authority_doc) if authority_doc else ()
+    authority_layer_stages = authority_layer_stages_from_doc(authority_doc) if authority_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
+    authority_layer_surface = readme_authority_layer_surface(repo_root)
 
     if not stale_reasons:
         if str(authority_doc.get("authority_family") or "").strip() != "protocol_root_corpus_authority":
@@ -252,6 +316,9 @@ def main() -> int:
         if not entry_projections:
             stale_reasons.append("root_corpus_authority_entry_projection_missing")
             error_code = ERR_REGISTRY
+        if not authority_layer_stages:
+            stale_reasons.append("root_corpus_authority_layer_stages_missing")
+            error_code = ERR_REGISTRY
         anchor_reason_count_before = len(stale_reasons)
         stale_reasons.extend(
             validate_expected_root_doc_anchor_checks(
@@ -271,6 +338,8 @@ def main() -> int:
     registry_classes = sorted({entry.corpus_class for entry in registry_entries})
     class_profile_map = {row.corpus_class: row for row in class_profiles}
     entry_projection_map = {row.rel_path: row for row in entry_projections}
+    authority_layer_stage_map = {row.stage_label: row for row in authority_layer_stages}
+    authority_layer_surface_map = {row.stage_label: row for row in authority_layer_surface.rows}
     ordering_reading_paths = [row.rel_path for row in sorted(reading_rows, key=lambda item: item.order)]
     root_index_entry = str(ordering_doc.get("root_index_entry") or "").strip() if ordering_doc else ""
 
@@ -307,6 +376,28 @@ def main() -> int:
             extra_reason="extra_unregistered_entries",
             duplicate_reason="duplicate_rel_path",
             actual_total_count=len(entry_projections),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="authority_layer_stages",
+            expected_ids=EXPECTED_AUTHORITY_LAYER_STAGES,
+            actual_ids=authority_layer_stage_map,
+            payload_key="stage_labels",
+            missing_reason="missing_authority_layer_stages",
+            extra_reason="extra_authority_layer_stages",
+            duplicate_reason="duplicate_authority_layer_stage",
+            actual_total_count=len(authority_layer_stages),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="authority_layer_stage_surface",
+            expected_ids=EXPECTED_AUTHORITY_LAYER_STAGES,
+            actual_ids=authority_layer_surface_map,
+            payload_key="stage_labels",
+            missing_reason="missing_authority_layer_surface_stages",
+            extra_reason="extra_authority_layer_surface_stages",
+            duplicate_reason="duplicate_authority_layer_surface_stage",
+            actual_total_count=len(authority_layer_surface.rows),
         )
         for row in class_profiles:
             if row.authority_mode not in ALLOWED_AUTHORITY_MODES:
@@ -454,6 +545,120 @@ def main() -> int:
                         }
                     )
 
+        expected_stage_labels = list(EXPECTED_AUTHORITY_LAYER_STAGES.keys())
+        expected_stage_orders = [int(stage["order"]) for stage in EXPECTED_AUTHORITY_LAYER_STAGES.values()]
+        actual_stage_orders = [row.order for row in authority_layer_stages]
+        actual_surface_orders = [row.order for row in authority_layer_surface.rows]
+        actual_surface_labels = [row.stage_label for row in authority_layer_surface.rows]
+        if len(set(actual_stage_orders)) != len(actual_stage_orders):
+            structure_violations.append(
+                {"field": "authority_layer_stages", "reason": "duplicate_authority_layer_stage_order"}
+            )
+        if actual_stage_orders and sorted(actual_stage_orders) != list(range(1, len(actual_stage_orders) + 1)):
+            structure_violations.append(
+                {"field": "authority_layer_stages", "reason": "authority_layer_stage_order_non_contiguous"}
+            )
+        if len(set(actual_surface_orders)) != len(actual_surface_orders):
+            structure_violations.append(
+                {"field": "authority_layer_stage_surface", "reason": "duplicate_authority_layer_surface_order"}
+            )
+        if actual_surface_orders and sorted(actual_surface_orders) != list(range(1, len(actual_surface_orders) + 1)):
+            structure_violations.append(
+                {"field": "authority_layer_stage_surface", "reason": "authority_layer_surface_order_non_contiguous"}
+            )
+        if actual_surface_labels and tuple(actual_surface_labels) != tuple(expected_stage_labels):
+            authority_violations.append(
+                {
+                    "field": "authority_layer_stage_surface",
+                    "reason": "authority_layer_surface_label_order_mismatch",
+                    "expected": expected_stage_labels,
+                    "actual": actual_surface_labels,
+                }
+            )
+        if actual_surface_orders and tuple(actual_surface_orders) != tuple(expected_stage_orders):
+            authority_violations.append(
+                {
+                    "field": "authority_layer_stage_surface",
+                    "reason": "authority_layer_surface_stage_order_mismatch",
+                    "expected": expected_stage_orders,
+                    "actual": actual_surface_orders,
+                }
+            )
+        for stage_label, expected in EXPECTED_AUTHORITY_LAYER_STAGES.items():
+            stage_row = authority_layer_stage_map.get(stage_label)
+            if stage_row is not None:
+                if stage_row.order != int(expected["order"]):
+                    authority_violations.append(
+                        {
+                            "field": "authority_layer_stages",
+                            "reason": "authority_layer_stage_order_mismatch",
+                            "stage_label": stage_label,
+                            "expected": int(expected["order"]),
+                            "actual": stage_row.order,
+                        }
+                    )
+                if tuple(stage_row.bound_corpus_classes) != tuple(expected["bound_corpus_classes"]):
+                    authority_violations.append(
+                        {
+                            "field": "authority_layer_stages",
+                            "reason": "bound_corpus_classes_mismatch",
+                            "stage_label": stage_label,
+                            "expected": list(expected["bound_corpus_classes"]),
+                            "actual": list(stage_row.bound_corpus_classes),
+                        }
+                    )
+                if tuple(stage_row.bound_authority_roles) != tuple(expected["bound_authority_roles"]):
+                    authority_violations.append(
+                        {
+                            "field": "authority_layer_stages",
+                            "reason": "bound_authority_roles_mismatch",
+                            "stage_label": stage_label,
+                            "expected": list(expected["bound_authority_roles"]),
+                            "actual": list(stage_row.bound_authority_roles),
+                        }
+                    )
+                if tuple(stage_row.bound_machine_surfaces) != tuple(expected["bound_machine_surfaces"]):
+                    authority_violations.append(
+                        {
+                            "field": "authority_layer_stages",
+                            "reason": "bound_machine_surfaces_mismatch",
+                            "stage_label": stage_label,
+                            "expected": list(expected["bound_machine_surfaces"]),
+                            "actual": list(stage_row.bound_machine_surfaces),
+                        }
+                    )
+                if tuple(stage_row.required_markers) != tuple(expected["required_markers"]):
+                    authority_violations.append(
+                        {
+                            "field": "authority_layer_stages",
+                            "reason": "required_markers_mismatch",
+                            "stage_label": stage_label,
+                            "expected": list(expected["required_markers"]),
+                            "actual": list(stage_row.required_markers),
+                        }
+                    )
+            surface_row = authority_layer_surface_map.get(stage_label)
+            if surface_row is not None:
+                surface_text = "\n".join(surface_row.body_lines)
+                for marker in expected["required_markers"]:
+                    if marker not in surface_text:
+                        authority_violations.append(
+                            {
+                                "field": "authority_layer_stage_surface",
+                                "reason": "required_marker_missing",
+                                "stage_label": stage_label,
+                                "marker": marker,
+                            }
+                        )
+
+        for reason in authority_layer_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "authority_layer_stage_surface",
+                    "reason": f"authority_layer_surface_{reason}",
+                }
+            )
+
         if ordering_reading_paths and ordering_reading_paths != registry_paths:
             # Registry paths are alphabetical, ordering paths are semantic. No violation here.
             pass
@@ -492,6 +697,20 @@ def main() -> int:
                 "expected_rows": {rel_path: {} for rel_path in registry_paths},
                 "id_attr": "rel_path",
             },
+            {
+                "family_id": "authority_layer_stages",
+                "member_id_key": "stage_label",
+                "actual_rows": authority_layer_stages,
+                "expected_rows": EXPECTED_AUTHORITY_LAYER_STAGES,
+                "id_attr": "stage_label",
+            },
+            {
+                "family_id": "authority_layer_stage_surface",
+                "member_id_key": "stage_label",
+                "actual_rows": authority_layer_surface.rows,
+                "expected_rows": EXPECTED_AUTHORITY_LAYER_STAGES,
+                "id_attr": "stage_label",
+            },
         ),
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
@@ -510,6 +729,7 @@ def main() -> int:
         "authority_anchor_check_count": len(anchor_checks),
         "authority_class_profile_count": len(class_profiles),
         "entry_authority_projection_count": len(entry_projections),
+        "authority_layer_stage_count": len(authority_layer_stages),
         **project_root_contract_support_projection(
             prefix="authority",
             row_family_projection_rows=row_family_projection_rows,
@@ -538,6 +758,30 @@ def main() -> int:
             }
             for row in entry_projections
         ],
+        "authority_layer_stages": [
+            {
+                "order": row.order,
+                "stage_label": row.stage_label,
+                "bound_corpus_classes": list(row.bound_corpus_classes),
+                "bound_authority_roles": list(row.bound_authority_roles),
+                "bound_machine_surfaces": list(row.bound_machine_surfaces),
+                "required_markers": list(row.required_markers),
+            }
+            for row in sorted(authority_layer_stages, key=lambda item: item.order)
+        ],
+        "authority_layer_stage_surface": {
+            "rel_path": authority_layer_surface.rel_path,
+            "entry_count": len(authority_layer_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "stage_label": row.stage_label,
+                    "body_lines": list(row.body_lines),
+                }
+                for row in authority_layer_surface.rows
+            ],
+            "extraction_violations": list(authority_layer_surface.extraction_violations),
+        },
         "structure_violations": structure_violations,
         "authority_violations": authority_violations,
         "anchor_violations": anchor_violations,

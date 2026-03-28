@@ -1159,7 +1159,8 @@ verdict text.
 Authority law is not a soft prose summary that may hide its machine rows
 behind aggregate counts.
 
-Required authority-class-profile and entry-authority-projection families must
+Required authority-class-profile, entry-authority-projection,
+authority-layer-stage, and authority-layer-stage-surface families must
 remain explicit as separate machine-readable row families.
 
 Expected row-family total and emitted row-family total must therefore stay
@@ -1171,11 +1172,16 @@ also remain machine-readable rather than being collapsed into aggregate counts
 or generic structure failure.
 
 The machine world must not finalize authority legality while required
-corpus-class or entry identity drift remains known only internally.
+corpus-class, entry, or authority-layer-stage identity drift remains known
+only internally.
 
 Missing or unexpected row identity must remain projected in fail-close machine
 output rather than being hidden behind row-count shorthand or summary-only
 verdict text.
+
+README authority layering must therefore stay congruent with admitted
+authority-layer-stage rows rather than becoming a freehand alternate
+authority ladder.
 
 ### Conflict-precedence row-family completeness must stay explicit
 

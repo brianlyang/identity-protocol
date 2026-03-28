@@ -32,15 +32,84 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_authority_status"] == "PASS_REQUIRED", payload
-assert payload["root_doc_anchor_check_count"] == 18, payload
+assert payload["root_doc_anchor_check_count"] == 20, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["authority_row_family_count"] == 2, payload
+assert payload["authority_row_family_count"] == 4, payload
 assert payload["authority_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["authority_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["root_index_entry"] == "identity/protocol/README.md", payload
 assert any(row["corpus_class"] == "bottom_theory" and row["philosophical_primacy"] for row in payload["authority_class_profiles"]), payload
+assert payload["authority_layer_stage_count"] == 3, payload
+assert payload["authority_layer_stages"][0]["stage_label"] == "bottom-theory primacy", payload
+assert payload["authority_layer_stages"][-1]["stage_label"] == "machine-consumed enforcement authority", payload
+assert payload["authority_layer_stage_surface"]["entry_count"] == 3, payload
+assert payload["authority_layer_stage_surface"]["entries"][0]["stage_label"] == "bottom-theory primacy", payload
+assert payload["authority_layer_stage_surface"]["entries"][-1]["stage_label"] == "machine-consumed enforcement authority", payload
+assert payload["authority_layer_stage_surface"]["extraction_violations"] == [], payload
+assert {row["family_id"] for row in payload["row_family_projection_rows"]} == {
+    "authority_class_profiles",
+    "entry_authority_projection",
+    "authority_layer_stages",
+    "authority_layer_stage_surface",
+}, payload
+PY
+
+MISSING_STAGE_REPO="${TMP_ROOT}/missing-authority-stage-repo"
+mirror_repo "${MISSING_STAGE_REPO}"
+python3 - <<'PY' "${MISSING_STAGE_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["authority_layer_stages"] = [
+    row for row in doc["authority_layer_stages"]
+    if row.get("stage_label") != "machine-consumed enforcement authority"
+]
+for idx, row in enumerate(doc["authority_layer_stages"], start=1):
+    row["order"] = idx
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+MISSING_STAGE_JSON="${TMP_ROOT}/missing-authority-stage.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_authority.py" \
+  --repo-root "${MISSING_STAGE_REPO}" \
+  --json-only >"${MISSING_STAGE_JSON}"; then
+  echo "[FAIL] root corpus authority validator unexpectedly passed missing authority-layer stage"
+  exit 1
+fi
+
+python3 - <<'PY' "${MISSING_STAGE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_authority_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCA-002", payload
+assert any(
+    row["field"] == "authority_layer_stages" and row["reason"] == "missing_authority_layer_stages"
+    for row in payload["structure_violations"]
+), payload
+stage_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "authority_layer_stages"
+)
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "authority_layer_stage_surface"
+)
+assert stage_row["expected_count"] == 3, payload
+assert stage_row["actual_count"] == 2, payload
+assert stage_row["missing_ids"] == ["machine-consumed enforcement authority"], payload
+assert stage_row["unexpected_ids"] == [], payload
+assert stage_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert stage_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 MISSING_CLASS_REPO="${TMP_ROOT}/missing-class-repo"
@@ -97,6 +166,44 @@ assert class_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert class_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 assert entry_row["coverage_status"] == "PASS_REQUIRED", payload
 assert entry_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+STAGE_ROLE_REPO="${TMP_ROOT}/stage-role-drift-repo"
+mirror_repo "${STAGE_ROLE_REPO}"
+python3 - <<'PY' "${STAGE_ROLE_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["authority_layer_stages"]:
+    if row.get("stage_label") == "bottom-theory primacy":
+        row["bound_authority_roles"] = ["constitutional_protocol_law"]
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+STAGE_ROLE_JSON="${TMP_ROOT}/stage-role-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_authority.py" \
+  --repo-root "${STAGE_ROLE_REPO}" \
+  --json-only >"${STAGE_ROLE_JSON}"; then
+  echo "[FAIL] root corpus authority validator unexpectedly passed authority-layer role drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${STAGE_ROLE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_authority_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCA-003", payload
+assert any(
+    "authority_violation:authority_layer_stages:bound_authority_roles_mismatch" == reason
+    for reason in payload["stale_reasons"]
+), payload
 PY
 
 IDENTITY_REPO="${TMP_ROOT}/identity-drift-repo"
@@ -265,6 +372,56 @@ assert any(
 ), payload
 PY
 
+SURFACE_REPO="${TMP_ROOT}/authority-layer-surface-drift-repo"
+mirror_repo "${SURFACE_REPO}"
+python3 - <<'PY' "${SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "3. **machine-consumed enforcement authority**"
+new = "3. **machine-consumed enforcing authority**"
+assert old in text, text[:3000]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+SURFACE_JSON="${TMP_ROOT}/authority-layer-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_authority.py" \
+  --repo-root "${SURFACE_REPO}" \
+  --json-only >"${SURFACE_JSON}"; then
+  echo "[FAIL] root corpus authority validator unexpectedly passed authority-layer surface label drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_authority_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCA-002", payload
+assert any(
+    row["field"] == "authority_layer_stage_surface" and row["reason"] == "missing_authority_layer_surface_stages"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    "authority_violation:authority_layer_stage_surface:authority_layer_surface_label_order_mismatch" == reason
+    for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "authority_layer_stage_surface"
+)
+assert surface_row["expected_count"] == 3, payload
+assert surface_row["actual_count"] == 3, payload
+assert surface_row["missing_ids"] == ["machine-consumed enforcement authority"], payload
+assert surface_row["unexpected_ids"] == ["machine-consumed enforcing authority"], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
 ANCHOR_REPO="${TMP_ROOT}/anchor-drift-repo"
 mirror_repo "${ANCHOR_REPO}"
 python3 - <<'PY' "${ANCHOR_REPO}/identity/protocol/README.md"
@@ -294,8 +451,14 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_authority_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCA-003", payload
+assert payload["error_code"] == "IP-RCA-002", payload
 assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert payload["authority_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["authority_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "authority_layer_stage_surface" and row["reason"] == "authority_layer_surface_section_marker_missing"
+    for row in payload["structure_violations"]
+), payload
 assert any("anchor_violation:identity/protocol/README.md:required_marker_missing" == reason for reason in payload["stale_reasons"]), payload
 PY
 

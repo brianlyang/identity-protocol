@@ -131,6 +131,7 @@ Philosophical primacy, however, is not the same as runtime-source primacy.
 ## Authority layering
 
 The authority order is layered, not flattened:
+This authority layering must remain bound to canonical authority-layer stage rows rather than becoming a freehand alternate authority ladder.
 
 1. **bottom-theory primacy**
    - `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`

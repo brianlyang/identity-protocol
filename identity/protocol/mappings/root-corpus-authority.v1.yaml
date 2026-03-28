@@ -19,6 +19,8 @@ authority_anchor_checks:
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Authority layering'
+  - This authority layering must remain bound to canonical authority-layer stage
+    rows rather than becoming a freehand alternate authority ladder.
   - machine-consumed enforcement authority
   - Philosophical primacy, however, is not the same as runtime-source primacy.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
@@ -26,6 +28,20 @@ authority_anchor_checks:
   - philosophical primacy does not mean runtime-source primacy
   - machine-consumed authority still lives in frozen contracts, mappings, validators,
     runtime state, and receipts
+  - README authority layering must therefore stay congruent with admitted authority-layer-stage
+    rows rather than becoming a freehand alternate authority ladder.
+- rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+  required_markers:
+  - '## Root authority completeness boundary'
+  - README authority layering stages rendered at protocol root must remain congruent
+    with admitted authority-layer-stage rows rather than silently authoring an
+    alternate authority ladder.
+- rel_path: identity/protocol/IDENTITY_RUNTIME.md
+  required_markers:
+  - '## Runtime authority consumption boundary'
+  - Runtime consumes README authority layering as a governed stage projection
+    bound to admitted authority-layer-stage rows rather than as a freehand alternate
+    authority ladder.
 - rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
   required_markers:
   - '## Runtime adjudication boundary'
@@ -244,3 +260,56 @@ entry_authority_projection:
   corpus_class: demoted_support_directory
   authority_role: demoted_support_material
   authority_mode: demoted_support_only
+authority_layer_stages:
+- order: 1
+  stage_label: bottom-theory primacy
+  bound_corpus_classes:
+  - bottom_theory
+  bound_authority_roles:
+  - interpretive_bottom_theory
+  bound_machine_surfaces: []
+  required_markers:
+  - '`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`'
+  - explains *why* protocol law has the shape it has.
+- order: 2
+  stage_label: constitutional / contract authority
+  bound_corpus_classes:
+  - constitution
+  - runtime_constitution
+  - root_contract
+  bound_authority_roles:
+  - constitutional_protocol_law
+  - constitutional_runtime_law
+  - root_domain_contract_law
+  bound_machine_surfaces: []
+  required_markers:
+  - '`IDENTITY_PROTOCOL.md`'
+  - '`IDENTITY_RUNTIME.md`'
+  - root contract files such as machine-law primacy, machine-world ontology, current-truth
+    epistemology, decision-evidence admissibility, success-path state admissibility,
+    entry-surface legitimacy, error terminality, artifact-family admissibility,
+    prompt bootstrap, discovery, handoff, instance self-judgement, protocol-instance
+    responsibility, stream-design admissibility, truth-lifecycle, and operator
+    answer-surface contracts
+  - these define *what law is concretely frozen*.
+- order: 3
+  stage_label: machine-consumed enforcement authority
+  bound_corpus_classes:
+  - machine_registry_directory
+  bound_authority_roles:
+  - machine_consumed_registry_family
+  bound_machine_surfaces:
+  - governance_review_docs
+  - mappings
+  - validators
+  - probes
+  - runtime_state
+  - receipts
+  required_markers:
+  - governance/review docs
+  - mappings
+  - validators
+  - probes
+  - runtime state
+  - receipts
+  - these determine *current machine truth and pass/fail authority*.
