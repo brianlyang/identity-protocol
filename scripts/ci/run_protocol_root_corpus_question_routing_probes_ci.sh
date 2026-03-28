@@ -34,10 +34,10 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_question_routing_status"] == "PASS_REQUIRED", payload
-assert payload["root_doc_anchor_check_count"] == 18, payload
+assert payload["root_doc_anchor_check_count"] == 20, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["adjudication_redirect"]["question_class"] == "current_turn_legality", payload
-assert payload["question_routing_row_family_count"] == 5, payload
+assert payload["question_routing_row_family_count"] == 7, payload
 assert payload["question_routing_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["question_routing_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
@@ -46,8 +46,12 @@ assert all(
     "current_turn_legality" not in row["question_classes"]
     for row in payload["entry_question_projection"]
 ), payload
+assert payload["root_question_discipline_stage_count"] == 8, payload
+assert payload["root_question_discipline_stage_surface"]["entry_count"] == 8, payload
 assert payload["entry_summary_stage_count"] == 4, payload
 assert payload["entry_summary_stage_surface"]["entry_count"] == 4, payload
+assert any(row["family_id"] == "root_question_discipline_stages" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "root_question_discipline_stage_surface" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "entry_summary_stages" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "entry_summary_stage_surface" for row in payload["row_family_projection_rows"]), payload
 assert {row["gateway_class"]: row["question_class"] for row in payload["gateway_question_projection"]} == {
@@ -56,6 +60,56 @@ assert {row["gateway_class"]: row["question_class"] for row in payload["gateway_
     "root_contract": "frozen_domain_contract_law",
     "machine_registry_directory": "registry_resolution",
 }, payload
+PY
+
+ROOT_QUESTION_STAGE_REPO="${TMP_ROOT}/root-question-stage-missing-repo"
+mirror_repo "${ROOT_QUESTION_STAGE_REPO}"
+python3 - <<'PY' "${ROOT_QUESTION_STAGE_REPO}/identity/protocol/mappings/root-corpus-question-routing.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["root_question_discipline_stages"] = [
+    row for row in doc["root_question_discipline_stages"]
+    if row.get("stage_label") != "support-material question"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ROOT_QUESTION_STAGE_JSON="${TMP_ROOT}/root-question-stage-missing.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_question_routing.py" \
+  --repo-root "${ROOT_QUESTION_STAGE_REPO}" \
+  --json-only >"${ROOT_QUESTION_STAGE_JSON}"; then
+  echo "[FAIL] root corpus question-routing validator unexpectedly passed missing root-question-discipline stage"
+  exit 1
+fi
+
+python3 - <<'PY' "${ROOT_QUESTION_STAGE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_question_routing_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCQR-002", payload
+assert any(
+    row["field"] == "root_question_discipline_stages"
+    and row["reason"] == "missing_root_question_discipline_stages"
+    and "support-material question" in row.get("stage_labels", [])
+    for row in payload["structure_violations"]
+), payload
+stage_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "root_question_discipline_stages"
+)
+assert stage_row["expected_count"] == 8, payload
+assert stage_row["actual_count"] == 7, payload
+assert stage_row["missing_ids"] == ["support-material question"], payload
+assert stage_row["unexpected_ids"] == [], payload
+assert stage_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert stage_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 SUMMARY_STAGE_REPO="${TMP_ROOT}/summary-stage-drift-repo"
@@ -275,6 +329,50 @@ assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
+ROOT_QUESTION_SURFACE_REPO="${TMP_ROOT}/root-question-surface-drift-repo"
+mirror_repo "${ROOT_QUESTION_SURFACE_REPO}"
+python3 - <<'PY' "${ROOT_QUESTION_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "2. **root-entry question**"
+new = "2. **root-index question**"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+ROOT_QUESTION_SURFACE_JSON="${TMP_ROOT}/root-question-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_question_routing.py" \
+  --repo-root "${ROOT_QUESTION_SURFACE_REPO}" \
+  --json-only >"${ROOT_QUESTION_SURFACE_JSON}"; then
+  echo "[FAIL] root corpus question-routing validator unexpectedly passed root-question-discipline surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ROOT_QUESTION_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_question_routing_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCQR-002", payload
+assert any(
+    "routing_violation:root_question_discipline_stage_surface:root_question_discipline_surface_order_mismatch" == reason
+    for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "root_question_discipline_stage_surface"
+)
+assert "root-entry question" in surface_row["missing_ids"], payload
+assert "root-index question" in surface_row["unexpected_ids"], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
 ROOT_ENTRY_REPO="${TMP_ROOT}/root-entry-drift-repo"
 mirror_repo "${ROOT_ENTRY_REPO}"
 python3 - <<'PY' "${ROOT_ENTRY_REPO}/identity/protocol/mappings/root-corpus-question-routing.v1.yaml"
@@ -386,6 +484,54 @@ assert any(
 ), payload
 PY
 
+ROOT_QUESTION_GATEWAY_STAGE_REPO="${TMP_ROOT}/root-question-gateway-stage-drift-repo"
+mirror_repo "${ROOT_QUESTION_GATEWAY_STAGE_REPO}"
+python3 - <<'PY' "${ROOT_QUESTION_GATEWAY_STAGE_REPO}/identity/protocol/mappings/root-corpus-question-routing.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["root_question_discipline_stages"]:
+    if row.get("stage_label") == "gateway target question class preserved":
+        row["bound_question_classes"] = [
+            "frozen_protocol_law",
+            "frozen_runtime_law",
+            "frozen_domain_contract_law",
+            "current_turn_legality",
+        ]
+        break
+else:
+    raise SystemExit("expected gateway target question class preserved row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ROOT_QUESTION_GATEWAY_STAGE_JSON="${TMP_ROOT}/root-question-gateway-stage-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_question_routing.py" \
+  --repo-root "${ROOT_QUESTION_GATEWAY_STAGE_REPO}" \
+  --json-only >"${ROOT_QUESTION_GATEWAY_STAGE_JSON}"; then
+  echo "[FAIL] root corpus question-routing validator unexpectedly passed root-question gateway-stage drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ROOT_QUESTION_GATEWAY_STAGE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_question_routing_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCQR-003", payload
+assert any(
+    reason in payload["stale_reasons"]
+    for reason in (
+        "routing_violation:root_question_discipline_stages:bound_question_classes_mismatch",
+        "routing_violation:root_question_discipline_stages:stage_gateway_question_classes_mismatch",
+    )
+), payload
+PY
+
 ANCHOR_REPO="${TMP_ROOT}/anchor-drift-repo"
 mirror_repo "${ANCHOR_REPO}"
 python3 - <<'PY' "${ANCHOR_REPO}/identity/protocol/README.md"
@@ -394,8 +540,8 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-old = "## Root question-routing discipline"
-new = "## Root question routing discipline"
+old = "This question-routing discipline must remain bound to canonical root-question-discipline stage rows rather than becoming a freehand alternate question ladder."
+new = "These question-routing rules must remain bound to canonical root-question-discipline stage rows rather than becoming a freehand alternate question ladder."
 assert old in text, text[:600]
 path.write_text(text.replace(old, new, 1), encoding="utf-8")
 PY

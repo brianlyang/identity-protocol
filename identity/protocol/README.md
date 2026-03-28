@@ -339,22 +339,33 @@ So the protocol must reject these precedence collapses:
 ## Root question-routing discipline
 
 Different root entries answer different classes of machine-world questions.
+This question-routing discipline must remain bound to canonical root-question-discipline stage rows rather than becoming a freehand alternate question ladder.
 
-1. `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` answers the **generative why-question**:
+1. **generative why-question**
+   - `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
    - why identity protocol law exists in this shape at all.
-2. `README.md` answers the **root-entry question**:
+2. **root-entry question**
+   - `README.md`
    - how to enter the root corpus without semantic confusion.
-3. `IDENTITY_PROTOCOL.md` and `IDENTITY_RUNTIME.md` answer the **constitutional law question**:
+3. **constitutional law question**
+   - `IDENTITY_PROTOCOL.md`
+   - `IDENTITY_RUNTIME.md`
    - what protocol-law and runtime-law are concretely frozen.
-4. Root contract files answer the **domain-law question**:
-   - what machine-law primacy, machine-world ontology, current-truth epistemology, decision-evidence admissibility, success-path state admissibility, entry-surface legitimacy, error terminality, artifact-family admissibility, prompt, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth lifecycle, operator answer surface, and related root-domain law are concretely frozen.
-5. `mappings/` answers the **machine-registry question**:
+4. **domain-law question**
+   - root contract files.
+   - what concrete root-domain contract law is frozen.
+5. **machine-registry question**
+   - `mappings/`
    - which aliases, active files, bindings, and registry rows are machine-consumed truth.
-6. `broadcast/` and `plugins/` answer the **governed extension question**:
+6. **governed extension question**
+   - `broadcast/`
+   - `plugins/`
    - what narrower subdomain law is frozen under the root corpus.
-7. `fixtures/` answers the **support-material question** only:
+7. **support-material question**
+   - `fixtures/`
    - what demoted support material exists without becoming runtime truth.
-8. gateway-mediated refreezing or projection keeps the question class governed by the gateway target layer:
+8. **gateway target question class preserved**
+   - gateway-mediated refreezing or projection keeps the question class governed by the gateway target layer.
    - it does not inherit a new answer class from incoming motivation or local convenience.
 
 The most important prohibition is strict:

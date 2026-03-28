@@ -236,11 +236,12 @@ implicit.
 
 ## Root question-routing completeness boundary
 
-1. Question-routing law must remain machine-readable as separate question-class-profile, root-entry-question-projection, entry-summary-stage, and gateway-question-projection row families.
+1. Question-routing law must remain machine-readable as separate question-class-profile, root-entry-question-projection, root-question-discipline-stage, root-question-discipline-stage-surface, entry-summary-stage, entry-summary-stage-surface, and gateway-question-projection row families.
 2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
-3. Expected row identity set and emitted row identity set for each question-routing family must also remain explicit; question-class, entry-summary-stage, or route identity drift may not be collapsed into summary-only counts.
-4. Protocol legality must not finalize question-routing legality while missing or unexpected question-class, entry-summary-stage, or route identities remain known only inside validator logic.
+3. Expected row identity set and emitted row identity set for each question-routing family must also remain explicit; question-class, root-question-discipline-stage, entry-summary-stage, or route identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize question-routing legality while missing or unexpected question-class, root-question-discipline-stage, entry-summary-stage, or route identities remain known only inside validator logic.
 5. Fail-close question-routing output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+6. README root question-routing discipline rendered at protocol root must remain congruent with admitted root-question-discipline-stage rows rather than silently authoring an alternate question ladder.
 
 ## Root design-question closure completeness boundary
 

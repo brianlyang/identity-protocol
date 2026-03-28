@@ -26,7 +26,9 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_class_profiles_from_doc,
     question_routing_anchor_checks_from_doc,
+    readme_root_question_discipline_surface,
     readme_entry_summary_surface,
+    root_question_discipline_stages_from_doc,
 )
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 
@@ -150,6 +152,100 @@ EXPECTED_ENTRY_SUMMARY_STAGES = {
         "terminal_machine_surfaces": EXPECTED_TERMINAL_MACHINE_SURFACES,
     },
 }
+EXPECTED_ROOT_QUESTION_DISCIPLINE_STAGES = {
+    "generative why-question": {
+        "order": 1,
+        "bound_question_classes": ("generative_why",),
+        "bound_corpus_classes": ("bottom_theory",),
+        "bound_gateway_classes": (),
+        "required_markers": (
+            "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`",
+            "why identity protocol law exists in this shape at all.",
+        ),
+    },
+    "root-entry question": {
+        "order": 2,
+        "bound_question_classes": ("root_entry_navigation",),
+        "bound_corpus_classes": ("root_index",),
+        "bound_gateway_classes": (),
+        "required_markers": (
+            "`README.md`",
+            "how to enter the root corpus without semantic confusion.",
+        ),
+    },
+    "constitutional law question": {
+        "order": 3,
+        "bound_question_classes": ("frozen_protocol_law", "frozen_runtime_law"),
+        "bound_corpus_classes": ("constitution", "runtime_constitution"),
+        "bound_gateway_classes": (),
+        "required_markers": (
+            "`IDENTITY_PROTOCOL.md`",
+            "`IDENTITY_RUNTIME.md`",
+            "what protocol-law and runtime-law are concretely frozen.",
+        ),
+    },
+    "domain-law question": {
+        "order": 4,
+        "bound_question_classes": ("frozen_domain_contract_law",),
+        "bound_corpus_classes": ("root_contract",),
+        "bound_gateway_classes": (),
+        "required_markers": (
+            "root contract files.",
+            "what concrete root-domain contract law is frozen.",
+        ),
+    },
+    "machine-registry question": {
+        "order": 5,
+        "bound_question_classes": ("registry_resolution",),
+        "bound_corpus_classes": ("machine_registry_directory",),
+        "bound_gateway_classes": (),
+        "required_markers": (
+            "`mappings/`",
+            "which aliases, active files, bindings, and registry rows are machine-consumed truth.",
+        ),
+    },
+    "governed extension question": {
+        "order": 6,
+        "bound_question_classes": ("governed_extension_law",),
+        "bound_corpus_classes": ("governed_subdomain_extension",),
+        "bound_gateway_classes": (),
+        "required_markers": (
+            "`broadcast/`",
+            "`plugins/`",
+            "what narrower subdomain law is frozen under the root corpus.",
+        ),
+    },
+    "support-material question": {
+        "order": 7,
+        "bound_question_classes": ("support_material_lookup",),
+        "bound_corpus_classes": ("demoted_support_directory",),
+        "bound_gateway_classes": (),
+        "required_markers": (
+            "`fixtures/`",
+            "what demoted support material exists without becoming runtime truth.",
+        ),
+    },
+    "gateway target question class preserved": {
+        "order": 8,
+        "bound_question_classes": (
+            "frozen_protocol_law",
+            "frozen_runtime_law",
+            "frozen_domain_contract_law",
+            "registry_resolution",
+        ),
+        "bound_corpus_classes": (),
+        "bound_gateway_classes": (
+            "constitution",
+            "runtime_constitution",
+            "root_contract",
+            "machine_registry_directory",
+        ),
+        "required_markers": (
+            "gateway-mediated refreezing or projection keeps the question class governed by the gateway target layer.",
+            "it does not inherit a new answer class from incoming motivation or local convenience.",
+        ),
+    },
+}
 EXPECTED_FORBIDDEN_ROOT_CLASSES = (
     "bottom_theory",
     "root_index",
@@ -162,8 +258,9 @@ EXPECTED_FORBIDDEN_ROOT_CLASSES = (
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/README.md": (
         "## Root question-routing discipline",
+        "This question-routing discipline must remain bound to canonical root-question-discipline stage rows rather than becoming a freehand alternate question ladder.",
+        "gateway-mediated refreezing or projection keeps the question class governed by the gateway target layer.",
         "current-turn legality question must never terminate in philosophy text, README text, or frozen contract prose alone.",
-        "gateway-mediated refreezing or projection keeps the question class governed by the gateway target layer:",
         "## Machine-world entry summary",
         "That is the canonical reading order for this directory.",
     ),
@@ -171,8 +268,19 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "### Question class and answer surface must stay paired",
         "No layer should answer a question that belongs to a different layer.",
         "Gateway-mediated refreezing or projection must preserve the question class of its governed target layer rather than inheriting a new answer class from incoming motivation.",
-        "Required question-class-profile, root-entry-question-projection, entry-summary-stage, and gateway-question-projection families must remain explicit as separate machine-readable row families.",
-        "The machine world must not finalize question-routing legality while required question-class, entry-summary-stage, or route identity drift remains known only internally.",
+        "README root question-routing discipline must therefore stay congruent with admitted root-question-discipline-stage rows rather than becoming a freehand alternate question ladder.",
+        "Required question-class-profile, root-entry-question-projection, root-question-discipline-stage, root-question-discipline-stage-surface, entry-summary-stage, entry-summary-stage-surface, and gateway-question-projection families must remain explicit as separate machine-readable row families.",
+        "The machine world must not finalize question-routing legality while required question-class, root-question-discipline-stage, entry-summary-stage, or route identity drift remains known only internally.",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root question-routing completeness boundary",
+        "Question-routing law must remain machine-readable as separate question-class-profile, root-entry-question-projection, root-question-discipline-stage, root-question-discipline-stage-surface, entry-summary-stage, entry-summary-stage-surface, and gateway-question-projection row families.",
+        "README root question-routing discipline rendered at protocol root must remain congruent with admitted root-question-discipline-stage rows rather than silently authoring an alternate question ladder.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime question-routing consumption boundary",
+        "Runtime consumes question-routing law as separate question-class-profile, root-entry-question-projection, root-question-discipline-stage, root-question-discipline-stage-surface, entry-summary-stage, entry-summary-stage-surface, and gateway-question-projection row families rather than as undifferentiated routing prose.",
+        "Runtime consumes README root question-routing discipline as a governed stage projection bound to admitted root-question-discipline-stage rows rather than as a freehand alternate question ladder.",
     ),
     "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md": (
         "## Runtime adjudication boundary",
@@ -301,10 +409,12 @@ def main() -> int:
 
     anchor_checks = question_routing_anchor_checks_from_doc(routing_doc) if routing_doc else ()
     question_profiles = question_class_profiles_from_doc(routing_doc) if routing_doc else ()
+    root_question_discipline_stages = root_question_discipline_stages_from_doc(routing_doc) if routing_doc else ()
     entry_summary_stages = entry_summary_stages_from_doc(routing_doc) if routing_doc else ()
     entry_projections = entry_question_projections_from_doc(routing_doc) if routing_doc else ()
     gateway_question_projections = gateway_question_projections_from_doc(routing_doc) if routing_doc else ()
     adjudication_redirect = adjudication_redirect_from_doc(routing_doc) if routing_doc else adjudication_redirect_from_doc({})
+    root_question_discipline_surface = readme_root_question_discipline_surface(repo_root)
     entry_summary_surface = readme_entry_summary_surface(repo_root)
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -353,6 +463,9 @@ def main() -> int:
         if not question_profiles:
             stale_reasons.append("root_corpus_question_routing_profiles_missing")
             error_code = ERR_REGISTRY
+        if not root_question_discipline_stages:
+            stale_reasons.append("root_corpus_question_routing_root_question_discipline_stages_missing")
+            error_code = ERR_REGISTRY
         if not entry_summary_stages:
             stale_reasons.append("root_corpus_question_routing_entry_summary_stages_missing")
             error_code = ERR_REGISTRY
@@ -382,6 +495,7 @@ def main() -> int:
     registry_entry_law_bearing_map = {entry.rel_path: entry.law_bearing for entry in registry_entries}
     registry_classes = sorted({entry.corpus_class for entry in registry_entries})
     question_profile_map = {row.question_class: row for row in question_profiles}
+    root_question_discipline_stage_map = {row.stage_label: row for row in root_question_discipline_stages}
     entry_summary_stage_map = {row.stage_label: row for row in entry_summary_stages}
     entry_projection_map = {row.rel_path: row for row in entry_projections}
     gateway_question_projection_map = {row.gateway_class: row for row in gateway_question_projections}
@@ -426,6 +540,17 @@ def main() -> int:
         )
         append_membership_delta_violations(
             structure_violations,
+            field_name="root_question_discipline_stages",
+            expected_ids=EXPECTED_ROOT_QUESTION_DISCIPLINE_STAGES,
+            actual_ids=root_question_discipline_stage_map,
+            payload_key="stage_labels",
+            missing_reason="missing_root_question_discipline_stages",
+            extra_reason="extra_root_question_discipline_stages",
+            duplicate_reason="duplicate_root_question_discipline_stage",
+            actual_total_count=len(root_question_discipline_stages),
+        )
+        append_membership_delta_violations(
+            structure_violations,
             field_name="entry_summary_stages",
             expected_ids=EXPECTED_ENTRY_SUMMARY_STAGES,
             actual_ids=entry_summary_stage_map,
@@ -445,6 +570,17 @@ def main() -> int:
             extra_reason="extra_gateway_classes",
             duplicate_reason="duplicate_gateway_class",
             actual_total_count=len(gateway_question_projections),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="root_question_discipline_stage_surface",
+            expected_ids=EXPECTED_ROOT_QUESTION_DISCIPLINE_STAGES,
+            actual_ids={row.stage_label: row for row in root_question_discipline_surface.rows},
+            payload_key="stage_labels",
+            missing_reason="missing_root_question_discipline_surface_stages",
+            extra_reason="extra_root_question_discipline_surface_stages",
+            duplicate_reason="duplicate_root_question_discipline_surface_stage",
+            actual_total_count=len(root_question_discipline_surface.rows),
         )
         append_membership_delta_violations(
             structure_violations,
@@ -502,6 +638,54 @@ def main() -> int:
                     }
                 )
 
+        root_question_stage_orders = [row.order for row in root_question_discipline_stages]
+        root_question_stage_labels = [row.stage_label for row in root_question_discipline_stages]
+        root_question_surface_orders = [row.order for row in root_question_discipline_surface.rows]
+        root_question_surface_labels = [row.stage_label for row in root_question_discipline_surface.rows]
+        expected_root_question_stage_labels = list(EXPECTED_ROOT_QUESTION_DISCIPLINE_STAGES.keys())
+        expected_root_question_stage_orders = [
+            int(stage["order"]) for stage in EXPECTED_ROOT_QUESTION_DISCIPLINE_STAGES.values()
+        ]
+        if len(set(root_question_stage_orders)) != len(root_question_stage_orders) or sorted(
+            root_question_stage_orders
+        ) != list(range(1, len(root_question_stage_orders) + 1)):
+            structure_violations.append(
+                {"field": "root_question_discipline_stages", "reason": "stage_order_non_contiguous"}
+            )
+        if len(set(root_question_stage_labels)) != len(root_question_stage_labels):
+            structure_violations.append(
+                {"field": "root_question_discipline_stages", "reason": "duplicate_stage_label"}
+            )
+        if root_question_surface_orders and (
+            len(set(root_question_surface_orders)) != len(root_question_surface_orders)
+            or sorted(root_question_surface_orders) != list(range(1, len(root_question_surface_orders) + 1))
+        ):
+            structure_violations.append(
+                {"field": "root_question_discipline_stage_surface", "reason": "stage_order_non_contiguous"}
+            )
+        if root_question_surface_labels and tuple(root_question_surface_labels) != tuple(
+            expected_root_question_stage_labels
+        ):
+            routing_violations.append(
+                {
+                    "field": "root_question_discipline_stage_surface",
+                    "reason": "root_question_discipline_surface_order_mismatch",
+                    "expected": expected_root_question_stage_labels,
+                    "actual": root_question_surface_labels,
+                }
+            )
+        if root_question_surface_orders and tuple(root_question_surface_orders) != tuple(
+            expected_root_question_stage_orders
+        ):
+            routing_violations.append(
+                {
+                    "field": "root_question_discipline_stage_surface",
+                    "reason": "root_question_discipline_surface_stage_order_mismatch",
+                    "expected": expected_root_question_stage_orders,
+                    "actual": root_question_surface_orders,
+                }
+            )
+
         stage_orders = [row.order for row in entry_summary_stages]
         stage_labels = [row.stage_label for row in entry_summary_stages]
         surface_orders = [row.order for row in entry_summary_surface.rows]
@@ -543,6 +727,120 @@ def main() -> int:
                     "actual": surface_orders,
                 }
             )
+        for stage_label, expected in EXPECTED_ROOT_QUESTION_DISCIPLINE_STAGES.items():
+            stage_row = root_question_discipline_stage_map.get(stage_label)
+            if stage_row is None:
+                continue
+            if stage_row.order != int(expected["order"]):
+                routing_violations.append(
+                    {
+                        "field": "root_question_discipline_stages",
+                        "reason": "stage_order_mismatch",
+                        "stage_label": stage_label,
+                        "expected": int(expected["order"]),
+                        "actual": stage_row.order,
+                    }
+                )
+            if tuple(stage_row.bound_question_classes) != tuple(expected["bound_question_classes"]):
+                routing_violations.append(
+                    {
+                        "field": "root_question_discipline_stages",
+                        "reason": "bound_question_classes_mismatch",
+                        "stage_label": stage_label,
+                        "expected": list(expected["bound_question_classes"]),
+                        "actual": list(stage_row.bound_question_classes),
+                    }
+                )
+            if tuple(stage_row.bound_corpus_classes) != tuple(expected["bound_corpus_classes"]):
+                routing_violations.append(
+                    {
+                        "field": "root_question_discipline_stages",
+                        "reason": "bound_corpus_classes_mismatch",
+                        "stage_label": stage_label,
+                        "expected": list(expected["bound_corpus_classes"]),
+                        "actual": list(stage_row.bound_corpus_classes),
+                    }
+                )
+            if tuple(stage_row.bound_gateway_classes) != tuple(expected["bound_gateway_classes"]):
+                routing_violations.append(
+                    {
+                        "field": "root_question_discipline_stages",
+                        "reason": "bound_gateway_classes_mismatch",
+                        "stage_label": stage_label,
+                        "expected": list(expected["bound_gateway_classes"]),
+                        "actual": list(stage_row.bound_gateway_classes),
+                    }
+                )
+            if tuple(stage_row.required_markers) != tuple(expected["required_markers"]):
+                routing_violations.append(
+                    {
+                        "field": "root_question_discipline_stages",
+                        "reason": "required_markers_mismatch",
+                        "stage_label": stage_label,
+                        "expected": list(expected["required_markers"]),
+                        "actual": list(stage_row.required_markers),
+                    }
+                )
+            if stage_row.bound_corpus_classes:
+                derived_rel_paths = sorted(
+                    rel_path
+                    for rel_path, corpus_class in registry_entry_class_map.items()
+                    if corpus_class in set(stage_row.bound_corpus_classes)
+                )
+                derived_question_classes = sorted(
+                    {
+                        question_class
+                        for rel_path in derived_rel_paths
+                        for question_class in (
+                            entry_projection_map.get(rel_path).question_classes
+                            if entry_projection_map.get(rel_path) is not None
+                            else ()
+                        )
+                    }
+                )
+                if derived_question_classes != sorted(set(stage_row.bound_question_classes)):
+                    routing_violations.append(
+                        {
+                            "field": "root_question_discipline_stages",
+                            "reason": "stage_entry_question_classes_mismatch",
+                            "stage_label": stage_label,
+                            "expected": sorted(set(stage_row.bound_question_classes)),
+                            "actual": derived_question_classes,
+                        }
+                    )
+            if stage_row.bound_gateway_classes:
+                missing_gateway_classes = sorted(
+                    gateway_class
+                    for gateway_class in stage_row.bound_gateway_classes
+                    if gateway_class not in gateway_question_projection_map
+                )
+                if missing_gateway_classes:
+                    routing_violations.append(
+                        {
+                            "field": "root_question_discipline_stages",
+                            "reason": "stage_bound_gateway_classes_missing_projection",
+                            "stage_label": stage_label,
+                            "gateway_classes": missing_gateway_classes,
+                        }
+                    )
+                derived_gateway_question_classes = sorted(
+                    {
+                        gateway_question_projection_map[gateway_class].question_class
+                        for gateway_class in stage_row.bound_gateway_classes
+                        if gateway_class in gateway_question_projection_map
+                    }
+                )
+                if derived_gateway_question_classes != sorted(set(stage_row.bound_question_classes)):
+                    routing_violations.append(
+                        {
+                            "field": "root_question_discipline_stages",
+                            "reason": "stage_gateway_question_classes_mismatch",
+                            "stage_label": stage_label,
+                            "expected": sorted(set(stage_row.bound_question_classes)),
+                            "actual": derived_gateway_question_classes,
+                        }
+                    )
+
         for stage_label, expected in EXPECTED_ENTRY_SUMMARY_STAGES.items():
             stage_row = entry_summary_stage_map.get(stage_label)
             if stage_row is None:
@@ -784,6 +1082,29 @@ def main() -> int:
                     "reason": "machine_registry_directory_must_not_be_forbidden_for_current_turn_legality",
                 }
             )
+        root_question_surface_map = {row.stage_label: row for row in root_question_discipline_surface.rows}
+        for reason in root_question_discipline_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "root_question_discipline_stage_surface",
+                    "reason": f"root_question_discipline_surface_{reason}",
+                }
+            )
+        for stage_label, expected in EXPECTED_ROOT_QUESTION_DISCIPLINE_STAGES.items():
+            surface_row = root_question_surface_map.get(stage_label)
+            if surface_row is None:
+                continue
+            surface_text = "\n".join(surface_row.body_lines)
+            for marker in expected["required_markers"]:
+                if marker not in surface_text:
+                    routing_violations.append(
+                        {
+                            "field": "root_question_discipline_stage_surface",
+                            "reason": "required_marker_missing",
+                            "stage_label": stage_label,
+                            "marker": marker,
+                        }
+                    )
         stage_surface_map = {row.stage_label: row for row in entry_summary_surface.rows}
         for reason in entry_summary_surface.extraction_violations:
             structure_violations.append(
@@ -856,6 +1177,24 @@ def main() -> int:
                 "id_attr": "rel_path",
             },
             {
+                "family_id": "root_question_discipline_stages",
+                "member_id_key": "stage_label",
+                "actual_rows": root_question_discipline_stages,
+                "expected_rows": {
+                    stage_label: {} for stage_label in EXPECTED_ROOT_QUESTION_DISCIPLINE_STAGES
+                },
+                "id_attr": "stage_label",
+            },
+            {
+                "family_id": "root_question_discipline_stage_surface",
+                "member_id_key": "stage_label",
+                "actual_rows": root_question_discipline_surface.rows,
+                "expected_rows": {
+                    stage_label: {} for stage_label in EXPECTED_ROOT_QUESTION_DISCIPLINE_STAGES
+                },
+                "id_attr": "stage_label",
+            },
+            {
                 "family_id": "entry_summary_stages",
                 "member_id_key": "stage_label",
                 "actual_rows": entry_summary_stages,
@@ -895,6 +1234,7 @@ def main() -> int:
         "root_index_entry": root_index_entry,
         "question_routing_anchor_check_count": len(anchor_checks),
         "question_class_profile_count": len(question_profiles),
+        "root_question_discipline_stage_count": len(root_question_discipline_stages),
         "entry_summary_stage_count": len(entry_summary_stages),
         "entry_question_projection_count": len(entry_projections),
         "gateway_question_projection_count": len(gateway_question_projections),
@@ -923,6 +1263,17 @@ def main() -> int:
             }
             for row in entry_projections
         ],
+        "root_question_discipline_stages": [
+            {
+                "order": row.order,
+                "stage_label": row.stage_label,
+                "bound_question_classes": list(row.bound_question_classes),
+                "bound_corpus_classes": list(row.bound_corpus_classes),
+                "bound_gateway_classes": list(row.bound_gateway_classes),
+                "required_markers": list(row.required_markers),
+            }
+            for row in sorted(root_question_discipline_stages, key=lambda item: item.order)
+        ],
         "entry_summary_stages": [
             {
                 "order": row.order,
@@ -944,6 +1295,19 @@ def main() -> int:
             }
             for row in gateway_question_projections
         ],
+        "root_question_discipline_stage_surface": {
+            "rel_path": root_question_discipline_surface.rel_path,
+            "entry_count": len(root_question_discipline_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "stage_label": row.stage_label,
+                    "body_lines": list(row.body_lines),
+                }
+                for row in root_question_discipline_surface.rows
+            ],
+            "extraction_violations": list(root_question_discipline_surface.extraction_violations),
+        },
         "entry_summary_stage_surface": {
             "rel_path": entry_summary_surface.rel_path,
             "entry_count": len(entry_summary_surface.rows),

@@ -21,9 +21,12 @@ question_routing_anchor_checks:
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root question-routing discipline'
+  - This question-routing discipline must remain bound to canonical root-question-discipline
+    stage rows rather than becoming a freehand alternate question ladder.
+  - gateway-mediated refreezing or projection keeps the question class governed
+    by the gateway target layer.
   - current-turn legality question must never terminate in philosophy text, README
     text, or frozen contract prose alone.
-  - 'gateway-mediated refreezing or projection keeps the question class governed by the gateway target layer:'
   - '## Machine-world entry summary'
   - That is the canonical reading order for this directory.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
@@ -33,12 +36,36 @@ question_routing_anchor_checks:
   - Gateway-mediated refreezing or projection must preserve the question class
     of its governed target layer rather than inheriting a new answer class from
     incoming motivation.
-  - Required question-class-profile, root-entry-question-projection,
-    entry-summary-stage, and gateway-question-projection families must remain
-    explicit as separate machine-readable row families.
+  - README root question-routing discipline must therefore stay congruent with
+    admitted root-question-discipline-stage rows rather than becoming a freehand
+    alternate question ladder.
+  - Required question-class-profile, root-entry-question-projection, root-question-discipline-stage,
+    root-question-discipline-stage-surface, entry-summary-stage, entry-summary-stage-surface,
+    and gateway-question-projection families must remain explicit as separate
+    machine-readable row families.
   - The machine world must not finalize question-routing legality while required
-    question-class, entry-summary-stage, or route identity drift remains known
-    only internally.
+    question-class, root-question-discipline-stage, entry-summary-stage, or route
+    identity drift remains known only internally.
+- rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+  required_markers:
+  - '## Root question-routing completeness boundary'
+  - Question-routing law must remain machine-readable as separate question-class-profile,
+    root-entry-question-projection, root-question-discipline-stage, root-question-discipline-stage-surface,
+    entry-summary-stage, entry-summary-stage-surface, and gateway-question-projection
+    row families.
+  - README root question-routing discipline rendered at protocol root must remain
+    congruent with admitted root-question-discipline-stage rows rather than silently
+    authoring an alternate question ladder.
+- rel_path: identity/protocol/IDENTITY_RUNTIME.md
+  required_markers:
+  - '## Runtime question-routing consumption boundary'
+  - Runtime consumes question-routing law as separate question-class-profile,
+    root-entry-question-projection, root-question-discipline-stage, root-question-discipline-stage-surface,
+    entry-summary-stage, entry-summary-stage-surface, and gateway-question-projection
+    row families rather than as undifferentiated routing prose.
+  - Runtime consumes README root question-routing discipline as a governed stage
+    projection bound to admitted root-question-discipline-stage rows rather than
+    as a freehand alternate question ladder.
 - rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
   required_markers:
   - '## Runtime adjudication boundary'
@@ -156,6 +183,92 @@ question_class_profiles:
   answer_mode: redirect_to_machine_enforcement
   current_turn_authority_allowed: true
   root_entry_required: false
+root_question_discipline_stages:
+- order: 1
+  stage_label: generative why-question
+  bound_question_classes:
+  - generative_why
+  bound_corpus_classes:
+  - bottom_theory
+  required_markers:
+  - '`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`'
+  - why identity protocol law exists in this shape at all.
+- order: 2
+  stage_label: root-entry question
+  bound_question_classes:
+  - root_entry_navigation
+  bound_corpus_classes:
+  - root_index
+  required_markers:
+  - '`README.md`'
+  - how to enter the root corpus without semantic confusion.
+- order: 3
+  stage_label: constitutional law question
+  bound_question_classes:
+  - frozen_protocol_law
+  - frozen_runtime_law
+  bound_corpus_classes:
+  - constitution
+  - runtime_constitution
+  required_markers:
+  - '`IDENTITY_PROTOCOL.md`'
+  - '`IDENTITY_RUNTIME.md`'
+  - what protocol-law and runtime-law are concretely frozen.
+- order: 4
+  stage_label: domain-law question
+  bound_question_classes:
+  - frozen_domain_contract_law
+  bound_corpus_classes:
+  - root_contract
+  required_markers:
+  - root contract files.
+  - what concrete root-domain contract law is frozen.
+- order: 5
+  stage_label: machine-registry question
+  bound_question_classes:
+  - registry_resolution
+  bound_corpus_classes:
+  - machine_registry_directory
+  required_markers:
+  - '`mappings/`'
+  - which aliases, active files, bindings, and registry rows are machine-consumed
+    truth.
+- order: 6
+  stage_label: governed extension question
+  bound_question_classes:
+  - governed_extension_law
+  bound_corpus_classes:
+  - governed_subdomain_extension
+  required_markers:
+  - '`broadcast/`'
+  - '`plugins/`'
+  - what narrower subdomain law is frozen under the root corpus.
+- order: 7
+  stage_label: support-material question
+  bound_question_classes:
+  - support_material_lookup
+  bound_corpus_classes:
+  - demoted_support_directory
+  required_markers:
+  - '`fixtures/`'
+  - what demoted support material exists without becoming runtime truth.
+- order: 8
+  stage_label: gateway target question class preserved
+  bound_question_classes:
+  - frozen_protocol_law
+  - frozen_runtime_law
+  - frozen_domain_contract_law
+  - registry_resolution
+  bound_gateway_classes:
+  - constitution
+  - runtime_constitution
+  - root_contract
+  - machine_registry_directory
+  required_markers:
+  - gateway-mediated refreezing or projection keeps the question class governed
+    by the gateway target layer.
+  - it does not inherit a new answer class from incoming motivation or local
+    convenience.
 entry_summary_stages:
 - order: 1
   stage_label: bottom theory first

@@ -185,11 +185,12 @@ implicit.
 
 ## Runtime question-routing consumption boundary
 
-1. Runtime consumes question-routing law as separate question-class-profile, root-entry-question-projection, entry-summary-stage, and gateway-question-projection row families rather than as undifferentiated routing prose.
+1. Runtime consumes question-routing law as separate question-class-profile, root-entry-question-projection, root-question-discipline-stage, root-question-discipline-stage-surface, entry-summary-stage, entry-summary-stage-surface, and gateway-question-projection row families rather than as undifferentiated routing prose.
 2. Runtime must keep expected row-family total and emitted row-family total congruent under machine-readable coverage completeness rather than relying on aggregate green shorthand.
-3. Runtime must also keep expected row identity set and emitted row identity set for each question-routing family explicit rather than collapsing question-class, entry-summary-stage, or route identity drift into summary-only counts.
-4. Runtime must not finalize question-routing legality while missing or unexpected question-class, entry-summary-stage, or route identities remain known only inside validator machinery.
+3. Runtime must also keep expected row identity set and emitted row identity set for each question-routing family explicit rather than collapsing question-class, root-question-discipline-stage, entry-summary-stage, or route identity drift into summary-only counts.
+4. Runtime must not finalize question-routing legality while missing or unexpected question-class, root-question-discipline-stage, entry-summary-stage, or route identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+6. Runtime consumes README root question-routing discipline as a governed stage projection bound to admitted root-question-discipline-stage rows rather than as a freehand alternate question ladder.
 
 ## Runtime design-question closure consumption boundary
 
