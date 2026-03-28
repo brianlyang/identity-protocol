@@ -10,6 +10,11 @@ POSITIVE_JSON="${TMP_ROOT}/positive.json"
 POSITIVE_SYNC_JSON="${TMP_ROOT}/positive-sync.json"
 NEGATIVE_SYNC_JSON="${TMP_ROOT}/negative-sync.json"
 SHADOW_ROOT="${TMP_ROOT}/shadow-repo"
+RELEASE_CHECK_NAMES=(
+  "release_doc_surface_governance"
+  "v16x_release_closure_boundary"
+  "v16x_release_closure_summary"
+)
 
 mkdir -p "${SHADOW_ROOT}"
 
@@ -93,6 +98,10 @@ PY
 printf '[RUN] positive release-closure control-plane status projection (shadow repo)\n'
 python3 "${SHADOW_ROOT}/scripts/materialize_control_plane_surfaces.py" \
   --repo-root "${SHADOW_ROOT}" \
+  --check-name "${RELEASE_CHECK_NAMES[0]}" \
+  --check-name "${RELEASE_CHECK_NAMES[1]}" \
+  --check-name "${RELEASE_CHECK_NAMES[2]}" \
+  --allow-partial-status-write \
   --write \
   --json-only > "${POSITIVE_JSON}"
 
@@ -129,6 +138,9 @@ PY
 
 python3 "${SHADOW_ROOT}/scripts/validate_control_plane_status_sync.py" \
   --repo-root "${SHADOW_ROOT}" \
+  --check-name "${RELEASE_CHECK_NAMES[0]}" \
+  --check-name "${RELEASE_CHECK_NAMES[1]}" \
+  --check-name "${RELEASE_CHECK_NAMES[2]}" \
   --json-only > "${POSITIVE_SYNC_JSON}"
 
 python3 - <<'PY' "${POSITIVE_SYNC_JSON}"
@@ -141,47 +153,36 @@ if str(payload.get("control_plane_status_sync_status", "")).strip().upper() != "
     raise SystemExit("positive_release_closure_status_sync_not_green")
 PY
 
-python3 - <<'PY' "${SHADOW_ROOT}/scripts/render_control_plane_status.py"
+python3 - <<'PY' "${SHADOW_ROOT}/identity/protocol/mappings/control-plane-status.v1.6.json"
 from pathlib import Path
+import json
 import sys
 
 path = Path(sys.argv[1])
-source_lines = path.read_text(encoding="utf-8").splitlines()
-updated_lines: list[str] = []
-candidate_block: list[str] | None = None
-remove_candidate = False
-paren_depth = 0
-removed = 0
-for line in source_lines:
-    stripped = line.strip()
-    if candidate_block is None and stripped == "CheckSpec(":
-        paren_depth = 1
-        candidate_block = [line]
-        remove_candidate = False
-        continue
-    if candidate_block is not None:
-        candidate_block.append(line)
-        paren_depth += line.count("(") - line.count(")")
-        if 'name="v16x_release_closure_summary"' in stripped:
-            remove_candidate = True
-        if paren_depth <= 0:
-            if remove_candidate:
-                removed += 1
-            else:
-                updated_lines.extend(candidate_block)
-            candidate_block = None
-            remove_candidate = False
-            paren_depth = 0
-        continue
-    updated_lines.append(line)
-if removed != 1:
-    raise SystemExit("probe_setup_failed:missing_v16x_release_closure_summary_check_block")
-path.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
+payload = json.loads(path.read_text(encoding="utf-8"))
+checks = payload.get("checks")
+if not isinstance(checks, list):
+    raise SystemExit("probe_setup_failed:status_checks_missing")
+filtered_checks = [
+    row
+    for row in checks
+    if not (
+        isinstance(row, dict)
+        and str(row.get("name", "")).strip() == "v16x_release_closure_summary"
+    )
+]
+if len(filtered_checks) == len(checks):
+    raise SystemExit("probe_setup_failed:missing_v16x_release_closure_summary_status_row")
+payload["checks"] = filtered_checks
+path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
 
 printf '[RUN] negative release-closure control-plane status sync drift (shadow repo)\n'
 if python3 "${SHADOW_ROOT}/scripts/validate_control_plane_status_sync.py" \
   --repo-root "${SHADOW_ROOT}" \
+  --check-name "${RELEASE_CHECK_NAMES[0]}" \
+  --check-name "${RELEASE_CHECK_NAMES[1]}" \
+  --check-name "${RELEASE_CHECK_NAMES[2]}" \
   --json-only > "${NEGATIVE_SYNC_JSON}"; then
   echo "[FAIL] release-closure control-plane status sync unexpectedly passed missing-check drift"
   exit 1
