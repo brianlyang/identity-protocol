@@ -27,6 +27,9 @@ from release_closure_narrative_marker_common import (
 from release_closure_governance_probe_projection_common import (
     collect_release_closure_governance_probe_projection_stale_reasons,
 )
+from release_closure_root_grounding_common import (
+    RELEASE_CLOSURE_ROOT_GROUNDING_SURFACE_CONSTRAINTS,
+)
 from repo_root_resolution_common import resolve_protocol_repo_root
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
@@ -57,8 +60,6 @@ REQUIRED_OUTER_SURFACE_E2E_BOUNDARY_MARKERS = (
 REQUIRED_REPO_GLOBAL_CLOSURE_BOUNDARY_MARKERS = (
     *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
 )
-
-
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
@@ -159,6 +160,11 @@ def main() -> int:
             if marker not in text:
                 stale_reasons.append(
                     f"{label}_missing_post_closure_adjudication_marker:{marker}"
+                )
+        for marker in RELEASE_CLOSURE_ROOT_GROUNDING_SURFACE_CONSTRAINTS:
+            if marker not in text:
+                stale_reasons.append(
+                    f"{label}_missing_release_closure_root_grounding_marker:{marker}"
                 )
         for marker in REQUIRED_REPO_GLOBAL_CLOSURE_BOUNDARY_MARKERS:
             if marker not in text:

@@ -37,6 +37,9 @@ from release_closure_narrative_marker_common import (
 from release_closure_governance_probe_projection_common import (
     collect_release_closure_governance_probe_projection_stale_reasons,
 )
+from release_closure_root_grounding_common import (
+    RELEASE_CLOSURE_ROOT_GROUNDING_SURFACE_CONSTRAINTS,
+)
 from repo_root_resolution_common import resolve_protocol_repo_root
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
@@ -112,6 +115,9 @@ REQUIRED_RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_MARKERS = (
 )
 REQUIRED_RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_MARKERS = (
     *RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_SURFACE_CONSTRAINTS,
+)
+REQUIRED_RELEASE_CLOSURE_ROOT_GROUNDING_MARKERS = (
+    *RELEASE_CLOSURE_ROOT_GROUNDING_SURFACE_CONSTRAINTS,
 )
 REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS = (
     "scripts/ci/run_full_scan_required_gate_projection_probes_ci.sh",
@@ -273,6 +279,11 @@ def main() -> int:
         if marker not in summary_text:
             stale_reasons.append(
                 f"summary_doc_missing_release_readiness_post_closure_adjudication_marker:{marker}"
+            )
+    for marker in REQUIRED_RELEASE_CLOSURE_ROOT_GROUNDING_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(
+                f"summary_doc_missing_release_closure_root_grounding_marker:{marker}"
             )
     for marker in REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS:
         if marker not in summary_text:

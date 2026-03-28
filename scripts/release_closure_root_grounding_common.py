@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class ReleaseClosureRootGroundingLaneSpec:
+    lane_id: str
+    validator_rel: str
+    probe_rel: str
+
+
+RELEASE_CLOSURE_ROOT_GROUNDING_LANE_SPECS: tuple[
+    ReleaseClosureRootGroundingLaneSpec, ...
+] = (
+    ReleaseClosureRootGroundingLaneSpec(
+        lane_id="protocol_root_corpus_precedence",
+        validator_rel="scripts/validate_protocol_root_corpus_precedence.py",
+        probe_rel="scripts/ci/run_protocol_root_corpus_precedence_probes_ci.sh",
+    ),
+    ReleaseClosureRootGroundingLaneSpec(
+        lane_id="protocol_root_corpus_question_routing",
+        validator_rel="scripts/validate_protocol_root_corpus_question_routing.py",
+        probe_rel="scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh",
+    ),
+    ReleaseClosureRootGroundingLaneSpec(
+        lane_id="protocol_root_design_question_closure",
+        validator_rel="scripts/validate_protocol_root_design_question_closure.py",
+        probe_rel="scripts/ci/run_protocol_root_design_question_closure_probes_ci.sh",
+    ),
+    ReleaseClosureRootGroundingLaneSpec(
+        lane_id="protocol_root_machine_law_primacy",
+        validator_rel="scripts/validate_protocol_root_machine_law_primacy.py",
+        probe_rel="scripts/ci/run_protocol_root_machine_law_primacy_probes_ci.sh",
+    ),
+    ReleaseClosureRootGroundingLaneSpec(
+        lane_id="protocol_root_machine_world_ontology",
+        validator_rel="scripts/validate_protocol_root_machine_world_ontology.py",
+        probe_rel="scripts/ci/run_protocol_root_machine_world_ontology_probes_ci.sh",
+    ),
+    ReleaseClosureRootGroundingLaneSpec(
+        lane_id="protocol_root_current_truth_epistemology",
+        validator_rel="scripts/validate_protocol_root_current_truth_epistemology.py",
+        probe_rel="scripts/ci/run_protocol_root_current_truth_epistemology_probes_ci.sh",
+    ),
+)
+
+RELEASE_CLOSURE_ROOT_GROUNDING_ORDER: tuple[str, ...] = tuple(
+    spec.lane_id for spec in RELEASE_CLOSURE_ROOT_GROUNDING_LANE_SPECS
+)
+RELEASE_CLOSURE_ROOT_GROUNDING_ORDER_MARKER = (
+    "release_closure_root_grounding_order="
+    + "|".join(RELEASE_CLOSURE_ROOT_GROUNDING_ORDER)
+)
+RELEASE_CLOSURE_ROOT_GROUNDING_LANE_MARKERS: tuple[str, ...] = tuple(
+    f"release_closure_root_grounding_lane={lane_id}"
+    for lane_id in RELEASE_CLOSURE_ROOT_GROUNDING_ORDER
+)
+RELEASE_CLOSURE_ROOT_GROUNDING_VALIDATOR_PATHS: tuple[str, ...] = tuple(
+    spec.validator_rel for spec in RELEASE_CLOSURE_ROOT_GROUNDING_LANE_SPECS
+)
+RELEASE_CLOSURE_ROOT_GROUNDING_PROBE_PATHS: tuple[str, ...] = tuple(
+    spec.probe_rel for spec in RELEASE_CLOSURE_ROOT_GROUNDING_LANE_SPECS
+)
+RELEASE_CLOSURE_ROOT_GROUNDING_SURFACE_CONSTRAINTS: tuple[str, ...] = (
+    RELEASE_CLOSURE_ROOT_GROUNDING_ORDER_MARKER,
+    *RELEASE_CLOSURE_ROOT_GROUNDING_LANE_MARKERS,
+    *RELEASE_CLOSURE_ROOT_GROUNDING_VALIDATOR_PATHS,
+    *RELEASE_CLOSURE_ROOT_GROUNDING_PROBE_PATHS,
+)
