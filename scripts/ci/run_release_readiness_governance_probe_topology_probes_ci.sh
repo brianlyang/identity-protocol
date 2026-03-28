@@ -38,7 +38,7 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["release_readiness_governance_probe_topology_status"] == "PASS_REQUIRED", payload
-assert payload["probe_count"] == 16, payload
+assert payload["probe_count"] == 17, payload
 assert payload["stale_reasons"] == [], payload
 PY
 

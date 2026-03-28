@@ -179,11 +179,29 @@ RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SPECS: tuple[ReleaseReadinessActiveRunt
         summary_key="identity_terminal_truth_cleanliness",
         one_look_field="identity_terminal_truth_cleanliness_status",
         status_fields=("identity_terminal_truth_cleanliness_status",),
-        keep_fields=("execution_closure_status", "canonical_publishable_result_status", "terminal_truth_class"),
+        keep_fields=(
+            "execution_closure_status",
+            "canonical_publishable_result_status",
+            "terminal_truth_class",
+            "terminal_state_machine_status",
+            "terminal_state_class",
+            "negative_feedback_class",
+            "loopback_required",
+            "publishable",
+            "next_state_after_veto",
+            "terminal_clean_alias_surface_status",
+        ),
         one_look_passthrough_fields=(
             ("execution_closure_status", "identity_terminal_truth_execution_closure_status"),
             ("canonical_publishable_result_status", "identity_terminal_truth_canonical_publishable_result_status"),
             ("terminal_truth_class", "identity_terminal_truth_class"),
+            ("terminal_state_machine_status", "identity_terminal_truth_state_machine_status"),
+            ("terminal_state_class", "identity_terminal_truth_state_class"),
+            ("negative_feedback_class", "identity_terminal_truth_negative_feedback_class"),
+            ("loopback_required", "identity_terminal_truth_loopback_required"),
+            ("publishable", "identity_terminal_truth_publishable"),
+            ("next_state_after_veto", "identity_terminal_truth_next_state_after_veto"),
+            ("terminal_clean_alias_surface_status", "identity_terminal_truth_alias_surface_status"),
         ),
     ),
 )
@@ -199,9 +217,20 @@ RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_DETAIL_FIELDS: tuple[str, ...] = (
     "one_look.identity_communication_transport_reply_transport_status",
     "one_look.identity_weak_live_operational_closure_class",
     "one_look.identity_terminal_truth_class",
+    "one_look.identity_terminal_truth_state_machine_status",
+    "one_look.identity_terminal_truth_state_class",
+    "one_look.identity_terminal_truth_negative_feedback_class",
+    "one_look.identity_terminal_truth_loopback_required",
+    "one_look.identity_terminal_truth_publishable",
+    "one_look.identity_terminal_truth_next_state_after_veto",
+    "one_look.identity_terminal_truth_alias_surface_status",
 )
 RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_OWNER_LANES: tuple[str, ...] = tuple(
     spec.script_rel for spec in RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SPECS
+)
+RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROOF_LANES: tuple[str, ...] = (
+    "scripts/validate_release_readiness_active_runtime_closure_topology.py",
+    "scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh",
 )
 RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION_MARKER = (
     "active_runtime_closure_projection="
@@ -211,6 +240,7 @@ RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS: tuple[str, ...] = 
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION_MARKER,
     *RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_DETAIL_FIELDS,
     *RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_OWNER_LANES,
+    *RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROOF_LANES,
 )
 
 
