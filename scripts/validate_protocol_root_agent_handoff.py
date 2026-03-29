@@ -41,7 +41,14 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
+from root_row_family_projection_common import (
+    NamedRowFamilyStatusProjectionSpec,
+    aggregate_row_family_status,
+    index_row_family_projection_rows,
+    project_named_row_family_statuses,
+    project_root_contract_support_projection,
+    project_row_families,
+)
 
 STATUS_KEY = "protocol_root_agent_handoff_status"
 ERR_REGISTRY = "IP-RAH-001"
@@ -361,7 +368,9 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
-    row_family_projection_by_id = {row["family_id"]: row for row in row_family_projection_rows}
+    row_family_projection_by_id = index_row_family_projection_rows(
+        row_family_projection_rows
+    )
 
     if not stale_reasons:
         expected_scalar_fields = {
@@ -603,6 +612,32 @@ def main() -> int:
             anchor_checks=root_doc_anchor_checks,
             anchor_violations=root_doc_anchor_violations,
             pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        **project_named_row_family_statuses(
+            row_family_projection_rows_by_id=row_family_projection_by_id,
+            specs=(
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="agent_handoff_completeness_row_coverage_status",
+                    family_id="agent_handoff_completeness_rows",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="agent_handoff_completeness_row_identity_projection_status",
+                    family_id="agent_handoff_completeness_rows",
+                    status_key="identity_projection_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="agent_handoff_completeness_surface_coverage_status",
+                    family_id="agent_handoff_completeness_surface",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="agent_handoff_completeness_surface_identity_projection_status",
+                    family_id="agent_handoff_completeness_surface",
+                    status_key="identity_projection_status",
+                ),
+            ),
             fail_status=STATUS_FAIL_REQUIRED,
         ),
         "role_row_coverage_status": row_family_projection_by_id["role_rows"]["coverage_status"],

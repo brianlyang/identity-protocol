@@ -40,7 +40,14 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
+from root_row_family_projection_common import (
+    NamedRowFamilyStatusProjectionSpec,
+    aggregate_row_family_status,
+    index_row_family_projection_rows,
+    project_named_row_family_statuses,
+    project_root_contract_support_projection,
+    project_row_families,
+)
 
 STATUS_KEY = "protocol_root_artifact_family_admissibility_status"
 ERR_REGISTRY = "IP-AFA-001"
@@ -159,6 +166,7 @@ def main() -> int:
     contract_marker_violations: list[dict[str, Any]] = []
     root_doc_anchor_violations: list[dict[str, Any]] = []
     row_family_projection_rows: list[dict[str, Any]] = []
+    row_family_projection_by_id: dict[str, dict[str, Any]] = {}
     error_code = ""
 
     if admissibility_alias_error:
@@ -259,6 +267,7 @@ def main() -> int:
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         )
+        row_family_projection_by_id = index_row_family_projection_rows(row_family_projection_rows)
 
         validate_contract_row_batches(
             batches=(
@@ -354,6 +363,32 @@ def main() -> int:
         "collapse_count": len(collapse_rows),
         "artifact_family_admissibility_completeness_row_count": len(artifact_family_admissibility_completeness_rows),
         **project_root_contract_support_projection(prefix="artifact_family", row_family_projection_rows=row_family_projection_rows, anchor_checks=root_doc_anchor_checks, anchor_violations=root_doc_anchor_violations, pass_status=STATUS_PASS_REQUIRED, fail_status=STATUS_FAIL_REQUIRED),
+        **project_named_row_family_statuses(
+            row_family_projection_rows_by_id=row_family_projection_by_id,
+            specs=(
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="artifact_family_admissibility_completeness_row_coverage_status",
+                    family_id="artifact_family_admissibility_completeness_rows",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="artifact_family_admissibility_completeness_row_identity_projection_status",
+                    family_id="artifact_family_admissibility_completeness_rows",
+                    status_key="identity_projection_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="artifact_family_admissibility_completeness_surface_coverage_status",
+                    family_id="artifact_family_admissibility_completeness_surface",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="artifact_family_admissibility_completeness_surface_identity_projection_status",
+                    family_id="artifact_family_admissibility_completeness_surface",
+                    status_key="identity_projection_status",
+                ),
+            ),
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "family_admission_class_ids": [row.family_admission_class_id for row in sorted(family_admission_class_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],

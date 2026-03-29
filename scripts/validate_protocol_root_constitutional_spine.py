@@ -27,7 +27,11 @@ from root_corpus_authority_common import entry_authority_projections_from_doc, l
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
 from root_corpus_question_routing_common import entry_question_projections_from_doc, load_root_corpus_question_routing
-from root_row_family_projection_common import project_root_contract_support_projection, project_row_families
+from root_row_family_projection_common import (
+    index_row_family_projection_rows,
+    project_root_contract_support_projection,
+    project_row_families,
+)
 
 STATUS_KEY = "protocol_root_constitutional_spine_status"
 ERR_REGISTRY = "IP-RCS-001"
@@ -560,7 +564,9 @@ def main() -> int:
             },
         )
     )
-    row_family_projection_by_id = {row["family_id"]: row for row in row_family_projection_rows}
+    row_family_projection_by_id = index_row_family_projection_rows(
+        row_family_projection_rows
+    )
 
     if not stale_reasons:
         expected_fields = {

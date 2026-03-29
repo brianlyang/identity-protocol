@@ -44,7 +44,12 @@ from root_machine_registry_completeness_common import (
     required_validator_surface_contract_values_from_doc,
     require_self_describing_families,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
+from root_row_family_projection_common import (
+    aggregate_row_family_status,
+    index_row_family_projection_rows,
+    project_root_contract_support_projection,
+    project_row_families,
+)
 
 STATUS_KEY = "protocol_root_machine_registry_completeness_status"
 ERR_REGISTRY = "IP-RMRC-001"
@@ -1302,9 +1307,9 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
-    row_family_projection_by_id = {
-        row["family_id"]: row for row in row_family_projection_rows
-    }
+    row_family_projection_by_id = index_row_family_projection_rows(
+        row_family_projection_rows
+    )
     payload = {
         STATUS_KEY: status,
         "completeness_family": str(completeness_doc.get("completeness_family") or ""),

@@ -17,7 +17,13 @@ from root_contract_row_validation_common import validate_contract_row_batches
 from root_corpus_derivation_common import derivation_class_profiles_from_doc, load_root_corpus_derivation
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_question_routing_common import adjudication_redirect_from_doc, load_root_corpus_question_routing
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
+from root_row_family_projection_common import (
+    NamedRowFamilyStatusProjectionSpec,
+    index_row_family_projection_rows,
+    project_named_row_family_statuses,
+    project_root_contract_support_projection,
+    project_row_families,
+)
 from root_corpus_transition_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -715,7 +721,9 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
-    row_family_projection_by_id = {row["family_id"]: row for row in row_family_projection_rows}
+    row_family_projection_by_id = index_row_family_projection_rows(
+        row_family_projection_rows
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_TRANSITION),
@@ -741,10 +749,32 @@ def main() -> int:
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         ),
-        "transition_completeness_row_coverage_status": row_family_projection_by_id["transition_completeness_rows"]["coverage_status"],
-        "transition_completeness_row_identity_projection_status": row_family_projection_by_id["transition_completeness_rows"]["identity_projection_status"],
-        "transition_completeness_surface_coverage_status": row_family_projection_by_id["transition_completeness_surface"]["coverage_status"],
-        "transition_completeness_surface_identity_projection_status": row_family_projection_by_id["transition_completeness_surface"]["identity_projection_status"],
+        **project_named_row_family_statuses(
+            row_family_projection_rows_by_id=row_family_projection_by_id,
+            specs=(
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="transition_completeness_row_coverage_status",
+                    family_id="transition_completeness_rows",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="transition_completeness_row_identity_projection_status",
+                    family_id="transition_completeness_rows",
+                    status_key="identity_projection_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="transition_completeness_surface_coverage_status",
+                    family_id="transition_completeness_surface",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="transition_completeness_surface_identity_projection_status",
+                    family_id="transition_completeness_surface",
+                    status_key="identity_projection_status",
+                ),
+            ),
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "current_turn_allowed_root_surface": EXPECTED_CURRENT_TURN_ROOT_CLASS,
         "surface_class_profiles": [

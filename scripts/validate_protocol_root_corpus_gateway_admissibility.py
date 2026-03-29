@@ -14,7 +14,13 @@ from root_contract_anchor_checks_common import (
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
 from root_contract_row_validation_common import contiguous_orders, validate_contract_row_batches
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
+from root_row_family_projection_common import (
+    NamedRowFamilyStatusProjectionSpec,
+    index_row_family_projection_rows,
+    project_named_row_family_statuses,
+    project_root_contract_support_projection,
+    project_row_families,
+)
 from root_corpus_authority_common import authority_class_profiles_from_doc, load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
     STATUS_FAIL_REQUIRED,
@@ -859,7 +865,9 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
-    row_family_projection_by_id = {row["family_id"]: row for row in row_family_projection_rows}
+    row_family_projection_by_id = index_row_family_projection_rows(
+        row_family_projection_rows
+    )
 
     payload = {
         STATUS_KEY: status,
@@ -890,10 +898,32 @@ def main() -> int:
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         ),
-        "gateway_admissibility_completeness_row_coverage_status": row_family_projection_by_id["gateway_admissibility_completeness_rows"]["coverage_status"],
-        "gateway_admissibility_completeness_row_identity_projection_status": row_family_projection_by_id["gateway_admissibility_completeness_rows"]["identity_projection_status"],
-        "gateway_admissibility_completeness_surface_coverage_status": row_family_projection_by_id["gateway_admissibility_completeness_surface"]["coverage_status"],
-        "gateway_admissibility_completeness_surface_identity_projection_status": row_family_projection_by_id["gateway_admissibility_completeness_surface"]["identity_projection_status"],
+        **project_named_row_family_statuses(
+            row_family_projection_rows_by_id=row_family_projection_by_id,
+            specs=(
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="gateway_admissibility_completeness_row_coverage_status",
+                    family_id="gateway_admissibility_completeness_rows",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="gateway_admissibility_completeness_row_identity_projection_status",
+                    family_id="gateway_admissibility_completeness_rows",
+                    status_key="identity_projection_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="gateway_admissibility_completeness_surface_coverage_status",
+                    family_id="gateway_admissibility_completeness_surface",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="gateway_admissibility_completeness_surface_identity_projection_status",
+                    family_id="gateway_admissibility_completeness_surface",
+                    status_key="identity_projection_status",
+                ),
+            ),
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "current_turn_terminal_gateway": next(
             (row.gateway_class for row in gateway_profiles if row.current_turn_legality_terminal),

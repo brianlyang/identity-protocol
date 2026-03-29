@@ -38,6 +38,10 @@ assert payload["anchor_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["handoff_proof_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["handoff_limit_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["collapse_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["agent_handoff_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["agent_handoff_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["agent_handoff_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["agent_handoff_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["agent_handoff_completeness_surface"]["entry_count"] == 5, payload
 assert payload["agent_handoff_completeness_surface"]["extraction_violations"] == [], payload
 assert [row["family_id"] for row in payload["row_family_projection_rows"]] == [
@@ -103,6 +107,10 @@ assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 assert payload["agent_handoff_row_coverage_status"] == "FAIL_REQUIRED", payload
 assert payload["agent_handoff_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["agent_handoff_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["agent_handoff_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["agent_handoff_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["agent_handoff_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/completeness-surface-drift-repo"
@@ -157,6 +165,10 @@ assert surface_row["missing_ids"] == ["required role, payload, anchor, handoff-p
 assert surface_row["unexpected_ids"] == ["required role, payload, anchor, handoff-proof, and collapse rows must remain explicit as separate machine-readable families;"], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["agent_handoff_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["agent_handoff_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["agent_handoff_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["agent_handoff_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/completeness-surface-order-drift-repo"
@@ -198,6 +210,8 @@ assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["agent_handoff_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["agent_handoff_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
