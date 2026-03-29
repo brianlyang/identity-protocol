@@ -138,6 +138,17 @@ def _clean_bool(value: Any) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+def _clean_reason_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    cleaned: list[str] = []
+    for item in value:
+        token = _clean_str(item)
+        if token:
+            cleaned.append(token)
+    return cleaned
+
+
 def _alignment_status(ok: bool) -> str:
     return STATUS_PASS_REQUIRED if ok else STATUS_FAIL_REQUIRED
 
@@ -209,6 +220,36 @@ def build_release_readiness_terminal_truth_bridge_from_parts(
     )
     repair_success_not_clean_terminal_truth = _clean_bool(
         boundary_projection.get("repair_success_not_clean_terminal_truth")
+    )
+    boundary_execution_closure_status = _clean_status(
+        boundary_projection.get("terminal_truth_execution_closure_status")
+    ) or STATUS_UNKNOWN
+    boundary_state_machine_status = _clean_status(
+        boundary_projection.get("terminal_truth_state_machine_status")
+    ) or STATUS_UNKNOWN
+    boundary_negative_feedback_terminal_veto_status = _clean_status(
+        boundary_projection.get("terminal_truth_negative_feedback_terminal_veto_status")
+    ) or STATUS_UNKNOWN
+    boundary_loopback_required = _clean_bool(
+        boundary_projection.get("terminal_truth_loopback_required")
+    )
+    boundary_next_state_after_veto = _clean_str(
+        boundary_projection.get("terminal_truth_next_state_after_veto")
+    )
+    boundary_dirty_signals = _clean_reason_list(
+        boundary_projection.get("terminal_truth_dirty_signals")
+    )
+    boundary_terminal_truth_blockers = _clean_reason_list(
+        boundary_projection.get("terminal_truth_blockers")
+    )
+    boundary_placeholder_result_fields = _clean_reason_list(
+        boundary_projection.get("terminal_truth_placeholder_result_fields")
+    )
+    boundary_contradiction_fields = _clean_reason_list(
+        boundary_projection.get("terminal_truth_contradiction_fields")
+    )
+    boundary_confidence_blocker_fields = _clean_reason_list(
+        boundary_projection.get("terminal_truth_confidence_blocker_fields")
     )
 
     active_runtime_cleanliness_status = _clean_status(
@@ -299,6 +340,21 @@ def build_release_readiness_terminal_truth_bridge_from_parts(
         stale_reasons.append(
             f"admission_lane_projection_unusable:{admission_lane_projection or STATUS_UNKNOWN}"
         )
+    if boundary_execution_closure_status not in {STATUS_PASS_REQUIRED, STATUS_FAIL_REQUIRED}:
+        stale_reasons.append(
+            "boundary_execution_closure_status_unusable:"
+            f"{boundary_execution_closure_status or STATUS_UNKNOWN}"
+        )
+    if boundary_state_machine_status not in {STATUS_PASS_REQUIRED, STATUS_FAIL_REQUIRED}:
+        stale_reasons.append(
+            "boundary_state_machine_status_unusable:"
+            f"{boundary_state_machine_status or STATUS_UNKNOWN}"
+        )
+    if boundary_negative_feedback_terminal_veto_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "boundary_negative_feedback_terminal_veto_status_not_pass:"
+            f"{boundary_negative_feedback_terminal_veto_status or STATUS_UNKNOWN}"
+        )
 
     terminal_truth_class_alignment_status = _alignment_status(
         boundary_terminal_truth_class == active_runtime_terminal_truth_class
@@ -359,6 +415,52 @@ def build_release_readiness_terminal_truth_bridge_from_parts(
         stale_reasons.append(
             "canonical_publishable_bridge_mismatch:"
             f"{boundary_canonical_result_eligible}!={active_runtime_canonical_publishable_result_status or STATUS_UNKNOWN}"
+        )
+
+    execution_closure_alignment_status = _alignment_status(
+        boundary_execution_closure_status == active_runtime_execution_closure_status
+    )
+    if execution_closure_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "execution_closure_bridge_mismatch:"
+            f"{boundary_execution_closure_status or STATUS_UNKNOWN}!={active_runtime_execution_closure_status or STATUS_UNKNOWN}"
+        )
+
+    state_machine_alignment_status = _alignment_status(
+        boundary_state_machine_status == active_runtime_state_machine_status
+    )
+    if state_machine_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "state_machine_bridge_mismatch:"
+            f"{boundary_state_machine_status or STATUS_UNKNOWN}!={active_runtime_state_machine_status or STATUS_UNKNOWN}"
+        )
+
+    negative_feedback_veto_alignment_status = _alignment_status(
+        boundary_negative_feedback_terminal_veto_status
+        == active_runtime_negative_feedback_terminal_veto_status
+    )
+    if negative_feedback_veto_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "negative_feedback_terminal_veto_bridge_mismatch:"
+            f"{boundary_negative_feedback_terminal_veto_status or STATUS_UNKNOWN}!={active_runtime_negative_feedback_terminal_veto_status or STATUS_UNKNOWN}"
+        )
+
+    loopback_flag_alignment_status = _alignment_status(
+        boundary_loopback_required is active_runtime_loopback_required
+    )
+    if loopback_flag_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "loopback_flag_bridge_mismatch:"
+            f"{boundary_loopback_required}!={active_runtime_loopback_required}"
+        )
+
+    next_state_after_veto_alignment_status = _alignment_status(
+        boundary_next_state_after_veto == active_runtime_next_state_after_veto
+    )
+    if next_state_after_veto_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "next_state_after_veto_bridge_mismatch:"
+            f"{boundary_next_state_after_veto or STATUS_UNKNOWN}!={active_runtime_next_state_after_veto or STATUS_UNKNOWN}"
         )
 
     loopback_alignment_status = _alignment_status(
@@ -443,6 +545,16 @@ def build_release_readiness_terminal_truth_bridge_from_parts(
         "boundary_negative_feedback_class": boundary_negative_feedback_class,
         "boundary_publishable": boundary_publishable,
         "boundary_canonical_result_eligible": boundary_canonical_result_eligible,
+        "boundary_execution_closure_status": boundary_execution_closure_status,
+        "boundary_state_machine_status": boundary_state_machine_status,
+        "boundary_negative_feedback_terminal_veto_status": boundary_negative_feedback_terminal_veto_status,
+        "boundary_loopback_required": boundary_loopback_required,
+        "boundary_next_state_after_veto": boundary_next_state_after_veto,
+        "boundary_dirty_signals": boundary_dirty_signals,
+        "boundary_terminal_truth_blockers": boundary_terminal_truth_blockers,
+        "boundary_placeholder_result_fields": boundary_placeholder_result_fields,
+        "boundary_contradiction_fields": boundary_contradiction_fields,
+        "boundary_confidence_blocker_fields": boundary_confidence_blocker_fields,
         "repair_success_not_clean_terminal_truth": repair_success_not_clean_terminal_truth,
         "active_runtime_cleanliness_status": active_runtime_cleanliness_status,
         "active_runtime_execution_closure_status": active_runtime_execution_closure_status,
@@ -462,6 +574,11 @@ def build_release_readiness_terminal_truth_bridge_from_parts(
         "negative_feedback_class_alignment_status": negative_feedback_class_alignment_status,
         "publishable_alignment_status": publishable_alignment_status,
         "canonical_publishable_alignment_status": canonical_publishable_alignment_status,
+        "execution_closure_alignment_status": execution_closure_alignment_status,
+        "state_machine_alignment_status": state_machine_alignment_status,
+        "negative_feedback_veto_alignment_status": negative_feedback_veto_alignment_status,
+        "loopback_flag_alignment_status": loopback_flag_alignment_status,
+        "next_state_after_veto_alignment_status": next_state_after_veto_alignment_status,
         "loopback_alignment_status": loopback_alignment_status,
         "admission_semantics_alignment_status": admission_semantics_alignment_status,
         "review_veto_semantics_alignment_status": review_veto_semantics_alignment_status,

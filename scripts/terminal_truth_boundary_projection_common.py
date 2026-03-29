@@ -4,7 +4,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from post_execution_report_repair_common import enrich_post_execution_report
+from post_execution_report_repair_common import (
+    build_post_execution_terminal_truth_observation_projection,
+    enrich_post_execution_report,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -49,6 +52,27 @@ RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_SURFACE_CONSTRAINTS: tuple[str, ...] =
         f"one_look.{field}"
         for field in RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_ONE_LOOK_FIELDS
     ),
+)
+TERMINAL_TRUTH_BOUNDARY_OBSERVATION_BRIDGE_FIELD_SPECS: tuple[tuple[str, str, str], ...] = (
+    ("execution_closure_status", "terminal_truth_execution_closure_status", "status"),
+    ("terminal_truth_class", "terminal_truth_class", "string"),
+    ("terminal_state_machine_status", "terminal_truth_state_machine_status", "status"),
+    ("terminal_state_class", "terminal_state_class", "string"),
+    ("negative_feedback_class", "negative_feedback_class", "string"),
+    (
+        "negative_feedback_terminal_veto_status",
+        "terminal_truth_negative_feedback_terminal_veto_status",
+        "status",
+    ),
+    ("loopback_required", "terminal_truth_loopback_required", "bool"),
+    ("next_state_after_veto", "terminal_truth_next_state_after_veto", "string"),
+    ("publishable", "publishable", "bool"),
+    ("canonical_result_eligible", "canonical_result_eligible", "bool"),
+    ("dirty_signals", "terminal_truth_dirty_signals", "reasons"),
+    ("terminal_truth_blockers", "terminal_truth_blockers", "reasons"),
+    ("placeholder_result_fields", "terminal_truth_placeholder_result_fields", "reasons"),
+    ("contradiction_fields", "terminal_truth_contradiction_fields", "reasons"),
+    ("confidence_blocker_fields", "terminal_truth_confidence_blocker_fields", "reasons"),
 )
 
 
@@ -142,6 +166,50 @@ def _pick_reason_list(
     return []
 
 
+def _build_terminal_truth_boundary_observation_defaults(
+    *,
+    default_status: str,
+) -> dict[str, Any]:
+    defaults: dict[str, Any] = {}
+    for _, target_key, value_kind in TERMINAL_TRUTH_BOUNDARY_OBSERVATION_BRIDGE_FIELD_SPECS:
+        if value_kind == "status":
+            defaults[target_key] = default_status
+        elif value_kind == "bool":
+            defaults[target_key] = False
+        elif value_kind == "reasons":
+            defaults[target_key] = []
+        else:
+            defaults[target_key] = ""
+    return defaults
+
+
+def _build_terminal_truth_boundary_observation_bridge_payload(
+    observation_projection: dict[str, Any],
+    fallback_projection: dict[str, Any],
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
+    for source_key, target_key, value_kind in TERMINAL_TRUTH_BOUNDARY_OBSERVATION_BRIDGE_FIELD_SPECS:
+        if value_kind == "status":
+            payload[target_key] = (
+                _pick_status(observation_projection, source_key, fallback_projection) or STATUS_UNKNOWN
+            )
+        elif value_kind == "bool":
+            payload[target_key] = _pick_bool(observation_projection, source_key, fallback_projection)
+        elif value_kind == "reasons":
+            payload[target_key] = _pick_reason_list(
+                observation_projection,
+                source_key,
+                fallback_projection,
+            )
+        else:
+            payload[target_key] = _pick_string(
+                observation_projection,
+                source_key,
+                fallback_projection,
+            )
+    return payload
+
+
 def _skip_payload(*, reason: str, report_selected_path: str = "") -> dict[str, Any]:
     return {
         "terminal_truth_boundary_projection_status": STATUS_SKIPPED_NOT_REQUIRED,
@@ -159,21 +227,9 @@ def _skip_payload(*, reason: str, report_selected_path: str = "") -> dict[str, A
         "experience_writeback_validation_status": STATUS_SKIPPED_NOT_REQUIRED,
         "experience_writeback_validation_stale_reasons": [],
         "terminal_truth_observation_status": STATUS_SKIPPED_NOT_REQUIRED,
-        "terminal_truth_execution_closure_status": STATUS_SKIPPED_NOT_REQUIRED,
-        "terminal_truth_class": "",
-        "terminal_truth_state_machine_status": STATUS_SKIPPED_NOT_REQUIRED,
-        "terminal_state_class": "",
-        "negative_feedback_class": "",
-        "terminal_truth_negative_feedback_terminal_veto_status": STATUS_SKIPPED_NOT_REQUIRED,
-        "terminal_truth_loopback_required": False,
-        "terminal_truth_next_state_after_veto": "",
-        "publishable": False,
-        "canonical_result_eligible": False,
-        "terminal_truth_dirty_signals": [],
-        "terminal_truth_blockers": [],
-        "terminal_truth_placeholder_result_fields": [],
-        "terminal_truth_contradiction_fields": [],
-        "terminal_truth_confidence_blocker_fields": [],
+        **_build_terminal_truth_boundary_observation_defaults(
+            default_status=STATUS_SKIPPED_NOT_REQUIRED
+        ),
         "repair_success_not_clean_terminal_truth": False,
         "clean_terminal_truth_veto_observed": False,
         "admission_lane_projection": ADMISSION_NOT_APPLICABLE,
@@ -202,10 +258,20 @@ def build_terminal_truth_boundary_projection_from_enrichment(
     applicability_reason = _clean_string(projection_applicability.get("applicability_reason"))
     report_surface_class = _clean_string(projection_applicability.get("report_surface_class"))
     report_after = projection_result.get("report_after") if isinstance(projection_result.get("report_after"), dict) else {}
-    terminal_truth_observation_projection = (
+    terminal_truth_observation_projection_raw = (
         projection_result.get("terminal_truth_observation_projection")
         if isinstance(projection_result.get("terminal_truth_observation_projection"), dict)
         else {}
+    )
+    terminal_truth_observation_projection = (
+        build_post_execution_terminal_truth_observation_projection(
+            terminal_truth_observation_projection_raw
+        )
+        if terminal_truth_observation_projection_raw
+        else {}
+    )
+    terminal_truth_observation_fallback = build_post_execution_terminal_truth_observation_projection(
+        report_after
     )
 
     if applicability_status == STATUS_SKIPPED_NOT_REQUIRED:
@@ -289,83 +355,11 @@ def build_terminal_truth_boundary_projection_from_enrichment(
         stale_reasons.append("terminal_truth_observation_status_missing")
     if admission_lane_projection_status == STATUS_FAIL_REQUIRED:
         stale_reasons.append("admission_lane_projection_unresolved")
-    if not terminal_truth_observation_projection:
+    if not terminal_truth_observation_projection_raw:
         stale_reasons.append("terminal_truth_observation_projection_missing")
-
-    terminal_truth_execution_closure_status = _pick_status(
+    observation_bridge_payload = _build_terminal_truth_boundary_observation_bridge_payload(
         terminal_truth_observation_projection,
-        "execution_closure_status",
-        report_after,
-    )
-    terminal_truth_class = _pick_string(
-        terminal_truth_observation_projection,
-        "terminal_truth_class",
-        report_after,
-    )
-    terminal_truth_state_machine_status = _pick_status(
-        terminal_truth_observation_projection,
-        "terminal_state_machine_status",
-        report_after,
-    )
-    terminal_state_class = _pick_string(
-        terminal_truth_observation_projection,
-        "terminal_state_class",
-        report_after,
-    )
-    negative_feedback_class = _pick_string(
-        terminal_truth_observation_projection,
-        "negative_feedback_class",
-        report_after,
-    )
-    terminal_truth_negative_feedback_terminal_veto_status = _pick_status(
-        terminal_truth_observation_projection,
-        "negative_feedback_terminal_veto_status",
-        report_after,
-    )
-    terminal_truth_loopback_required = _pick_bool(
-        terminal_truth_observation_projection,
-        "loopback_required",
-        report_after,
-    )
-    terminal_truth_next_state_after_veto = _pick_string(
-        terminal_truth_observation_projection,
-        "next_state_after_veto",
-        report_after,
-    )
-    publishable = _pick_bool(
-        terminal_truth_observation_projection,
-        "publishable",
-        report_after,
-    )
-    canonical_result_eligible = _pick_bool(
-        terminal_truth_observation_projection,
-        "canonical_result_eligible",
-        report_after,
-    )
-    terminal_truth_dirty_signals = _pick_reason_list(
-        terminal_truth_observation_projection,
-        "dirty_signals",
-        report_after,
-    )
-    terminal_truth_blockers = _pick_reason_list(
-        terminal_truth_observation_projection,
-        "terminal_truth_blockers",
-        report_after,
-    )
-    terminal_truth_placeholder_result_fields = _pick_reason_list(
-        terminal_truth_observation_projection,
-        "placeholder_result_fields",
-        report_after,
-    )
-    terminal_truth_contradiction_fields = _pick_reason_list(
-        terminal_truth_observation_projection,
-        "contradiction_fields",
-        report_after,
-    )
-    terminal_truth_confidence_blocker_fields = _pick_reason_list(
-        terminal_truth_observation_projection,
-        "confidence_blocker_fields",
-        report_after,
+        terminal_truth_observation_fallback,
     )
 
     projection_status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
@@ -386,23 +380,7 @@ def build_terminal_truth_boundary_projection_from_enrichment(
         "experience_writeback_validation_status": experience_writeback_status or STATUS_UNKNOWN,
         "experience_writeback_validation_stale_reasons": experience_writeback_stale_reasons,
         "terminal_truth_observation_status": terminal_truth_status or STATUS_UNKNOWN,
-        "terminal_truth_execution_closure_status": terminal_truth_execution_closure_status or STATUS_UNKNOWN,
-        "terminal_truth_class": terminal_truth_class,
-        "terminal_truth_state_machine_status": terminal_truth_state_machine_status or STATUS_UNKNOWN,
-        "terminal_state_class": terminal_state_class,
-        "negative_feedback_class": negative_feedback_class,
-        "terminal_truth_negative_feedback_terminal_veto_status": (
-            terminal_truth_negative_feedback_terminal_veto_status or STATUS_UNKNOWN
-        ),
-        "terminal_truth_loopback_required": terminal_truth_loopback_required,
-        "terminal_truth_next_state_after_veto": terminal_truth_next_state_after_veto,
-        "publishable": publishable,
-        "canonical_result_eligible": canonical_result_eligible,
-        "terminal_truth_dirty_signals": terminal_truth_dirty_signals,
-        "terminal_truth_blockers": terminal_truth_blockers,
-        "terminal_truth_placeholder_result_fields": terminal_truth_placeholder_result_fields,
-        "terminal_truth_contradiction_fields": terminal_truth_contradiction_fields,
-        "terminal_truth_confidence_blocker_fields": terminal_truth_confidence_blocker_fields,
+        **observation_bridge_payload,
         "repair_success_not_clean_terminal_truth": repair_success_not_clean_terminal_truth,
         "clean_terminal_truth_veto_observed": clean_terminal_truth_veto_observed,
         "admission_lane_projection": admission_lane_projection,
@@ -507,21 +485,9 @@ def build_terminal_truth_boundary_projection_from_report(
             "experience_writeback_validation_status": STATUS_UNKNOWN,
             "experience_writeback_validation_stale_reasons": [],
             "terminal_truth_observation_status": STATUS_UNKNOWN,
-            "terminal_truth_execution_closure_status": STATUS_UNKNOWN,
-            "terminal_truth_class": "",
-            "terminal_truth_state_machine_status": STATUS_UNKNOWN,
-            "terminal_state_class": "",
-            "negative_feedback_class": "",
-            "terminal_truth_negative_feedback_terminal_veto_status": STATUS_UNKNOWN,
-            "terminal_truth_loopback_required": False,
-            "terminal_truth_next_state_after_veto": "",
-            "publishable": False,
-            "canonical_result_eligible": False,
-            "terminal_truth_dirty_signals": [],
-            "terminal_truth_blockers": [],
-            "terminal_truth_placeholder_result_fields": [],
-            "terminal_truth_contradiction_fields": [],
-            "terminal_truth_confidence_blocker_fields": [],
+            **_build_terminal_truth_boundary_observation_defaults(
+                default_status=STATUS_UNKNOWN
+            ),
             "repair_success_not_clean_terminal_truth": False,
             "clean_terminal_truth_veto_observed": False,
             "admission_lane_projection": ADMISSION_UNRESOLVED,

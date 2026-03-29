@@ -541,6 +541,24 @@ for row in seeded:
             == STATUS_PASS_REQUIRED
         ), bridge
         assert bridge["active_runtime_alias_surface_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["boundary_execution_closure_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["boundary_state_machine_status"] == STATUS_PASS_REQUIRED, bridge
+        assert (
+            bridge["boundary_negative_feedback_terminal_veto_status"]
+            == STATUS_PASS_REQUIRED
+        ), bridge
+        assert bridge["boundary_loopback_required"] is False, bridge
+        assert bridge["boundary_next_state_after_veto"] == "", bridge
+        assert bridge["boundary_dirty_signals"] == [], bridge
+        assert bridge["boundary_terminal_truth_blockers"] == [], bridge
+        assert bridge["boundary_placeholder_result_fields"] == [], bridge
+        assert bridge["boundary_contradiction_fields"] == [], bridge
+        assert bridge["boundary_confidence_blocker_fields"] == [], bridge
+        assert bridge["execution_closure_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["state_machine_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["negative_feedback_veto_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["loopback_flag_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["next_state_after_veto_alignment_status"] == STATUS_PASS_REQUIRED, bridge
     elif case_name == "review_required_execution_closure":
         assert rc == 1, (case_name, rc, summary)
         assert summary["release_readiness_status"] == "FAIL_REQUIRED", summary
@@ -561,6 +579,24 @@ for row in seeded:
         assert bridge["active_runtime_loopback_required"] is False, bridge
         assert bridge["active_runtime_alias_surface_status"] == STATUS_PASS_REQUIRED, bridge
         assert bridge["active_runtime_next_state_after_veto"] == "review_pending", bridge
+        assert bridge["boundary_execution_closure_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["boundary_state_machine_status"] == STATUS_PASS_REQUIRED, bridge
+        assert (
+            bridge["boundary_negative_feedback_terminal_veto_status"]
+            == STATUS_PASS_REQUIRED
+        ), bridge
+        assert bridge["boundary_loopback_required"] is False, bridge
+        assert bridge["boundary_next_state_after_veto"] == "review_pending", bridge
+        assert "review_required_next_action" in bridge["boundary_dirty_signals"], bridge
+        assert "review_required_next_action" in bridge["boundary_terminal_truth_blockers"], bridge
+        assert bridge["boundary_placeholder_result_fields"] == [], bridge
+        assert bridge["boundary_contradiction_fields"] == [], bridge
+        assert bridge["boundary_confidence_blocker_fields"] == [], bridge
+        assert bridge["execution_closure_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["state_machine_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["negative_feedback_veto_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["loopback_flag_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["next_state_after_veto_alignment_status"] == STATUS_PASS_REQUIRED, bridge
     else:
         raise AssertionError(f"unexpected_case:{case_name}")
     results.append(

@@ -9,7 +9,10 @@ from typing import Any
 
 from capability_activation_projection_common import CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID, FINAL_EMIT_POLICY_MODE, FINAL_EMIT_SCHEMA_ID
-from post_execution_report_repair_common import enrich_post_execution_report
+from post_execution_report_repair_common import (
+    build_post_execution_terminal_truth_observation_after_payload,
+    enrich_post_execution_report,
+)
 from tool_vendor_governance_common import boolish, latest_identity_upgrade_report, load_json, resolve_pack_and_task
 from writeback_continuity_common import derive_writeback_continuity_fields
 
@@ -261,6 +264,11 @@ def main() -> int:
         error_code = "IP-WRB-REPAIR-002"
     else:
         error_code = ""
+    terminal_truth_observation_after_payload = (
+        build_post_execution_terminal_truth_observation_after_payload(
+            terminal_truth_observation_projection
+        )
+    )
 
     payload = {
         "identity_id": args.identity_id,
@@ -305,50 +313,7 @@ def main() -> int:
         "terminal_truth_validation_status_after": str(
             ((projection_result.get("terminal_truth_validation") or {}).get("status", "")) or ""
         ).strip(),
-        "execution_closure_status_after": str(
-            (terminal_truth_observation_projection.get("execution_closure_status", "")) or ""
-        ).strip(),
-        "terminal_truth_cleanliness_status_after": str(
-            (terminal_truth_observation_projection.get("terminal_truth_cleanliness_status", "")) or ""
-        ).strip(),
-        "terminal_truth_class_after": str(
-            (terminal_truth_observation_projection.get("terminal_truth_class", "")) or ""
-        ).strip(),
-        "terminal_state_machine_status_after": str(
-            (terminal_truth_observation_projection.get("terminal_state_machine_status", "")) or ""
-        ).strip(),
-        "terminal_state_class_after": str(
-            (terminal_truth_observation_projection.get("terminal_state_class", "")) or ""
-        ).strip(),
-        "negative_feedback_class_after": str(
-            (terminal_truth_observation_projection.get("negative_feedback_class", "")) or ""
-        ).strip(),
-        "negative_feedback_terminal_veto_status_after": str(
-            (terminal_truth_observation_projection.get("negative_feedback_terminal_veto_status", "")) or ""
-        ).strip(),
-        "loopback_required_after": bool(
-            terminal_truth_observation_projection.get("loopback_required", False)
-        ),
-        "next_state_after_veto_after": str(
-            (terminal_truth_observation_projection.get("next_state_after_veto", "")) or ""
-        ).strip(),
-        "publishable_after": bool(terminal_truth_observation_projection.get("publishable", False)),
-        "canonical_result_eligible_after": bool(
-            terminal_truth_observation_projection.get("canonical_result_eligible", False)
-        ),
-        "dirty_signals_after": list(terminal_truth_observation_projection.get("dirty_signals") or []),
-        "terminal_truth_blockers_after": list(
-            terminal_truth_observation_projection.get("terminal_truth_blockers") or []
-        ),
-        "placeholder_result_fields_after": list(
-            terminal_truth_observation_projection.get("placeholder_result_fields") or []
-        ),
-        "contradiction_fields_after": list(
-            terminal_truth_observation_projection.get("contradiction_fields") or []
-        ),
-        "confidence_blocker_fields_after": list(
-            terminal_truth_observation_projection.get("confidence_blocker_fields") or []
-        ),
+        **terminal_truth_observation_after_payload,
         "observation_stale_reasons": observation_stale_reasons,
         "terminal_truth_observation_projection_after": terminal_truth_observation_projection,
         "projection_enrichment": projection_result,

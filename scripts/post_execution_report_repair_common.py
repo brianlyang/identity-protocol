@@ -38,6 +38,27 @@ POST_EXECUTION_TERMINAL_TRUTH_OBSERVATION_FIELDS: tuple[str, ...] = (
     "contradiction_fields",
     "confidence_blocker_fields",
 )
+POST_EXECUTION_TERMINAL_TRUTH_OBSERVATION_AFTER_FIELD_ALIASES: tuple[tuple[str, str], ...] = (
+    ("execution_closure_status", "execution_closure_status_after"),
+    ("terminal_truth_cleanliness_status", "terminal_truth_cleanliness_status_after"),
+    ("terminal_truth_class", "terminal_truth_class_after"),
+    ("terminal_state_machine_status", "terminal_state_machine_status_after"),
+    ("terminal_state_class", "terminal_state_class_after"),
+    ("negative_feedback_class", "negative_feedback_class_after"),
+    (
+        "negative_feedback_terminal_veto_status",
+        "negative_feedback_terminal_veto_status_after",
+    ),
+    ("loopback_required", "loopback_required_after"),
+    ("next_state_after_veto", "next_state_after_veto_after"),
+    ("publishable", "publishable_after"),
+    ("canonical_result_eligible", "canonical_result_eligible_after"),
+    ("dirty_signals", "dirty_signals_after"),
+    ("terminal_truth_blockers", "terminal_truth_blockers_after"),
+    ("placeholder_result_fields", "placeholder_result_fields_after"),
+    ("contradiction_fields", "contradiction_fields_after"),
+    ("confidence_blocker_fields", "confidence_blocker_fields_after"),
+)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
@@ -372,6 +393,31 @@ def build_post_execution_terminal_truth_observation_projection(
             source.get("confidence_blocker_fields")
         ),
     }
+
+
+def build_post_execution_terminal_truth_observation_alias_payload(
+    report_doc: dict[str, Any] | None,
+    *,
+    field_aliases: tuple[tuple[str, str], ...],
+) -> dict[str, Any]:
+    projection = build_post_execution_terminal_truth_observation_projection(report_doc)
+    payload: dict[str, Any] = {}
+    for source_field, target_field in field_aliases:
+        value = projection.get(source_field)
+        if isinstance(value, list):
+            payload[target_field] = list(value)
+        else:
+            payload[target_field] = value
+    return payload
+
+
+def build_post_execution_terminal_truth_observation_after_payload(
+    report_doc: dict[str, Any] | None,
+) -> dict[str, Any]:
+    return build_post_execution_terminal_truth_observation_alias_payload(
+        report_doc,
+        field_aliases=POST_EXECUTION_TERMINAL_TRUTH_OBSERVATION_AFTER_FIELD_ALIASES,
+    )
 
 
 def enrich_post_execution_report(
