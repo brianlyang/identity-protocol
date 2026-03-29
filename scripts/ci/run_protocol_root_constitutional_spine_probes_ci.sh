@@ -290,20 +290,12 @@ PY
 
 COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/constitutional-spine-completeness-surface-order-drift-repo"
 mirror_repo "${COMPLETENESS_SURFACE_ORDER_REPO}"
-python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_REPO}/identity/protocol/README.md"
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-text = path.read_text(encoding="utf-8")
-first = "1. required constitutional-entry, spine-bridge, philosophy-primacy, and philosophy-primacy-surface rows must remain explicit as separate machine-readable families;"
-second = "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
-assert first in text and second in text, text
-text = text.replace(first, "__TEMP__", 1)
-text = text.replace(second, first, 1)
-text = text.replace("__TEMP__", second, 1)
-path.write_text(text, encoding="utf-8")
-PY
+protocol_root_probe_swap_numbered_surface_order_rows \
+  "${COMPLETENESS_SURFACE_ORDER_REPO}/identity/protocol/README.md" \
+  "## Root constitutional-spine completeness discipline" \
+  "## Root adjudication-surface discipline" \
+  "1. required constitutional-entry, spine-bridge, philosophy-primacy, and philosophy-primacy-surface rows must remain explicit as separate machine-readable families;" \
+  "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
 
 COMPLETENESS_SURFACE_ORDER_JSON="${TMP_ROOT}/constitutional-spine-completeness-surface-order-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_constitutional_spine.py" \
