@@ -6,7 +6,7 @@ from full_scan_required_gate_bundle_projection_common import (
     FULL_SCAN_REQUIRED_GATE_BUNDLE_SUMMARY_MARKER,
 )
 from projection_profile_exclusion_scope_common import (
-    PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
+    PROJECTION_PROFILE_EXCLUSION_SCOPE_MARKER,
 )
 from release_cloud_evidence_projection_common import (
     RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_PROJECTION_MARKER,
@@ -46,7 +46,7 @@ RELEASE_CLOSURE_BOUNDED_PROJECTION_LITERAL_CANONICALITY_SPECS: tuple[
 ] = (
     ReleaseClosureSurfaceLiteralCanonicalitySpec(
         literal_key="projection_profile_exclusion_scope",
-        canonical_marker=PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS[0],
+        canonical_marker=PROJECTION_PROFILE_EXCLUSION_SCOPE_MARKER,
         stale_reason_suffix="projection_profile_exclusion_scope_line_not_canonical",
     ),
     ReleaseClosureSurfaceLiteralCanonicalitySpec(

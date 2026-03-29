@@ -16,7 +16,7 @@ SUMMARY_SHADOW_PATH="${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-
 projection_profile_exclusion_scope_marker="$(
   resolve_python_module_expression \
     "projection_profile_exclusion_scope_common" \
-    "PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS[0]"
+    "PROJECTION_PROFILE_EXCLUSION_SCOPE_MARKER"
 )"
 release_cloud_evidence_projection_marker="$(
   resolve_python_module_expression \

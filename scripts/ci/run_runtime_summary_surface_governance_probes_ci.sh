@@ -106,7 +106,7 @@ cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/go
 projection_profile_exclusion_scope_marker="$(
   resolve_python_module_expression \
     "projection_profile_exclusion_scope_common" \
-    "PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS[0]"
+    "PROJECTION_PROFILE_EXCLUSION_SCOPE_MARKER"
 )"
 
 cp scripts/report_three_plane_status.py "$tmpdir/scripts/"

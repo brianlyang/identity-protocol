@@ -17,6 +17,9 @@ PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS: tuple[str, ...] = (
     "projection_skip_scope_reason=projection_profile_out_of_scope|"
     "projection_excluded_area",
 )
+PROJECTION_PROFILE_EXCLUSION_SCOPE_MARKER = (
+    PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS[0]
+)
 
 
 def build_projection_profile_exclusion_reason(*, area: str, profile_id: str) -> str:
