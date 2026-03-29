@@ -25,3 +25,41 @@ protocol_root_probe_define_relpath_mirror() {
     probe_mirror_repo_with_relpaths "${ROOT}" "${dst}" "${PROTOCOL_ROOT_PROBE_REL_PATHS[@]}"
   }
 }
+
+protocol_root_probe_swap_numbered_surface_order_rows() {
+  local path="$1"
+  local section_marker="$2"
+  local next_marker="$3"
+  local first="$4"
+  local second="$5"
+  python3 - "$path" "$section_marker" "$next_marker" "$first" "$second" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+section_marker = sys.argv[2]
+next_marker = sys.argv[3]
+first = sys.argv[4]
+second = sys.argv[5]
+
+if not first.startswith("1. "):
+    raise SystemExit(f"first row must start with '1. ': {first}")
+if not second.startswith("2. "):
+    raise SystemExit(f"second row must start with '2. ': {second}")
+
+text = path.read_text(encoding="utf-8")
+assert section_marker in text, text
+before, rest = text.split(section_marker, 1)
+section_body, sep, after = rest.partition(next_marker)
+assert sep, rest[:4000]
+assert first in section_body, section_body
+assert second in section_body, section_body
+
+swapped_first = "1. " + second[3:]
+swapped_second = "2. " + first[3:]
+section_body = section_body.replace(first, "__TEMP__", 1)
+section_body = section_body.replace(second, swapped_second, 1)
+section_body = section_body.replace("__TEMP__", swapped_first, 1)
+path.write_text(before + section_marker + section_body + sep + after, encoding="utf-8")
+PY
+}
