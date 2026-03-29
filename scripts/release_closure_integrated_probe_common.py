@@ -20,6 +20,9 @@ from release_closure_projection_companion_marker_bundle_common import (
     RELEASE_CLOSURE_SUMMARY_PROJECTION_COMPANION_MARKER_BUNDLE_SPECS,
     RELEASE_CLOSURE_SUMMARY_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_MARKERS,
 )
+from release_closure_control_surface_probe_common import (
+    RELEASE_CLOSURE_TERMINAL_TRUTH_BRIDGE_SURFACE_ADDITIVE_POLLUTION_MARKER,
+)
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION_MARKER,
     RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_NEGATIVE_FEEDBACK_VETO_STATUS_FIELD,
@@ -236,7 +239,9 @@ RELEASE_CLOSURE_SUMMARY_MAIN_PROBE_MUTATION_SPECS: tuple[LiteralMutationSpec, ..
     ),
     LiteralMutationSpec(
         RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER,
-        "terminal_truth_bridge_surface=one_look.identity_terminal_truth_cleanliness_status",
+        RELEASE_CLOSURE_TERMINAL_TRUTH_BRIDGE_SURFACE_ADDITIVE_POLLUTION_MARKER,
+        mode="first",
+        require_absent_after=False,
     ),
     *RELEASE_CLOSURE_TERMINAL_TRUTH_BRIDGE_CASE_DRIFT_MUTATION_SPECS,
     LiteralMutationSpec(
@@ -286,7 +291,9 @@ RELEASE_CLOSURE_BOUNDARY_MAIN_PROBE_MUTATION_SPECS: tuple[LiteralMutationSpec, .
     ),
     LiteralMutationSpec(
         RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER,
-        "terminal_truth_bridge_surface=one_look.identity_terminal_truth_cleanliness_status",
+        RELEASE_CLOSURE_TERMINAL_TRUTH_BRIDGE_SURFACE_ADDITIVE_POLLUTION_MARKER,
+        mode="first",
+        require_absent_after=False,
     ),
     *RELEASE_CLOSURE_TERMINAL_TRUTH_BRIDGE_CASE_DRIFT_MUTATION_SPECS,
     LiteralMutationSpec(
@@ -552,8 +559,7 @@ def _assert_release_closure_summary_probe_results(
     )
     _require_reason(
         reasons,
-        "summary_doc_missing_release_readiness_terminal_truth_bridge_marker:"
-        f"{RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER}",
+        "summary_doc_terminal_truth_bridge_surface_line_not_canonical",
         "negative release-closure summary must detect terminal-truth bridge surface drift",
     )
     for reason in release_closure_terminal_truth_bridge_case_missing_reasons(
@@ -712,8 +718,7 @@ def _assert_release_closure_boundary_probe_results(
     )
     _require_reason(
         reasons,
-        "governance_doc_missing_terminal_truth_bridge_marker:"
-        f"{RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER}",
+        "governance_doc_terminal_truth_bridge_surface_line_not_canonical",
         "negative release-closure boundary must detect terminal-truth bridge surface drift",
     )
     for reason in release_closure_terminal_truth_bridge_case_missing_reasons(

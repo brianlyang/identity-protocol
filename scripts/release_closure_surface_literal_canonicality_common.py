@@ -12,6 +12,24 @@ class ReleaseClosureSurfaceLiteralCanonicalitySpec:
     stale_reason_suffix: str
 
 
+def _collect_literal_fragments(
+    text: str,
+    *,
+    literal_key: str,
+) -> list[str]:
+    quoted_pattern = re.compile(
+        rf"`({re.escape(literal_key)}=[^`\n]+)`"
+    )
+    quoted_fragments = [match.group(1).strip() for match in quoted_pattern.finditer(text)]
+    if quoted_fragments:
+        return quoted_fragments
+
+    bare_pattern = re.compile(
+        rf"({re.escape(literal_key)}=[^\s`,;]+)"
+    )
+    return [match.group(1).strip() for match in bare_pattern.finditer(text)]
+
+
 def collect_release_closure_surface_literal_stale_reasons(
     text: str,
     *,
@@ -20,15 +38,11 @@ def collect_release_closure_surface_literal_stale_reasons(
     canonical_marker: str,
     stale_reason_suffix: str,
 ) -> list[str]:
-    literal_pattern = re.compile(
-        rf"(^|[^A-Za-z0-9_]){re.escape(literal_key)}="
+    literal_fragments = _collect_literal_fragments(
+        text,
+        literal_key=literal_key,
     )
-    literal_lines = [
-        line.strip()
-        for line in text.splitlines()
-        if literal_pattern.search(line)
-    ]
-    if any(canonical_marker not in line for line in literal_lines):
+    if any(fragment != canonical_marker for fragment in literal_fragments):
         return [f"{label}_{stale_reason_suffix}"]
     return []
 
