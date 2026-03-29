@@ -23,7 +23,9 @@ from root_contract_row_validation_common import validate_contract_row_batches
 from root_agent_handoff_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
+    agent_handoff_completeness_rows_from_doc,
     anchor_rows_from_doc,
+    readme_agent_handoff_completeness_surface,
     collapse_rows_from_doc,
     handoff_limit_rows_from_doc,
     handoff_proof_rows_from_doc,
@@ -163,6 +165,28 @@ EXPECTED_COLLAPSE_ROWS = {
         "contract_phrase": "sample or self-test validation is treated as if it proved present-turn production handoff legality.",
     },
 }
+EXPECTED_AGENT_HANDOFF_COMPLETENESS_ROWS = {
+    "explicit_agent_handoff_row_families": {
+        "order": 1,
+        "contract_phrase": "required role, payload, anchor, handoff-proof, handoff-limit, and collapse rows must remain explicit as separate machine-readable families;",
+    },
+    "congruent_agent_handoff_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_agent_handoff_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_agent_handoff_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only internally;",
+    },
+    "fail_close_preserves_agent_handoff_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected role, payload, anchor, proof, limit, and collapse row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_REGISTRY_MARKERS = (
     "This file remains the authoritative root-domain contract for governed agent-handoff law.",
     "## Governed handoff law",
@@ -181,22 +205,26 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "### Agent-handoff row-family completeness must stay explicit",
         "Required role, payload, anchor, handoff-proof, handoff-limit, and collapse families must remain explicit as separate machine-readable row families.",
+        "README root agent-handoff completeness discipline must therefore stay congruent with admitted agent-handoff-completeness rows rather than becoming a freehand completeness summary.",
         "The machine world must not finalize handoff legality while required role, payload, anchor, proof, limit, or collapse identity drift remains known only internally.",
     ),
     "identity/protocol/README.md": (
         "## Root agent-handoff completeness discipline",
         "`AGENT_HANDOFF_CONTRACT.md` freezes governed handoff law as root-domain contract law rather than informal collaboration guidance.",
+        "These agent-handoff-completeness rules must remain bound to canonical agent-handoff-completeness rows rather than drifting into soft summary prose.",
         "1. required role, payload, anchor, handoff-proof, handoff-limit, and collapse rows must remain explicit as separate machine-readable families;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root agent-handoff completeness boundary",
         "1. Agent-handoff law must remain machine-readable as separate role, payload, anchor, handoff-proof, handoff-limit, and collapse row families.",
         "4. Protocol legality must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only inside validator logic.",
+        "6. README root agent-handoff completeness discipline rendered at protocol root must remain congruent with admitted agent-handoff-completeness rows rather than silently authoring an alternate completeness summary.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime agent-handoff consumption boundary",
         "1. Runtime consumes agent-handoff law as separate role, payload, anchor, handoff-proof, handoff-limit, and collapse row families rather than as undifferentiated collaboration prose.",
         "4. Runtime must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only inside validator machinery.",
+        "6. Runtime consumes README root agent-handoff completeness discipline as a governed completeness projection bound to admitted agent-handoff-completeness rows rather than as a freehand completeness summary.",
     ),
 }
 
@@ -254,6 +282,10 @@ def main() -> int:
     handoff_proof_rows = handoff_proof_rows_from_doc(handoff_doc) if handoff_doc else ()
     handoff_limit_rows = handoff_limit_rows_from_doc(handoff_doc) if handoff_doc else ()
     collapse_rows = collapse_rows_from_doc(handoff_doc) if handoff_doc else ()
+    agent_handoff_completeness_rows = (
+        agent_handoff_completeness_rows_from_doc(handoff_doc) if handoff_doc else ()
+    )
+    agent_handoff_completeness_surface = readme_agent_handoff_completeness_surface(repo_root)
     root_doc_anchor_checks = root_doc_anchor_checks_from_doc(handoff_doc) if handoff_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -305,6 +337,26 @@ def main() -> int:
                 "expected_rows": EXPECTED_COLLAPSE_ROWS,
                 "id_attr": "row_id",
             },
+            {
+                "family_id": "agent_handoff_completeness_rows",
+                "member_id_key": "completeness_id",
+                "actual_rows": agent_handoff_completeness_rows,
+                "expected_rows": {
+                    completeness_id: {}
+                    for completeness_id in EXPECTED_AGENT_HANDOFF_COMPLETENESS_ROWS
+                },
+                "id_attr": "completeness_id",
+            },
+            {
+                "family_id": "agent_handoff_completeness_surface",
+                "member_id_key": "contract_phrase",
+                "actual_rows": agent_handoff_completeness_surface.rows,
+                "expected_rows": {
+                    row["contract_phrase"]: {}
+                    for row in EXPECTED_AGENT_HANDOFF_COMPLETENESS_ROWS.values()
+                },
+                "id_attr": "contract_phrase",
+            },
         ),
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
@@ -342,6 +394,9 @@ def main() -> int:
             if not rows:
                 stale_reasons.append(f"root_agent_handoff_{field}_missing")
                 error_code = ERR_REGISTRY
+        if not agent_handoff_completeness_rows:
+            stale_reasons.append("root_agent_handoff_completeness_rows_missing")
+            error_code = ERR_REGISTRY
         if not handoff_doc.get("contract_required_markers"):
             stale_reasons.append("root_agent_handoff_contract_required_markers_missing")
             error_code = ERR_REGISTRY
@@ -362,6 +417,13 @@ def main() -> int:
                 error_code = ERR_REGISTRY
 
     if not stale_reasons:
+        for reason in agent_handoff_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "agent_handoff_completeness_surface",
+                    "reason": f"agent_handoff_completeness_surface_{reason}",
+                }
+            )
         validate_contract_row_batches(
             batches=(
                 {
@@ -405,6 +467,34 @@ def main() -> int:
                     "field_name": "required_collapse_rows",
                     "id_attr": "row_id",
                     "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": agent_handoff_completeness_rows,
+                    "expected_rows": EXPECTED_AGENT_HANDOFF_COMPLETENESS_ROWS,
+                    "field_name": "agent_handoff_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                },
+                {
+                    "actual_rows": agent_handoff_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_AGENT_HANDOFF_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "agent_handoff_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_agent_handoff_completeness_surface_phrase",
+                    "non_contiguous_reason": "agent_handoff_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_agent_handoff_completeness_surface_rows",
+                    "extra_reason": "extra_agent_handoff_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "agent_handoff_completeness_surface_order_mismatch",
                 },
             ),
             structure_violations=structure_violations,
@@ -506,6 +596,7 @@ def main() -> int:
         "handoff_proof_count": len(handoff_proof_rows),
         "handoff_limit_count": len(handoff_limit_rows),
         "collapse_count": len(collapse_rows),
+        "agent_handoff_completeness_row_count": len(agent_handoff_completeness_rows),
         **project_root_contract_support_projection(
             prefix="agent_handoff",
             row_family_projection_rows=row_family_projection_rows,
@@ -540,6 +631,26 @@ def main() -> int:
         "collapse_row_identity_projection_status": row_family_projection_by_id["collapse_rows"][
             "identity_projection_status"
         ],
+        "agent_handoff_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted(agent_handoff_completeness_rows, key=lambda item: item.order)
+        ],
+        "agent_handoff_completeness_surface": {
+            "rel_path": agent_handoff_completeness_surface.rel_path,
+            "entry_count": len(agent_handoff_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in agent_handoff_completeness_surface.rows
+            ],
+            "extraction_violations": list(agent_handoff_completeness_surface.extraction_violations),
+        },
         "handoff_proof_ids": [row.proof_id for row in sorted(handoff_proof_rows, key=lambda item: item.order)],
         "handoff_limit_ids": [row.row_id for row in sorted(handoff_limit_rows, key=lambda item: item.order)],
         "row_family_projection_rows": row_family_projection_rows,

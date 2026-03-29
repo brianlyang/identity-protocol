@@ -318,6 +318,7 @@ implicit.
 3. Expected row identity set and emitted row identity set for each agent-handoff family must also remain explicit; role, payload, anchor, proof, limit, or collapse drift may not be collapsed into summary-only counts.
 4. Protocol legality must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only inside validator logic.
 5. Fail-close agent-handoff output must preserve missing/unexpected role, payload, anchor, proof, limit, and collapse row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+6. README root agent-handoff completeness discipline rendered at protocol root must remain congruent with admitted agent-handoff-completeness rows rather than silently authoring an alternate completeness summary.
 
 ## Root error-terminality completeness boundary
 

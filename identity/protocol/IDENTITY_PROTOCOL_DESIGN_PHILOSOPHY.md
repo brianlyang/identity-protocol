@@ -1523,6 +1523,8 @@ Agent-handoff law is not a soft prose summary that may hide its machine rows beh
 
 Required role, payload, anchor, handoff-proof, handoff-limit, and collapse families must remain explicit as separate machine-readable row families.
 
+README root agent-handoff completeness discipline must therefore stay congruent with admitted agent-handoff-completeness rows rather than becoming a freehand completeness summary.
+
 Expected row-family total and emitted row-family total must therefore stay congruent under machine-readable coverage completeness rather than being left implicit.
 
 Expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts or generic structure failure.

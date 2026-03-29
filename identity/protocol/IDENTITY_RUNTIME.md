@@ -268,6 +268,7 @@ implicit.
 3. Runtime must also keep expected row identity set and emitted row identity set for each agent-handoff family explicit rather than collapsing role, payload, anchor, proof, limit, or collapse drift into summary-only counts.
 4. Runtime must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected role, payload, anchor, proof, limit, and collapse row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+6. Runtime consumes README root agent-handoff completeness discipline as a governed completeness projection bound to admitted agent-handoff-completeness rows rather than as a freehand completeness summary.
 
 ## Runtime error-terminality consumption boundary
 
