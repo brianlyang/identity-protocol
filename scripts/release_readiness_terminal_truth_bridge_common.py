@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -10,6 +11,12 @@ STATUS_UNKNOWN = "UNKNOWN"
 
 ADMISSION_BLOCKED_BY_TERMINAL_TRUTH = "BLOCKED_BY_TERMINAL_TRUTH"
 ADMISSION_NOT_BLOCKED_BY_TERMINAL_TRUTH = "NOT_BLOCKED_BY_TERMINAL_TRUTH"
+
+
+@dataclass(frozen=True)
+class ReleaseReadinessTerminalTruthBridgeCaseSpec:
+    case_id: str
+    marker: str
 
 RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_BOUNDARY_FIELDS: tuple[str, ...] = (
     "one_look.terminal_truth_boundary_projection_status",
@@ -45,15 +52,36 @@ RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER = (
         )
     )
 )
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CLEAN_CASE_SPEC = (
+    ReleaseReadinessTerminalTruthBridgeCaseSpec(
+        case_id="clean_terminal_truth",
+        marker="terminal_truth_bridge_case=clean_terminal_truth",
+    )
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_SPEC = (
+    ReleaseReadinessTerminalTruthBridgeCaseSpec(
+        case_id="review_required_execution_closure",
+        marker="terminal_truth_bridge_case=review_required_execution_closure",
+    )
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_SPECS: tuple[
+    ReleaseReadinessTerminalTruthBridgeCaseSpec,
+    ...,
+] = (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CLEAN_CASE_SPEC,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_SPEC,
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_ORDER: tuple[str, ...] = tuple(
+    spec.case_id for spec in RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_SPECS
+)
 RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CLEAN_CASE_MARKER = (
-    "terminal_truth_bridge_case=clean_terminal_truth"
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CLEAN_CASE_SPEC.marker
 )
 RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_MARKER = (
-    "terminal_truth_bridge_case=review_required_execution_closure"
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_SPEC.marker
 )
-RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_MARKERS: tuple[str, ...] = (
-    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CLEAN_CASE_MARKER,
-    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_MARKER,
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_MARKERS: tuple[str, ...] = tuple(
+    spec.marker for spec in RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_SPECS
 )
 RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR = (
     "scripts/validate_release_readiness_terminal_truth_bridge.py"
@@ -61,12 +89,33 @@ RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR = (
 RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE = (
     "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh"
 )
-RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS: tuple[str, ...] = (
-    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER,
-    *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_MARKERS,
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR_COMMAND: tuple[str, ...] = (
+    "python3",
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR,
+    "--json-only",
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_COMMAND: tuple[str, ...] = (
+    "bash",
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE,
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROOF_LANES: tuple[str, ...] = (
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE,
 )
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS: tuple[str, ...] = (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER,
+    *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_MARKERS,
+    *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROOF_LANES,
+)
+
+
+def find_release_readiness_terminal_truth_bridge_case_spec(
+    case_id: str,
+) -> ReleaseReadinessTerminalTruthBridgeCaseSpec | None:
+    for spec in RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_SPECS:
+        if spec.case_id == case_id:
+            return spec
+    return None
 
 
 def _clean_status(value: Any) -> str:

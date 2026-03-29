@@ -22,12 +22,17 @@ from release_readiness_governance_probe_projection_common import (
 from release_readiness_terminal_truth_bridge_common import (
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ACTIVE_RUNTIME_FIELDS,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_BOUNDARY_FIELDS,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_ORDER,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_SPECS,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_MARKERS,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_MARKER,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_COMMAND,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROOF_LANES,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR_COMMAND,
     STATUS_UNKNOWN,
 )
 from terminal_truth_boundary_projection_common import (
@@ -68,6 +73,13 @@ EXPECTED_CASE_MARKERS: tuple[str, ...] = (
     "terminal_truth_bridge_case=clean_terminal_truth",
     "terminal_truth_bridge_case=review_required_execution_closure",
 )
+EXPECTED_CASE_ORDER: tuple[str, ...] = (
+    "clean_terminal_truth",
+    "review_required_execution_closure",
+)
+EXPECTED_REVIEW_REQUIRED_CASE_MARKER = (
+    "terminal_truth_bridge_case=review_required_execution_closure"
+)
 EXPECTED_SURFACE_MARKER = (
     "terminal_truth_bridge_surface="
     + "|".join((*EXPECTED_BOUNDARY_FIELDS, *EXPECTED_ACTIVE_RUNTIME_FIELDS))
@@ -89,15 +101,8 @@ EXPECTED_PROBE_KEEP_FIELDS: tuple[str, ...] = (
     "bridge_cases",
     "seeded_identity_ids",
 )
-EXPECTED_VALIDATOR_COMMAND = (
-    "python3",
-    "scripts/validate_release_readiness_terminal_truth_bridge.py",
-    "--json-only",
-)
-EXPECTED_PROBE_COMMAND = (
-    "bash",
-    "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh",
-)
+EXPECTED_VALIDATOR_COMMAND = RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR_COMMAND
+EXPECTED_PROBE_COMMAND = RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_COMMAND
 SUMMARY_VALIDATOR_REL = "scripts/validate_v16x_release_closure_summary.py"
 BOUNDARY_VALIDATOR_REL = "scripts/validate_v16x_release_closure_boundary.py"
 SUMMARY_BINDING_PROBE_REL = "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh"
@@ -160,6 +165,7 @@ def main() -> int:
         "boundary_fields": list(RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_BOUNDARY_FIELDS),
         "active_runtime_fields": list(RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ACTIVE_RUNTIME_FIELDS),
         "surface_constraints": list(RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS),
+        "bridge_case_order": list(RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_ORDER),
         "stale_reasons": [],
     }
 
@@ -169,18 +175,24 @@ def main() -> int:
         stale_reasons.append("terminal_truth_bridge_boundary_fields_drift")
     if RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ACTIVE_RUNTIME_FIELDS != EXPECTED_ACTIVE_RUNTIME_FIELDS:
         stale_reasons.append("terminal_truth_bridge_active_runtime_fields_drift")
+    if RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_ORDER != EXPECTED_CASE_ORDER:
+        stale_reasons.append("terminal_truth_bridge_case_order_drift")
+    if len(RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_SPECS) != len(EXPECTED_CASE_ORDER):
+        stale_reasons.append("terminal_truth_bridge_case_count_drift")
     if RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_MARKERS != EXPECTED_CASE_MARKERS:
         stale_reasons.append("terminal_truth_bridge_case_markers_drift")
     if RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER != EXPECTED_SURFACE_MARKER:
         stale_reasons.append("terminal_truth_bridge_surface_marker_drift")
     if RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS != EXPECTED_SURFACE_CONSTRAINTS:
         stale_reasons.append("terminal_truth_bridge_surface_constraints_drift")
+    if RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROOF_LANES != EXPECTED_SURFACE_CONSTRAINTS[-2:]:
+        stale_reasons.append("terminal_truth_bridge_proof_lanes_drift")
     if RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR != EXPECTED_VALIDATOR_COMMAND[1]:
         stale_reasons.append("terminal_truth_bridge_validator_path_drift")
     if RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE != EXPECTED_PROBE_COMMAND[1]:
         stale_reasons.append("terminal_truth_bridge_probe_path_drift")
     if (
-        EXPECTED_CASE_MARKERS[1]
+        EXPECTED_REVIEW_REQUIRED_CASE_MARKER
         != RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_MARKER
     ):
         stale_reasons.append("terminal_truth_bridge_review_required_case_marker_drift")
