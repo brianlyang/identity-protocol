@@ -8,11 +8,38 @@ cd "${ROOT}"
 source "${ROOT}/scripts/probe_fixture_shell_common.sh"
 source "${ROOT}/scripts/ci/probe_repo_mirror_common.sh"
 
+terminal_truth_bridge_validator="$(
+  resolve_python_module_expression \
+    "release_readiness_terminal_truth_bridge_common" \
+    "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR"
+)"
+terminal_truth_bridge_probe="$(
+  resolve_python_module_expression \
+    "release_readiness_terminal_truth_bridge_common" \
+    "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE"
+)"
+terminal_truth_bridge_review_required_case_marker="$(
+  resolve_python_module_expression \
+    "release_readiness_terminal_truth_bridge_common" \
+    "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_MARKER"
+)"
+terminal_truth_bridge_probe_command_literal="[\"bash\", \"${terminal_truth_bridge_probe}\"],"
+terminal_truth_bridge_probe_summary_key="$(
+  resolve_python_module_expression \
+    "release_readiness_governance_probe_projection_common" \
+    "next(spec.summary_key for spec in RELEASE_READINESS_GOVERNANCE_PROBE_SPECS if spec.one_look_field == RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_ONE_LOOK_FIELD)"
+)"
+terminal_truth_bridge_probe_one_look_field="$(
+  resolve_python_module_expression \
+    "release_readiness_governance_probe_projection_common" \
+    "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_ONE_LOOK_FIELD"
+)"
+
 run_shadow_validator() {
   local shadow_root="$1"
   local output_path="$2"
   PYTHONPATH="${shadow_root}/scripts${PYTHONPATH:+:${PYTHONPATH}}" \
-    python3 "${shadow_root}/scripts/validate_release_readiness_terminal_truth_bridge.py" \
+    python3 "${shadow_root}/${terminal_truth_bridge_validator}" \
       --repo-root "${shadow_root}" \
       --json-only >"${output_path}"
 }
@@ -26,7 +53,7 @@ restore_shadow_file() {
 
 POSITIVE_JSON="/tmp/release-readiness-terminal-truth-bridge-positive.json"
 echo "[INFO] positive: release-readiness terminal-truth bridge validator"
-python3 scripts/validate_release_readiness_terminal_truth_bridge.py --json-only >"${POSITIVE_JSON}"
+python3 "${terminal_truth_bridge_validator}" --json-only >"${POSITIVE_JSON}"
 
 python3 - <<'PY' "${POSITIVE_JSON}"
 from __future__ import annotations
@@ -48,7 +75,7 @@ restore_shadow_file "${TMP_ROOT}" "scripts/release_readiness_terminal_truth_brid
 # expected fail-close: terminal_truth_bridge_case_markers_drift
 mutate_probe_literal \
   "${TMP_ROOT}/scripts/release_readiness_terminal_truth_bridge_common.py" \
-  'terminal_truth_bridge_case=review_required_execution_closure' \
+  "${terminal_truth_bridge_review_required_case_marker}" \
   'terminal_truth_bridge_case=review_required_execution'
 if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-terminal-truth-bridge-negative-common.json; then
   echo "[FAIL] terminal-truth bridge common drift unexpectedly passed"
@@ -57,10 +84,10 @@ fi
 echo "[PASS] terminal-truth bridge common drift fail-closed as expected"
 
 restore_shadow_file "${TMP_ROOT}" "scripts/release_readiness_check.py"
-# expected fail-close: post_closure_bundle_missing_probe:scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh
+# expected fail-close: post_closure_bundle_missing_probe:${terminal_truth_bridge_probe}
 mutate_probe_literal \
   "${TMP_ROOT}/scripts/release_readiness_check.py" \
-  '["bash", "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh"],' \
+  "${terminal_truth_bridge_probe_command_literal}" \
   ''
 if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-terminal-truth-bridge-negative-post-closure.json; then
   echo "[FAIL] missing terminal-truth bridge probe command unexpectedly passed"
@@ -69,10 +96,10 @@ fi
 echo "[PASS] missing terminal-truth bridge probe command fail-closed as expected"
 
 restore_shadow_file "${TMP_ROOT}" "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh"
-# expected fail-close: summary_binding_probe_missing_token:release_readiness_terminal_truth_bridge_probe
+# expected fail-close: summary_binding_probe_missing_token:${terminal_truth_bridge_probe_summary_key}
 mutate_probe_literal \
   "${TMP_ROOT}/scripts/ci/run_release_readiness_summary_binding_probes_ci.sh" \
-  'release_readiness_terminal_truth_bridge_probe' \
+  "${terminal_truth_bridge_probe_summary_key}" \
   'release_readiness_terminal_truth_bridge'
 if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-terminal-truth-bridge-negative-summary-binding.json; then
   echo "[FAIL] summary binding terminal-truth bridge absorption drift unexpectedly passed"
@@ -99,7 +126,7 @@ E2E_ROOT="$(mktemp -d "${PROBE_ROOT_BASE}/release-readiness-terminal-truth-bridg
 trap 'rm -rf "${TMP_ROOT}" "${E2E_ROOT}"' EXIT
 
 PYTHONPATH="${ROOT}/scripts${PYTHONPATH:+:${PYTHONPATH}}" \
-python3 - "${ROOT}" "${E2E_ROOT}" "${POSITIVE_JSON}" <<'PY'
+python3 - "${ROOT}" "${E2E_ROOT}" "${POSITIVE_JSON}" "${terminal_truth_bridge_probe_one_look_field}" <<'PY'
 from __future__ import annotations
 
 import hashlib
@@ -114,6 +141,7 @@ from pathlib import Path
 repo_root = Path(sys.argv[1]).resolve()
 e2e_root = Path(sys.argv[2]).resolve()
 positive_validator_output = str(Path(sys.argv[3]).resolve())
+probe_one_look_field = sys.argv[4]
 sys.path.insert(0, str((repo_root / "scripts").resolve()))
 
 from blocker_taxonomy_common import BLOCKER_ALIAS_MAP_VERSION, CANONICAL_BLOCKER_TYPES
@@ -540,7 +568,7 @@ for row in seeded:
 print(
     json.dumps(
         {
-            "release_readiness_terminal_truth_bridge_probe_status": STATUS_PASS_REQUIRED,
+            probe_one_look_field: STATUS_PASS_REQUIRED,
             "positive_validator_output": positive_validator_output,
             "bridge_case_count": len(results),
             "bridge_cases": [row["case_name"] for row in results],
