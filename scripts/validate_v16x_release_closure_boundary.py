@@ -17,9 +17,8 @@ from release_closure_continuation_marker_common import (
     RELEASE_CLOSURE_BOUNDARY_CONTINUATION_MARKERS,
 )
 from release_closure_foundational_marker_common import (
-    collect_release_closure_closure_class_stale_reasons,
-    collect_release_closure_philosophy_order_stale_reasons,
-    collect_release_closure_terminal_truth_split_stale_reasons,
+    collect_release_closure_boundary_foundational_bundle_stale_reasons,
+    collect_release_closure_foundational_philosophy_bundle_stale_reasons,
 )
 from release_closure_active_runtime_projection_common import (
     collect_release_closure_active_runtime_projection_stale_reasons,
@@ -137,7 +136,11 @@ def main() -> int:
 
     stale_reasons: list[str] = []
 
-    stale_reasons.extend(collect_release_closure_philosophy_order_stale_reasons(philosophy_text))
+    stale_reasons.extend(
+        collect_release_closure_foundational_philosophy_bundle_stale_reasons(
+            philosophy_text
+        )
+    )
 
     for label, text in (
         ("governance_doc", governance_text),
@@ -149,9 +152,11 @@ def main() -> int:
             stale_reasons.append(f"{label}_missing_protocol_anchor")
         if RELEASE_CLOSURE_DOC_REL_PATHS.runtime_doc not in text:
             stale_reasons.append(f"{label}_missing_runtime_anchor")
-        stale_reasons.extend(collect_release_closure_closure_class_stale_reasons(text, label=label))
         stale_reasons.extend(
-            collect_release_closure_terminal_truth_split_stale_reasons(text, label=label)
+            collect_release_closure_boundary_foundational_bundle_stale_reasons(
+                text,
+                label=label,
+            )
         )
         for marker in REQUIRED_OUTER_SURFACE_E2E_BOUNDARY_MARKERS:
             if marker not in text:

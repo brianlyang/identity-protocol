@@ -27,9 +27,8 @@ from release_closure_doc_common import (
     resolve_release_closure_doc_paths,
 )
 from release_closure_foundational_marker_common import (
-    collect_release_closure_closure_class_stale_reasons,
-    collect_release_closure_philosophy_order_stale_reasons,
-    collect_release_closure_terminal_truth_split_stale_reasons,
+    collect_release_closure_foundational_philosophy_bundle_stale_reasons,
+    collect_release_closure_summary_foundational_bundle_stale_reasons,
 )
 from release_closure_active_runtime_projection_common import (
     collect_release_closure_active_runtime_projection_stale_reasons,
@@ -199,7 +198,11 @@ def main() -> int:
 
     stale_reasons: list[str] = []
 
-    stale_reasons.extend(collect_release_closure_philosophy_order_stale_reasons(philosophy_text))
+    stale_reasons.extend(
+        collect_release_closure_foundational_philosophy_bundle_stale_reasons(
+            philosophy_text
+        )
+    )
 
     for required_ref in (
         RELEASE_CLOSURE_DOC_REL_PATHS.philosophy_doc,
@@ -221,7 +224,10 @@ def main() -> int:
     if "Question class and authoritative answer surfaces" not in summary_text:
         stale_reasons.append("summary_doc_missing_question_class_section")
     stale_reasons.extend(
-        collect_release_closure_closure_class_stale_reasons(summary_text, label="summary_doc")
+        collect_release_closure_summary_foundational_bundle_stale_reasons(
+            summary_text,
+            label="summary_doc",
+        )
     )
     if not contains_release_closure_issue_horizon(summary_text, highest_issue):
         stale_reasons.append("summary_doc_issue_horizon_mismatch")
@@ -238,12 +244,6 @@ def main() -> int:
         stale_reasons.append("summary_doc_missing_scope_separation_markers")
     if "not declare a release tag" not in summary_text:
         stale_reasons.append("summary_doc_missing_release_tag_boundary")
-    stale_reasons.extend(
-        collect_release_closure_terminal_truth_split_stale_reasons(
-            summary_text,
-            label="summary_doc",
-        )
-    )
     stale_reasons.extend(
         collect_release_closure_governance_probe_projection_stale_reasons(
             summary_text,
