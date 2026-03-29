@@ -7,6 +7,61 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"
 protocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-artifact-family-admissibility-ci"
 protocol_root_probe_define_full_mirror
+export PROBE_FIXTURE_REPO_ROOT="${ROOT}"
+# shellcheck source=../probe_fixture_shell_common.sh
+source "${ROOT}/scripts/probe_fixture_shell_common.sh"
+
+ARTIFACT_COMPLETENESS_NONCONTIG_ID="$({
+  resolve_python_module_expression \
+    "validate_protocol_root_artifact_family_admissibility" \
+    "tuple(EXPECTED_ARTIFACT_FAMILY_ADMISSIBILITY_COMPLETENESS_ROWS.keys())[1]"
+})"
+ARTIFACT_COMPLETENESS_SURFACE_SECTION_MARKER="$({
+  resolve_python_module_expression \
+    "validate_protocol_root_artifact_family_admissibility" \
+    "EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'][0]"
+})"
+ARTIFACT_COMPLETENESS_SURFACE_NONCONTIG_ORDER="$({
+  resolve_python_module_expression \
+    "validate_protocol_root_artifact_family_admissibility" \
+    "list(EXPECTED_ARTIFACT_FAMILY_ADMISSIBILITY_COMPLETENESS_ROWS.values())[1]['order']"
+})"
+ARTIFACT_COMPLETENESS_SURFACE_NONCONTIG_PHRASE="$({
+  resolve_python_module_expression \
+    "validate_protocol_root_artifact_family_admissibility" \
+    "list(EXPECTED_ARTIFACT_FAMILY_ADMISSIBILITY_COMPLETENESS_ROWS.values())[1]['contract_phrase']"
+})"
+
+set_numbered_surface_row_order_in_section() {
+  local path="$1"
+  local section_marker="$2"
+  local order="$3"
+  local phrase="$4"
+  local new_order="$5"
+  python3 - "$path" "$section_marker" "$order" "$phrase" "$new_order" <<PY
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+section_marker = sys.argv[2]
+order = sys.argv[3]
+phrase = sys.argv[4]
+new_order = sys.argv[5]
+
+text = path.read_text(encoding="utf-8")
+assert section_marker in text, section_marker
+before, rest = text.split(section_marker, 1)
+section_body, next_heading_sep, after = rest.partition("\n## ")
+old = f"{order}. {phrase}"
+new = f"{new_order}. {phrase}"
+assert old in section_body, old
+section_body = section_body.replace(old, new, 1)
+rebuilt = before + section_marker + section_body
+if next_heading_sep:
+    rebuilt += next_heading_sep + after
+path.write_text(rebuilt, encoding="utf-8")
+PY
+}
 
 PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_artifact_family_admissibility.py" \
@@ -94,6 +149,64 @@ assert payload["artifact_family_admissibility_completeness_row_coverage_status"]
 assert payload["artifact_family_admissibility_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert payload["artifact_family_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["artifact_family_admissibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+COMPLETENESS_ROW_NONCONTIG_REPO="${TMP_ROOT}/completeness-row-non-contiguous-repo"
+mirror_repo "${COMPLETENESS_ROW_NONCONTIG_REPO}"
+python3 - <<PY "${COMPLETENESS_ROW_NONCONTIG_REPO}/identity/protocol/mappings/root-artifact-family-admissibility.v1.yaml" "${ARTIFACT_COMPLETENESS_NONCONTIG_ID}"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+target_id = sys.argv[2]
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["artifact_family_admissibility_completeness_rows"]:
+    if row.get("completeness_id") == target_id:
+        row["order"] = 1
+        break
+else:
+    raise SystemExit(f"{target_id} not found in artifact_family_admissibility_completeness_rows")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_NONCONTIG_JSON="${TMP_ROOT}/completeness-row-non-contiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_artifact_family_admissibility.py" \
+  --repo-root "${COMPLETENESS_ROW_NONCONTIG_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_NONCONTIG_JSON}"; then
+  echo "[FAIL] root artifact-family admissibility validator unexpectedly passed non-contiguous completeness row ordering"
+  exit 1
+fi
+
+python3 - <<PY "${COMPLETENESS_ROW_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_artifact_family_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-AFA-002", payload
+assert payload["artifact_family_admissibility_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "artifact_family_admissibility_completeness_rows"
+    and row["reason"] == "artifact_family_admissibility_completeness_row_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    reason == "structure_violation:artifact_family_admissibility_completeness_rows:artifact_family_admissibility_completeness_row_order_non_contiguous"
+    for reason in payload.get("stale_reasons", [])
+), payload
+row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "artifact_family_admissibility_completeness_rows"
+)
+assert row["expected_count"] == 5, payload
+assert row["actual_count"] == 5, payload
+assert row["missing_ids"] == [], payload
+assert row["unexpected_ids"] == [], payload
+assert row["coverage_status"] == "PASS_REQUIRED", payload
+assert row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/completeness-surface-drift-repo"
@@ -195,6 +308,54 @@ assert payload["artifact_family_admissibility_completeness_row_coverage_status"]
 assert payload["artifact_family_admissibility_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["artifact_family_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["artifact_family_admissibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_NONCONTIG_REPO="${TMP_ROOT}/completeness-surface-non-contiguous-repo"
+mirror_repo "${COMPLETENESS_SURFACE_NONCONTIG_REPO}"
+set_numbered_surface_row_order_in_section \
+  "${COMPLETENESS_SURFACE_NONCONTIG_REPO}/identity/protocol/README.md" \
+  "${ARTIFACT_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${ARTIFACT_COMPLETENESS_SURFACE_NONCONTIG_ORDER}" \
+  "${ARTIFACT_COMPLETENESS_SURFACE_NONCONTIG_PHRASE}" \
+  "1"
+
+COMPLETENESS_SURFACE_NONCONTIG_JSON="${TMP_ROOT}/completeness-surface-non-contiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_artifact_family_admissibility.py" \
+  --repo-root "${COMPLETENESS_SURFACE_NONCONTIG_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_NONCONTIG_JSON}"; then
+  echo "[FAIL] root artifact-family admissibility validator unexpectedly passed non-contiguous completeness surface ordering"
+  exit 1
+fi
+
+python3 - <<PY "${COMPLETENESS_SURFACE_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_artifact_family_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-AFA-002", payload
+assert payload["artifact_family_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "artifact_family_admissibility_completeness_surface"
+    and row["reason"] == "artifact_family_admissibility_completeness_surface_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    reason == "structure_violation:artifact_family_admissibility_completeness_surface:artifact_family_admissibility_completeness_surface_order_non_contiguous"
+    for reason in payload.get("stale_reasons", [])
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "artifact_family_admissibility_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"

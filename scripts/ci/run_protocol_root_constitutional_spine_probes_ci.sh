@@ -8,6 +8,12 @@ source "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"
 protocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-constitutional-spine-ci"
 protocol_root_probe_define_full_mirror
 
+CONSTITUTIONAL_COMPLETENESS_SURFACE_SECTION_MARKER="## Root constitutional-spine completeness discipline"
+CONSTITUTIONAL_COMPLETENESS_SURFACE_FIRST_ORDER="1"
+CONSTITUTIONAL_COMPLETENESS_SURFACE_FIRST_PHRASE="required constitutional-entry, spine-bridge, philosophy-primacy, and philosophy-primacy-surface rows must remain explicit as separate machine-readable families;"
+CONSTITUTIONAL_COMPLETENESS_SURFACE_SECOND_ORDER="2"
+CONSTITUTIONAL_COMPLETENESS_SURFACE_SECOND_PHRASE="expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+
 PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_constitutional_spine.py" \
   --repo-root "${ROOT}" \
@@ -686,6 +692,55 @@ assert any(
     and row["marker"] == "## Root constitutional-spine discipline"
     for row in payload["root_doc_anchor_violations"]
 ), payload
+PY
+
+COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO="${TMP_ROOT}/constitutional-spine-completeness-surface-order-noncontiguous-repo"
+mirror_repo "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}"
+protocol_root_probe_set_numbered_surface_row_order_in_section \
+  "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}/identity/protocol/README.md" \
+  "${CONSTITUTIONAL_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${CONSTITUTIONAL_COMPLETENESS_SURFACE_SECOND_ORDER}" \
+  "${CONSTITUTIONAL_COMPLETENESS_SURFACE_SECOND_PHRASE}" \
+  "${CONSTITUTIONAL_COMPLETENESS_SURFACE_FIRST_ORDER}"
+
+COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON="${TMP_ROOT}/constitutional-spine-completeness-surface-order-noncontiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_constitutional_spine.py" \
+  --repo-root "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"; then
+  echo "[FAIL] root constitutional spine validator unexpectedly passed completeness surface order non-contiguous"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_constitutional_spine_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCS-002", payload
+assert payload["constitutional_spine_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "constitutional_spine_completeness_surface"
+    and row["reason"] == "constitutional_spine_completeness_surface_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "constitutional_spine_completeness_surface"
+    and row["reason"] == "constitutional_spine_completeness_surface_order_mismatch"
+    for row in payload["projection_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "constitutional_spine_completeness_surface"
+)
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 PHILOSOPHY_ROW_REPO="${TMP_ROOT}/philosophy-row-drift-repo"

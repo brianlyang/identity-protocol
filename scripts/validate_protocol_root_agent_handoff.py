@@ -483,9 +483,11 @@ def main() -> int:
                     "field_name": "agent_handoff_completeness_rows",
                     "id_attr": "completeness_id",
                     "compare_fields": ("contract_phrase",),
+                    "non_contiguous_reason": "agent_handoff_completeness_row_order_non_contiguous",
                     "missing_ids_key": "completeness_ids",
                     "extra_ids_key": "completeness_ids",
                     "violation_id_key": "completeness_id",
+                    "order_reason": "agent_handoff_completeness_row_order_mismatch",
                 },
                 {
                     "actual_rows": agent_handoff_completeness_surface.rows,
