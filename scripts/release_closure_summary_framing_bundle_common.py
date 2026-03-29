@@ -18,22 +18,36 @@ class ReleaseClosureSummaryFramingBundleSpec:
     framing_specs: tuple[ReleaseClosureSummaryFramingSpec, ...]
 
 
+RELEASE_CLOSURE_SUMMARY_QUESTION_CLASS_MARKER = (
+    "Question class and authoritative answer surfaces"
+)
 RELEASE_CLOSURE_SUMMARY_QUESTION_CLASS_MARKERS: tuple[str, ...] = (
-    "Question class and authoritative answer surfaces",
+    RELEASE_CLOSURE_SUMMARY_QUESTION_CLASS_MARKER,
 )
 
+RELEASE_CLOSURE_SUMMARY_RUNTIME_VERDICT_SCOPE_MARKER = "runtime verdict surface"
+RELEASE_CLOSURE_SUMMARY_FLEET_SCOPE_CLOSURE_MATRIX_MARKER = (
+    "fleet-scope closure matrix"
+)
 RELEASE_CLOSURE_SUMMARY_SCOPE_SEPARATION_MARKERS: tuple[str, ...] = (
-    "runtime verdict surface",
-    "fleet-scope closure matrix",
+    RELEASE_CLOSURE_SUMMARY_RUNTIME_VERDICT_SCOPE_MARKER,
+    RELEASE_CLOSURE_SUMMARY_FLEET_SCOPE_CLOSURE_MATRIX_MARKER,
 )
 
+RELEASE_CLOSURE_SUMMARY_RELEASE_TAG_BOUNDARY_MARKER = "not declare a release tag"
 RELEASE_CLOSURE_SUMMARY_RELEASE_TAG_BOUNDARY_MARKERS: tuple[str, ...] = (
-    "not declare a release tag",
+    RELEASE_CLOSURE_SUMMARY_RELEASE_TAG_BOUNDARY_MARKER,
 )
 
+RELEASE_CLOSURE_SUMMARY_FORBIDDEN_STALE_GO_MARKER = (
+    "Workspace-local core-role required closure: **Go**"
+)
+RELEASE_CLOSURE_SUMMARY_FORBIDDEN_STALE_GREEN_SCOPE_MARKER = (
+    "workspace-local core release scope is now green on required closure"
+)
 RELEASE_CLOSURE_SUMMARY_FORBIDDEN_STALE_MARKERS: tuple[str, ...] = (
-    "Workspace-local core-role required closure: **Go**",
-    "workspace-local core release scope is now green on required closure",
+    RELEASE_CLOSURE_SUMMARY_FORBIDDEN_STALE_GO_MARKER,
+    RELEASE_CLOSURE_SUMMARY_FORBIDDEN_STALE_GREEN_SCOPE_MARKER,
 )
 
 RELEASE_CLOSURE_SUMMARY_FRAMING_SPECS: tuple[ReleaseClosureSummaryFramingSpec, ...] = (

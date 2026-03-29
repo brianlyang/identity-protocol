@@ -16,32 +16,32 @@ SUMMARY_SHADOW_PATH="${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-
 question_class_marker="$(
   resolve_python_module_expression \
     "release_closure_summary_framing_bundle_common" \
-    "RELEASE_CLOSURE_SUMMARY_QUESTION_CLASS_MARKERS[0]"
+    "RELEASE_CLOSURE_SUMMARY_QUESTION_CLASS_MARKER"
 )"
 scope_marker_a="$(
   resolve_python_module_expression \
     "release_closure_summary_framing_bundle_common" \
-    "RELEASE_CLOSURE_SUMMARY_SCOPE_SEPARATION_MARKERS[0]"
+    "RELEASE_CLOSURE_SUMMARY_RUNTIME_VERDICT_SCOPE_MARKER"
 )"
 scope_marker_b="$(
   resolve_python_module_expression \
     "release_closure_summary_framing_bundle_common" \
-    "RELEASE_CLOSURE_SUMMARY_SCOPE_SEPARATION_MARKERS[1]"
+    "RELEASE_CLOSURE_SUMMARY_FLEET_SCOPE_CLOSURE_MATRIX_MARKER"
 )"
 release_tag_marker="$(
   resolve_python_module_expression \
     "release_closure_summary_framing_bundle_common" \
-    "RELEASE_CLOSURE_SUMMARY_RELEASE_TAG_BOUNDARY_MARKERS[0]"
+    "RELEASE_CLOSURE_SUMMARY_RELEASE_TAG_BOUNDARY_MARKER"
 )"
 forbidden_marker_a="$(
   resolve_python_module_expression \
     "release_closure_summary_framing_bundle_common" \
-    "RELEASE_CLOSURE_SUMMARY_FORBIDDEN_STALE_MARKERS[0]"
+    "RELEASE_CLOSURE_SUMMARY_FORBIDDEN_STALE_GO_MARKER"
 )"
 forbidden_marker_b="$(
   resolve_python_module_expression \
     "release_closure_summary_framing_bundle_common" \
-    "RELEASE_CLOSURE_SUMMARY_FORBIDDEN_STALE_MARKERS[1]"
+    "RELEASE_CLOSURE_SUMMARY_FORBIDDEN_STALE_GREEN_SCOPE_MARKER"
 )"
 
 printf '[RUN] positive release-closure summary framing bundle validation\n'
