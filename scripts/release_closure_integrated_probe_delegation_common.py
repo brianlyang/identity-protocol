@@ -12,6 +12,9 @@ from release_readiness_repo_global_closure_projection_common import (
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT,
     RELEASE_READINESS_REPO_GLOBAL_CODEX_LAUNCHER_CHECKED_IDENTITY_COUNT_FIELD,
 )
+from release_closure_surface_registry_common import (
+    release_closure_surface_spec_by_bundle_surface_id,
+)
 
 
 RELEASE_CLOSURE_INTEGRATED_PROBE_COMMON_REL = (
@@ -19,12 +22,12 @@ RELEASE_CLOSURE_INTEGRATED_PROBE_COMMON_REL = (
 )
 RELEASE_CLOSURE_INTEGRATED_PROBE_SUMMARY_PROFILE_ID = "summary"
 RELEASE_CLOSURE_INTEGRATED_PROBE_BOUNDARY_PROFILE_ID = "boundary"
-RELEASE_CLOSURE_SUMMARY_PROBE_SCRIPT_REL = (
-    "scripts/ci/run_v16x_release_closure_summary_probes_ci.sh"
-)
-RELEASE_CLOSURE_BOUNDARY_PROBE_SCRIPT_REL = (
-    "scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh"
-)
+_SUMMARY_SURFACE_SPEC = release_closure_surface_spec_by_bundle_surface_id("summary")
+_BOUNDARY_SURFACE_SPEC = release_closure_surface_spec_by_bundle_surface_id("boundary")
+if _SUMMARY_SURFACE_SPEC is None or _BOUNDARY_SURFACE_SPEC is None:
+    raise RuntimeError("release_closure_integrated_probe_delegation_missing_surface_specs")
+RELEASE_CLOSURE_SUMMARY_PROBE_SCRIPT_REL = _SUMMARY_SURFACE_SPEC.probe_script_rel
+RELEASE_CLOSURE_BOUNDARY_PROBE_SCRIPT_REL = _BOUNDARY_SURFACE_SPEC.probe_script_rel
 
 
 @dataclass(frozen=True)

@@ -39,6 +39,7 @@ trap 'rm -rf "$tmpdir"' EXIT
 
 mkdir -p "$tmpdir/scripts" "$tmpdir/docs/governance" "$tmpdir/docs/review" "$tmpdir/docs/release"
 cp scripts/release_readiness_check.py "$tmpdir/scripts/"
+cp scripts/release_closure_surface_registry_common.py "$tmpdir/scripts/"
 cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
 cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
 cp scripts/report_three_plane_status.py "$tmpdir/scripts/"

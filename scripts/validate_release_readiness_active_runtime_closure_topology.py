@@ -45,6 +45,9 @@ from release_readiness_governance_probe_projection_common import (
 from release_readiness_one_look_topology_common import (
     RELEASE_READINESS_ONE_LOOK_FAMILY_SPECS,
 )
+from release_closure_surface_registry_common import (
+    release_closure_surface_spec_by_bundle_surface_id,
+)
 
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -148,8 +151,12 @@ PROJECTION_COMMON_REL = "scripts/release_readiness_active_runtime_closure_projec
 READINESS_CHECK_REL = "scripts/release_readiness_check.py"
 ONE_LOOK_TOPOLOGY_COMMON_REL = "scripts/release_readiness_one_look_topology_common.py"
 GOVERNANCE_PROJECTION_COMMON_REL = "scripts/release_readiness_governance_probe_projection_common.py"
-SUMMARY_VALIDATOR_REL = "scripts/validate_v16x_release_closure_summary.py"
-BOUNDARY_VALIDATOR_REL = "scripts/validate_v16x_release_closure_boundary.py"
+_SUMMARY_SURFACE_SPEC = release_closure_surface_spec_by_bundle_surface_id("summary")
+_BOUNDARY_SURFACE_SPEC = release_closure_surface_spec_by_bundle_surface_id("boundary")
+if _SUMMARY_SURFACE_SPEC is None or _BOUNDARY_SURFACE_SPEC is None:
+    raise RuntimeError("active_runtime_closure_topology_missing_release_closure_surface_specs")
+SUMMARY_VALIDATOR_REL = _SUMMARY_SURFACE_SPEC.validator_script_rel
+BOUNDARY_VALIDATOR_REL = _BOUNDARY_SURFACE_SPEC.validator_script_rel
 SUMMARY_PROBE_REL = RELEASE_CLOSURE_SUMMARY_INTEGRATED_PROBE_DELEGATION_SPEC.probe_script_rel
 BOUNDARY_PROBE_REL = RELEASE_CLOSURE_BOUNDARY_INTEGRATED_PROBE_DELEGATION_SPEC.probe_script_rel
 SUMMARY_BINDING_PROBE_REL = "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh"

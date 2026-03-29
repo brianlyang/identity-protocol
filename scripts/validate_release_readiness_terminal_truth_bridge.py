@@ -47,6 +47,9 @@ from release_readiness_terminal_truth_bridge_common import (
 from terminal_truth_boundary_projection_common import (
     RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_ONE_LOOK_FIELDS,
 )
+from release_closure_surface_registry_common import (
+    release_closure_surface_spec_by_bundle_surface_id,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -127,8 +130,12 @@ EXPECTED_BOUNDARY_VALIDATOR_SHARED_BUNDLE_TOKEN = (
 )
 EXPECTED_VALIDATOR_COMMAND = RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR_COMMAND
 EXPECTED_PROBE_COMMAND = RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_COMMAND
-SUMMARY_VALIDATOR_REL = "scripts/validate_v16x_release_closure_summary.py"
-BOUNDARY_VALIDATOR_REL = "scripts/validate_v16x_release_closure_boundary.py"
+_SUMMARY_SURFACE_SPEC = release_closure_surface_spec_by_bundle_surface_id("summary")
+_BOUNDARY_SURFACE_SPEC = release_closure_surface_spec_by_bundle_surface_id("boundary")
+if _SUMMARY_SURFACE_SPEC is None or _BOUNDARY_SURFACE_SPEC is None:
+    raise RuntimeError("terminal_truth_bridge_missing_release_closure_surface_specs")
+SUMMARY_VALIDATOR_REL = _SUMMARY_SURFACE_SPEC.validator_script_rel
+BOUNDARY_VALIDATOR_REL = _BOUNDARY_SURFACE_SPEC.validator_script_rel
 SUMMARY_BINDING_PROBE_REL = "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh"
 
 

@@ -42,6 +42,7 @@ from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, res
 from runtime_summary_surface_governance_common import (
     RUNTIME_SUMMARY_SURFACE_GOVERNANCE_VALIDATOR,
 )
+from release_closure_surface_registry_common import RELEASE_CLOSURE_SURFACE_SPECS
 from reference_visual_atlas_governance_common import discover_visual_atlas_governance_scripts
 
 
@@ -1200,53 +1201,26 @@ def main() -> int:
     _run_reference_visual_atlas_scaffold_probe(repo_root, failures)
     _run_reference_visual_atlas_inventory_check(repo_root, failures)
 
-    release_closure_boundary_script = repo_root / "scripts/validate_v16x_release_closure_boundary.py"
-    if release_closure_boundary_script.exists():
+    for surface_spec in RELEASE_CLOSURE_SURFACE_SPECS:
+        surface_script = repo_root / surface_spec.validator_script_rel
+        if not surface_script.exists():
+            failures.append(f"[MISSING_SCRIPT] {surface_spec.validator_script_rel} not found")
+            continue
         proc = subprocess.run(
-            [sys.executable, str(release_closure_boundary_script), "--json-only"],
+            [sys.executable, str(surface_script), "--json-only"],
             capture_output=True,
             text=True,
             cwd=repo_root,
         )
         if proc.returncode != 0:
             failures.append(
-                "[RELEASE_CLOSURE_BOUNDARY_FAIL] "
-                + (proc.stdout.strip() or proc.stderr.strip() or "validate_v16x_release_closure_boundary failed")
+                f"[{surface_spec.docs_command_contract_failure_tag}] "
+                + (
+                    proc.stdout.strip()
+                    or proc.stderr.strip()
+                    or f"{surface_spec.validator_script_rel} failed"
+                )
             )
-    else:
-        failures.append("[MISSING_SCRIPT] scripts/validate_v16x_release_closure_boundary.py not found")
-
-    release_closure_summary_script = repo_root / "scripts/validate_v16x_release_closure_summary.py"
-    if release_closure_summary_script.exists():
-        proc = subprocess.run(
-            [sys.executable, str(release_closure_summary_script), "--json-only"],
-            capture_output=True,
-            text=True,
-            cwd=repo_root,
-        )
-        if proc.returncode != 0:
-            failures.append(
-                "[RELEASE_CLOSURE_SUMMARY_FAIL] "
-                + (proc.stdout.strip() or proc.stderr.strip() or "validate_v16x_release_closure_summary failed")
-            )
-    else:
-        failures.append("[MISSING_SCRIPT] scripts/validate_v16x_release_closure_summary.py not found")
-
-    release_doc_surface_script = repo_root / "scripts/validate_release_doc_surface_governance.py"
-    if release_doc_surface_script.exists():
-        proc = subprocess.run(
-            [sys.executable, str(release_doc_surface_script), "--json-only"],
-            capture_output=True,
-            text=True,
-            cwd=repo_root,
-        )
-        if proc.returncode != 0:
-            failures.append(
-                "[RELEASE_DOC_SURFACE_GOVERNANCE_FAIL] "
-                + (proc.stdout.strip() or proc.stderr.strip() or "validate_release_doc_surface_governance failed")
-            )
-    else:
-        failures.append("[MISSING_SCRIPT] scripts/validate_release_doc_surface_governance.py not found")
 
     workspace_runtime_closure_command_surface_script = (
         repo_root / "scripts/validate_workspace_runtime_closure_command_surface.py"

@@ -15,6 +15,7 @@ from reference_visual_atlas_governance_common import (
     load_reference_visual_atlas_registry,
     reference_visual_atlas_control_plane_checks,
 )
+from release_closure_surface_registry_common import RELEASE_CLOSURE_SURFACE_SPECS
 from repo_root_resolution_common import resolve_protocol_repo_root
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -142,20 +143,13 @@ BASE_CHECKS: tuple[CheckSpec, ...] = (
         command=("python3", "scripts/validate_protocol_governed_subdomain_doc_control_registry.py", "--json-only"),
         status_key="protocol_governed_subdomain_doc_control_registry_status",
     ),
-    CheckSpec(
-        name="release_doc_surface_governance",
-        command=("python3", "scripts/validate_release_doc_surface_governance.py", "--json-only"),
-        status_key="release_doc_surface_governance_status",
-    ),
-    CheckSpec(
-        name="v16x_release_closure_boundary",
-        command=("python3", "scripts/validate_v16x_release_closure_boundary.py", "--json-only"),
-        status_key="v16x_release_closure_boundary_status",
-    ),
-    CheckSpec(
-        name="v16x_release_closure_summary",
-        command=("python3", "scripts/validate_v16x_release_closure_summary.py", "--json-only"),
-        status_key="v16x_release_closure_summary_status",
+    *tuple(
+        CheckSpec(
+            name=spec.name,
+            command=spec.validator_command(json_only=True),
+            status_key=spec.status_key,
+        )
+        for spec in RELEASE_CLOSURE_SURFACE_SPECS
     ),
     CheckSpec(
         name="doc_command_surface_registry",

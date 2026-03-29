@@ -23,6 +23,7 @@ python3 "${REPO_ROOT}/scripts/control_plane_probe_shadow_common.py" \
   --copy-script materialize_control_plane_surfaces.py \
   --copy-script render_control_plane_budget.py \
   --copy-script render_control_plane_status.py \
+  --copy-script release_closure_surface_registry_common.py \
   --copy-script validate_control_plane_budget.py \
   --copy-script validate_control_plane_budget_sync.py \
   --copy-script validate_control_plane_status_sync.py \

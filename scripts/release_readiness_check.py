@@ -79,6 +79,9 @@ from release_readiness_required_gate_bundle_scope_common import (
 from release_readiness_selected_check_scope_common import (
     materialize_targeted_subset_selected_check_scope_exclusions,
 )
+from release_closure_surface_registry_common import (
+    release_closure_surface_post_closure_governance_commands,
+)
 from required_contract_coverage_projection_common import build_required_contract_coverage_projection
 from required_gate_bundle_projection_common import build_required_gate_bundle_target_projection
 from required_gate_report_authority_common import REQUIRED_GATE_REPORT_AUTHORITY_FIELDS
@@ -120,9 +123,7 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["python3", "scripts/materialize_control_plane_surfaces.py", "--json-only"],
     ["bash", "scripts/ci/run_control_plane_budget_sync_probes_ci.sh"],
     ["bash", "scripts/ci/run_control_plane_surface_materialization_probes_ci.sh"],
-    ["bash", "scripts/ci/run_release_doc_surface_governance_probes_ci.sh"],
-    ["bash", "scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh"],
-    ["bash", "scripts/ci/run_v16x_release_closure_summary_probes_ci.sh"],
+    *[list(command) for command in release_closure_surface_post_closure_governance_commands()],
     ["bash", "scripts/ci/run_release_closure_control_plane_status_probes_ci.sh"],
     ["python3", "scripts/validate_issue_register_consistency.py", "--json-only"],
     ["python3", "scripts/validate_runtime_file_boundary_governance.py", "--json-only"],
