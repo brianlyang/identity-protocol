@@ -3,8 +3,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/identity-dialogue-retention-ci.XXXXXX")"
-trap 'rm -rf "${TMP_ROOT}"' EXIT
+# shellcheck source=./probe_runtime_tmp_common.sh
+source "${REPO_ROOT}/scripts/ci/probe_runtime_tmp_common.sh"
+probe_runtime_tmp_bootstrap "${REPO_ROOT}" "identity-dialogue-retention-probes" "run"
 
 PACK_ROOT="${TMP_ROOT}/identity/probe-dialogue-retention"
 CATALOG_PATH="${TMP_ROOT}/identity/catalog.local.yaml"

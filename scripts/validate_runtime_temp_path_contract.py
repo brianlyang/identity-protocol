@@ -25,11 +25,43 @@ TARGET_RULES = {
         "required": ("source \"$ROOT/scripts/runtime_temp_path_common.sh\"", "identity_runtime_mktemp_dir_sh"),
         "forbidden": ("mktemp -d \"$TMP_ROOT_BASE",),
     },
+    "scripts/ci/probe_runtime_tmp_common.sh": {
+        "required": (
+            'source "${repo_root}/scripts/runtime_temp_path_common.sh"',
+            'IDENTITY_RUNTIME_TMP_ROOT:-${repo_root}/.tmp',
+            'identity_runtime_mktemp_dir_sh "${temp_scope}" "${temp_prefix}"',
+        ),
+        "forbidden": ('mktemp -d "${TMPDIR:-/tmp}/',),
+    },
     "scripts/ci/protocol_root_probe_shadow_common.sh": {
         "required": (
+            'source "${ROOT}/scripts/ci/probe_runtime_tmp_common.sh"',
+            'probe_runtime_tmp_bootstrap "${ROOT}" "protocol-root-probes" "${tmp_prefix}"',
+        ),
+        "forbidden": (
             'source "${ROOT}/scripts/runtime_temp_path_common.sh"',
-            'IDENTITY_RUNTIME_TMP_ROOT:-${ROOT}/.tmp',
             'identity_runtime_mktemp_dir_sh "protocol-root-probes" "${tmp_prefix}"',
+            'mktemp -d "${TMPDIR:-/tmp}/',
+        ),
+    },
+    "scripts/ci/run_identity_artifact_family_routing_probes_ci.sh": {
+        "required": (
+            'source "${ROOT}/scripts/ci/probe_runtime_tmp_common.sh"',
+            'probe_runtime_tmp_bootstrap "${ROOT}" "identity-artifact-family-routing-probes" "run"',
+        ),
+        "forbidden": ('mktemp -d "${TMPDIR:-/tmp}/',),
+    },
+    "scripts/ci/run_identity_dialogue_retention_probes_ci.sh": {
+        "required": (
+            'source "${REPO_ROOT}/scripts/ci/probe_runtime_tmp_common.sh"',
+            'probe_runtime_tmp_bootstrap "${REPO_ROOT}" "identity-dialogue-retention-probes" "run"',
+        ),
+        "forbidden": ('mktemp -d "${TMPDIR:-/tmp}/',),
+    },
+    "scripts/ci/run_identity_broadcast_delivery_probes_ci.sh": {
+        "required": (
+            'source "${ROOT}/scripts/ci/probe_runtime_tmp_common.sh"',
+            'probe_runtime_tmp_bootstrap "${ROOT}" "identity-broadcast-delivery-probes" "run"',
         ),
         "forbidden": ('mktemp -d "${TMPDIR:-/tmp}/',),
     },
