@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from release_closure_surface_literal_canonicality_common import (
-    collect_release_closure_surface_literal_stale_reasons,
+from release_closure_control_surface_literal_bundle_common import (
+    RELEASE_CLOSURE_GOVERNANCE_PROBE_PROJECTION_LITERAL_CANONICALITY_SPEC,
 )
-from release_readiness_governance_probe_projection_common import (
-    RELEASE_READINESS_GOVERNANCE_PROBE_PROJECTION_MARKER,
+from release_closure_surface_literal_canonicality_common import (
+    collect_release_closure_surface_literal_spec_stale_reasons,
 )
 
 
@@ -14,10 +14,8 @@ def collect_release_closure_governance_probe_projection_stale_reasons(
     *,
     label: str,
 ) -> list[str]:
-    return collect_release_closure_surface_literal_stale_reasons(
+    return collect_release_closure_surface_literal_spec_stale_reasons(
         text,
         label=label,
-        literal_key="governance_probe_projection",
-        canonical_marker=RELEASE_READINESS_GOVERNANCE_PROBE_PROJECTION_MARKER,
-        stale_reason_suffix="governance_probe_projection_line_not_canonical",
+        spec=RELEASE_CLOSURE_GOVERNANCE_PROBE_PROJECTION_LITERAL_CANONICALITY_SPEC,
     )

@@ -30,20 +30,11 @@ from release_closure_foundational_marker_common import (
     collect_release_closure_foundational_philosophy_bundle_stale_reasons,
     collect_release_closure_summary_foundational_bundle_stale_reasons,
 )
-from release_closure_active_runtime_projection_common import (
-    collect_release_closure_active_runtime_projection_stale_reasons,
-)
 from release_closure_narrative_marker_common import (
     collect_release_closure_summary_narrative_bundle_stale_reasons,
 )
-from release_closure_governance_probe_projection_common import (
-    collect_release_closure_governance_probe_projection_stale_reasons,
-)
-from release_closure_post_closure_adjudication_order_common import (
-    collect_release_closure_post_closure_adjudication_order_stale_reasons,
-)
-from release_closure_repo_global_projection_common import (
-    collect_release_closure_repo_global_projection_stale_reasons,
+from release_closure_control_surface_literal_bundle_common import (
+    collect_release_closure_summary_control_surface_literal_bundle_stale_reasons,
 )
 from release_closure_root_grounding_common import (
     RELEASE_CLOSURE_ROOT_GROUNDING_SURFACE_CONSTRAINTS,
@@ -54,9 +45,6 @@ from release_closure_bounded_projection_literal_bundle_common import (
 from release_closure_operational_marker_bundle_common import (
     RELEASE_CLOSURE_SUMMARY_OPERATIONAL_MARKER_BUNDLE_SPECS,
     collect_release_closure_operational_marker_bundle_stale_reasons,
-)
-from release_closure_terminal_truth_bridge_surface_common import (
-    collect_release_closure_terminal_truth_bridge_surface_stale_reasons,
 )
 from repo_root_resolution_common import resolve_protocol_repo_root
 from release_readiness_active_runtime_closure_projection_common import (
@@ -245,31 +233,7 @@ def main() -> int:
     if "not declare a release tag" not in summary_text:
         stale_reasons.append("summary_doc_missing_release_tag_boundary")
     stale_reasons.extend(
-        collect_release_closure_governance_probe_projection_stale_reasons(
-            summary_text,
-            label="summary_doc",
-        )
-    )
-    stale_reasons.extend(
-        collect_release_closure_repo_global_projection_stale_reasons(
-            summary_text,
-            label="summary_doc",
-        )
-    )
-    stale_reasons.extend(
-        collect_release_closure_active_runtime_projection_stale_reasons(
-            summary_text,
-            label="summary_doc",
-        )
-    )
-    stale_reasons.extend(
-        collect_release_closure_terminal_truth_bridge_surface_stale_reasons(
-            summary_text,
-            label="summary_doc",
-        )
-    )
-    stale_reasons.extend(
-        collect_release_closure_post_closure_adjudication_order_stale_reasons(
+        collect_release_closure_summary_control_surface_literal_bundle_stale_reasons(
             summary_text,
             label="summary_doc",
         )
