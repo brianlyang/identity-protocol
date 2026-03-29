@@ -9,11 +9,34 @@ export PROBE_FIXTURE_REPO_ROOT="${ROOT}"
 source "${ROOT}/scripts/probe_fixture_shell_common.sh"
 source "${ROOT}/scripts/ci/probe_repo_mirror_common.sh"
 
+active_runtime_topology_validator="$(
+  resolve_python_module_expression \
+    "release_readiness_active_runtime_closure_projection_common" \
+    "RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_VALIDATOR_SCRIPT"
+)"
+active_runtime_topology_probe="$(
+  resolve_python_module_expression \
+    "release_readiness_active_runtime_closure_projection_common" \
+    "RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_SCRIPT"
+)"
+active_runtime_topology_validator_command_literal="[\"python3\", \"${active_runtime_topology_validator}\", \"--json-only\"],"
+active_runtime_topology_probe_command_literal="[\"bash\", \"${active_runtime_topology_probe}\"],"
+active_runtime_topology_probe_summary_key="$(
+  resolve_python_module_expression \
+    "release_readiness_active_runtime_closure_projection_common" \
+    "RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_SUMMARY_KEY"
+)"
+active_runtime_topology_probe_one_look_field="$(
+  resolve_python_module_expression \
+    "release_readiness_active_runtime_closure_projection_common" \
+    "RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_ONE_LOOK_FIELD"
+)"
+
 run_shadow_validator() {
   local shadow_root="$1"
   local output_path="$2"
   PYTHONPATH="${shadow_root}/scripts${PYTHONPATH:+:${PYTHONPATH}}" \
-    python3 "${shadow_root}/scripts/validate_release_readiness_active_runtime_closure_topology.py" \
+    python3 "${shadow_root}/${active_runtime_topology_validator}" \
       --repo-root "${shadow_root}" \
       --json-only >"${output_path}"
 }
@@ -27,7 +50,7 @@ restore_shadow_file() {
 
 POSITIVE_JSON="/tmp/release-readiness-active-runtime-closure-topology-positive.json"
 echo "[INFO] positive: release-readiness active-runtime closure topology validator"
-python3 scripts/validate_release_readiness_active_runtime_closure_topology.py --json-only >"${POSITIVE_JSON}"
+python3 "${active_runtime_topology_validator}" --json-only >"${POSITIVE_JSON}"
 
 python3 - <<'PY' "${POSITIVE_JSON}"
 from __future__ import annotations
@@ -110,7 +133,7 @@ restore_shadow_file "${TMP_ROOT}" "scripts/release_readiness_check.py"
 # expected fail-close: post_closure_bundle_missing_validator:scripts/validate_release_readiness_active_runtime_closure_topology.py --json-only
 mutate_probe_literal \
   "${TMP_ROOT}/scripts/release_readiness_check.py" \
-  '["python3", "scripts/validate_release_readiness_active_runtime_closure_topology.py", "--json-only"],' \
+  "${active_runtime_topology_validator_command_literal}" \
   ''
 if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-active-runtime-closure-topology-negative-missing-validator-command.json; then
   echo "[FAIL] active-runtime topology validator command drift unexpectedly passed"
@@ -122,7 +145,7 @@ restore_shadow_file "${TMP_ROOT}" "scripts/release_readiness_check.py"
 # expected fail-close: post_closure_bundle_missing_probe:scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh
 mutate_probe_literal \
   "${TMP_ROOT}/scripts/release_readiness_check.py" \
-  '["bash", "scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh"],' \
+  "${active_runtime_topology_probe_command_literal}" \
   ''
 if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-active-runtime-closure-topology-negative-missing-probe-command.json; then
   echo "[FAIL] active-runtime topology probe command drift unexpectedly passed"
@@ -170,7 +193,7 @@ restore_shadow_file "${TMP_ROOT}" "scripts/ci/run_release_readiness_summary_bind
 # expected fail-close: summary_binding_probe_missing_token:release_readiness_active_runtime_closure_topology_probe
 mutate_probe_literal \
   "${TMP_ROOT}/scripts/ci/run_release_readiness_summary_binding_probes_ci.sh" \
-  'release_readiness_active_runtime_closure_topology_probe' \
+  "${active_runtime_topology_probe_summary_key}" \
   'release_readiness_active_runtime_closure_topology'
 if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-active-runtime-closure-topology-negative-summary-binding.json; then
   echo "[FAIL] active-runtime summary-binding absorption drift unexpectedly passed"
@@ -178,17 +201,18 @@ if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-active-runtime-clos
 fi
 echo "[PASS] active-runtime summary-binding absorption drift fail-closed as expected"
 
-restore_shadow_file "${TMP_ROOT}" "scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh"
+restore_shadow_file "${TMP_ROOT}" "${active_runtime_topology_probe}"
 mutate_probe_literal \
-  "${TMP_ROOT}/scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh" \
-  'summary_binding_probe_missing_token:release_readiness_active_runtime_closure_topology_probe'
+  "${TMP_ROOT}/${active_runtime_topology_probe}" \
+  'active_runtime_topology_probe_summary_key=' \
+  'active_runtime_topology_probe_summary_guard='
 if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-active-runtime-closure-topology-negative-probe-self-check.json; then
   echo "[FAIL] active-runtime topology probe self-check unexpectedly passed"
   exit 1
 fi
 echo "[PASS] active-runtime topology probe self-check fail-closed as expected"
 
-python3 - <<'PY' "${POSITIVE_JSON}"
+python3 - "${POSITIVE_JSON}" "${active_runtime_topology_probe_one_look_field}" <<'PY'
 from __future__ import annotations
 
 import json
@@ -196,7 +220,7 @@ import pathlib
 import sys
 
 print(json.dumps({
-    "release_readiness_active_runtime_closure_topology_probe_status": "PASS_REQUIRED",
+    sys.argv[2]: "PASS_REQUIRED",
     "positive_validator_output": str(pathlib.Path(sys.argv[1]).resolve()),
 }, ensure_ascii=False))
 PY

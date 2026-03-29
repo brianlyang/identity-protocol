@@ -18,7 +18,15 @@ from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION_MARKER,
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SPECS,
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_COMMAND,
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_KEEP_FIELDS,
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_ONE_LOOK_FIELD,
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_STATUS_FIELDS,
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_SUMMARY_KEY,
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROOF_LANES,
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_VALIDATOR_COMMAND,
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_VALIDATOR_SCRIPT,
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_SCRIPT,
     RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_NEGATIVE_FEEDBACK_VETO_STATUS_FIELD,
     release_readiness_active_runtime_closure_capture_script_map,
     release_readiness_active_runtime_closure_structured_capture_specs,
@@ -118,16 +126,18 @@ EXPECTED_SURFACE_CONSTRAINTS: tuple[str, ...] = (
 )
 EXPECTED_ONE_LOOK_FAMILY_ID = "active_runtime_closure"
 EXPECTED_ONE_LOOK_APPLIER_NAME = "apply_release_readiness_active_runtime_closure_one_look"
-EXPECTED_VALIDATOR_SCRIPT = "scripts/validate_release_readiness_active_runtime_closure_topology.py"
-EXPECTED_PROBE_SCRIPT = "scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh"
-EXPECTED_VALIDATOR_COMMAND = ("python3", EXPECTED_VALIDATOR_SCRIPT, "--json-only")
-EXPECTED_PROBE_COMMAND = ("bash", EXPECTED_PROBE_SCRIPT)
-EXPECTED_GOVERNANCE_SUMMARY_KEY = "release_readiness_active_runtime_closure_topology_probe"
-EXPECTED_GOVERNANCE_ONE_LOOK_FIELD = "release_readiness_active_runtime_closure_topology_probe_status"
+EXPECTED_VALIDATOR_SCRIPT = RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_VALIDATOR_SCRIPT
+EXPECTED_PROBE_SCRIPT = RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_SCRIPT
+EXPECTED_VALIDATOR_COMMAND = RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_VALIDATOR_COMMAND
+EXPECTED_PROBE_COMMAND = RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_COMMAND
+EXPECTED_GOVERNANCE_SUMMARY_KEY = RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_SUMMARY_KEY
+EXPECTED_GOVERNANCE_ONE_LOOK_FIELD = RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_ONE_LOOK_FIELD
 EXPECTED_GOVERNANCE_STATUS_FIELDS: tuple[str, ...] = (
-    "release_readiness_active_runtime_closure_topology_probe_status",
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_STATUS_FIELDS
 )
-EXPECTED_GOVERNANCE_KEEP_FIELDS: tuple[str, ...] = ("positive_validator_output",)
+EXPECTED_GOVERNANCE_KEEP_FIELDS: tuple[str, ...] = (
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_KEEP_FIELDS
+)
 
 PROJECTION_COMMON_REL = "scripts/release_readiness_active_runtime_closure_projection_common.py"
 READINESS_CHECK_REL = "scripts/release_readiness_check.py"
@@ -139,8 +149,13 @@ SUMMARY_PROBE_REL = "scripts/ci/run_v16x_release_closure_summary_probes_ci.sh"
 BOUNDARY_PROBE_REL = "scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh"
 SUMMARY_BINDING_PROBE_REL = "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh"
 PROBE_REQUIRED_TOKENS: tuple[str, ...] = (
-    "scripts/validate_release_readiness_active_runtime_closure_topology.py --json-only",
-    "scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh",
+    "release_readiness_active_runtime_closure_projection_common",
+    "active_runtime_topology_validator",
+    "active_runtime_topology_probe",
+    "active_runtime_topology_validator_command_literal",
+    "active_runtime_topology_probe_command_literal",
+    "active_runtime_topology_probe_summary_key",
+    "active_runtime_topology_probe_one_look_field",
     "active_runtime_closure_summary_keys_not_unique",
     "active_runtime_closure_one_look_field_order_changed",
     "release_readiness_check_missing_capture_map_injection",
@@ -148,9 +163,6 @@ PROBE_REQUIRED_TOKENS: tuple[str, ...] = (
     "release_readiness_check_missing_summary_defaults_injection",
     "active_runtime_summary_probe_missing_projection_marker_resolution",
     "active_runtime_boundary_probe_missing_detail_field_resolution",
-    "summary_binding_probe_missing_token:release_readiness_active_runtime_closure_topology_probe",
-    "post_closure_bundle_missing_validator:scripts/validate_release_readiness_active_runtime_closure_topology.py --json-only",
-    "post_closure_bundle_missing_probe:scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh",
 )
 
 

@@ -252,6 +252,33 @@ RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROOF_LANES: tuple[str, ...] =
     "scripts/validate_release_readiness_active_runtime_closure_topology.py",
     "scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh",
 )
+RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_VALIDATOR_SCRIPT = (
+    "scripts/validate_release_readiness_active_runtime_closure_topology.py"
+)
+RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_SCRIPT = (
+    "scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh"
+)
+RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_VALIDATOR_COMMAND: tuple[str, ...] = (
+    "python3",
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_VALIDATOR_SCRIPT,
+    "--json-only",
+)
+RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_COMMAND: tuple[str, ...] = (
+    "bash",
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_SCRIPT,
+)
+RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_SUMMARY_KEY = (
+    "release_readiness_active_runtime_closure_topology_probe"
+)
+RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_ONE_LOOK_FIELD = (
+    "release_readiness_active_runtime_closure_topology_probe_status"
+)
+RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_STATUS_FIELDS: tuple[str, ...] = (
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_ONE_LOOK_FIELD,
+)
+RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_KEEP_FIELDS: tuple[str, ...] = (
+    "positive_validator_output",
+)
 RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION_MARKER = (
     "active_runtime_closure_projection="
     + "|".join(f"one_look.{field}" for field in RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_ONE_LOOK_FIELDS)
