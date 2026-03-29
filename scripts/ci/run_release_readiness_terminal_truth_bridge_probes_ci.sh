@@ -126,6 +126,18 @@ if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-terminal-tr
 fi
 echo "[PASS] release summary terminal-truth bridge marker drift fail-closed as expected"
 
+restore_shadow_file "${TMP_ROOT}" "docs/release/identity-v1.6x-release-closure-summary.md"
+# expected fail-close: summary_doc_missing_terminal_truth_bridge_rich_field:boundary_execution_closure_status
+mutate_probe_literal \
+  "${TMP_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" \
+  'boundary_execution_closure_status' \
+  'bridge_exec_closure_status_missing'
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-terminal-truth-bridge-negative-rich-doc.json"; then
+  echo "[FAIL] release summary terminal-truth rich bridge field drift unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] release summary terminal-truth rich bridge field drift fail-closed as expected"
+
 PROJECT_IDENTITY_HOME="$(resolve_probe_project_identity_home "${ROOT}")"
 PROBE_ROOT_BASE="${PROJECT_IDENTITY_HOME}/_probe"
 mkdir -p "${PROBE_ROOT_BASE}"

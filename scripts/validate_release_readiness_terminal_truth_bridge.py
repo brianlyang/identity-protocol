@@ -22,6 +22,7 @@ from release_readiness_governance_probe_projection_common import (
 )
 from release_readiness_terminal_truth_bridge_common import (
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ACTIVE_RUNTIME_FIELDS,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ALIGNMENT_FIELDS,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_BOUNDARY_FIELDS,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_ORDER,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_SPECS,
@@ -30,6 +31,8 @@ from release_readiness_terminal_truth_bridge_common import (
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_COMMAND,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROOF_LANES,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_BOUNDARY_COMPANION_FIELDS,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_FIELDS,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR,
@@ -102,6 +105,10 @@ EXPECTED_PROBE_KEEP_FIELDS: tuple[str, ...] = (
     "bridge_cases",
     "seeded_identity_ids",
 )
+EXPECTED_PROBE_SHARED_IMPORT_TOKENS: tuple[str, ...] = (
+    "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_BOUNDARY_COMPANION_FIELDS",
+    "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ALIGNMENT_FIELDS",
+)
 EXPECTED_VALIDATOR_COMMAND = RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR_COMMAND
 EXPECTED_PROBE_COMMAND = RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_COMMAND
 SUMMARY_VALIDATOR_REL = "scripts/validate_v16x_release_closure_summary.py"
@@ -165,6 +172,12 @@ def main() -> int:
         "repo_root": str(repo_root),
         "boundary_fields": list(RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_BOUNDARY_FIELDS),
         "active_runtime_fields": list(RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ACTIVE_RUNTIME_FIELDS),
+        "rich_boundary_companion_fields": list(
+            RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_BOUNDARY_COMPANION_FIELDS
+        ),
+        "alignment_fields": list(
+            RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ALIGNMENT_FIELDS
+        ),
         "surface_constraints": list(RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS),
         "bridge_case_order": list(RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_ORDER),
         "stale_reasons": [],
@@ -188,6 +201,18 @@ def main() -> int:
         stale_reasons.append("terminal_truth_bridge_surface_constraints_drift")
     if RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROOF_LANES != EXPECTED_SURFACE_CONSTRAINTS[-2:]:
         stale_reasons.append("terminal_truth_bridge_proof_lanes_drift")
+    if not RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_BOUNDARY_COMPANION_FIELDS:
+        stale_reasons.append("terminal_truth_bridge_rich_boundary_companion_fields_empty")
+    if not RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ALIGNMENT_FIELDS:
+        stale_reasons.append("terminal_truth_bridge_alignment_fields_empty")
+    if (
+        RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_FIELDS
+        != (
+            *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_BOUNDARY_COMPANION_FIELDS,
+            *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ALIGNMENT_FIELDS,
+        )
+    ):
+        stale_reasons.append("terminal_truth_bridge_rich_companion_fields_drift")
     if RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR != EXPECTED_VALIDATOR_COMMAND[1]:
         stale_reasons.append("terminal_truth_bridge_validator_path_drift")
     if RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE != EXPECTED_PROBE_COMMAND[1]:
@@ -256,17 +281,23 @@ def main() -> int:
     summary_validator_text = _read_text((repo_root / SUMMARY_VALIDATOR_REL).resolve())
     boundary_validator_text = _read_text((repo_root / BOUNDARY_VALIDATOR_REL).resolve())
     summary_binding_probe_text = _read_text((repo_root / SUMMARY_BINDING_PROBE_REL).resolve())
+    probe_text = _read_text((repo_root / EXPECTED_PROBE_COMMAND[1]).resolve())
     for label, text in (
         ("summary_validator", summary_validator_text),
         ("boundary_validator", boundary_validator_text),
     ):
         if "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS" not in text:
             stale_reasons.append(f"{label}_missing_terminal_truth_bridge_surface_constraints")
+        if "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_FIELDS" not in text:
+            stale_reasons.append(f"{label}_missing_terminal_truth_bridge_rich_companion_fields")
 
     if EXPECTED_PROBE_SUMMARY_KEY not in summary_binding_probe_text:
         stale_reasons.append(
             f"summary_binding_probe_missing_token:{EXPECTED_PROBE_SUMMARY_KEY}"
         )
+    for token in EXPECTED_PROBE_SHARED_IMPORT_TOKENS:
+        if token not in probe_text:
+            stale_reasons.append(f"bridge_probe_missing_shared_import_token:{token}")
 
     for label, path in (
         ("summary_doc", docs.summary_path),
@@ -277,6 +308,11 @@ def main() -> int:
         for marker in EXPECTED_SURFACE_CONSTRAINTS:
             if marker not in text:
                 stale_reasons.append(f"{label}_missing_terminal_truth_bridge_marker:{marker}")
+        for field_name in RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_FIELDS:
+            if field_name not in text:
+                stale_reasons.append(
+                    f"{label}_missing_terminal_truth_bridge_rich_field:{field_name}"
+                )
 
     payload[STATUS_KEY] = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
     payload["error_code"] = "" if not stale_reasons else ERR_CODE

@@ -51,6 +51,7 @@ from release_readiness_repo_global_closure_projection_common import (
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
 )
 from release_readiness_terminal_truth_bridge_common import (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_FIELDS,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS,
 )
 from repo_root_resolution_common import resolve_protocol_repo_root
@@ -65,6 +66,9 @@ SUMMARY_DOC_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_STALE_REASON_PREFIX = (
 )
 SUMMARY_DOC_TERMINAL_TRUTH_BRIDGE_STALE_REASON_PREFIX = (
     "summary_doc_missing_release_readiness_terminal_truth_bridge_marker"
+)
+SUMMARY_DOC_TERMINAL_TRUTH_BRIDGE_RICH_FIELD_STALE_REASON_PREFIX = (
+    "summary_doc_missing_release_readiness_terminal_truth_bridge_rich_field"
 )
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -194,6 +198,16 @@ def main() -> int:
         stale_reasons.append(
             f"{SUMMARY_DOC_TERMINAL_TRUTH_BRIDGE_STALE_REASON_PREFIX}:terminal_truth_bridge_surface_constraints_empty"
         )
+    if not RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_FIELDS:
+        stale_reasons.append(
+            f"{SUMMARY_DOC_TERMINAL_TRUTH_BRIDGE_RICH_FIELD_STALE_REASON_PREFIX}:terminal_truth_bridge_rich_companion_fields_empty"
+        )
+    else:
+        for field_name in RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_FIELDS:
+            if field_name not in summary_text:
+                stale_reasons.append(
+                    f"{SUMMARY_DOC_TERMINAL_TRUTH_BRIDGE_RICH_FIELD_STALE_REASON_PREFIX}:{field_name}"
+                )
     stale_reasons.extend(
         collect_release_closure_operational_marker_bundle_stale_reasons(
             summary_text,
