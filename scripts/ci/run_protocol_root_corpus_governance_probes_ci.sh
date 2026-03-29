@@ -44,8 +44,8 @@ assert "root_contract" in payload["corpus_class_profile_ids"], payload
 assert "business_domain_example" in payload["forbidden_content_class_ids"], payload
 assert payload["root_index_class_projection_count"] == 6, payload
 assert payload["root_index_class_projection_surface"]["entry_count"] == 6, payload
-assert payload["root_maintenance_guardrail_count"] == 5, payload
-assert payload["root_maintenance_guardrail_surface"]["entry_count"] == 5, payload
+assert payload["root_maintenance_guardrail_count"] == 6, payload
+assert payload["root_maintenance_guardrail_surface"]["entry_count"] == 6, payload
 assert any(row["family_id"] == "root_index_class_projections" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "root_index_class_projection_surface" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "root_maintenance_guardrails" for row in payload["row_family_projection_rows"]), payload
@@ -113,7 +113,7 @@ path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
 doc["root_maintenance_guardrails"] = [
     row for row in doc["root_maintenance_guardrails"]
-    if row.get("guardrail_label") != "root-corpus admission must be machine-governed"
+    if row.get("guardrail_label") != "protocol repo authority is exclusive"
 ]
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
@@ -137,16 +137,16 @@ assert payload["error_code"] == "IP-RCG-002", payload
 assert any(
     row["field"] == "root_maintenance_guardrails"
     and row["reason"] == "missing_root_maintenance_guardrails"
-    and "root-corpus admission must be machine-governed" in row.get("guardrail_labels", [])
+    and "protocol repo authority is exclusive" in row.get("guardrail_labels", [])
     for row in payload["structure_violations"]
 ), payload
 guardrail_row = next(
     row for row in payload["row_family_projection_rows"]
     if row["family_id"] == "root_maintenance_guardrails"
 )
-assert guardrail_row["expected_count"] == 5, payload
-assert guardrail_row["actual_count"] == 4, payload
-assert guardrail_row["missing_ids"] == ["root-corpus admission must be machine-governed"], payload
+assert guardrail_row["expected_count"] == 6, payload
+assert guardrail_row["actual_count"] == 5, payload
+assert guardrail_row["missing_ids"] == ["protocol repo authority is exclusive"], payload
 assert guardrail_row["unexpected_ids"] == [], payload
 assert guardrail_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert guardrail_row["identity_projection_status"] == "FAIL_REQUIRED", payload

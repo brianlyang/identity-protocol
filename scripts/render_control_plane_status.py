@@ -128,6 +128,11 @@ BASE_CHECKS: tuple[CheckSpec, ...] = (
         status_key="protocol_root_shared_primitive_adoption_status",
     ),
     CheckSpec(
+        name="protocol_repo_authority_exclusivity",
+        command=("python3", "scripts/validate_protocol_repo_authority_exclusivity.py", "--json-only"),
+        status_key="protocol_repo_authority_exclusivity_status",
+    ),
+    CheckSpec(
         name="protocol_broadcast_doc_control",
         command=("python3", "scripts/validate_protocol_broadcast_doc_control.py", "--json-only"),
         status_key="protocol_broadcast_doc_control_status",

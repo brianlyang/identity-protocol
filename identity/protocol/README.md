@@ -1402,6 +1402,10 @@ When root protocol files are authored or updated, the following guardrails must 
 5. **root-corpus admission must be machine-governed**
    - law-bearing admission, classification, and exclusion at `identity/protocol/` should be mirrored in protocol-owned registry / validator / probe surfaces rather than left to reviewer taste or oral memory;
    - if root purity depends only on human recollection, the root corpus has already started to drift away from machine law.
+6. **protocol repo authority is exclusive**
+   - protocol cleanliness, audit, commit admission, and release readiness for identity law must resolve only from the `identity-protocol-local` repository root;
+   - an enclosing workspace repo, instance repo, or other host container may physically contain the protocol checkout, but it remains non-authoritative for protocol-law verdicts;
+   - outer git dirty/clean state, top-level resolution, or history must not be projected as protocol repo truth.
 
 ---
 

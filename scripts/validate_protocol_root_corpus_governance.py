@@ -101,6 +101,14 @@ EXPECTED_ROOT_MAINTENANCE_GUARDRAILS = {
             "if root purity depends only on human recollection, the root corpus has already started to drift away from machine law.",
         ),
     },
+    "protocol repo authority is exclusive": {
+        "order": 6,
+        "required_markers": (
+            "protocol cleanliness, audit, commit admission, and release readiness for identity law must resolve only from the `identity-protocol-local` repository root;",
+            "an enclosing workspace repo, instance repo, or other host container may physically contain the protocol checkout, but it remains non-authoritative for protocol-law verdicts;",
+            "outer git dirty/clean state, top-level resolution, or history must not be projected as protocol repo truth.",
+        ),
+    },
 }
 
 
