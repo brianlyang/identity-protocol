@@ -6,6 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./protocol_root_probe_shadow_common.sh
 source "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"
 protocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-precedence-ci"
+export PROBE_FIXTURE_REPO_ROOT="${ROOT}"
+# shellcheck source=../probe_fixture_shell_common.sh
+source "${ROOT}/scripts/probe_fixture_shell_common.sh"
 
 PROBE_REL_PATHS=(
   "scripts/root_corpus_governance_common.py"
@@ -22,6 +25,37 @@ PROBE_REL_PATHS=(
 )
 
 protocol_root_probe_define_relpath_mirror "${PROBE_REL_PATHS[@]}"
+
+PRECEDENCE_COMPLETENESS_NONCONTIG_ID="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_precedence" \
+    "tuple(EXPECTED_CONFLICT_PRECEDENCE_COMPLETENESS_ROWS.keys())[1]"
+)"
+PRECEDENCE_COMPLETENESS_SURFACE_SECTION_MARKER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_precedence" \
+    "next(marker for marker in EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'] if marker == '## Root conflict-precedence completeness discipline')"
+)"
+PRECEDENCE_COMPLETENESS_SURFACE_FIRST_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_precedence" \
+    "list(EXPECTED_CONFLICT_PRECEDENCE_COMPLETENESS_ROWS.values())[0]['order']"
+)"
+PRECEDENCE_COMPLETENESS_SURFACE_FIRST_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_precedence" \
+    "list(EXPECTED_CONFLICT_PRECEDENCE_COMPLETENESS_ROWS.values())[0]['contract_phrase']"
+)"
+PRECEDENCE_COMPLETENESS_SURFACE_SECOND_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_precedence" \
+    "list(EXPECTED_CONFLICT_PRECEDENCE_COMPLETENESS_ROWS.values())[1]['order']"
+)"
+PRECEDENCE_COMPLETENESS_SURFACE_SECOND_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_precedence" \
+    "list(EXPECTED_CONFLICT_PRECEDENCE_COMPLETENESS_ROWS.values())[1]['contract_phrase']"
+)"
 
 
 PASS_JSON="${TMP_ROOT}/pass.json"
@@ -191,14 +225,76 @@ assert payload["conflict_precedence_completeness_surface_coverage_status"] == "P
 assert payload["conflict_precedence_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
+COMPLETENESS_ROW_ORDER_REPO="${TMP_ROOT}/conflict-precedence-completeness-row-order-noncontiguous-repo"
+mirror_repo "${COMPLETENESS_ROW_ORDER_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_REPO}/identity/protocol/mappings/root-corpus-precedence.v1.yaml" "${PRECEDENCE_COMPLETENESS_NONCONTIG_ID}"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+target_id = sys.argv[2]
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["conflict_precedence_completeness_rows"]:
+    if row.get("completeness_id") == target_id:
+        row["order"] = 1
+        break
+else:
+    raise SystemExit("expected conflict precedence completeness row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_ORDER_JSON="${TMP_ROOT}/conflict-precedence-completeness-row-order-noncontiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_precedence.py" \
+  --repo-root "${COMPLETENESS_ROW_ORDER_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_ORDER_JSON}"; then
+  echo "[FAIL] precedence validator unexpectedly passed conflict-precedence completeness row order non-contiguous"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_precedence_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCP-002", payload
+assert payload["precedence_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["precedence_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "conflict_precedence_completeness_rows"
+    and row["reason"] == "conflict_precedence_completeness_row_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "conflict_precedence_completeness_rows"
+    and row["reason"] == "conflict_precedence_completeness_row_order_mismatch"
+    for row in payload["precedence_violations"]
+), payload
+row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "conflict_precedence_completeness_rows"
+)
+assert row["expected_count"] == 5, payload
+assert row["actual_count"] == 5, payload
+assert row["missing_ids"] == [], payload
+assert row["unexpected_ids"] == [], payload
+assert row["coverage_status"] == "PASS_REQUIRED", payload
+assert row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
 COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/completeness-surface-order-drift-repo"
 mirror_repo "${COMPLETENESS_SURFACE_ORDER_REPO}"
-protocol_root_probe_swap_numbered_surface_order_rows \
+protocol_root_probe_swap_numbered_surface_order_rows_in_section \
   "${COMPLETENESS_SURFACE_ORDER_REPO}/identity/protocol/README.md" \
-  "## Root conflict-precedence completeness discipline" \
-  $'\n---\n\n## Root ordering completeness discipline' \
-  "1. required precedence-profile, gateway-authorship-projection, conflict-handling-rule, and conflict-handling-rule-surface rows must remain explicit as separate machine-readable row families;" \
-  "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+  "${PRECEDENCE_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${PRECEDENCE_COMPLETENESS_SURFACE_FIRST_PHRASE}" \
+  "${PRECEDENCE_COMPLETENESS_SURFACE_SECOND_PHRASE}"
 
 COMPLETENESS_SURFACE_ORDER_JSON="${TMP_ROOT}/completeness-surface-order-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_corpus_precedence.py" \
@@ -220,13 +316,76 @@ assert payload["precedence_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["precedence_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert any(
     row["field"] == "conflict_precedence_completeness_surface"
-    and row["reason"] == "order_mismatch"
+    and row["reason"] == "conflict_precedence_completeness_surface_order_mismatch"
+    for row in payload["precedence_violations"]
+), payload
+assert any(
+    row["field"] == "conflict_precedence_completeness_surface"
+    and row["reason"] == "conflict_precedence_completeness_surface_phrase_order_mismatch"
     for row in payload["precedence_violations"]
 ), payload
 surface_row = next(
     row for row in payload["row_family_projection_rows"]
     if row["family_id"] == "conflict_precedence_completeness_surface"
 )
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO="${TMP_ROOT}/conflict-precedence-completeness-surface-order-noncontiguous-repo"
+mirror_repo "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}"
+protocol_root_probe_set_numbered_surface_row_order_in_section \
+  "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}/identity/protocol/README.md" \
+  "${PRECEDENCE_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${PRECEDENCE_COMPLETENESS_SURFACE_SECOND_ORDER}" \
+  "${PRECEDENCE_COMPLETENESS_SURFACE_SECOND_PHRASE}" \
+  "${PRECEDENCE_COMPLETENESS_SURFACE_FIRST_ORDER}"
+
+COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON="${TMP_ROOT}/conflict-precedence-completeness-surface-order-noncontiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_precedence.py" \
+  --repo-root "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"; then
+  echo "[FAIL] precedence validator unexpectedly passed conflict-precedence completeness surface order non-contiguous"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_precedence_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCP-002", payload
+assert payload["precedence_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["precedence_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "conflict_precedence_completeness_surface"
+    and row["reason"] == "conflict_precedence_completeness_surface_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "conflict_precedence_completeness_surface"
+    and row["reason"] == "conflict_precedence_completeness_surface_order_mismatch"
+    for row in payload["precedence_violations"]
+), payload
+assert not any(
+    row["field"] == "conflict_precedence_completeness_surface"
+    and row["reason"] == "conflict_precedence_completeness_surface_phrase_order_mismatch"
+    for row in payload["precedence_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "conflict_precedence_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
 assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload

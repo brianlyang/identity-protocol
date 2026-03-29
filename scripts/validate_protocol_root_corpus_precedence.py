@@ -414,6 +414,7 @@ def main() -> int:
                     "missing_ids_key": "completeness_ids",
                     "extra_ids_key": "completeness_ids",
                     "violation_id_key": "completeness_id",
+                    "order_reason": "conflict_precedence_completeness_row_order_mismatch",
                 },
                 {
                     "actual_rows": conflict_precedence_completeness_surface.rows,
@@ -431,11 +432,46 @@ def main() -> int:
                     "missing_ids_key": "contract_phrases",
                     "extra_ids_key": "contract_phrases",
                     "violation_id_key": "contract_phrase",
+                    "order_reason": "conflict_precedence_completeness_surface_order_mismatch",
                 },
             ),
             structure_violations=structure_violations,
             support_violations=precedence_violations,
         )
+        expected_conflict_precedence_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_CONFLICT_PRECEDENCE_COMPLETENESS_ROWS.values()
+        ]
+        expected_conflict_precedence_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_CONFLICT_PRECEDENCE_COMPLETENESS_ROWS.values()
+        ]
+        actual_conflict_precedence_completeness_phrases = [
+            row.contract_phrase for row in conflict_precedence_completeness_surface.rows
+        ]
+        actual_conflict_precedence_completeness_orders = [
+            row.order for row in conflict_precedence_completeness_surface.rows
+        ]
+        if actual_conflict_precedence_completeness_phrases and tuple(
+            actual_conflict_precedence_completeness_phrases
+        ) != tuple(expected_conflict_precedence_completeness_phrases):
+            precedence_violations.append(
+                {
+                    "field": "conflict_precedence_completeness_surface",
+                    "reason": "conflict_precedence_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_conflict_precedence_completeness_phrases,
+                    "actual": actual_conflict_precedence_completeness_phrases,
+                }
+            )
+        if actual_conflict_precedence_completeness_orders and tuple(
+            actual_conflict_precedence_completeness_orders
+        ) != tuple(expected_conflict_precedence_completeness_orders):
+            precedence_violations.append(
+                {
+                    "field": "conflict_precedence_completeness_surface",
+                    "reason": "conflict_precedence_completeness_surface_order_mismatch",
+                    "expected": expected_conflict_precedence_completeness_orders,
+                    "actual": actual_conflict_precedence_completeness_orders,
+                }
+            )
 
         for row in precedence_profiles:
             expected_meta = EXPECTED_PROFILES.get(row.conflict_class)

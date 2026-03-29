@@ -827,6 +827,7 @@ def main() -> int:
                     "missing_ids_key": "completeness_ids",
                     "extra_ids_key": "completeness_ids",
                     "violation_id_key": "completeness_id",
+                    "order_reason": "ordering_completeness_row_order_mismatch",
                 },
                 {
                     "actual_rows": ordering_completeness_surface.rows,
@@ -844,6 +845,7 @@ def main() -> int:
                     "missing_ids_key": "contract_phrases",
                     "extra_ids_key": "contract_phrases",
                     "violation_id_key": "contract_phrase",
+                    "order_reason": "ordering_completeness_surface_order_mismatch",
                 },
             ),
             structure_violations=structure_violations,

@@ -143,6 +143,10 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def probe_shadow_bootstrap_contract_from_doc(routing_doc: Mapping[str, Any]) -> str:
+    return _norm_str(routing_doc.get("probe_shadow_bootstrap_contract"))
+
+
 def load_root_corpus_question_routing(repo_root: Path) -> tuple[dict[str, Any], Path, Path, str]:
     entry_path = (repo_root / ROOT_CORPUS_QUESTION_ROUTING_CURRENT).resolve()
     active_path, _active_file, alias_error = resolve_current_yaml_alias(repo_root, ROOT_CORPUS_QUESTION_ROUTING_CURRENT)

@@ -7,6 +7,40 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"
 protocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-law-bundle-ci"
 protocol_root_probe_define_full_mirror
+export PROBE_FIXTURE_REPO_ROOT="${ROOT}"
+# shellcheck source=../probe_fixture_shell_common.sh
+source "${ROOT}/scripts/probe_fixture_shell_common.sh"
+
+LAW_BUNDLE_COMPLETENESS_NONCONTIG_ID="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_law_bundle" \
+    "tuple(EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS.keys())[1]"
+)"
+LAW_BUNDLE_COMPLETENESS_SURFACE_SECTION_MARKER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_law_bundle" \
+    "next(marker for marker in EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'] if marker == '## Root law-bundle component-row completeness discipline')"
+)"
+LAW_BUNDLE_COMPLETENESS_SURFACE_FIRST_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_law_bundle" \
+    "list(EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS.values())[0]['order']"
+)"
+LAW_BUNDLE_COMPLETENESS_SURFACE_FIRST_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_law_bundle" \
+    "list(EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS.values())[0]['contract_phrase']"
+)"
+LAW_BUNDLE_COMPLETENESS_SURFACE_SECOND_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_law_bundle" \
+    "list(EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS.values())[1]['order']"
+)"
+LAW_BUNDLE_COMPLETENESS_SURFACE_SECOND_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_law_bundle" \
+    "list(EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS.values())[1]['contract_phrase']"
+)"
 
 write_minimal_root_precedence_validator() {
   local target_path="$1"
@@ -405,6 +439,69 @@ assert payload["law_bundle_row_coverage_status"] == "FAIL_REQUIRED", payload
 assert payload["law_bundle_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
+COMPLETENESS_ROW_ORDER_REPO="${TMP_ROOT}/law-bundle-completeness-row-order-noncontiguous-repo"
+mirror_repo "${COMPLETENESS_ROW_ORDER_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml" "${LAW_BUNDLE_COMPLETENESS_NONCONTIG_ID}"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+target_id = sys.argv[2]
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["law_bundle_component_row_completeness_rows"]:
+    if row.get("completeness_id") == target_id:
+        row["order"] = 1
+        break
+else:
+    raise SystemExit("expected law-bundle completeness row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_ORDER_JSON="${TMP_ROOT}/law-bundle-completeness-row-order-noncontiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPLETENESS_ROW_ORDER_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_ORDER_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed completeness row order non-contiguous"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-002", payload
+assert payload["law_bundle_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_rows"
+    and row["reason"] == "law_bundle_component_row_completeness_row_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_rows"
+    and row["reason"] == "law_bundle_component_row_completeness_row_order_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "law_bundle_component_row_completeness_rows"
+)
+assert row["expected_count"] == 5, payload
+assert row["actual_count"] == 5, payload
+assert row["missing_ids"] == [], payload
+assert row["unexpected_ids"] == [], payload
+assert row["coverage_status"] == "PASS_REQUIRED", payload
+assert row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
 COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/law-bundle-completeness-surface-drift-repo"
 mirror_repo "${COMPLETENESS_SURFACE_REPO}"
 python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
@@ -465,12 +562,11 @@ PY
 
 COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/law-bundle-completeness-surface-order-drift-repo"
 mirror_repo "${COMPLETENESS_SURFACE_ORDER_REPO}"
-protocol_root_probe_swap_numbered_surface_order_rows \
+protocol_root_probe_swap_numbered_surface_order_rows_in_section \
   "${COMPLETENESS_SURFACE_ORDER_REPO}/identity/protocol/README.md" \
-  "## Root law-bundle component-row completeness discipline" \
-  $'\n---\n\n## Root-law bundle discipline' \
-  "1. required component-row and component-status-row rows must remain explicit as separate machine-readable row families;" \
-  "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+  "${LAW_BUNDLE_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${LAW_BUNDLE_COMPLETENESS_SURFACE_FIRST_PHRASE}" \
+  "${LAW_BUNDLE_COMPLETENESS_SURFACE_SECOND_PHRASE}"
 
 COMPLETENESS_SURFACE_ORDER_JSON="${TMP_ROOT}/law-bundle-completeness-surface-order-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
@@ -492,6 +588,11 @@ assert payload["law_bundle_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["law_bundle_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert any(
     row["field"] == "law_bundle_component_row_completeness_surface"
+    and row["reason"] == "law_bundle_component_row_completeness_surface_phrase_order_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_surface"
     and row["reason"] == "law_bundle_component_row_completeness_surface_order_mismatch"
     for row in payload["bundle_violations"]
 ), payload
@@ -505,6 +606,64 @@ assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO="${TMP_ROOT}/law-bundle-completeness-surface-order-noncontiguous-repo"
+mirror_repo "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}"
+protocol_root_probe_set_numbered_surface_row_order_in_section \
+  "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}/identity/protocol/README.md" \
+  "${LAW_BUNDLE_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${LAW_BUNDLE_COMPLETENESS_SURFACE_SECOND_ORDER}" \
+  "${LAW_BUNDLE_COMPLETENESS_SURFACE_SECOND_PHRASE}" \
+  "${LAW_BUNDLE_COMPLETENESS_SURFACE_FIRST_ORDER}"
+
+COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON="${TMP_ROOT}/law-bundle-completeness-surface-order-noncontiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed completeness surface order non-contiguous"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-002", payload
+assert payload["law_bundle_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_surface"
+    and row["reason"] == "law_bundle_component_row_completeness_surface_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_surface"
+    and row["reason"] == "law_bundle_component_row_completeness_surface_order_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+assert not any(
+    row["field"] == "law_bundle_component_row_completeness_surface"
+    and row["reason"] == "law_bundle_component_row_completeness_surface_phrase_order_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "law_bundle_component_row_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 COMPONENT_VALIDATOR_STATUS_REQUIREMENT_REPO="${TMP_ROOT}/component-validator-status-requirement-drift-repo"

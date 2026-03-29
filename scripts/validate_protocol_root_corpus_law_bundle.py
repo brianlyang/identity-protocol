@@ -3395,6 +3395,40 @@ def main() -> int:
             structure_violations=structure_violations,
             support_violations=bundle_violations,
         )
+        expected_law_bundle_component_row_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS.values()
+        ]
+        expected_law_bundle_component_row_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS.values()
+        ]
+        actual_law_bundle_component_row_completeness_phrases = [
+            row.contract_phrase for row in law_bundle_component_row_completeness_surface.rows
+        ]
+        actual_law_bundle_component_row_completeness_orders = [
+            row.order for row in law_bundle_component_row_completeness_surface.rows
+        ]
+        if actual_law_bundle_component_row_completeness_phrases and tuple(
+            actual_law_bundle_component_row_completeness_phrases
+        ) != tuple(expected_law_bundle_component_row_completeness_phrases):
+            bundle_violations.append(
+                {
+                    "field": "law_bundle_component_row_completeness_surface",
+                    "reason": "law_bundle_component_row_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_law_bundle_component_row_completeness_phrases,
+                    "actual": actual_law_bundle_component_row_completeness_phrases,
+                }
+            )
+        if actual_law_bundle_component_row_completeness_orders and tuple(
+            actual_law_bundle_component_row_completeness_orders
+        ) != tuple(expected_law_bundle_component_row_completeness_orders):
+            bundle_violations.append(
+                {
+                    "field": "law_bundle_component_row_completeness_surface",
+                    "reason": "law_bundle_component_row_completeness_surface_order_mismatch",
+                    "expected": expected_law_bundle_component_row_completeness_orders,
+                    "actual": actual_law_bundle_component_row_completeness_orders,
+                }
+            )
 
         for row in sorted_components:
             expected = EXPECTED_COMPONENTS.get(row.component_id)

@@ -31,6 +31,7 @@ from root_corpus_question_routing_common import (
     readme_question_routing_completeness_surface,
     readme_root_question_discipline_surface,
     readme_entry_summary_surface,
+    probe_shadow_bootstrap_contract_from_doc,
     root_question_discipline_stages_from_doc,
 )
 from root_row_family_projection_common import (
@@ -184,6 +185,7 @@ EXPECTED_QUESTION_ROUTING_COMPLETENESS_ROWS = {
         "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
     },
 }
+PROBE_SHADOW_BOOTSTRAP_CONTRACT = "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings"
 EXPECTED_ROOT_QUESTION_DISCIPLINE_STAGES = {
     "generative why-question": {
         "order": 1,
@@ -417,6 +419,10 @@ def main() -> int:
     row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
+    component_probe_shadow_bootstrap_contract = (
+        probe_shadow_bootstrap_contract_from_doc(routing_doc) if routing_doc else ""
+    )
+
     if routing_alias_error:
         stale_reasons.append(f"root_corpus_question_routing_alias_error:{routing_alias_error}")
         error_code = ERR_REGISTRY
@@ -472,6 +478,23 @@ def main() -> int:
         question_routing_completeness_rows,
         key=lambda item: item.order,
     )
+
+    if routing_doc:
+        if not component_probe_shadow_bootstrap_contract:
+            structure_violations.append(
+                {
+                    "field": "probe_shadow_bootstrap_contract",
+                    "reason": "component_probe_shadow_bootstrap_contract_missing",
+                }
+            )
+        elif component_probe_shadow_bootstrap_contract != PROBE_SHADOW_BOOTSTRAP_CONTRACT:
+            structure_violations.append(
+                {
+                    "field": "probe_shadow_bootstrap_contract",
+                    "reason": "component_probe_shadow_bootstrap_contract_not_inherited",
+                    "actual": component_probe_shadow_bootstrap_contract,
+                }
+            )
 
     if not stale_reasons:
         if str(routing_doc.get("routing_family") or "").strip() != "protocol_root_corpus_question_routing":
@@ -1475,6 +1498,7 @@ def main() -> int:
             }
             for row in sorted_question_routing_completeness_rows
         ],
+        "probe_shadow_bootstrap_contract": component_probe_shadow_bootstrap_contract,
         "gateway_question_projection": [
             {
                 "gateway_class": row.gateway_class,

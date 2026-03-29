@@ -38,6 +38,36 @@ protocol_boundary_probe_target_drifted_sentence="$(
     "root_corpus_contract_list_sync_common" \
     "current_protocol_boundary_root_contract_projection_probe_target()['drifted_sentence']"
 )"
+ORDERING_COMPLETENESS_NONCONTIG_ID="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_ordering" \
+    "tuple(EXPECTED_ORDERING_COMPLETENESS_ROWS.keys())[1]"
+)"
+ORDERING_COMPLETENESS_SURFACE_SECTION_MARKER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_ordering" \
+    "next(marker for marker in EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'] if marker == '## Root ordering completeness discipline')"
+)"
+ORDERING_COMPLETENESS_SURFACE_FIRST_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_ordering" \
+    "list(EXPECTED_ORDERING_COMPLETENESS_ROWS.values())[0]['order']"
+)"
+ORDERING_COMPLETENESS_SURFACE_FIRST_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_ordering" \
+    "list(EXPECTED_ORDERING_COMPLETENESS_ROWS.values())[0]['contract_phrase']"
+)"
+ORDERING_COMPLETENESS_SURFACE_SECOND_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_ordering" \
+    "list(EXPECTED_ORDERING_COMPLETENESS_ROWS.values())[1]['order']"
+)"
+ORDERING_COMPLETENESS_SURFACE_SECOND_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_ordering" \
+    "list(EXPECTED_ORDERING_COMPLETENESS_ROWS.values())[1]['contract_phrase']"
+)"
 
 
 PASS_JSON="${TMP_ROOT}/pass.json"
@@ -241,14 +271,76 @@ assert payload["ordering_completeness_surface_coverage_status"] == "PASS_REQUIRE
 assert payload["ordering_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
+ORDERING_COMPLETENESS_ROW_NONCONTIG_REPO="${TMP_ROOT}/ordering-completeness-row-order-noncontiguous-repo"
+mirror_repo "${ORDERING_COMPLETENESS_ROW_NONCONTIG_REPO}"
+python3 - <<'PY' "${ORDERING_COMPLETENESS_ROW_NONCONTIG_REPO}/identity/protocol/mappings/root-corpus-ordering.v1.yaml" "${ORDERING_COMPLETENESS_NONCONTIG_ID}"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+target_id = sys.argv[2]
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["ordering_completeness_rows"]:
+    if row.get("completeness_id") == target_id:
+        row["order"] = 1
+        break
+else:
+    raise SystemExit("expected ordering completeness row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ORDERING_COMPLETENESS_ROW_NONCONTIG_JSON="${TMP_ROOT}/ordering-completeness-row-order-noncontiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
+  --repo-root "${ORDERING_COMPLETENESS_ROW_NONCONTIG_REPO}" \
+  --json-only >"${ORDERING_COMPLETENESS_ROW_NONCONTIG_JSON}"; then
+  echo "[FAIL] root corpus ordering validator unexpectedly passed ordering completeness row order non-contiguous"
+  exit 1
+fi
+
+python3 - <<'PY' "${ORDERING_COMPLETENESS_ROW_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_ordering_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCO-002", payload
+assert payload["ordering_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "ordering_completeness_rows"
+    and row["reason"] == "ordering_completeness_row_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "ordering_completeness_rows"
+    and row["reason"] == "ordering_completeness_row_order_mismatch"
+    for row in payload["coverage_violations"]
+), payload
+row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "ordering_completeness_rows"
+)
+assert row["expected_count"] == 5, payload
+assert row["actual_count"] == 5, payload
+assert row["missing_ids"] == [], payload
+assert row["unexpected_ids"] == [], payload
+assert row["coverage_status"] == "PASS_REQUIRED", payload
+assert row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
 ORDERING_COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/ordering-completeness-surface-order-drift-repo"
 mirror_repo "${ORDERING_COMPLETENESS_SURFACE_ORDER_REPO}"
-protocol_root_probe_swap_numbered_surface_order_rows \
+protocol_root_probe_swap_numbered_surface_order_rows_in_section \
   "${ORDERING_COMPLETENESS_SURFACE_ORDER_REPO}/identity/protocol/README.md" \
-  "## Root ordering completeness discipline" \
-  "## Root question-routing completeness discipline" \
-  "1. required source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface, order-plane-stage, order-plane-stage-surface, explanatory root-contract index/projection, adjudication-order, and adjudication-surface-profile rows must remain explicit as separate machine-readable row families;" \
-  "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+  "${ORDERING_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${ORDERING_COMPLETENESS_SURFACE_FIRST_PHRASE}" \
+  "${ORDERING_COMPLETENESS_SURFACE_SECOND_PHRASE}"
 
 ORDERING_COMPLETENESS_SURFACE_ORDER_JSON="${TMP_ROOT}/ordering-completeness-surface-order-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
@@ -268,21 +360,75 @@ assert payload["protocol_root_corpus_ordering_status"] == "FAIL_REQUIRED", paylo
 assert payload["error_code"] == "IP-RCO-003", payload
 assert any(
     row["field"] == "ordering_completeness_surface"
-    and row["reason"] == "order_mismatch"
-    and row["expected"] == 1
-    and row["actual"] == 2
+    and row["reason"] == "ordering_completeness_surface_phrase_order_mismatch"
     for row in payload["coverage_violations"]
 ), payload
 assert any(
     row["field"] == "ordering_completeness_surface"
-    and row["reason"] == "order_mismatch"
-    and row["expected"] == 2
-    and row["actual"] == 1
+    and row["reason"] == "ordering_completeness_surface_order_mismatch"
     for row in payload["coverage_violations"]
 ), payload
 assert any(
-    "coverage_violation:ordering_completeness_surface:order_mismatch" == reason
+    "coverage_violation:ordering_completeness_surface:ordering_completeness_surface_order_mismatch" == reason
     for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "ordering_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+ORDERING_COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO="${TMP_ROOT}/ordering-completeness-surface-order-noncontiguous-repo"
+mirror_repo "${ORDERING_COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}"
+protocol_root_probe_set_numbered_surface_row_order_in_section \
+  "${ORDERING_COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}/identity/protocol/README.md" \
+  "${ORDERING_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${ORDERING_COMPLETENESS_SURFACE_SECOND_ORDER}" \
+  "${ORDERING_COMPLETENESS_SURFACE_SECOND_PHRASE}" \
+  "${ORDERING_COMPLETENESS_SURFACE_FIRST_ORDER}"
+
+ORDERING_COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON="${TMP_ROOT}/ordering-completeness-surface-order-noncontiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
+  --repo-root "${ORDERING_COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}" \
+  --json-only >"${ORDERING_COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"; then
+  echo "[FAIL] root corpus ordering validator unexpectedly passed ordering completeness surface order non-contiguous"
+  exit 1
+fi
+
+python3 - <<'PY' "${ORDERING_COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_ordering_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCO-002", payload
+assert payload["ordering_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "ordering_completeness_surface"
+    and row["reason"] == "ordering_completeness_surface_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "ordering_completeness_surface"
+    and row["reason"] == "ordering_completeness_surface_order_mismatch"
+    for row in payload["coverage_violations"]
+), payload
+assert not any(
+    row["field"] == "ordering_completeness_surface"
+    and row["reason"] == "ordering_completeness_surface_phrase_order_mismatch"
+    for row in payload["coverage_violations"]
 ), payload
 surface_row = next(
     row for row in payload["row_family_projection_rows"]
