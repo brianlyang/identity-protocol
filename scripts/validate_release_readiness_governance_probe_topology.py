@@ -26,6 +26,9 @@ from release_readiness_governance_probe_projection_common import (
     RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_ONE_LOOK_FIELD,
     RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_SCRIPT,
     RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_SUMMARY_KEY,
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE,
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_ONE_LOOK_FIELD,
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_SUMMARY_KEY,
     release_readiness_governance_probe_capture_script_map,
     release_readiness_governance_probe_structured_capture_specs,
     release_readiness_governance_probe_summary_defaults,
@@ -54,7 +57,7 @@ ERR_BINDING = "IP-RRGPT-002"
 EXPECTED_SCRIPT_ORDER: tuple[str, ...] = (
     "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh",
     "scripts/ci/run_full_scan_health_projection_probes_ci.sh",
-    "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE,
     RELEASE_READINESS_ONE_LOOK_TOPOLOGY_GOVERNANCE_PROBE_SCRIPT,
     "scripts/ci/run_release_readiness_repo_global_closure_topology_probes_ci.sh",
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_SCRIPT,
@@ -76,7 +79,7 @@ EXPECTED_SCRIPT_ORDER: tuple[str, ...] = (
 EXPECTED_SUMMARY_KEY_ORDER: tuple[str, ...] = (
     "terminal_truth_boundary_outer_surface_e2e_probe",
     "full_scan_health_projection_probe",
-    "runtime_summary_surface_governance_probe",
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_SUMMARY_KEY,
     RELEASE_READINESS_ONE_LOOK_TOPOLOGY_GOVERNANCE_PROBE_SUMMARY_KEY,
     "release_readiness_repo_global_closure_topology_probe",
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_SUMMARY_KEY,
@@ -98,7 +101,7 @@ EXPECTED_SUMMARY_KEY_ORDER: tuple[str, ...] = (
 EXPECTED_ONE_LOOK_FIELD_ORDER: tuple[str, ...] = (
     "terminal_truth_boundary_outer_surface_e2e_probe_status",
     "full_scan_health_projection_probe_status",
-    "runtime_summary_surface_governance_probe_status",
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_ONE_LOOK_FIELD,
     RELEASE_READINESS_ONE_LOOK_TOPOLOGY_GOVERNANCE_PROBE_ONE_LOOK_FIELD,
     "release_readiness_repo_global_closure_topology_probe_status",
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_ONE_LOOK_FIELD,

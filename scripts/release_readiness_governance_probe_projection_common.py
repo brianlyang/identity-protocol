@@ -11,6 +11,13 @@ from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_STATUS_FIELDS,
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_SUMMARY_KEY,
 )
+from runtime_summary_surface_governance_common import (
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE,
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_KEEP_FIELDS,
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_ONE_LOOK_FIELD,
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_STATUS_FIELDS,
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_SUMMARY_KEY,
+)
 
 
 STATUS_UNKNOWN = "UNKNOWN"
@@ -84,11 +91,11 @@ RELEASE_READINESS_GOVERNANCE_PROBE_SPECS: tuple[ReleaseReadinessGovernanceProbeP
         ),
     ),
     ReleaseReadinessGovernanceProbeProjectionSpec(
-        script_rel="scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
-        summary_key="runtime_summary_surface_governance_probe",
-        one_look_field="runtime_summary_surface_governance_probe_status",
-        status_fields=("runtime_summary_surface_governance_probe_status",),
-        keep_fields=("positive_validator_output",),
+        script_rel=RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE,
+        summary_key=RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_SUMMARY_KEY,
+        one_look_field=RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_ONE_LOOK_FIELD,
+        status_fields=RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_STATUS_FIELDS,
+        keep_fields=RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_KEEP_FIELDS,
     ),
     ReleaseReadinessGovernanceProbeProjectionSpec(
         script_rel=RELEASE_READINESS_ONE_LOOK_TOPOLOGY_GOVERNANCE_PROBE_SCRIPT,

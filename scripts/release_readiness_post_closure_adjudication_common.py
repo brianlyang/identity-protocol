@@ -7,6 +7,9 @@ from release_readiness_one_look_topology_common import (
     RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_COMMAND,
     RELEASE_READINESS_ONE_LOOK_TOPOLOGY_VALIDATOR_COMMAND,
 )
+from runtime_summary_surface_governance_common import (
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_COMMAND,
+)
 
 
 @dataclass(frozen=True)
@@ -21,7 +24,7 @@ RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_STAGE_SPECS: tuple[
 ] = (
     ReleaseReadinessPostClosureAdjudicationStageSpec(
         stage_id="runtime_summary_surface_governance",
-        probe_command=("bash", "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh"),
+        probe_command=RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_COMMAND,
     ),
     ReleaseReadinessPostClosureAdjudicationStageSpec(
         stage_id="one_look_topology",
