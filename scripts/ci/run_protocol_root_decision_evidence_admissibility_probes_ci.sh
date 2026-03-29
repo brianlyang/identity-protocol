@@ -12,6 +12,8 @@ PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_decision_evidence_admissibility.py" \
   --repo-root "${ROOT}" \
   --json-only >"${PASS_JSON}"
+ls -l "${PASS_JSON}"
+head -n 1 "${PASS_JSON}"
 
 python3 - <<'PY' "${PASS_JSON}"
 import json
@@ -33,6 +35,10 @@ assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["decision_evidence_row_family_count"] == 9, payload
 assert payload["decision_evidence_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["decision_evidence_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["adjudication_phase_alignment_surfaces"] == ["runtime_state", "receipts"], payload
@@ -66,6 +72,8 @@ doc["decision_evidence_admissibility_completeness_rows"] = [
     row for row in doc["decision_evidence_admissibility_completeness_rows"]
     if row.get("completeness_id") != "explicit_decision_evidence_admissibility_row_families"
 ]
+for idx, row in enumerate(doc["decision_evidence_admissibility_completeness_rows"], start=1):
+    row["order"] = idx
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -101,6 +109,10 @@ assert completeness_row["missing_ids"] == ["explicit_decision_evidence_admissibi
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -502,6 +514,10 @@ assert surface_row["unexpected_ids"] == [
 ], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 
@@ -552,6 +568,10 @@ assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["decision_evidence_admissibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 echo "[PASS] protocol root decision-evidence admissibility probes passed"

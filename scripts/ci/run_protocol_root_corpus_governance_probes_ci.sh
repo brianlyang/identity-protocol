@@ -39,6 +39,10 @@ assert payload["governance_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["governance_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["governance_completeness_row_count"] == 5, payload
 assert payload["governance_completeness_surface"]["entry_count"] == 5, payload
+assert payload["governance_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["governance_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["governance_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["governance_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["governance_completeness_surface"]["extraction_violations"] == [], payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
@@ -104,6 +108,10 @@ assert completeness_row["missing_ids"] == ["fail_close_preserves_governance_iden
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["governance_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["governance_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["governance_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["governance_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 PROFILE_REPO="${TMP_ROOT}/missing-profile-repo"
@@ -309,6 +317,10 @@ assert surface_row["expected_count"] == 5, payload
 assert surface_row["actual_count"] == 5, payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["governance_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["governance_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["governance_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["governance_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 GOVERNANCE_SURFACE_ORDER_REPO="${TMP_ROOT}/governance-surface-order-drift-repo"

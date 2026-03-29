@@ -33,7 +33,14 @@ from root_corpus_question_routing_common import (
     readme_entry_summary_surface,
     root_question_discipline_stages_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
+from root_row_family_projection_common import (
+    NamedRowFamilyStatusProjectionSpec,
+    aggregate_row_family_status,
+    index_row_family_projection_rows,
+    project_named_row_family_statuses,
+    project_root_contract_support_projection,
+    project_row_families,
+)
 
 STATUS_KEY = "protocol_root_corpus_question_routing_status"
 ERR_REGISTRY = "IP-RCQR-001"
@@ -1365,6 +1372,9 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    row_family_projection_by_id = index_row_family_projection_rows(
+        row_family_projection_rows
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_ROUTING),
@@ -1391,6 +1401,32 @@ def main() -> int:
             anchor_checks=anchor_checks,
             anchor_violations=anchor_violations,
             pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        **project_named_row_family_statuses(
+            row_family_projection_rows_by_id=row_family_projection_by_id,
+            specs=(
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="question_routing_completeness_row_coverage_status",
+                    family_id="question_routing_completeness_rows",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="question_routing_completeness_row_identity_projection_status",
+                    family_id="question_routing_completeness_rows",
+                    status_key="identity_projection_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="question_routing_completeness_surface_coverage_status",
+                    family_id="question_routing_completeness_surface",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="question_routing_completeness_surface_identity_projection_status",
+                    family_id="question_routing_completeness_surface",
+                    status_key="identity_projection_status",
+                ),
+            ),
             fail_status=STATUS_FAIL_REQUIRED,
         ),
         "row_family_projection_rows": row_family_projection_rows,

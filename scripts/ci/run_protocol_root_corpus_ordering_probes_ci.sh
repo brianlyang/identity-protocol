@@ -57,6 +57,10 @@ assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["ordering_row_family_count"] == 14, payload
 assert payload["ordering_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["ordering_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["reading_order"][0]["rel_path"] == "identity/protocol/README.md", payload
@@ -81,6 +85,11 @@ assert payload["ordering_completeness_surface"]["entry_count"] == 5, payload
 assert payload["ordering_completeness_surface"]["entries"][0]["contract_phrase"].startswith("required source-order, reading-order"), payload
 assert payload["ordering_completeness_surface"]["entries"][-1]["contract_phrase"].startswith("fail-close machine output must preserve"), payload
 assert payload["ordering_completeness_surface"]["extraction_violations"] == [], payload
+assert payload["ordering_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+
 assert payload["source_order"][0]["corpus_class"] == "bottom_theory", payload
 assert payload["canonical_root_contract_entry_count"] == 16, payload
 assert payload["canonical_root_contract_entry_paths"][0] == "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md", payload
@@ -168,6 +177,10 @@ assert row["coverage_status"] == "FAIL_REQUIRED", payload
 assert row["identity_projection_status"] == "FAIL_REQUIRED", payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["ordering_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["ordering_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 ORDERING_COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/ordering-completeness-surface-drift-repo"
@@ -222,6 +235,10 @@ assert surface_row["missing_ids"] == [
 assert surface_row["unexpected_ids"] == [
     "required source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface, order-plane-stage, order-plane-stage-surface, manual root-contract index/projection, adjudication-order, and adjudication-surface-profile rows must remain explicit as separate machine-readable row families;"
 ], payload
+assert payload["ordering_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 ORDERING_COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/ordering-completeness-surface-order-drift-repo"

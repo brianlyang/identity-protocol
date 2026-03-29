@@ -13,7 +13,14 @@ from root_contract_anchor_checks_common import (
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
 from root_contract_row_validation_common import validate_contract_row_batches
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
+from root_row_family_projection_common import (
+    NamedRowFamilyStatusProjectionSpec,
+    aggregate_row_family_status,
+    index_row_family_projection_rows,
+    project_named_row_family_statuses,
+    project_root_contract_support_projection,
+    project_row_families,
+)
 from root_corpus_authority_common import load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
     gateway_effect_targets_from_doc,
@@ -649,6 +656,10 @@ def main() -> int:
         fail_status=STATUS_FAIL_REQUIRED,
     )
 
+    row_family_projection_by_id = index_row_family_projection_rows(
+        row_family_projection_rows
+    )
+
     payload = {
         STATUS_KEY: status,
         "error_code": error_code,
@@ -678,6 +689,32 @@ def main() -> int:
             anchor_checks=anchor_checks,
             anchor_violations=anchor_violations,
             pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        **project_named_row_family_statuses(
+            row_family_projection_rows_by_id=row_family_projection_by_id,
+            specs=(
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="conflict_precedence_completeness_row_coverage_status",
+                    family_id="conflict_precedence_completeness_rows",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="conflict_precedence_completeness_row_identity_projection_status",
+                    family_id="conflict_precedence_completeness_rows",
+                    status_key="identity_projection_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="conflict_precedence_completeness_surface_coverage_status",
+                    family_id="conflict_precedence_completeness_surface",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="conflict_precedence_completeness_surface_identity_projection_status",
+                    family_id="conflict_precedence_completeness_surface",
+                    status_key="identity_projection_status",
+                ),
+            ),
             fail_status=STATUS_FAIL_REQUIRED,
         ),
         "row_family_projection_rows": row_family_projection_rows,

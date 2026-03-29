@@ -52,6 +52,10 @@ assert payload["entry_summary_stage_count"] == 4, payload
 assert payload["entry_summary_stage_surface"]["entry_count"] == 4, payload
 assert payload["question_routing_completeness_row_count"] == 5, payload
 assert payload["question_routing_completeness_surface"]["entry_count"] == 5, payload
+assert payload["question_routing_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["question_routing_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["question_routing_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["question_routing_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert any(row["family_id"] == "root_question_discipline_stages" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "root_question_discipline_stage_surface" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "entry_summary_stages" for row in payload["row_family_projection_rows"]), payload
@@ -79,6 +83,8 @@ doc["question_routing_completeness_rows"] = [
     row for row in doc["question_routing_completeness_rows"]
     if row.get("completeness_id") != "explicit_question_routing_row_families"
 ]
+for idx, row in enumerate(doc["question_routing_completeness_rows"], start=1):
+    row["order"] = idx
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -114,6 +120,10 @@ assert completeness_row["missing_ids"] == ["explicit_question_routing_row_famili
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["question_routing_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["question_routing_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["question_routing_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["question_routing_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 ROOT_QUESTION_STAGE_REPO="${TMP_ROOT}/root-question-stage-missing-repo"
@@ -426,6 +436,10 @@ assert expected_phrase in surface_row["missing_ids"], payload
 assert "runtime or validator code must not finalize question-routing legality while missing or unexpected question-class, root-question-discipline-stage, or route identities remain known only internally;" in surface_row["unexpected_ids"], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["question_routing_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["question_routing_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["question_routing_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["question_routing_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/question-routing-completeness-surface-order-drift-repo"
@@ -467,6 +481,10 @@ assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["question_routing_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["question_routing_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["question_routing_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["question_routing_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 ROOT_QUESTION_SURFACE_REPO="${TMP_ROOT}/root-question-surface-drift-repo"

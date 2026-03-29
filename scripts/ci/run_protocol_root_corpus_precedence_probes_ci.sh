@@ -52,6 +52,10 @@ assert payload["conflict_precedence_completeness_surface"]["entry_count"] == 5, 
 assert payload["conflict_precedence_completeness_surface"]["entries"][0]["contract_phrase"].startswith("required precedence-profile"), payload
 assert payload["conflict_precedence_completeness_surface"]["entries"][-1]["contract_phrase"].startswith("fail-close machine output must preserve"), payload
 assert payload["conflict_precedence_completeness_surface"]["extraction_violations"] == [], payload
+assert payload["conflict_precedence_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert any(
     row["conflict_class"] == "current_turn_legality_conflict"
     and row["resolution_mode"] == "machine_enforcement_terminal"
@@ -125,6 +129,10 @@ assert row["coverage_status"] == "FAIL_REQUIRED", payload
 assert row["identity_projection_status"] == "FAIL_REQUIRED", payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["conflict_precedence_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["conflict_precedence_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/completeness-surface-drift-repo"
@@ -177,6 +185,10 @@ assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 assert "required precedence-profile, gateway-authorship-projection, conflict-handling-rule, and conflict-handling-rule-surface rows must remain explicit as separate machine-readable row families;" in surface_row["missing_ids"], payload
 assert "required precedence-profile, gateway-authorship-projection, conflict-handling-rule, and conflict-handling guidance rows must remain explicit as separate machine-readable row families;" in surface_row["unexpected_ids"], payload
+assert payload["conflict_precedence_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["conflict_precedence_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/completeness-surface-order-drift-repo"

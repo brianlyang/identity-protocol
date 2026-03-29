@@ -32,7 +32,14 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
+from root_row_family_projection_common import (
+    NamedRowFamilyStatusProjectionSpec,
+    aggregate_row_family_status,
+    index_row_family_projection_rows,
+    project_named_row_family_statuses,
+    project_root_contract_support_projection,
+    project_row_families,
+)
 from root_decision_evidence_admissibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -324,7 +331,10 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
-    print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
+    print(
+        json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2),
+        flush=True,
+    )
 
 
 
@@ -349,6 +359,7 @@ def main() -> int:
     contract_marker_violations: list[dict[str, Any]] = []
     root_doc_anchor_violations: list[dict[str, Any]] = []
     row_family_projection_rows: list[dict[str, Any]] = []
+    row_family_projection_by_id: dict[str, dict[str, Any]] = {}
     error_code = ""
 
     if admissibility_alias_error:
@@ -520,6 +531,9 @@ def main() -> int:
             ),
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
+        )
+        row_family_projection_by_id = index_row_family_projection_rows(
+            row_family_projection_rows
         )
 
         validate_contract_row_batches(
@@ -819,6 +833,32 @@ def main() -> int:
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         ),
+        **project_named_row_family_statuses(
+            row_family_projection_rows_by_id=row_family_projection_by_id,
+            specs=(
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="decision_evidence_admissibility_completeness_row_coverage_status",
+                    family_id="decision_evidence_admissibility_completeness_rows",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="decision_evidence_admissibility_completeness_row_identity_projection_status",
+                    family_id="decision_evidence_admissibility_completeness_rows",
+                    status_key="identity_projection_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="decision_evidence_admissibility_completeness_surface_coverage_status",
+                    family_id="decision_evidence_admissibility_completeness_surface",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="decision_evidence_admissibility_completeness_surface_identity_projection_status",
+                    family_id="decision_evidence_admissibility_completeness_surface",
+                    status_key="identity_projection_status",
+                ),
+            ),
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "evidence_class_ids": [row.evidence_class_id for row in sorted(evidence_class_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
@@ -875,6 +915,7 @@ def main() -> int:
         "root_doc_anchor_violations": root_doc_anchor_violations,
         "stale_reasons": stale_reasons,
     }
+
     _emit(payload, json_only=args.json_only)
     return 0 if status == STATUS_PASS_REQUIRED else 1
 
