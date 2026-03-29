@@ -258,6 +258,7 @@ def main() -> int:
     contract_marker_violations: list[dict[str, Any]] = []
     root_doc_anchor_violations: list[dict[str, Any]] = []
     row_family_projection_rows: list[dict[str, Any]] = []
+    row_family_projection_rows_by_id: dict[str, dict[str, Any]] = {}
     error_code = ""
 
     if responsibility_alias_error:
@@ -420,6 +421,9 @@ def main() -> int:
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         )
+        row_family_projection_rows_by_id = {
+            row["family_id"]: row for row in row_family_projection_rows
+        }
         validate_contract_row_batches(
             batches=(
                 {
@@ -601,6 +605,26 @@ def main() -> int:
             )
         )
 
+    def _row_status(family_id: str, status_key: str) -> str:
+        return str(row_family_projection_rows_by_id.get(family_id, {}).get(status_key) or STATUS_FAIL_REQUIRED)
+
+    protocol_instance_responsibility_completeness_row_coverage_status = _row_status(
+        "protocol_instance_responsibility_completeness_rows",
+        "coverage_status",
+    )
+    protocol_instance_responsibility_completeness_row_identity_projection_status = _row_status(
+        "protocol_instance_responsibility_completeness_rows",
+        "identity_projection_status",
+    )
+    protocol_instance_responsibility_completeness_surface_coverage_status = _row_status(
+        "protocol_instance_responsibility_completeness_surface",
+        "coverage_status",
+    )
+    protocol_instance_responsibility_completeness_surface_identity_projection_status = _row_status(
+        "protocol_instance_responsibility_completeness_surface",
+        "identity_projection_status",
+    )
+
     support_violations = responsibility_violations + integration_violations + contract_marker_violations + root_doc_anchor_violations
     verdict = project_root_contract_support_verdict(
         stale_reasons=stale_reasons,
@@ -636,6 +660,10 @@ def main() -> int:
         "protocol_instance_responsibility_completeness_row_count": len(
             protocol_instance_responsibility_completeness_rows
         ),
+        "protocol_instance_responsibility_completeness_row_coverage_status": protocol_instance_responsibility_completeness_row_coverage_status,
+        "protocol_instance_responsibility_completeness_row_identity_projection_status": protocol_instance_responsibility_completeness_row_identity_projection_status,
+        "protocol_instance_responsibility_completeness_surface_coverage_status": protocol_instance_responsibility_completeness_surface_coverage_status,
+        "protocol_instance_responsibility_completeness_surface_identity_projection_status": protocol_instance_responsibility_completeness_surface_identity_projection_status,
         **project_root_contract_support_projection(
             prefix="protocol_instance",
             row_family_projection_rows=row_family_projection_rows,
