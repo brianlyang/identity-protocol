@@ -42,6 +42,9 @@ from release_closure_operational_marker_bundle_common import (
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
 )
+from release_readiness_repo_global_closure_projection_common import (
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
+)
 from release_readiness_terminal_truth_bridge_common import (
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS,
 )
@@ -49,6 +52,9 @@ from repo_root_resolution_common import resolve_protocol_repo_root
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_RELEASE_CLOSURE = "IP-RCLOS-001"
+BOUNDARY_DOC_REPO_GLOBAL_CLOSURE_STALE_REASON_SUFFIX = (
+    "missing_repo_global_closure_boundary_marker"
+)
 BOUNDARY_DOC_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_STALE_REASON_SUFFIX = (
     "missing_active_runtime_closure_projection_marker"
 )
@@ -151,6 +157,10 @@ def main() -> int:
                 label=label,
             )
         )
+        if not RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS:
+            stale_reasons.append(
+                f"{label}_{BOUNDARY_DOC_REPO_GLOBAL_CLOSURE_STALE_REASON_SUFFIX}:repo_global_surface_constraints_empty"
+            )
         if not RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS:
             stale_reasons.append(
                 f"{label}_{BOUNDARY_DOC_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_STALE_REASON_SUFFIX}:active_runtime_surface_constraints_empty"

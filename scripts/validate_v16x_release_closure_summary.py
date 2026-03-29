@@ -46,6 +46,10 @@ from release_closure_operational_marker_bundle_common import (
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
 )
+from release_readiness_repo_global_closure_projection_common import (
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OUTER_SURFACE_E2E_MARKERS,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
+)
 from release_readiness_terminal_truth_bridge_common import (
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS,
 )
@@ -53,6 +57,9 @@ from repo_root_resolution_common import resolve_protocol_repo_root
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_RELEASE_SUMMARY = "IP-RCSUM-001"
+SUMMARY_DOC_OUTER_SURFACE_E2E_STALE_REASON_PREFIX = (
+    "summary_doc_missing_outer_surface_e2e_marker"
+)
 SUMMARY_DOC_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_STALE_REASON_PREFIX = (
     "summary_doc_missing_active_runtime_closure_projection_marker"
 )
@@ -168,6 +175,17 @@ def main() -> int:
             label="summary_doc",
         )
     )
+    if not RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OUTER_SURFACE_E2E_MARKERS:
+        stale_reasons.append(
+            f"{SUMMARY_DOC_OUTER_SURFACE_E2E_STALE_REASON_PREFIX}:repo_global_outer_surface_e2e_markers_empty"
+        )
+    elif (
+        RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER
+        not in RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OUTER_SURFACE_E2E_MARKERS
+    ):
+        stale_reasons.append(
+            f"{SUMMARY_DOC_OUTER_SURFACE_E2E_STALE_REASON_PREFIX}:repo_global_projection_marker_not_bound"
+        )
     if not RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS:
         stale_reasons.append(
             f"{SUMMARY_DOC_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_STALE_REASON_PREFIX}:active_runtime_surface_constraints_empty"
