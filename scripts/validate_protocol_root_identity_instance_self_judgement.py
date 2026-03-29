@@ -7,9 +7,9 @@ from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from root_contract_anchor_checks_common import (
+    append_expected_root_doc_anchor_stale_reasons,
     evaluate_root_doc_anchor_checks,
     root_doc_anchor_checks_from_doc,
-    validate_expected_root_doc_anchor_checks,
 )
 from root_contract_marker_checks_common import (
     contract_required_markers_from_doc,
@@ -34,8 +34,10 @@ from root_identity_instance_self_judgement_common import (
     STATUS_PASS_REQUIRED,
     anchor_rows_from_doc,
     collapse_rows_from_doc,
+    identity_instance_self_judgement_completeness_rows_from_doc,
     load_root_identity_instance_self_judgement,
     question_rows_from_doc,
+    readme_identity_instance_self_judgement_completeness_surface,
     self_judgement_limit_rows_from_doc,
     self_judgement_proof_rows_from_doc,
 )
@@ -156,6 +158,28 @@ EXPECTED_COLLAPSE_ROWS = {
         "contract_phrase": "an issue requiring escalation is kept local purely because the instance feels confident.",
     },
 }
+EXPECTED_IDENTITY_INSTANCE_SELF_JUDGEMENT_COMPLETENESS_ROWS = {
+    "explicit_identity_instance_self_judgement_row_families": {
+        "order": 1,
+        "contract_phrase": "required question, anchor, self-judgement-proof, self-judgement-limit, and collapse rows must remain explicit as separate machine-readable families;",
+    },
+    "congruent_identity_instance_self_judgement_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_identity_instance_self_judgement_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_identity_instance_self_judgement_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize identity-instance self-judgement legality while missing or unexpected row identities remain known only internally;",
+    },
+    "fail_close_preserves_identity_instance_self_judgement_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for identity-instance self-judgement law",
     "## Four self-judgement questions",
@@ -173,22 +197,26 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "### Identity-instance self-judgement row-family completeness must stay explicit",
         "Required question, anchor, self-judgement-proof, self-judgement-limit, and\ncollapse families must remain explicit as separate machine-readable row\nfamilies.",
+        "README root identity-instance self-judgement completeness discipline must\ntherefore stay congruent with admitted\nidentity-instance-self-judgement-completeness rows rather than becoming a\nfreehand completeness summary.",
         "The machine world must not finalize identity-instance self-judgement legality while required row identity drift remains known only internally.",
     ),
     "identity/protocol/README.md": (
         "## Root identity-instance self-judgement completeness discipline",
         "Identity-instance self-judgement law is not a soft prose bundle.",
+        "These identity-instance-self-judgement-completeness rules must remain bound to canonical identity-instance-self-judgement-completeness rows rather than drifting into soft summary prose.",
         "1. required question, anchor, self-judgement-proof, self-judgement-limit, and collapse rows must remain explicit as separate machine-readable families;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root identity-instance self-judgement completeness boundary",
         "1. Identity-instance self-judgement law must remain machine-readable as separate question, anchor, self-judgement-proof, self-judgement-limit, and collapse row families.",
         "4. Protocol legality must not finalize identity-instance self-judgement legality while missing or unexpected row identities remain known only inside validator logic.",
+        "6. README root identity-instance self-judgement completeness discipline rendered at protocol root must remain congruent with admitted identity-instance-self-judgement-completeness rows rather than silently authoring an alternate completeness summary.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime identity-instance self-judgement consumption boundary",
         "1. Runtime consumes identity-instance self-judgement law as separate question, anchor, self-judgement-proof, self-judgement-limit, and collapse row families rather than as undifferentiated self-description prose.",
         "4. Runtime must not finalize identity-instance self-judgement legality while missing or unexpected row identities remain known only inside validator machinery.",
+        "6. Runtime consumes README root identity-instance self-judgement completeness discipline as a governed completeness projection bound to admitted identity-instance-self-judgement-completeness rows rather than as a freehand completeness summary.",
     ),
 }
 
@@ -246,7 +274,13 @@ def main() -> int:
     self_judgement_proof_rows = self_judgement_proof_rows_from_doc(self_doc) if self_doc else ()
     self_judgement_limit_rows = self_judgement_limit_rows_from_doc(self_doc) if self_doc else ()
     collapse_rows = collapse_rows_from_doc(self_doc) if self_doc else ()
+    identity_instance_self_judgement_completeness_rows = (
+        identity_instance_self_judgement_completeness_rows_from_doc(self_doc) if self_doc else ()
+    )
     root_doc_anchor_checks = root_doc_anchor_checks_from_doc(self_doc) if self_doc else ()
+    identity_instance_self_judgement_completeness_surface = (
+        readme_identity_instance_self_judgement_completeness_surface(repo_root)
+    )
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_anchors = authority_anchor_checks_from_doc(authority_doc) if authority_doc else ()
@@ -284,18 +318,18 @@ def main() -> int:
             if not rows:
                 stale_reasons.append(f"root_identity_instance_self_judgement_{field}_missing")
                 error_code = ERR_REGISTRY
+        if not identity_instance_self_judgement_completeness_rows:
+            stale_reasons.append("root_identity_instance_self_judgement_completeness_rows_missing")
+            error_code = ERR_REGISTRY
         if not self_doc.get("contract_required_markers"):
             stale_reasons.append("root_identity_instance_self_judgement_contract_required_markers_missing")
             error_code = ERR_REGISTRY
-        anchor_reason_count_before = len(stale_reasons)
-        stale_reasons.extend(
-            validate_expected_root_doc_anchor_checks(
-                root_doc_anchor_checks,
-                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
-                stale_reason_prefix="root_identity_instance_self_judgement",
-            )
-        )
-        if len(stale_reasons) > anchor_reason_count_before:
+        if append_expected_root_doc_anchor_stale_reasons(
+            stale_reasons,
+            root_doc_anchor_checks,
+            EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+            stale_reason_prefix="root_identity_instance_self_judgement",
+        ):
             error_code = ERR_REGISTRY
 
         for field in ("contract_file", "philosophy_anchor_file", "validator_script", "probe_script", "common_script"):
@@ -342,6 +376,26 @@ def main() -> int:
                     "expected_rows": EXPECTED_COLLAPSE_ROWS,
                     "id_attr": "row_id",
                 },
+                {
+                    "family_id": "identity_instance_self_judgement_completeness_rows",
+                    "member_id_key": "completeness_id",
+                    "actual_rows": identity_instance_self_judgement_completeness_rows,
+                    "expected_rows": {
+                        completeness_id: {}
+                        for completeness_id in EXPECTED_IDENTITY_INSTANCE_SELF_JUDGEMENT_COMPLETENESS_ROWS
+                    },
+                    "id_attr": "completeness_id",
+                },
+                {
+                    "family_id": "identity_instance_self_judgement_completeness_surface",
+                    "member_id_key": "contract_phrase",
+                    "actual_rows": identity_instance_self_judgement_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {}
+                        for row in EXPECTED_IDENTITY_INSTANCE_SELF_JUDGEMENT_COMPLETENESS_ROWS.values()
+                    },
+                    "id_attr": "contract_phrase",
+                },
             ),
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
@@ -383,10 +437,85 @@ def main() -> int:
                     "id_attr": "row_id",
                     "compare_fields": ("contract_phrase",),
                 },
+                {
+                    "actual_rows": identity_instance_self_judgement_completeness_rows,
+                    "expected_rows": EXPECTED_IDENTITY_INSTANCE_SELF_JUDGEMENT_COMPLETENESS_ROWS,
+                    "field_name": "identity_instance_self_judgement_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "duplicate_reason": "duplicate_identity_instance_self_judgement_completeness_id",
+                    "non_contiguous_reason": "identity_instance_self_judgement_completeness_row_order_non_contiguous",
+                    "missing_reason": "missing_identity_instance_self_judgement_completeness_rows",
+                    "extra_reason": "extra_identity_instance_self_judgement_completeness_rows",
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                    "order_reason": "identity_instance_self_judgement_completeness_row_order_mismatch",
+                },
+                {
+                    "actual_rows": identity_instance_self_judgement_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_IDENTITY_INSTANCE_SELF_JUDGEMENT_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "identity_instance_self_judgement_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_identity_instance_self_judgement_completeness_surface_phrase",
+                    "non_contiguous_reason": "identity_instance_self_judgement_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_identity_instance_self_judgement_completeness_surface_rows",
+                    "extra_reason": "extra_identity_instance_self_judgement_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "identity_instance_self_judgement_completeness_surface_order_mismatch",
+                },
             ),
             structure_violations=structure_violations,
             judgement_violations=judgement_violations,
         )
+
+        expected_identity_instance_self_judgement_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_IDENTITY_INSTANCE_SELF_JUDGEMENT_COMPLETENESS_ROWS.values()
+        ]
+        actual_identity_instance_self_judgement_completeness_phrases = [
+            row.contract_phrase for row in identity_instance_self_judgement_completeness_surface.rows
+        ]
+        expected_identity_instance_self_judgement_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_IDENTITY_INSTANCE_SELF_JUDGEMENT_COMPLETENESS_ROWS.values()
+        ]
+        actual_identity_instance_self_judgement_completeness_orders = [
+            row.order for row in identity_instance_self_judgement_completeness_surface.rows
+        ]
+        for reason in identity_instance_self_judgement_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "identity_instance_self_judgement_completeness_surface",
+                    "reason": f"identity_instance_self_judgement_completeness_surface_{reason}",
+                }
+            )
+        if actual_identity_instance_self_judgement_completeness_phrases and tuple(
+            actual_identity_instance_self_judgement_completeness_phrases
+        ) != tuple(expected_identity_instance_self_judgement_completeness_phrases):
+            judgement_violations.append(
+                {
+                    "field": "identity_instance_self_judgement_completeness_surface",
+                    "reason": "identity_instance_self_judgement_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_identity_instance_self_judgement_completeness_phrases,
+                    "actual": actual_identity_instance_self_judgement_completeness_phrases,
+                }
+            )
+        if actual_identity_instance_self_judgement_completeness_orders and tuple(
+            actual_identity_instance_self_judgement_completeness_orders
+        ) != tuple(expected_identity_instance_self_judgement_completeness_orders):
+            judgement_violations.append(
+                {
+                    "field": "identity_instance_self_judgement_completeness_surface",
+                    "reason": "identity_instance_self_judgement_completeness_surface_order_mismatch",
+                    "expected": expected_identity_instance_self_judgement_completeness_orders,
+                    "actual": actual_identity_instance_self_judgement_completeness_orders,
+                }
+            )
 
         contract_file = str(self_doc.get("contract_file") or "").strip()
         contract_path = (repo_root / contract_file).resolve()
@@ -473,6 +602,9 @@ def main() -> int:
         "self_judgement_proof_count": len(self_judgement_proof_rows),
         "self_judgement_limit_count": len(self_judgement_limit_rows),
         "collapse_count": len(collapse_rows),
+        "identity_instance_self_judgement_completeness_row_count": len(
+            identity_instance_self_judgement_completeness_rows
+        ),
         **project_root_contract_support_projection(
             prefix="self_judgement",
             row_family_projection_rows=row_family_projection_rows,
@@ -487,6 +619,26 @@ def main() -> int:
         "self_judgement_proof_ids": [row.proof_id for row in sorted(self_judgement_proof_rows, key=lambda item: item.order)],
         "self_judgement_limit_ids": [row.row_id for row in sorted(self_judgement_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
+        "identity_instance_self_judgement_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted(identity_instance_self_judgement_completeness_rows, key=lambda item: item.order)
+        ],
+        "identity_instance_self_judgement_completeness_surface": {
+            "rel_path": identity_instance_self_judgement_completeness_surface.rel_path,
+            "entry_count": len(identity_instance_self_judgement_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in identity_instance_self_judgement_completeness_surface.rows
+            ],
+            "extraction_violations": list(identity_instance_self_judgement_completeness_surface.extraction_violations),
+        },
         "structure_violations": structure_violations,
         "judgement_violations": judgement_violations,
         "integration_violations": integration_violations,

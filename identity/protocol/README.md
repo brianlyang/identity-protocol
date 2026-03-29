@@ -761,6 +761,7 @@ These protocol-instance-responsibility-completeness rules must remain bound to c
 ## Root identity-instance self-judgement completeness discipline
 
 Identity-instance self-judgement law is not a soft prose bundle.
+These identity-instance-self-judgement-completeness rules must remain bound to canonical identity-instance-self-judgement-completeness rows rather than drifting into soft summary prose.
 
 1. required question, anchor, self-judgement-proof, self-judgement-limit, and collapse rows must remain explicit as separate machine-readable families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;

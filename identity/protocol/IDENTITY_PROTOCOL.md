@@ -395,6 +395,7 @@ implicit.
 3. Expected row identity set and emitted row identity set for each identity-instance self-judgement family must also remain explicit; identity drift may not be collapsed into summary-only counts.
 4. Protocol legality must not finalize identity-instance self-judgement legality while missing or unexpected row identities remain known only inside validator logic.
 5. Fail-close identity-instance self-judgement output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+6. README root identity-instance self-judgement completeness discipline rendered at protocol root must remain congruent with admitted identity-instance-self-judgement-completeness rows rather than silently authoring an alternate completeness summary.
 
 ## Root law-bundle component-row completeness boundary
 
