@@ -60,6 +60,10 @@ class ReleaseClosureProjectionCompanionMarkerBundleSpec:
     markers: tuple[str, ...]
 
 
+RELEASE_CLOSURE_SUMMARY_PROJECTION_COMPANION_SURFACE_ID = "summary"
+RELEASE_CLOSURE_BOUNDARY_PROJECTION_COMPANION_SURFACE_ID = "boundary"
+
+
 RELEASE_CLOSURE_SUMMARY_OUTER_SURFACE_E2E_COMPANION_MARKER = (
     "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh"
 )
@@ -287,6 +291,27 @@ RELEASE_CLOSURE_BOUNDARY_PROJECTION_COMPANION_MARKER_BUNDLE_SPECS: tuple[
         markers=RELEASE_CLOSURE_BOUNDARY_HEALTH_PROJECTION_COMPANION_MARKERS,
     ),
 )
+
+
+def release_closure_projection_companion_bundle_specs_for_surface(
+    surface_id: str,
+) -> tuple[ReleaseClosureProjectionCompanionMarkerBundleSpec, ...]:
+    if surface_id == RELEASE_CLOSURE_SUMMARY_PROJECTION_COMPANION_SURFACE_ID:
+        return RELEASE_CLOSURE_SUMMARY_PROJECTION_COMPANION_MARKER_BUNDLE_SPECS
+    if surface_id == RELEASE_CLOSURE_BOUNDARY_PROJECTION_COMPANION_SURFACE_ID:
+        return RELEASE_CLOSURE_BOUNDARY_PROJECTION_COMPANION_MARKER_BUNDLE_SPECS
+    raise ValueError(f"unsupported release closure projection companion surface: {surface_id}")
+
+
+def find_release_closure_projection_companion_bundle_spec(
+    *,
+    surface_id: str,
+    stale_reason_prefix: str,
+) -> ReleaseClosureProjectionCompanionMarkerBundleSpec | None:
+    for spec in release_closure_projection_companion_bundle_specs_for_surface(surface_id):
+        if spec.stale_reason_prefix == stale_reason_prefix:
+            return spec
+    return None
 
 
 def collect_release_closure_projection_companion_marker_bundle_stale_reasons(
