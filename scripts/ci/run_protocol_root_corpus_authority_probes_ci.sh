@@ -576,6 +576,64 @@ assert any(
 ), payload
 PY
 
+COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/authority-completeness-surface-order-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_ORDER_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+section_marker = "## Root authority completeness discipline"
+next_heading = "## Root conflict-precedence completeness discipline"
+first = "1. required authority-class-profile, entry-authority-projection, authority-layer-stage, and authority-layer-stage-surface rows must remain explicit as separate machine-readable row families;"
+second = "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+swapped_first = "1. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+swapped_second = "2. required authority-class-profile, entry-authority-projection, authority-layer-stage, and authority-layer-stage-surface rows must remain explicit as separate machine-readable row families;"
+assert section_marker in text, text
+assert next_heading in text, text
+before, rest = text.split(section_marker, 1)
+section_body, sep, after = rest.partition(next_heading)
+assert sep, rest[:4000]
+assert first in section_body and second in section_body, section_body
+section_body = section_body.replace(first, "__TEMP__", 1)
+section_body = section_body.replace(second, swapped_second, 1)
+section_body = section_body.replace("__TEMP__", swapped_first, 1)
+path.write_text(before + section_marker + section_body + sep + after, encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_ORDER_JSON="${TMP_ROOT}/authority-completeness-surface-order-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_authority.py" \
+  --repo-root "${COMPLETENESS_SURFACE_ORDER_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_ORDER_JSON}"; then
+  echo "[FAIL] root corpus authority validator unexpectedly passed authority completeness surface order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_authority_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCA-003", payload
+assert any(
+    "authority_violation:authority_completeness_surface:authority_completeness_surface_order_mismatch" == reason
+    for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "authority_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
 CASE_REPO="${TMP_ROOT}/case-normalization-repo"
 mirror_repo "${CASE_REPO}"
 python3 - <<'PY' "${CASE_REPO}/identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md"
