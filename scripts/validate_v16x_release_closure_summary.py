@@ -7,8 +7,6 @@ from pathlib import Path
 from typing import Any
 
 from release_closure_doc_common import (
-    collect_release_closure_issue_horizon_targets,
-    contains_release_closure_issue_horizon,
     extract_release_closure_v16_versions,
     parse_release_closure_issue_register,
     resolve_release_closure_doc_paths,
@@ -19,6 +17,9 @@ from release_closure_foundational_marker_common import (
 )
 from release_closure_doc_reference_bundle_common import (
     collect_release_closure_summary_doc_reference_bundle_stale_reasons,
+)
+from release_closure_horizon_alignment_bundle_common import (
+    collect_release_closure_summary_horizon_alignment_bundle_stale_reasons,
 )
 from release_closure_narrative_marker_common import (
     collect_release_closure_summary_narrative_bundle_stale_reasons,
@@ -128,16 +129,15 @@ def main() -> int:
             label="summary_doc",
         )
     )
-    if not contains_release_closure_issue_horizon(summary_text, highest_issue):
-        stale_reasons.append("summary_doc_issue_horizon_mismatch")
-    for target_issue in collect_release_closure_issue_horizon_targets(summary_text):
-        if target_issue != highest_issue:
-            stale_reasons.append(f"summary_doc_stale_issue_horizon:{target_issue}")
-    if highest_version and highest_version not in summary_text:
-        stale_reasons.append("summary_doc_missing_highest_v16_stream_version")
-    for version in boundary_versions:
-        if version not in summary_text:
-            stale_reasons.append(f"summary_doc_missing_boundary_stream_version:{version}")
+    stale_reasons.extend(
+        collect_release_closure_summary_horizon_alignment_bundle_stale_reasons(
+            summary_text,
+            label="summary_doc",
+            current_issue=highest_issue,
+            highest_version=highest_version,
+            boundary_versions=tuple(boundary_versions),
+        )
+    )
 
     if "runtime verdict surface" not in summary_text or "fleet-scope closure matrix" not in summary_text:
         stale_reasons.append("summary_doc_missing_scope_separation_markers")

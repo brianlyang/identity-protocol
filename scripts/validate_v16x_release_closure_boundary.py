@@ -7,8 +7,6 @@ from pathlib import Path
 from typing import Any
 
 from release_closure_doc_common import (
-    collect_release_closure_issue_horizon_targets,
-    contains_release_closure_issue_horizon,
     parse_release_closure_issue_register,
     resolve_release_closure_doc_paths,
 )
@@ -18,6 +16,9 @@ from release_closure_foundational_marker_common import (
 )
 from release_closure_doc_reference_bundle_common import (
     collect_release_closure_boundary_doc_reference_bundle_stale_reasons,
+)
+from release_closure_horizon_alignment_bundle_common import (
+    collect_release_closure_boundary_horizon_alignment_bundle_stale_reasons,
 )
 from release_closure_narrative_marker_common import (
     collect_release_closure_boundary_narrative_bundle_stale_reasons,
@@ -156,13 +157,14 @@ def main() -> int:
                 label=label,
             )
         )
-        if not contains_release_closure_issue_horizon(text, highest_issue):
-            stale_reasons.append(f"{label}_issue_horizon_mismatch")
-        for target_issue in collect_release_closure_issue_horizon_targets(text):
-            if target_issue != highest_issue:
-                stale_reasons.append(f"{label}_stale_issue_horizon:{target_issue}")
-        if highest_version and highest_version not in text:
-            stale_reasons.append(f"{label}_missing_highest_v16_stream_version")
+        stale_reasons.extend(
+            collect_release_closure_boundary_horizon_alignment_bundle_stale_reasons(
+                text,
+                label=label,
+                current_issue=highest_issue,
+                highest_version=highest_version,
+            )
+        )
 
     payload["v16x_release_closure_boundary_status"] = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
     payload["error_code"] = "" if not stale_reasons else ERR_RELEASE_CLOSURE
