@@ -25,13 +25,116 @@ assert payload["differentiation_count"] == 6, payload
 assert payload["family_admission_proof_count"] == 6, payload
 assert payload["family_admission_limit_count"] == 6, payload
 assert payload["collapse_count"] == 6, payload
+assert payload["artifact_family_admissibility_completeness_row_count"] == 5, payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["artifact_family_row_family_count"] == 5, payload
+assert payload["artifact_family_row_family_count"] == 7, payload
 assert payload["artifact_family_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["artifact_family_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert payload["artifact_family_admissibility_completeness_surface"]["entry_count"] == 5, payload
+assert payload["artifact_family_admissibility_completeness_surface"]["extraction_violations"] == [], payload
+assert any(row["family_id"] == "artifact_family_admissibility_completeness_rows" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "artifact_family_admissibility_completeness_surface" for row in payload["row_family_projection_rows"]), payload
+PY
+
+COMPLETENESS_ROW_REPO="${TMP_ROOT}/missing-completeness-row-repo"
+mirror_repo "${COMPLETENESS_ROW_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_REPO}/identity/protocol/mappings/root-artifact-family-admissibility.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["artifact_family_admissibility_completeness_rows"] = [
+    row for row in doc["artifact_family_admissibility_completeness_rows"]
+    if row.get("completeness_id") != "explicit_artifact_family_admissibility_row_families"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_JSON="${TMP_ROOT}/missing-completeness-row.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_artifact_family_admissibility.py" \
+  --repo-root "${COMPLETENESS_ROW_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_JSON}"; then
+  echo "[FAIL] root artifact-family admissibility validator unexpectedly passed missing completeness row"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_artifact_family_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-AFA-002", payload
+assert any(
+    row["field"] == "artifact_family_admissibility_completeness_rows"
+    and row["reason"] == "missing_artifact_family_admissibility_completeness_rows"
+    and "explicit_artifact_family_admissibility_row_families" in row.get("completeness_ids", [])
+    for row in payload["structure_violations"]
+), payload
+completeness_row = next(row for row in payload["row_family_projection_rows"] if row["family_id"] == "artifact_family_admissibility_completeness_rows")
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 4, payload
+assert completeness_row["missing_ids"] == ["explicit_artifact_family_admissibility_row_families"], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/completeness-surface-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "1. required family-admission-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;"
+new = "1. required family-admission-class, differentiation, proof, and collapse rows must remain explicit as separate machine-readable families;"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_JSON="${TMP_ROOT}/completeness-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_artifact_family_admissibility.py" \
+  --repo-root "${COMPLETENESS_SURFACE_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_JSON}"; then
+  echo "[FAIL] root artifact-family admissibility validator unexpectedly passed completeness surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_artifact_family_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-AFA-002", payload
+assert any(
+    row["field"] == "artifact_family_admissibility_completeness_surface"
+    and row["reason"] == "missing_artifact_family_admissibility_completeness_surface_rows"
+    and "required family-admission-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;" in row.get("contract_phrases", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "artifact_family_admissibility_completeness_surface"
+    and row["reason"] == "extra_artifact_family_admissibility_completeness_surface_rows"
+    and "required family-admission-class, differentiation, proof, and collapse rows must remain explicit as separate machine-readable families;" in row.get("contract_phrases", [])
+    for row in payload["structure_violations"]
+), payload
+surface_row = next(row for row in payload["row_family_projection_rows"] if row["family_id"] == "artifact_family_admissibility_completeness_surface")
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == ["required family-admission-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;"], payload
+assert surface_row["unexpected_ids"] == ["required family-admission-class, differentiation, proof, and collapse rows must remain explicit as separate machine-readable families;"], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -44,7 +147,8 @@ import yaml
 path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
 doc["required_family_admission_proof_rows"] = [
-    row for row in doc["required_family_admission_proof_rows"] if row.get("proof_id") != "demotion_quarantine_family_admission_proof"
+    row for row in doc["required_family_admission_proof_rows"]
+    if row.get("proof_id") != "demotion_quarantine_family_admission_proof"
 ]
 for idx, row in enumerate(doc["required_family_admission_proof_rows"], start=1):
     row["order"] = idx
@@ -73,10 +177,7 @@ assert any(
     row["reason"] == "missing_expected_rows" and "demotion_quarantine_family_admission_proof" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
-proof_row = next(
-    row for row in payload["row_family_projection_rows"]
-    if row["family_id"] == "required_family_admission_proof_rows"
-)
+proof_row = next(row for row in payload["row_family_projection_rows"] if row["family_id"] == "required_family_admission_proof_rows")
 assert proof_row["expected_count"] == 6, payload
 assert proof_row["actual_count"] == 5, payload
 assert proof_row["missing_ids"] == ["demotion_quarantine_family_admission_proof"], payload
@@ -129,10 +230,7 @@ assert any(
 ), payload
 assert payload["artifact_family_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["artifact_family_row_identity_projection_status"] == "FAIL_REQUIRED", payload
-class_row = next(
-    row for row in payload["row_family_projection_rows"]
-    if row["family_id"] == "required_family_admission_class_rows"
-)
+class_row = next(row for row in payload["row_family_projection_rows"] if row["family_id"] == "required_family_admission_class_rows")
 assert class_row["expected_count"] == 6, payload
 assert class_row["actual_count"] == 6, payload
 assert class_row["missing_ids"] == ["canonical_family_sink"], payload
@@ -261,8 +359,8 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-old = "## Root artifact-family admissibility completeness discipline"
-new = "## Root artifact-family admissibility discipline"
+old = "These artifact-family-admissibility-completeness rules must remain bound to canonical artifact-family-admissibility-completeness rows rather than drifting into soft summary prose."
+new = "These artifact-family-admissibility rules may be summarized directly in README prose."
 assert old in text, text
 path.write_text(text.replace(old, new, 1), encoding="utf-8")
 PY
@@ -284,14 +382,11 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_artifact_family_admissibility_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-AFA-003", payload
 assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
-assert any(
-    reason.startswith("root_doc_anchor_violation:")
-    for reason in payload["stale_reasons"]
-), payload
+assert any(reason.startswith("root_doc_anchor_violation:") for reason in payload["stale_reasons"]), payload
 assert any(
     row["rel_path"] == "identity/protocol/README.md"
     and row["reason"] == "required_marker_missing"
-    and row["marker"] == "## Root artifact-family admissibility completeness discipline"
+    and row["marker"] == "These artifact-family-admissibility-completeness rules must remain bound to canonical artifact-family-admissibility-completeness rows rather than drifting into soft summary prose."
     for row in payload["root_doc_anchor_violations"]
 ), payload
 PY

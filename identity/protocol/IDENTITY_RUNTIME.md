@@ -292,6 +292,7 @@ implicit.
 3. Runtime must also keep expected row identity set and emitted row identity set for each artifact-family admissibility family explicit rather than collapsing identity drift into summary-only counts.
 4. Runtime must not finalize artifact-family admissibility while missing or unexpected row identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+6. Runtime consumes README root artifact-family admissibility completeness discipline as a governed completeness projection bound to admitted artifact-family-admissibility-completeness rows rather than as a freehand completeness summary.
 
 ## Runtime current-truth epistemology consumption boundary
 

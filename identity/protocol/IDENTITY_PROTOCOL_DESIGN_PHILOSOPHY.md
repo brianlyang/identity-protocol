@@ -1559,6 +1559,11 @@ its machine rows behind aggregate counts.
 Required family-admission-class, differentiation, proof, limit, and collapse
 families must remain explicit as separate machine-readable row families.
 
+README root artifact-family admissibility completeness discipline must
+therefore stay congruent with admitted
+artifact-family-admissibility-completeness rows rather than becoming a
+freehand completeness summary.
+
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left
 implicit.
