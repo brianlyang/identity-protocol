@@ -13,6 +13,7 @@ from root_contract_anchor_checks_common import (
     validate_expected_root_doc_anchor_checks,
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
+from root_contract_row_validation_common import validate_contract_row_batches
 from root_corpus_derivation_common import derivation_class_profiles_from_doc, load_root_corpus_derivation
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_question_routing_common import adjudication_redirect_from_doc, load_root_corpus_question_routing
@@ -22,7 +23,9 @@ from root_corpus_transition_common import (
     STATUS_PASS_REQUIRED,
     load_root_corpus_transition,
     transition_anchor_checks_from_doc,
+    transition_completeness_rows_from_doc,
     transition_surface_profiles_from_doc,
+    readme_transition_completeness_surface,
 )
 
 STATUS_KEY = "protocol_root_corpus_transition_status"
@@ -159,24 +162,60 @@ ROOT_TRANSITION_EXPECTATIONS = {
 ALLOWED_REENTRY_GATEWAYS = {"constitution", "runtime_constitution", "root_contract", "machine_registry_directory"}
 EXPECTED_CURRENT_TURN_ROOT_CLASS = "machine_registry_directory"
 EXPECTED_SURFACE_CLASSES = sorted(set(ROOT_TRANSITION_EXPECTATIONS) | set(OUTER_SURFACE_EXPECTATIONS))
+EXPECTED_TRANSITION_COMPLETENESS_ROWS = {
+    "explicit_transition_row_families": {
+        "order": 1,
+        "contract_phrase": "required surface-class-profile, direct-root-target-edge, and strengthening-gateway-edge rows must remain explicit as separate machine-readable row families;",
+    },
+    "congruent_transition_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_transition_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_transition_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize transition legality while missing or unexpected surface, promotion-edge, or re-entry-gateway identities remain known only internally;",
+    },
+    "fail_close_preserves_transition_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/README.md": (
         "## Root promotion-demotion discipline",
         "outer governance, review, workbook, reference, evidence, runtime, receipt, and implementation surfaces may motivate strengthening, but they do not directly promote themselves into root law;",
         "demoted support material cannot directly climb back into law-bearing root status;",
+        "## Root transition completeness discipline",
+        "These transition-completeness rules must remain bound to canonical transition-completeness rows rather than drifting into soft summary prose.",
+        "1. required surface-class-profile, direct-root-target-edge, and strengthening-gateway-edge rows must remain explicit as separate machine-readable row families;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "### Promotion, demotion, and re-entry must stay governed",
         "demotion removes law-bearing authority; it does not preserve a suspended sovereignty that can silently reclaim root status later;",
         "outer governance, review, workbook, reference, evidence, runtime, receipt, and implementation surfaces may motivate strengthening, but they do not directly author root law by themselves;",
+        "### Transition row-family completeness must stay explicit",
+        "README root transition completeness discipline must therefore stay congruent with admitted transition-completeness rows rather than becoming a freehand completeness summary.",
+        "The machine world must not finalize transition legality while required surface, promotion-edge, or re-entry-gateway identity drift remains known only internally.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root-law promotion and re-entry boundary",
         "Promotion into root law without governed refreezing is non-compliant, even if the motivating surface contains true evidence.",
+        "## Root transition completeness boundary",
+        "1. Transition law must remain machine-readable as separate surface-class-profile, direct-root-target-edge, and strengthening-gateway-edge row families.",
+        "4. Protocol legality must not finalize transition legality while missing or unexpected surface, promotion-edge, or re-entry-gateway identities remain known only inside validator logic.",
+        "6. README root transition completeness discipline rendered at protocol root must remain congruent with admitted transition-completeness rows rather than silently authoring an alternate completeness summary.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime-to-root promotion boundary",
         "Runtime-origin evidence must re-enter shared law only through governed refreezing at constitutional, runtime-constitutional, root-contract, or machine-registry gateways.",
+        "## Runtime transition consumption boundary",
+        "1. Runtime consumes transition law as separate surface-class-profile, direct-root-target-edge, and strengthening-gateway-edge row families rather than as undifferentiated transition prose.",
+        "4. Runtime must not finalize transition legality while missing or unexpected surface, promotion-edge, or re-entry-gateway identities remain known only inside validator machinery.",
+        "6. Runtime consumes README root transition completeness discipline as a governed completeness projection bound to admitted transition-completeness rows rather than as a freehand completeness summary.",
     ),
 }
 
@@ -236,9 +275,11 @@ def main() -> int:
 
     anchor_checks = transition_anchor_checks_from_doc(transition_doc) if transition_doc else ()
     surface_profiles = transition_surface_profiles_from_doc(transition_doc) if transition_doc else ()
+    transition_completeness_rows = transition_completeness_rows_from_doc(transition_doc) if transition_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     derivation_profiles = derivation_class_profiles_from_doc(derivation_doc) if derivation_doc else ()
     adjudication_redirect = adjudication_redirect_from_doc(question_routing_doc) if question_routing_doc else adjudication_redirect_from_doc({})
+    transition_completeness_surface = readme_transition_completeness_surface(repo_root)
 
     if not stale_reasons:
         if str(transition_doc.get("transition_family") or "").strip() != "protocol_root_corpus_transition":
@@ -285,6 +326,9 @@ def main() -> int:
                 error_code = ERR_REGISTRY
         if not anchor_checks:
             stale_reasons.append("root_corpus_transition_anchor_checks_missing")
+            error_code = ERR_REGISTRY
+        if not transition_completeness_rows:
+            stale_reasons.append("root_corpus_transition_completeness_rows_missing")
             error_code = ERR_REGISTRY
         if not surface_profiles:
             stale_reasons.append("root_corpus_transition_surface_profiles_missing")
@@ -350,6 +394,81 @@ def main() -> int:
             duplicate_reason="duplicate_surface_class",
             actual_total_count=len(surface_profiles),
         )
+        for reason in transition_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "transition_completeness_surface",
+                    "reason": f"transition_completeness_surface_{reason}",
+                }
+            )
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": transition_completeness_rows,
+                    "expected_rows": EXPECTED_TRANSITION_COMPLETENESS_ROWS,
+                    "field_name": "transition_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                },
+                {
+                    "actual_rows": transition_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_TRANSITION_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "transition_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_transition_completeness_surface_phrase",
+                    "non_contiguous_reason": "transition_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_transition_completeness_surface_rows",
+                    "extra_reason": "extra_transition_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "transition_completeness_surface_order_mismatch",
+                },
+            ),
+            structure_violations=structure_violations,
+            support_violations=transition_violations,
+        )
+        expected_transition_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_TRANSITION_COMPLETENESS_ROWS.values()
+        ]
+        actual_transition_completeness_phrases = [
+            row.contract_phrase for row in transition_completeness_surface.rows
+        ]
+        expected_transition_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_TRANSITION_COMPLETENESS_ROWS.values()
+        ]
+        actual_transition_completeness_orders = [
+            row.order for row in transition_completeness_surface.rows
+        ]
+        if actual_transition_completeness_phrases and tuple(actual_transition_completeness_phrases) != tuple(
+            expected_transition_completeness_phrases
+        ):
+            transition_violations.append(
+                {
+                    "field": "transition_completeness_surface",
+                    "reason": "transition_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_transition_completeness_phrases,
+                    "actual": actual_transition_completeness_phrases,
+                }
+            )
+        if actual_transition_completeness_orders and tuple(actual_transition_completeness_orders) != tuple(
+            expected_transition_completeness_orders
+        ):
+            transition_violations.append(
+                {
+                    "field": "transition_completeness_surface",
+                    "reason": "transition_completeness_surface_order_mismatch",
+                    "expected": expected_transition_completeness_orders,
+                    "actual": actual_transition_completeness_orders,
+                }
+            )
 
         for row in surface_profiles:
             expected = ROOT_TRANSITION_EXPECTATIONS.get(row.surface_class, OUTER_SURFACE_EXPECTATIONS.get(row.surface_class))
@@ -572,10 +691,31 @@ def main() -> int:
                 "expected_rows": expected_strengthening_gateway_edges,
                 "id_attr": "edge_id",
             },
+            {
+                "family_id": "transition_completeness_rows",
+                "member_id_key": "completeness_id",
+                "actual_rows": transition_completeness_rows,
+                "expected_rows": {
+                    completeness_id: {}
+                    for completeness_id in EXPECTED_TRANSITION_COMPLETENESS_ROWS
+                },
+                "id_attr": "completeness_id",
+            },
+            {
+                "family_id": "transition_completeness_surface",
+                "member_id_key": "contract_phrase",
+                "actual_rows": transition_completeness_surface.rows,
+                "expected_rows": {
+                    row["contract_phrase"]: {}
+                    for row in EXPECTED_TRANSITION_COMPLETENESS_ROWS.values()
+                },
+                "id_attr": "contract_phrase",
+            },
         ),
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    row_family_projection_by_id = {row["family_id"]: row for row in row_family_projection_rows}
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_TRANSITION),
@@ -592,6 +732,7 @@ def main() -> int:
         "surface_class_profile_count": len(surface_profiles),
         "direct_root_target_edge_count": len(direct_root_target_edges),
         "strengthening_gateway_edge_count": len(strengthening_gateway_edges),
+        "transition_completeness_row_count": len(transition_completeness_rows),
         **project_root_contract_support_projection(
             prefix="transition",
             row_family_projection_rows=row_family_projection_rows,
@@ -600,6 +741,10 @@ def main() -> int:
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         ),
+        "transition_completeness_row_coverage_status": row_family_projection_by_id["transition_completeness_rows"]["coverage_status"],
+        "transition_completeness_row_identity_projection_status": row_family_projection_by_id["transition_completeness_rows"]["identity_projection_status"],
+        "transition_completeness_surface_coverage_status": row_family_projection_by_id["transition_completeness_surface"]["coverage_status"],
+        "transition_completeness_surface_identity_projection_status": row_family_projection_by_id["transition_completeness_surface"]["identity_projection_status"],
         "row_family_projection_rows": row_family_projection_rows,
         "current_turn_allowed_root_surface": EXPECTED_CURRENT_TURN_ROOT_CLASS,
         "surface_class_profiles": [
@@ -628,6 +773,26 @@ def main() -> int:
             }
             for row in strengthening_gateway_edges
         ],
+        "transition_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted(transition_completeness_rows, key=lambda item: item.order)
+        ],
+        "transition_completeness_surface": {
+            "rel_path": transition_completeness_surface.rel_path,
+            "entry_count": len(transition_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in transition_completeness_surface.rows
+            ],
+            "extraction_violations": list(transition_completeness_surface.extraction_violations),
+        },
         "structure_violations": structure_violations,
         "transition_violations": transition_violations,
         "anchor_violations": anchor_violations,
