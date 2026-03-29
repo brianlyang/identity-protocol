@@ -21,24 +21,52 @@ authority_anchor_checks:
   - '## Authority layering'
   - This authority layering must remain bound to canonical authority-layer stage
     rows rather than becoming a freehand alternate authority ladder.
+  - '## Root authority completeness discipline'
+  - These authority-completeness rules must remain bound to canonical authority-completeness
+    rows rather than drifting into soft summary prose.
+  - '1. required authority-class-profile, entry-authority-projection, authority-layer-stage,
+    and authority-layer-stage-surface rows must remain explicit as separate machine-readable
+    row families;'
   - machine-consumed enforcement authority
   - Philosophical primacy, however, is not the same as runtime-source primacy.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
+  - '### Authority row-family completeness must stay explicit'
   - philosophical primacy does not mean runtime-source primacy
   - machine-consumed authority still lives in frozen contracts, mappings, validators,
     runtime state, and receipts
+  - README root authority completeness discipline must therefore stay congruent
+    with admitted authority-completeness rows rather than becoming a freehand
+    completeness summary.
   - README authority layering must therefore stay congruent with admitted authority-layer-stage
     rows rather than becoming a freehand alternate authority ladder.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root authority completeness boundary'
+  - '1. Authority law must remain machine-readable as separate authority-class-profile,
+    entry-authority-projection, authority-layer-stage, and authority-layer-stage-surface
+    row families.'
+  - README root authority completeness discipline rendered at protocol root must
+    remain congruent with admitted authority-completeness rows rather than silently
+    authoring an alternate completeness summary.
+  - '7. README authority layering stages rendered at protocol root must remain congruent
+    with admitted authority-layer-stage rows rather than silently authoring an
+    alternate authority ladder.'
   - README authority layering stages rendered at protocol root must remain congruent
     with admitted authority-layer-stage rows rather than silently authoring an
     alternate authority ladder.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime authority consumption boundary'
+  - '1. Runtime consumes authority law as separate authority-class-profile, entry-authority-projection,
+    authority-layer-stage, and authority-layer-stage-surface row families rather
+    than as undifferentiated authority prose.'
+  - Runtime consumes README root authority completeness discipline as a governed
+    completeness projection bound to admitted authority-completeness rows rather
+    than as a freehand completeness summary.
+  - '7. Runtime consumes README authority layering as a governed stage projection
+    bound to admitted authority-layer-stage rows rather than as a freehand alternate
+    authority ladder.'
   - Runtime consumes README authority layering as a governed stage projection
     bound to admitted authority-layer-stage rows rather than as a freehand alternate
     authority ladder.
@@ -313,3 +341,19 @@ authority_layer_stages:
   - runtime state
   - receipts
   - these determine *current machine truth and pass/fail authority*.
+authority_completeness_rows:
+- order: 1
+  completeness_id: explicit_authority_row_families
+  contract_phrase: 'required authority-class-profile, entry-authority-projection, authority-layer-stage, and authority-layer-stage-surface rows must remain explicit as separate machine-readable row families;'
+- order: 2
+  completeness_id: congruent_authority_row_family_totals
+  contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+- order: 3
+  completeness_id: explicit_authority_row_identity_sets
+  contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+- order: 4
+  completeness_id: hidden_authority_identity_drift_forbidden
+  contract_phrase: 'runtime or validator code must not finalize authority legality while missing or unexpected corpus-class, entry, or authority-layer-stage identities remain known only internally;'
+- order: 5
+  completeness_id: fail_close_preserves_authority_identity_projection
+  contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'

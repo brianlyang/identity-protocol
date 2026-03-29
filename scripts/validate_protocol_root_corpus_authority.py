@@ -12,15 +12,18 @@ from root_contract_anchor_checks_common import (
     validate_expected_root_doc_anchor_checks,
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
+from root_contract_row_validation_common import validate_contract_row_batches
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_authority_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     authority_anchor_checks_from_doc,
     authority_class_profiles_from_doc,
+    authority_completeness_rows_from_doc,
     authority_layer_stages_from_doc,
     entry_authority_projections_from_doc,
     load_root_corpus_authority,
+    readme_authority_completeness_surface,
     readme_authority_layer_surface,
 )
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
@@ -89,24 +92,57 @@ ALLOWED_AUTHORITY_MODES = {
     "extension_family",
     "demoted_support_only",
 }
+EXPECTED_AUTHORITY_COMPLETENESS_ROWS = {
+    "explicit_authority_row_families": {
+        "order": 1,
+        "contract_phrase": "required authority-class-profile, entry-authority-projection, authority-layer-stage, and authority-layer-stage-surface rows must remain explicit as separate machine-readable row families;",
+    },
+    "congruent_authority_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_authority_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_authority_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize authority legality while missing or unexpected corpus-class, entry, or authority-layer-stage identities remain known only internally;",
+    },
+    "fail_close_preserves_authority_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/README.md": (
         "## Authority layering",
         "This authority layering must remain bound to canonical authority-layer stage rows rather than becoming a freehand alternate authority ladder.",
+        "## Root authority completeness discipline",
+        "These authority-completeness rules must remain bound to canonical authority-completeness rows rather than drifting into soft summary prose.",
+        "1. required authority-class-profile, entry-authority-projection, authority-layer-stage, and authority-layer-stage-surface rows must remain explicit as separate machine-readable row families;",
         "machine-consumed enforcement authority",
         "Philosophical primacy, however, is not the same as runtime-source primacy.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Authority row-family completeness must stay explicit",
         "philosophical primacy does not mean runtime-source primacy",
         "machine-consumed authority still lives in frozen contracts, mappings, validators, runtime state, and receipts",
+        "README root authority completeness discipline must therefore stay congruent with admitted authority-completeness rows rather than becoming a freehand completeness summary.",
         "README authority layering must therefore stay congruent with admitted authority-layer-stage rows rather than becoming a freehand alternate authority ladder.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root authority completeness boundary",
+        "1. Authority law must remain machine-readable as separate authority-class-profile, entry-authority-projection, authority-layer-stage, and authority-layer-stage-surface row families.",
+        "README root authority completeness discipline rendered at protocol root must remain congruent with admitted authority-completeness rows rather than silently authoring an alternate completeness summary.",
+        "7. README authority layering stages rendered at protocol root must remain congruent with admitted authority-layer-stage rows rather than silently authoring an alternate authority ladder.",
         "README authority layering stages rendered at protocol root must remain congruent with admitted authority-layer-stage rows rather than silently authoring an alternate authority ladder.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime authority consumption boundary",
+        "1. Runtime consumes authority law as separate authority-class-profile, entry-authority-projection, authority-layer-stage, and authority-layer-stage-surface row families rather than as undifferentiated authority prose.",
+        "Runtime consumes README root authority completeness discipline as a governed completeness projection bound to admitted authority-completeness rows rather than as a freehand completeness summary.",
+        "7. Runtime consumes README authority layering as a governed stage projection bound to admitted authority-layer-stage rows rather than as a freehand alternate authority ladder.",
         "Runtime consumes README authority layering as a governed stage projection bound to admitted authority-layer-stage rows rather than as a freehand alternate authority ladder.",
     ),
     "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md": (
@@ -173,6 +209,28 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "## Runtime adjudication boundary",
         "Current-turn answer-surface legality must still resolve from machine-consumed enforcement surfaces",
     ),
+}
+EXPECTED_AUTHORITY_COMPLETENESS_ROWS = {
+    "explicit_authority_row_families": {
+        "order": 1,
+        "contract_phrase": "required authority-class-profile, entry-authority-projection, authority-layer-stage, and authority-layer-stage-surface rows must remain explicit as separate machine-readable row families;",
+    },
+    "congruent_authority_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_authority_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_authority_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize authority legality while missing or unexpected corpus-class, entry, or authority-layer-stage identities remain known only internally;",
+    },
+    "fail_close_preserves_authority_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
 }
 EXPECTED_AUTHORITY_LAYER_STAGES = {
     "bottom-theory primacy": {
@@ -273,8 +331,10 @@ def main() -> int:
     class_profiles = authority_class_profiles_from_doc(authority_doc) if authority_doc else ()
     entry_projections = entry_authority_projections_from_doc(authority_doc) if authority_doc else ()
     authority_layer_stages = authority_layer_stages_from_doc(authority_doc) if authority_doc else ()
+    authority_completeness_rows = authority_completeness_rows_from_doc(authority_doc) if authority_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
+    authority_completeness_surface = readme_authority_completeness_surface(repo_root)
     authority_layer_surface = readme_authority_layer_surface(repo_root)
 
     if not stale_reasons:
@@ -319,6 +379,9 @@ def main() -> int:
         if not authority_layer_stages:
             stale_reasons.append("root_corpus_authority_layer_stages_missing")
             error_code = ERR_REGISTRY
+        if not authority_completeness_rows:
+            stale_reasons.append("root_corpus_authority_completeness_rows_missing")
+            error_code = ERR_REGISTRY
         anchor_reason_count_before = len(stale_reasons)
         stale_reasons.extend(
             validate_expected_root_doc_anchor_checks(
@@ -344,6 +407,13 @@ def main() -> int:
     root_index_entry = str(ordering_doc.get("root_index_entry") or "").strip() if ordering_doc else ""
 
     if not stale_reasons:
+        for reason in authority_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "authority_completeness_surface",
+                    "reason": f"authority_completeness_surface_{reason}",
+                }
+            )
         append_root_doc_anchor_registry_structure_violations(
             structure_violations,
             anchor_checks,
@@ -399,6 +469,79 @@ def main() -> int:
             duplicate_reason="duplicate_authority_layer_surface_stage",
             actual_total_count=len(authority_layer_surface.rows),
         )
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": authority_completeness_rows,
+                    "expected_rows": EXPECTED_AUTHORITY_COMPLETENESS_ROWS,
+                    "field_name": "authority_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "duplicate_reason": "duplicate_authority_completeness_id",
+                    "non_contiguous_reason": "authority_completeness_row_order_non_contiguous",
+                    "missing_reason": "missing_authority_completeness_rows",
+                    "extra_reason": "extra_authority_completeness_rows",
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                    "order_reason": "authority_completeness_row_order_mismatch",
+                },
+                {
+                    "actual_rows": authority_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_AUTHORITY_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "authority_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_authority_completeness_surface_phrase",
+                    "non_contiguous_reason": "authority_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_authority_completeness_surface_rows",
+                    "extra_reason": "extra_authority_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "authority_completeness_surface_order_mismatch",
+                },
+            ),
+            structure_violations=structure_violations,
+            support_violations=authority_violations,
+        )
+        expected_authority_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_AUTHORITY_COMPLETENESS_ROWS.values()
+        ]
+        actual_authority_completeness_phrases = [
+            row.contract_phrase for row in authority_completeness_surface.rows
+        ]
+        expected_authority_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_AUTHORITY_COMPLETENESS_ROWS.values()
+        ]
+        actual_authority_completeness_orders = [
+            row.order for row in authority_completeness_surface.rows
+        ]
+        if actual_authority_completeness_phrases and tuple(actual_authority_completeness_phrases) != tuple(
+            expected_authority_completeness_phrases
+        ):
+            authority_violations.append(
+                {
+                    "field": "authority_completeness_surface",
+                    "reason": "authority_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_authority_completeness_phrases,
+                    "actual": actual_authority_completeness_phrases,
+                }
+            )
+        if actual_authority_completeness_orders and tuple(actual_authority_completeness_orders) != tuple(
+            expected_authority_completeness_orders
+        ):
+            authority_violations.append(
+                {
+                    "field": "authority_completeness_surface",
+                    "reason": "authority_completeness_surface_order_mismatch",
+                    "expected": expected_authority_completeness_orders,
+                    "actual": actual_authority_completeness_orders,
+                }
+            )
         for row in class_profiles:
             if row.authority_mode not in ALLOWED_AUTHORITY_MODES:
                 structure_violations.append(
@@ -711,10 +854,25 @@ def main() -> int:
                 "expected_rows": EXPECTED_AUTHORITY_LAYER_STAGES,
                 "id_attr": "stage_label",
             },
+            {
+                "family_id": "authority_completeness_rows",
+                "member_id_key": "completeness_id",
+                "actual_rows": authority_completeness_rows,
+                "expected_rows": {row_id: {} for row_id in EXPECTED_AUTHORITY_COMPLETENESS_ROWS},
+                "id_attr": "completeness_id",
+            },
+            {
+                "family_id": "authority_completeness_surface",
+                "member_id_key": "contract_phrase",
+                "actual_rows": authority_completeness_surface.rows,
+                "expected_rows": {row["contract_phrase"]: {} for row in EXPECTED_AUTHORITY_COMPLETENESS_ROWS.values()},
+                "id_attr": "contract_phrase",
+            },
         ),
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    row_family_projection_by_id = {row["family_id"]: row for row in row_family_projection_rows}
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_AUTHORITY),
@@ -730,6 +888,7 @@ def main() -> int:
         "authority_class_profile_count": len(class_profiles),
         "entry_authority_projection_count": len(entry_projections),
         "authority_layer_stage_count": len(authority_layer_stages),
+        "authority_completeness_row_count": len(authority_completeness_rows),
         **project_root_contract_support_projection(
             prefix="authority",
             row_family_projection_rows=row_family_projection_rows,
@@ -738,6 +897,10 @@ def main() -> int:
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         ),
+        "authority_completeness_row_coverage_status": row_family_projection_by_id["authority_completeness_rows"]["coverage_status"],
+        "authority_completeness_row_identity_projection_status": row_family_projection_by_id["authority_completeness_rows"]["identity_projection_status"],
+        "authority_completeness_surface_coverage_status": row_family_projection_by_id["authority_completeness_surface"]["coverage_status"],
+        "authority_completeness_surface_identity_projection_status": row_family_projection_by_id["authority_completeness_surface"]["identity_projection_status"],
         "row_family_projection_rows": row_family_projection_rows,
         "authority_class_profiles": [
             {
@@ -781,6 +944,26 @@ def main() -> int:
                 for row in authority_layer_surface.rows
             ],
             "extraction_violations": list(authority_layer_surface.extraction_violations),
+        },
+        "authority_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted(authority_completeness_rows, key=lambda item: item.order)
+        ],
+        "authority_completeness_surface": {
+            "rel_path": authority_completeness_surface.rel_path,
+            "entry_count": len(authority_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in authority_completeness_surface.rows
+            ],
+            "extraction_violations": list(authority_completeness_surface.extraction_violations),
         },
         "structure_violations": structure_violations,
         "authority_violations": authority_violations,
