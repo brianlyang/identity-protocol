@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Iterable
 
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+
+
+@dataclass(frozen=True)
+class NamedRowFamilyStatusProjectionSpec:
+    payload_key: str
+    family_id: str
+    status_key: str
 
 
 def project_row_family(
@@ -52,6 +60,30 @@ def project_row_families(
         )
         for family in families
     ]
+
+
+def index_row_family_projection_rows(
+    row_family_projection_rows: Iterable[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    return {
+        str(row["family_id"]): row
+        for row in row_family_projection_rows
+    }
+
+
+def project_named_row_family_statuses(
+    *,
+    row_family_projection_rows_by_id: dict[str, dict[str, Any]],
+    specs: Iterable[NamedRowFamilyStatusProjectionSpec],
+    fail_status: str = STATUS_FAIL_REQUIRED,
+) -> dict[str, str]:
+    return {
+        spec.payload_key: str(
+            row_family_projection_rows_by_id.get(spec.family_id, {}).get(spec.status_key)
+            or fail_status
+        )
+        for spec in specs
+    }
 
 
 def aggregate_row_family_status(
