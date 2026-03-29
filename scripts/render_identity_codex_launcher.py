@@ -8,6 +8,7 @@ import shlex
 from pathlib import Path
 from typing import Any
 
+from governed_answer_bridge_admission_common import evaluate_governed_answer_bridge_admission
 from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
 from identity_codex_launcher_common import (
     GENERIC_LAUNCHER_NAME,
@@ -126,8 +127,29 @@ def _build_launcher_runtime_guard_fail_payload(
             if continuity_requested
             else "continuity_intent_not_requested"
         ),
-        "continuity_intent_owner_stream": "v1.6.16",
-        "continuity_intent_question_family": "identity_context_reentry_recovery",
+        "continuity_intent_owner_stream": "",
+        "continuity_intent_owner_stream_status": (
+            STATUS_FAIL_REQUIRED if continuity_requested else STATUS_SKIPPED_NOT_REQUIRED
+        ),
+        "continuity_intent_question_family": "",
+        "continuity_intent_question_family_status": (
+            STATUS_FAIL_REQUIRED if continuity_requested else STATUS_SKIPPED_NOT_REQUIRED
+        ),
+        "continuity_intent_owner_bundle_status": (
+            STATUS_FAIL_REQUIRED if continuity_requested else STATUS_SKIPPED_NOT_REQUIRED
+        ),
+        "continuity_intent_bridge_contract": {},
+        "continuity_intent_bridge_contract_status": (
+            STATUS_FAIL_REQUIRED if continuity_requested else STATUS_SKIPPED_NOT_REQUIRED
+        ),
+        "continuity_intent_operator_projection_status": (
+            STATUS_FAIL_REQUIRED if continuity_requested else STATUS_SKIPPED_NOT_REQUIRED
+        ),
+        "continuity_intent_operator_projection_reason": (
+            "launcher_runtime_admissibility_blocked_before_continuity_intent_evaluation"
+            if continuity_requested
+            else "continuity_intent_not_requested"
+        ),
         "continuity_reentry_answer_bundle_status": (
             STATUS_FAIL_REQUIRED if continuity_requested else STATUS_SKIPPED_NOT_REQUIRED
         ),
@@ -148,8 +170,15 @@ def _build_launcher_runtime_guard_fail_payload(
             "new_terminal_command_family_created": False,
             "launcher_command_lookup_owner_stream": "v1.6.14",
             "continuity_intent_bridge_projection_only": True,
-            "continuity_intent_answer_owner_stream": "v1.6.16",
+            "continuity_intent_answer_owner_stream": "",
             "continuity_intent_bridge_requires_governed_answer_bundle": True,
+            "continuity_intent_owner_bundle_status_gate_required": True,
+            "continuity_intent_owner_stream_exact_match_required": True,
+            "continuity_intent_question_family_exact_match_required": True,
+            "continuity_intent_bridge_contract_required": True,
+            "continuity_intent_consumer_default_injection_forbidden": True,
+            "bridge_integrity_not_equal_owner_answer_status": True,
+            "owner_answer_status_not_equal_operator_projection": True,
             "fresh_start_recommendation_not_equal_continuity_closure": True,
             "thread_recovery_target_replacement_forbidden": True,
             "actor_session_tuple_truth_replacement_forbidden": True,
@@ -238,8 +267,15 @@ def _resolve_continuity_intent_projection(
         "continuity_intent_bridge_reason": "continuity_intent_not_requested",
         "continuity_intent_status": STATUS_SKIPPED_NOT_REQUIRED,
         "continuity_intent_reason": "continuity_intent_not_requested",
-        "continuity_intent_owner_stream": "v1.6.16",
-        "continuity_intent_question_family": "identity_context_reentry_recovery",
+        "continuity_intent_owner_stream": "",
+        "continuity_intent_owner_stream_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "continuity_intent_question_family": "",
+        "continuity_intent_question_family_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "continuity_intent_owner_bundle_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "continuity_intent_bridge_contract": {},
+        "continuity_intent_bridge_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "continuity_intent_operator_projection_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "continuity_intent_operator_projection_reason": "continuity_intent_not_requested",
         "continuity_reentry_answer_bundle_status": STATUS_SKIPPED_NOT_REQUIRED,
         "continuity_reentry_answer_bundle": {},
         "continuity_reentry_answer": {},
@@ -259,52 +295,78 @@ def _resolve_continuity_intent_projection(
     bundle_status = str(
         bundle.get("identity_context_reentry_answer_bundle_status") or bundle.get("status") or ""
     ).strip() or STATUS_FAIL_REQUIRED
+    admission = evaluate_governed_answer_bridge_admission(
+        bundle,
+        expected_consumer_stream="v1.6.14",
+        expected_owner_stream="v1.6.16",
+        expected_question_family="identity_context_reentry_recovery",
+    )
+    projection = {
+        **base_projection,
+        "continuity_intent_owner_stream": admission["owner_stream_value"],
+        "continuity_intent_owner_stream_status": admission["owner_stream_status"],
+        "continuity_intent_question_family": admission["question_family_value"],
+        "continuity_intent_question_family_status": admission["question_family_status"],
+        "continuity_intent_owner_bundle_status": admission["owner_bundle_status"],
+        "continuity_intent_bridge_contract": admission["bridge_contract"],
+        "continuity_intent_bridge_contract_status": admission["bridge_contract_status"],
+        "continuity_reentry_answer_bundle_status": bundle_status,
+        "continuity_reentry_answer_bundle": bundle,
+    }
     answer_rows = bundle.get("intent_answers")
     if not isinstance(answer_rows, dict):
         return {
-            **base_projection,
+            **projection,
             "continuity_intent_bridge_status": STATUS_FAIL_REQUIRED,
-            "continuity_intent_bridge_reason": "requested_continuity_intent_answer_row_missing",
+            "continuity_intent_bridge_reason": (
+                admission["bridge_reason"]
+                if admission["bridge_status"] != STATUS_PASS_REQUIRED
+                else "requested_continuity_intent_answer_row_missing"
+            ),
             "continuity_intent_status": STATUS_FAIL_REQUIRED,
             "continuity_intent_reason": "requested_continuity_intent_answer_row_missing",
-            "continuity_reentry_answer_bundle_status": bundle_status,
-            "continuity_reentry_answer_bundle": bundle,
             "recommended_followup_reentry_task_block_status": STATUS_FAIL_REQUIRED,
         }
     answer = answer_rows.get(requested_intent)
     if not isinstance(answer, dict):
         return {
-            **base_projection,
+            **projection,
             "continuity_intent_bridge_status": STATUS_FAIL_REQUIRED,
-            "continuity_intent_bridge_reason": "requested_continuity_intent_answer_row_missing",
+            "continuity_intent_bridge_reason": (
+                admission["bridge_reason"]
+                if admission["bridge_status"] != STATUS_PASS_REQUIRED
+                else "requested_continuity_intent_answer_row_missing"
+            ),
             "continuity_intent_status": STATUS_FAIL_REQUIRED,
             "continuity_intent_reason": "requested_continuity_intent_answer_row_missing",
-            "continuity_reentry_answer_bundle_status": bundle_status,
-            "continuity_reentry_answer_bundle": bundle,
             "recommended_followup_reentry_task_block_status": STATUS_FAIL_REQUIRED,
         }
     answer_status = str(answer.get("status", "")).strip() or STATUS_FAIL_REQUIRED
+    bridge_pass = admission["bridge_status"] == STATUS_PASS_REQUIRED
     return {
-        **base_projection,
-        "continuity_intent_bridge_status": STATUS_PASS_REQUIRED,
-        "continuity_intent_bridge_reason": "bridged_governed_reentry_answer_row_resolved",
+        **projection,
+        "continuity_intent_bridge_status": (
+            STATUS_PASS_REQUIRED if bridge_pass else STATUS_FAIL_REQUIRED
+        ),
+        "continuity_intent_bridge_reason": (
+            "bridged_governed_reentry_answer_row_resolved"
+            if bridge_pass
+            else admission["bridge_reason"]
+        ),
         "continuity_intent_status": answer_status,
         "continuity_intent_reason": str(answer.get("reason", "")).strip()
         or "requested_continuity_intent_status_unavailable",
-        "continuity_intent_owner_stream": str(bundle.get("continuity_owner_stream", "")).strip() or "v1.6.16",
-        "continuity_intent_question_family": str(bundle.get("question_family", "")).strip()
-        or "identity_context_reentry_recovery",
-        "continuity_reentry_answer_bundle_status": bundle_status,
-        "continuity_reentry_answer_bundle": bundle,
         "continuity_reentry_answer": answer,
-        "continuity_safe_to_trigger_now": bool(answer.get("safe_to_trigger_now")),
-        "recommended_followup_reentry_task_block": str(
-            answer.get("copyable_reentry_task_block", "")
-        ).strip(),
-        "recommended_followup_reentry_task_block_status": answer_status,
-        "recommended_followup_reentry_required_receipt_kind": str(
-            answer.get("required_receipt_kind", "")
-        ).strip(),
+        "continuity_safe_to_trigger_now": bool(answer.get("safe_to_trigger_now")) if bridge_pass else False,
+        "recommended_followup_reentry_task_block": (
+            str(answer.get("copyable_reentry_task_block", "")).strip() if bridge_pass else ""
+        ),
+        "recommended_followup_reentry_task_block_status": (
+            answer_status if bridge_pass else STATUS_FAIL_REQUIRED
+        ),
+        "recommended_followup_reentry_required_receipt_kind": (
+            str(answer.get("required_receipt_kind", "")).strip() if bridge_pass else ""
+        ),
     }
 
 
@@ -312,8 +374,16 @@ def _finalize_recommended_user_command(payload: dict[str, Any]) -> None:
     recommended_start_command = str(payload.get("recommended_start_command", "")).strip()
     recommended_resume_command = str(payload.get("recommended_resume_command", "")).strip()
     continuity_requested = bool(payload.get("continuity_intent_requested"))
+    continuity_bridge_status = str(payload.get("continuity_intent_bridge_status", "")).strip()
     continuity_status = str(payload.get("continuity_intent_status", "")).strip()
     if continuity_requested:
+        if continuity_bridge_status != STATUS_PASS_REQUIRED:
+            payload["recommended_user_command"] = ""
+            payload["recommended_user_command_kind"] = "blocked"
+            payload["recommended_user_command_reason"] = (
+                "explicit_continuity_intent_bridge_not_admitted"
+            )
+            return
         if continuity_status == STATUS_PASS_REQUIRED:
             payload["recommended_user_command"] = recommended_start_command
             payload["recommended_user_command_kind"] = "start"
@@ -348,6 +418,60 @@ def _finalize_recommended_user_command(payload: dict[str, Any]) -> None:
     )
 
 
+def _finalize_continuity_intent_operator_projection(payload: dict[str, Any]) -> None:
+    continuity_requested = bool(payload.get("continuity_intent_requested"))
+    if not continuity_requested:
+        payload["continuity_intent_operator_projection_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["continuity_intent_operator_projection_reason"] = "continuity_intent_not_requested"
+        return
+
+    continuity_bridge_status = str(payload.get("continuity_intent_bridge_status", "")).strip()
+    if continuity_bridge_status != STATUS_PASS_REQUIRED:
+        payload["continuity_intent_operator_projection_status"] = STATUS_FAIL_REQUIRED
+        payload["continuity_intent_operator_projection_reason"] = "continuity_intent_bridge_not_admitted"
+        return
+
+    continuity_status = str(payload.get("continuity_intent_status", "")).strip()
+    recommended_kind = str(payload.get("recommended_user_command_kind", "")).strip()
+    recommended_user_command = str(payload.get("recommended_user_command", "")).strip()
+    recommended_start_command = str(payload.get("recommended_start_command", "")).strip()
+
+    if continuity_status in {STATUS_PASS_REQUIRED, STATUS_SKIPPED_NOT_REQUIRED}:
+        if (
+            recommended_kind == "start"
+            and recommended_user_command
+            and recommended_user_command == recommended_start_command
+        ):
+            payload["continuity_intent_operator_projection_status"] = STATUS_PASS_REQUIRED
+            payload["continuity_intent_operator_projection_reason"] = (
+                "continuity_intent_projection_promotes_fresh_start_surface"
+            )
+            return
+        payload["continuity_intent_operator_projection_status"] = STATUS_FAIL_REQUIRED
+        payload["continuity_intent_operator_projection_reason"] = (
+            "continuity_intent_projection_must_promote_fresh_start_surface"
+        )
+        return
+
+    if continuity_status == STATUS_FAIL_REQUIRED:
+        if recommended_kind == "blocked" and not recommended_user_command:
+            payload["continuity_intent_operator_projection_status"] = STATUS_PASS_REQUIRED
+            payload["continuity_intent_operator_projection_reason"] = (
+                "continuity_intent_projection_blocks_until_governed_reentry_ready"
+            )
+            return
+        payload["continuity_intent_operator_projection_status"] = STATUS_FAIL_REQUIRED
+        payload["continuity_intent_operator_projection_reason"] = (
+            "continuity_intent_projection_must_block_until_governed_reentry_ready"
+        )
+        return
+
+    payload["continuity_intent_operator_projection_status"] = STATUS_FAIL_REQUIRED
+    payload["continuity_intent_operator_projection_reason"] = (
+        "continuity_intent_projection_status_unresolved"
+    )
+
+
 def _emit_commands(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
         _emit(payload, json_only=True)
@@ -379,8 +503,32 @@ def _emit_commands(payload: dict[str, Any], *, json_only: bool) -> None:
         print(f"continuity_intent_bridge_status={payload.get('continuity_intent_bridge_status', STATUS_FAIL_REQUIRED)}")
         print(f"continuity_intent_bridge_reason={payload.get('continuity_intent_bridge_reason', '')}")
         print(f"continuity_intent={continuity_intent}")
+        print(
+            f"continuity_intent_owner_bundle_status={payload.get('continuity_intent_owner_bundle_status', STATUS_FAIL_REQUIRED)}"
+        )
+        print(
+            f"continuity_intent_owner_stream={payload.get('continuity_intent_owner_stream', '')}"
+        )
+        print(
+            f"continuity_intent_owner_stream_status={payload.get('continuity_intent_owner_stream_status', STATUS_FAIL_REQUIRED)}"
+        )
+        print(
+            f"continuity_intent_question_family={payload.get('continuity_intent_question_family', '')}"
+        )
+        print(
+            f"continuity_intent_question_family_status={payload.get('continuity_intent_question_family_status', STATUS_FAIL_REQUIRED)}"
+        )
+        print(
+            f"continuity_intent_bridge_contract_status={payload.get('continuity_intent_bridge_contract_status', STATUS_FAIL_REQUIRED)}"
+        )
         print(f"continuity_intent_status={payload.get('continuity_intent_status', STATUS_FAIL_REQUIRED)}")
         print(f"continuity_intent_reason={payload.get('continuity_intent_reason', '')}")
+        print(
+            f"continuity_intent_operator_projection_status={payload.get('continuity_intent_operator_projection_status', STATUS_FAIL_REQUIRED)}"
+        )
+        print(
+            f"continuity_intent_operator_projection_reason={payload.get('continuity_intent_operator_projection_reason', '')}"
+        )
     print(f"preferred_start={payload['preferred_start_command']}")
     shortcut_start_command = str(payload.get("shortcut_start_command", "")).strip()
     if shortcut_start_command and shortcut_start_command != payload["preferred_start_command"]:
@@ -753,8 +901,29 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         "continuity_intent_bridge_reason": continuity_intent_projection["continuity_intent_bridge_reason"],
         "continuity_intent_status": continuity_intent_projection["continuity_intent_status"],
         "continuity_intent_reason": continuity_intent_projection["continuity_intent_reason"],
+        "continuity_intent_owner_bundle_status": continuity_intent_projection[
+            "continuity_intent_owner_bundle_status"
+        ],
         "continuity_intent_owner_stream": continuity_intent_projection["continuity_intent_owner_stream"],
+        "continuity_intent_owner_stream_status": continuity_intent_projection[
+            "continuity_intent_owner_stream_status"
+        ],
         "continuity_intent_question_family": continuity_intent_projection["continuity_intent_question_family"],
+        "continuity_intent_question_family_status": continuity_intent_projection[
+            "continuity_intent_question_family_status"
+        ],
+        "continuity_intent_bridge_contract": continuity_intent_projection[
+            "continuity_intent_bridge_contract"
+        ],
+        "continuity_intent_bridge_contract_status": continuity_intent_projection[
+            "continuity_intent_bridge_contract_status"
+        ],
+        "continuity_intent_operator_projection_status": continuity_intent_projection[
+            "continuity_intent_operator_projection_status"
+        ],
+        "continuity_intent_operator_projection_reason": continuity_intent_projection[
+            "continuity_intent_operator_projection_reason"
+        ],
         "continuity_reentry_answer_bundle_status": continuity_intent_projection[
             "continuity_reentry_answer_bundle_status"
         ],
@@ -801,6 +970,13 @@ def _cmd_commands(args: argparse.Namespace) -> int:
                 "continuity_intent_owner_stream"
             ],
             "continuity_intent_bridge_requires_governed_answer_bundle": True,
+            "continuity_intent_bridge_contract_required": True,
+            "continuity_intent_owner_bundle_status_gate_required": True,
+            "continuity_intent_owner_stream_exact_match_required": True,
+            "continuity_intent_question_family_exact_match_required": True,
+            "continuity_intent_consumer_default_injection_forbidden": True,
+            "bridge_integrity_not_equal_owner_answer_status": True,
+            "owner_answer_status_not_equal_operator_projection": True,
             "fresh_start_recommendation_not_equal_continuity_closure": True,
             "thread_recovery_target_replacement_forbidden": True,
             "actor_session_tuple_truth_replacement_forbidden": True,
@@ -812,6 +988,7 @@ def _cmd_commands(args: argparse.Namespace) -> int:
             "python_helper_surface_forbidden": True,
             "terminal_native_surface_required": True,
             "continuity_support_internal_only": True,
+            "governed_answer_bridge_projection_only": True,
         },
         "copyable_commands": {
             "start": {
@@ -941,6 +1118,7 @@ def _cmd_commands(args: argparse.Namespace) -> int:
     else:
         payload["resume_reason"] = thread_source
     _finalize_recommended_user_command(payload)
+    _finalize_continuity_intent_operator_projection(payload)
     _emit_commands(payload, json_only=args.json_only)
     return 0
 

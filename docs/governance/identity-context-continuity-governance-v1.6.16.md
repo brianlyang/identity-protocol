@@ -318,8 +318,14 @@ Minimum additional requirements:
    - continuity-intent bridge integrity (the governed answer row resolved or not),
    - continuity-intent semantic answer status (PASS / SKIPPED / FAIL under `v1.6.16`),
    - launcher primary recommendation (`start` / `resume` / `blocked`) on the inherited `v1.6.14` surface.
-21. If the bridged continuity-intent answer is `FAIL_REQUIRED`, launcher command discovery must fail-close that operator goal rather than relabeling a bare fresh start as continuity closure.
-22. The continuity answer surface must never inject or hardcode thread UUIDs; launcher-command lookup stays delegated to `v1.6.14`, while `v1.6.16` governs only the reentry task and evidence side.
+21. That bridge is admitted only when the consumed owner bundle still preserves all owner-side machine-law facts together:
+   - `identity_context_reentry_answer_bundle_status=PASS_REQUIRED`,
+   - `continuity_owner_stream=v1.6.16`,
+   - `question_family=identity_context_reentry_recovery`,
+   - and an admitted `bridge_admission_contract` whose booleans keep bridge integrity, owner semantic answer, and operator projection explicitly non-collapsed.
+22. Consumer-side default injection is therefore forbidden: if launcher-side code can bridge only by inventing the owner stream, question family, or bridge contract locally, the bridge must fail-close instead of laundering that drift into a “success”.
+23. If the bridged continuity-intent answer is `FAIL_REQUIRED`, launcher command discovery must fail-close that operator goal rather than relabeling a bare fresh start as continuity closure.
+24. The continuity answer surface must never inject or hardcode thread UUIDs; launcher-command lookup stays delegated to `v1.6.14`, while `v1.6.16` governs only the reentry task and evidence side.
 
 ### 2.11A Governed outer support surface boundary (frozen)
 

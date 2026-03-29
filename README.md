@@ -101,6 +101,17 @@ operator goals separate instead of collapsing them:
 - if the bridged governed reentry answer is blocked, the launcher bundle must not misreport a bare fresh start as
   equivalent to continuity closure
 
+That rule is now frozen as a general governed-answer bridge admission law for any stream-A consumer of a stream-B
+governed answer bundle:
+
+- bridge integrity requires owner bundle status `PASS_REQUIRED`, exact owner-stream identity, exact question-family
+  identity, and an admitted `bridge_admission_contract`; consumer-side default injection of missing owner fields is
+  forbidden
+- bridge integrity, owner semantic answer status, and operator projection are three different machine facts and must
+  remain separately visible rather than being collapsed into one “bridge succeeded” summary
+- if bridge integrity is not admitted, the consumer surface must fail-close the operator projection even when the owner
+  row itself still renders a semantic answer
+
 Critical semantic boundary:
 
 - `resume <host-thread-uuid>` is still the **Codex transcript recovery target**.

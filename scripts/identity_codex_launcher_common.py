@@ -12,6 +12,9 @@ from pathlib import Path
 from typing import Any
 
 from actor_session_common import resolve_required_protocol_actor_id
+from governed_answer_bridge_admission_common import (
+    build_governed_answer_bridge_admission_contract,
+)
 from instance_script_orchestration_common import resolve_pack_task
 from resolve_identity_context import default_local_catalog_path, resolve_identity, resolve_protocol_root
 from runtime_temp_path_common import runtime_temp_file
@@ -377,6 +380,12 @@ def load_launcher_reentry_answer_bundle(
             "identity_context_reentry_answer_bundle_status": STATUS_FAIL_REQUIRED,
             "answer_bundle_contract_id": "identity_context_reentry_answer_contract_v1",
             "question_family": "identity_context_reentry_recovery",
+            "continuity_owner_stream": "v1.6.16",
+            "bridge_admission_contract": build_governed_answer_bridge_admission_contract(
+                consumer_stream="v1.6.14",
+                owner_stream="v1.6.16",
+                question_family="identity_context_reentry_recovery",
+            ),
             "identity_id": identity_id,
             "render_error": f"launcher_reentry_answer_render_failed:{type(exc).__name__}",
             "error": str(exc),
@@ -387,6 +396,12 @@ def load_launcher_reentry_answer_bundle(
             "identity_context_reentry_answer_bundle_status": STATUS_FAIL_REQUIRED,
             "answer_bundle_contract_id": "identity_context_reentry_answer_contract_v1",
             "question_family": "identity_context_reentry_recovery",
+            "continuity_owner_stream": "v1.6.16",
+            "bridge_admission_contract": build_governed_answer_bridge_admission_contract(
+                consumer_stream="v1.6.14",
+                owner_stream="v1.6.16",
+                question_family="identity_context_reentry_recovery",
+            ),
             "identity_id": identity_id,
             "render_error": "launcher_reentry_answer_render_root_not_object",
         }
@@ -637,6 +652,11 @@ def launcher_command_discovery_doc(identity_id: str) -> dict[str, Any]:
         "continuity_intent_argument": "--continuity-intent <migrate_new_window|reload_after_clear>",
         "explicit_continuity_intent_promotes_fresh_start_surface": True,
         "continuity_intent_owner_stream": "v1.6.16",
+        "governed_answer_bridge_admission_contract": build_governed_answer_bridge_admission_contract(
+            consumer_stream="v1.6.14",
+            owner_stream="v1.6.16",
+            question_family="identity_context_reentry_recovery",
+        ),
         "resume_target_remains_codex_thread": True,
         "instance_answer_mode": "instance_returns_concrete_commands",
         "manual_command_assembly_forbidden": True,

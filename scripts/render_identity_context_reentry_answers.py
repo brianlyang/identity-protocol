@@ -6,6 +6,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+from governed_answer_bridge_admission_common import (
+    build_governed_answer_bridge_admission_contract,
+)
 from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
 from identity_context_continuity_common import (
     REENTRY_ANSWER_BUNDLE_CONTRACT_ID,
@@ -34,6 +37,14 @@ def _intent_names(raw_intent: str) -> tuple[str, ...]:
             f"unsupported intent {token!r}; expected one of: {', '.join(REENTRY_ANSWER_INTENTS)}"
         )
     return (token,)
+
+
+def _bridge_admission_contract() -> dict[str, Any]:
+    return build_governed_answer_bridge_admission_contract(
+        consumer_stream="v1.6.14",
+        owner_stream="v1.6.16",
+        question_family=REENTRY_ANSWER_QUESTION_FAMILY,
+    )
 
 
 def _answer_mode(
@@ -188,6 +199,8 @@ def render_reentry_answers_payload(
             "identity_context_reentry_answer_bundle_status": STATUS_FAIL_REQUIRED,
             "answer_bundle_contract_id": REENTRY_ANSWER_BUNDLE_CONTRACT_ID,
             "question_family": REENTRY_ANSWER_QUESTION_FAMILY,
+            "continuity_owner_stream": "v1.6.16",
+            "bridge_admission_contract": _bridge_admission_contract(),
             "identity_id": identity_id,
             "continuity_bundle_status": continuity_bundle_status or STATUS_FAIL_REQUIRED,
             "error": clean_string(continuity_bundle.get("error")),
@@ -254,6 +267,7 @@ def render_reentry_answers_payload(
         "identity_context_reentry_answer_bundle_status": STATUS_PASS_REQUIRED,
         "answer_bundle_contract_id": REENTRY_ANSWER_BUNDLE_CONTRACT_ID,
         "question_family": REENTRY_ANSWER_QUESTION_FAMILY,
+        "bridge_admission_contract": _bridge_admission_contract(),
         "identity_id": identity_id,
         "requested_intent": clean_string(intent),
         "catalog_path": clean_string(continuity_bundle.get("catalog_path")),
@@ -277,6 +291,9 @@ def render_reentry_answers_payload(
             "identity_instance_visible_answer_surface": True,
             "new_terminal_command_family_created": False,
             "launcher_command_lookup_delegated_to_v1_6_14": True,
+            "bridge_admission_contract_emitted": True,
+            "bridge_integrity_not_equal_owner_answer_status": True,
+            "owner_answer_status_not_equal_operator_projection": True,
             "manual_reentry_task_assembly_forbidden": True,
             "thread_uuid_injection_by_continuity_surface_forbidden": True,
             "raw_transcript_authority_forbidden": True,
@@ -320,6 +337,8 @@ def main() -> int:
             "identity_context_reentry_answer_bundle_status": STATUS_FAIL_REQUIRED,
             "answer_bundle_contract_id": REENTRY_ANSWER_BUNDLE_CONTRACT_ID,
             "question_family": REENTRY_ANSWER_QUESTION_FAMILY,
+            "continuity_owner_stream": "v1.6.16",
+            "bridge_admission_contract": _bridge_admission_contract(),
             "identity_id": args.identity_id,
             "error": str(exc),
         }
