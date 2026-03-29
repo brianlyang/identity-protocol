@@ -33,6 +33,10 @@ assert payload["machine_law_primacy_row_coverage_status"] == "PASS_REQUIRED", pa
 assert payload["machine_law_primacy_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["machine_law_primacy_completeness_surface"]["entry_count"] == 5, payload
 assert payload["machine_law_primacy_completeness_surface"]["extraction_violations"] == [], payload
+assert payload["machine_law_primacy_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "machine_law_primacy_completeness_rows" for row in payload["row_family_projection_rows"]), payload
@@ -52,6 +56,8 @@ doc["machine_law_primacy_completeness_rows"] = [
     row for row in doc["machine_law_primacy_completeness_rows"]
     if row.get("completeness_id") != "explicit_machine_law_primacy_row_families"
 ]
+for idx, row in enumerate(doc["machine_law_primacy_completeness_rows"], start=1):
+    row["order"] = idx
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -87,6 +93,10 @@ assert completeness_row["missing_ids"] == ["explicit_machine_law_primacy_row_fam
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -407,6 +417,10 @@ assert expected_phrase in surface_row["missing_ids"], payload
 assert "runtime or validator code must not finalize machine-law primacy legality while missing row identities remain known only internally;" in surface_row["unexpected_ids"], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 

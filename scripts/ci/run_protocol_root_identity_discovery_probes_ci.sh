@@ -36,6 +36,10 @@ assert payload["identity_discovery_completeness_row_count"] == 5, payload
 assert payload["identity_discovery_row_family_count"] == 12, payload
 assert payload["identity_discovery_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["identity_discovery_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["identity_discovery_completeness_surface"]["entry_count"] == 5, payload
 assert payload["identity_discovery_completeness_surface"]["extraction_violations"] == [], payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
@@ -64,6 +68,8 @@ doc["identity_discovery_completeness_rows"] = [
     for row in doc["identity_discovery_completeness_rows"]
     if row.get("completeness_id") != "explicit_identity_discovery_row_families"
 ]
+for idx, row in enumerate(doc["identity_discovery_completeness_rows"], start=1):
+    row["order"] = idx
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -101,6 +107,10 @@ assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 assert payload["identity_discovery_row_coverage_status"] == "FAIL_REQUIRED", payload
 assert payload["identity_discovery_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["identity_discovery_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["identity_discovery_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["identity_discovery_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/completeness-surface-drift-repo"
@@ -155,6 +165,10 @@ assert surface_row["missing_ids"] == ["required section, request-field, response
 assert surface_row["unexpected_ids"] == ["required section, request-field, response-field, precedence, activation, error-field, implementation, proof, and collapse rows must remain explicit as separate machine-readable families;"], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["identity_discovery_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 

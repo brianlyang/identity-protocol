@@ -35,6 +35,10 @@ assert payload["design_question_closure_row_coverage_status"] == "PASS_REQUIRED"
 assert payload["design_question_closure_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["design_question_closure_completeness_row_count"] == 5, payload
 assert payload["design_question_closure_completeness_surface"]["entry_count"] == 5, payload
+assert payload["design_question_closure_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["design_question_closure_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["design_question_closure_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["design_question_closure_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "design_question_closure_completeness_rows" for row in payload["row_family_projection_rows"]), payload
@@ -54,6 +58,8 @@ doc["design_question_closure_completeness_rows"] = [
     row for row in doc["design_question_closure_completeness_rows"]
     if row.get("completeness_id") != "explicit_design_question_closure_row_families"
 ]
+for idx, row in enumerate(doc["design_question_closure_completeness_rows"], start=1):
+    row["order"] = idx
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -89,6 +95,10 @@ assert completeness_row["missing_ids"] == ["explicit_design_question_closure_row
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["design_question_closure_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["design_question_closure_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["design_question_closure_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["design_question_closure_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 ROW_REPO="${TMP_ROOT}/missing-row-repo"
@@ -412,6 +422,10 @@ assert expected_phrase in surface_row["missing_ids"], payload
 assert "runtime or validator code must not finalize design-question closure legality while missing question identities remain known only internally;" in surface_row["unexpected_ids"], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["design_question_closure_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["design_question_closure_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["design_question_closure_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["design_question_closure_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 SURFACE_ORDER_REPO="${TMP_ROOT}/design-question-closure-completeness-surface-order-drift-repo"

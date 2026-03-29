@@ -23,7 +23,14 @@ from root_design_question_closure_common import (
     question_closure_rows_from_doc,
     readme_design_question_closure_completeness_surface,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
+from root_row_family_projection_common import (
+    NamedRowFamilyStatusProjectionSpec,
+    aggregate_row_family_status,
+    index_row_family_projection_rows,
+    project_named_row_family_statuses,
+    project_root_contract_support_projection,
+    project_row_families,
+)
 from root_stream_design_admissibility_common import load_root_stream_design_admissibility, required_question_rows_from_doc
 
 STATUS_KEY = "protocol_root_design_question_closure_status"
@@ -566,6 +573,7 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    row_family_projection_by_id = index_row_family_projection_rows(row_family_projection_rows)
 
     payload = {
         STATUS_KEY: status,
@@ -581,6 +589,32 @@ def main() -> int:
             anchor_checks=root_doc_anchor_checks,
             anchor_violations=root_doc_anchor_violations,
             pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        **project_named_row_family_statuses(
+            row_family_projection_rows_by_id=row_family_projection_by_id,
+            specs=(
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="design_question_closure_completeness_row_coverage_status",
+                    family_id="design_question_closure_completeness_rows",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="design_question_closure_completeness_row_identity_projection_status",
+                    family_id="design_question_closure_completeness_rows",
+                    status_key="identity_projection_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="design_question_closure_completeness_surface_coverage_status",
+                    family_id="design_question_closure_completeness_surface",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="design_question_closure_completeness_surface_identity_projection_status",
+                    family_id="design_question_closure_completeness_surface",
+                    status_key="identity_projection_status",
+                ),
+            ),
             fail_status=STATUS_FAIL_REQUIRED,
         ),
         "row_family_projection_rows": row_family_projection_rows,
