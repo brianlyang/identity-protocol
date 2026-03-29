@@ -21,6 +21,9 @@ from release_closure_doc_reference_bundle_common import (
 from release_closure_horizon_alignment_bundle_common import (
     collect_release_closure_summary_horizon_alignment_bundle_stale_reasons,
 )
+from release_closure_summary_framing_bundle_common import (
+    collect_release_closure_summary_framing_bundle_stale_reasons,
+)
 from release_closure_narrative_marker_common import (
     collect_release_closure_summary_narrative_bundle_stale_reasons,
 )
@@ -41,10 +44,6 @@ from repo_root_resolution_common import resolve_protocol_repo_root
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_RELEASE_SUMMARY = "IP-RCSUM-001"
-FORBIDDEN_STALE_MARKERS = (
-    "Workspace-local core-role required closure: **Go**",
-    "workspace-local core release scope is now green on required closure",
-)
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
@@ -121,8 +120,6 @@ def main() -> int:
         )
     )
 
-    if "Question class and authoritative answer surfaces" not in summary_text:
-        stale_reasons.append("summary_doc_missing_question_class_section")
     stale_reasons.extend(
         collect_release_closure_summary_foundational_bundle_stale_reasons(
             summary_text,
@@ -139,10 +136,9 @@ def main() -> int:
         )
     )
 
-    if "runtime verdict surface" not in summary_text or "fleet-scope closure matrix" not in summary_text:
-        stale_reasons.append("summary_doc_missing_scope_separation_markers")
-    if "not declare a release tag" not in summary_text:
-        stale_reasons.append("summary_doc_missing_release_tag_boundary")
+    stale_reasons.extend(
+        collect_release_closure_summary_framing_bundle_stale_reasons(summary_text)
+    )
     stale_reasons.extend(
         collect_release_closure_summary_control_surface_literal_bundle_stale_reasons(
             summary_text,
@@ -174,10 +170,6 @@ def main() -> int:
             label="summary_doc",
         )
     )
-
-    for marker in FORBIDDEN_STALE_MARKERS:
-        if marker in summary_text:
-            stale_reasons.append(f"summary_doc_contains_stale_marker:{marker}")
 
     payload["v16x_release_closure_summary_status"] = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
     payload["error_code"] = "" if not stale_reasons else ERR_RELEASE_SUMMARY
