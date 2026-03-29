@@ -17,17 +17,17 @@ SUMMARY_SHADOW_PATH="${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-
 philosophy_order_marker="$(
   resolve_python_module_expression \
     "release_closure_foundational_marker_common" \
-    "RELEASE_CLOSURE_PHILOSOPHY_ORDER_MARKERS[0]"
+    "RELEASE_CLOSURE_PHILOSOPHY_SOURCE_ORDER_MARKER"
 )"
 closure_class_marker="$(
   resolve_python_module_expression \
     "release_closure_foundational_marker_common" \
-    "RELEASE_CLOSURE_CLOSURE_CLASS_MARKERS[0]"
+    "RELEASE_CLOSURE_ROOT_CLOSED_MARKER"
 )"
 terminal_truth_split_marker="$(
   resolve_python_module_expression \
     "release_closure_foundational_marker_common" \
-    "RELEASE_CLOSURE_TERMINAL_TRUTH_SPLIT_MARKERS[-1]"
+    "RELEASE_CLOSURE_TERMINAL_TRUTH_SPLIT_REPAIR_SUCCESS_NOT_CLEAN_MARKER"
 )"
 
 printf '[RUN] positive release-closure summary foundational-bundle validation\n'

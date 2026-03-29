@@ -18,17 +18,17 @@ REVIEW_SHADOW_PATH="${SHADOW_ROOT}/docs/review/protocol-remediation-audit-ledger
 philosophy_order_marker="$(
   resolve_python_module_expression \
     "release_closure_foundational_marker_common" \
-    "RELEASE_CLOSURE_PHILOSOPHY_ORDER_MARKERS[-1]"
+    "RELEASE_CLOSURE_PHILOSOPHY_ADJUDICATION_ORDER_MARKER"
 )"
 closure_class_marker="$(
   resolve_python_module_expression \
     "release_closure_foundational_marker_common" \
-    "RELEASE_CLOSURE_CLOSURE_CLASS_MARKERS[1]"
+    "RELEASE_CLOSURE_MACHINE_CLOSED_MARKER"
 )"
 terminal_truth_split_marker="$(
   resolve_python_module_expression \
     "release_closure_foundational_marker_common" \
-    "RELEASE_CLOSURE_TERMINAL_TRUTH_SPLIT_MARKERS[2]"
+    "RELEASE_CLOSURE_TERMINAL_TRUTH_SPLIT_CREATOR_UPDATE_ADMISSION_MARKER"
 )"
 
 printf '[RUN] positive release-closure boundary foundational-bundle validation\n'
