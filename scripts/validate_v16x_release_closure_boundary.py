@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 from release_closure_doc_common import (
-    RELEASE_CLOSURE_DOC_REL_PATHS,
     collect_release_closure_issue_horizon_targets,
     contains_release_closure_issue_horizon,
     parse_release_closure_issue_register,
@@ -16,6 +15,9 @@ from release_closure_doc_common import (
 from release_closure_foundational_marker_common import (
     collect_release_closure_boundary_foundational_bundle_stale_reasons,
     collect_release_closure_foundational_philosophy_bundle_stale_reasons,
+)
+from release_closure_doc_reference_bundle_common import (
+    collect_release_closure_boundary_doc_reference_bundle_stale_reasons,
 )
 from release_closure_narrative_marker_common import (
     collect_release_closure_boundary_narrative_bundle_stale_reasons,
@@ -83,8 +85,8 @@ def main() -> int:
                 raise FileNotFoundError(f"missing_required_doc:{path}")
 
         philosophy_text = _read(docs.philosophy_path)
-        protocol_text = _read(docs.protocol_path)
-        runtime_text = _read(docs.runtime_path)
+        _read(docs.protocol_path)
+        _read(docs.runtime_path)
         issue_register_text = _read(docs.issue_register_path)
         governance_text = _read(docs.governance_path)
         review_text = _read(docs.review_path)
@@ -111,12 +113,12 @@ def main() -> int:
         ("governance_doc", governance_text),
         ("review_doc", review_text),
     ):
-        if RELEASE_CLOSURE_DOC_REL_PATHS.philosophy_doc not in text:
-            stale_reasons.append(f"{label}_missing_philosophy_anchor")
-        if RELEASE_CLOSURE_DOC_REL_PATHS.protocol_doc not in text:
-            stale_reasons.append(f"{label}_missing_protocol_anchor")
-        if RELEASE_CLOSURE_DOC_REL_PATHS.runtime_doc not in text:
-            stale_reasons.append(f"{label}_missing_runtime_anchor")
+        stale_reasons.extend(
+            collect_release_closure_boundary_doc_reference_bundle_stale_reasons(
+                text,
+                label=label,
+            )
+        )
         stale_reasons.extend(
             collect_release_closure_boundary_foundational_bundle_stale_reasons(
                 text,

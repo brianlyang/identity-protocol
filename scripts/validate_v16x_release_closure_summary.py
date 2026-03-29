@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 from release_closure_doc_common import (
-    RELEASE_CLOSURE_DOC_REL_PATHS,
     collect_release_closure_issue_horizon_targets,
     contains_release_closure_issue_horizon,
     extract_release_closure_v16_versions,
@@ -17,6 +16,9 @@ from release_closure_doc_common import (
 from release_closure_foundational_marker_common import (
     collect_release_closure_foundational_philosophy_bundle_stale_reasons,
     collect_release_closure_summary_foundational_bundle_stale_reasons,
+)
+from release_closure_doc_reference_bundle_common import (
+    collect_release_closure_summary_doc_reference_bundle_stale_reasons,
 )
 from release_closure_narrative_marker_common import (
     collect_release_closure_summary_narrative_bundle_stale_reasons,
@@ -111,22 +113,12 @@ def main() -> int:
         )
     )
 
-    for required_ref in (
-        RELEASE_CLOSURE_DOC_REL_PATHS.philosophy_doc,
-        RELEASE_CLOSURE_DOC_REL_PATHS.protocol_doc,
-        RELEASE_CLOSURE_DOC_REL_PATHS.runtime_doc,
-        RELEASE_CLOSURE_DOC_REL_PATHS.governance_doc,
-        RELEASE_CLOSURE_DOC_REL_PATHS.review_doc,
-        "identity/protocol/mappings/workbook-registry.current.yaml",
-        "identity/protocol/mappings/stream-doc-registry.current.yaml",
-        "identity/protocol/mappings/contract-binding.current.yaml",
-        "identity/protocol/mappings/control-plane-status.current.yaml",
-        "identity/protocol/mappings/control-plane-budget.current.yaml",
-        RELEASE_CLOSURE_DOC_REL_PATHS.issue_register_doc,
-        RELEASE_CLOSURE_DOC_REL_PATHS.workbook_doc,
-    ):
-        if required_ref not in summary_text:
-            stale_reasons.append(f"summary_doc_missing_required_ref:{required_ref}")
+    stale_reasons.extend(
+        collect_release_closure_summary_doc_reference_bundle_stale_reasons(
+            summary_text,
+            label="summary_doc",
+        )
+    )
 
     if "Question class and authoritative answer surfaces" not in summary_text:
         stale_reasons.append("summary_doc_missing_question_class_section")
