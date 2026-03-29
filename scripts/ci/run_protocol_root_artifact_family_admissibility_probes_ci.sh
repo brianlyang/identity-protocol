@@ -31,6 +31,10 @@ assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["artifact_family_row_family_count"] == 7, payload
 assert payload["artifact_family_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["artifact_family_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["artifact_family_admissibility_completeness_surface"]["entry_count"] == 5, payload
@@ -84,6 +88,10 @@ assert completeness_row["missing_ids"] == ["explicit_artifact_family_admissibili
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/completeness-surface-drift-repo"
@@ -135,6 +143,10 @@ assert surface_row["missing_ids"] == ["required family-admission-class, differen
 assert surface_row["unexpected_ids"] == ["required family-admission-class, differentiation, proof, and collapse rows must remain explicit as separate machine-readable families;"], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/completeness-surface-order-drift-repo"
@@ -177,6 +189,10 @@ assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
