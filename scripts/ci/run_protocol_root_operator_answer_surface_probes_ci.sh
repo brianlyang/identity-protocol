@@ -8,6 +8,83 @@ source "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"
 protocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-operator-answer-surface-ci"
 protocol_root_probe_define_full_mirror
 
+assert_stale_reason_present() {
+  local json_file="$1"
+  local expected_reason="$2"
+  python3 - <<'PY' "${json_file}" "${expected_reason}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+reason = sys.argv[2]
+assert reason in payload.get("stale_reasons", []), payload
+PY
+}
+
+bump_yaml_row_order_by_id() {
+  local path="$1"
+  local collection_key="$2"
+  local id_field="$3"
+  local row_id="$4"
+  python3 - <<'PY' "${path}" "${collection_key}" "${id_field}" "${row_id}"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+collection_key = sys.argv[2]
+id_field = sys.argv[3]
+row_id = sys.argv[4]
+
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+rows = doc[collection_key]
+for row in rows:
+    if str(row.get(id_field) or "") == row_id:
+        row["order"] = int(row["order"]) + 1
+        break
+else:
+    raise SystemExit(f"{row_id} not found in {collection_key}")
+
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+}
+
+export PROBE_FIXTURE_REPO_ROOT="${ROOT}"
+# shellcheck source=../probe_fixture_shell_common.sh
+source "${ROOT}/scripts/probe_fixture_shell_common.sh"
+
+OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_SECTION_MARKER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_operator_answer_surface" \
+    "next(marker for marker in EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'] if marker.startswith('## Root ') and marker.endswith('completeness discipline'))"
+)"
+OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_FIRST_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_operator_answer_surface" \
+    "list(EXPECTED_OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROWS.values())[0]['order']"
+)"
+OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_FIRST_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_operator_answer_surface" \
+    "list(EXPECTED_OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROWS.values())[0]['contract_phrase']"
+)"
+OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_SECOND_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_operator_answer_surface" \
+    "list(EXPECTED_OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROWS.values())[1]['order']"
+)"
+OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_SECOND_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_operator_answer_surface" \
+    "list(EXPECTED_OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROWS.values())[1]['contract_phrase']"
+)"
+OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROW_NONCONTIG_ID="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_operator_answer_surface" \
+    "tuple(EXPECTED_OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROWS.keys())[1]"
+)"
+
 PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_operator_answer_surface.py" \
   --repo-root "${ROOT}" \
@@ -126,6 +203,119 @@ assert payload["operator_answer_surface_completeness_row_identity_projection_sta
 assert payload["operator_answer_surface_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["operator_answer_surface_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
+
+OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROW_NONCONTIG_REPO="${TMP_ROOT}/operator-answer-surface-completeness-row-order-non-contiguous-repo"
+mirror_repo "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROW_NONCONTIG_REPO}"
+bump_yaml_row_order_by_id \
+  "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROW_NONCONTIG_REPO}/identity/protocol/mappings/root-operator-answer-surface.v1.yaml" \
+  "operator_answer_surface_completeness_rows" \
+  "completeness_id" \
+  "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROW_NONCONTIG_ID}"
+
+OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROW_NONCONTIG_JSON="${TMP_ROOT}/operator-answer-surface-completeness-row-order-non-contiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_operator_answer_surface.py" \
+  --repo-root "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROW_NONCONTIG_REPO}" \
+  --json-only >"${OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROW_NONCONTIG_JSON}"; then
+  echo "[FAIL] operator answer-surface validator unexpectedly passed completeness row order non-contiguous drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROW_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_operator_answer_surface_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-ROAS-002", payload
+assert payload["operator_answer_surface_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["operator_answer_surface_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "operator_answer_surface_completeness_rows"
+    and row["reason"] == "operator_answer_surface_completeness_row_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "operator_answer_surface_completeness_rows"
+    and row["reason"] == "operator_answer_surface_completeness_row_order_mismatch"
+    for row in payload["answer_violations"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "operator_answer_surface_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 5, payload
+assert completeness_row["missing_ids"] == [], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "PASS_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+assert_stale_reason_present \
+  "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROW_NONCONTIG_JSON}" \
+  "structure_violation:operator_answer_surface_completeness_rows:operator_answer_surface_completeness_row_order_non_contiguous"
+
+assert_stale_reason_present \
+  "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROW_NONCONTIG_JSON}" \
+  "answer_surface_violation:operator_answer_surface_completeness_rows:operator_answer_surface_completeness_row_order_mismatch"
+
+OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO="${TMP_ROOT}/operator-answer-surface-completeness-surface-order-non-contiguous-repo"
+mirror_repo "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}"
+protocol_root_probe_set_numbered_surface_row_order_in_section \
+  "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}/identity/protocol/README.md" \
+  "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_SECOND_ORDER}" \
+  "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_SECOND_PHRASE}" \
+  "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_FIRST_ORDER}"
+
+OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON="${TMP_ROOT}/operator-answer-surface-completeness-surface-order-non-contiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_operator_answer_surface.py" \
+  --repo-root "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}" \
+  --json-only >"${OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"; then
+  echo "[FAIL] operator answer-surface validator unexpectedly passed completeness surface order non-contiguous drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_operator_answer_surface_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-ROAS-002", payload
+assert payload["operator_answer_surface_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["operator_answer_surface_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "operator_answer_surface_completeness_surface"
+    and row["reason"] == "operator_answer_surface_completeness_surface_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "operator_answer_surface_completeness_surface"
+    and row["reason"] == "operator_answer_surface_completeness_surface_order_mismatch"
+    for row in payload["answer_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "operator_answer_surface_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+assert_stale_reason_present \
+  "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}" \
+  "structure_violation:operator_answer_surface_completeness_surface:operator_answer_surface_completeness_surface_order_non_contiguous"
+
+assert_stale_reason_present \
+  "${OPERATOR_ANSWER_SURFACE_COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}" \
+  "answer_surface_violation:operator_answer_surface_completeness_surface:operator_answer_surface_completeness_surface_order_mismatch"
 
 STAGE_REPO="${TMP_ROOT}/stage-drift-repo"
 mirror_repo "${STAGE_REPO}"
