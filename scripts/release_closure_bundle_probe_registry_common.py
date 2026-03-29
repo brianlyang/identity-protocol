@@ -27,9 +27,30 @@ from release_closure_foundational_marker_common import (
     collect_release_closure_foundational_philosophy_bundle_stale_reasons,
     collect_release_closure_summary_foundational_bundle_stale_reasons,
 )
+from release_closure_narrative_marker_common import (
+    RELEASE_CLOSURE_NARRATIVE_MARKER_SPECS,
+    collect_release_closure_boundary_narrative_bundle_stale_reasons,
+    collect_release_closure_summary_narrative_bundle_stale_reasons,
+)
+from release_closure_operational_marker_bundle_common import (
+    RELEASE_CLOSURE_BOUNDARY_OPERATIONAL_MARKER_BUNDLE_SPECS,
+    RELEASE_CLOSURE_SUMMARY_OPERATIONAL_MARKER_BUNDLE_SPECS,
+    collect_release_closure_operational_marker_bundle_stale_reasons,
+)
 from release_closure_required_doc_bundle_common import (
     RELEASE_CLOSURE_BOUNDARY_REQUIRED_DOC_RELPATHS,
     RELEASE_CLOSURE_SUMMARY_REQUIRED_DOC_RELPATHS,
+)
+from release_closure_continuation_marker_common import (
+    RELEASE_CLOSURE_CONTINUATION_CALLER_CWD_MARKER,
+    RELEASE_CLOSURE_CONTINUATION_STABLE_PREWRITE_SNAPSHOT_MARKER,
+    RELEASE_CLOSURE_SUMMARY_CONTINUATION_FINALIZED_MARKER,
+    RELEASE_CLOSURE_SUMMARY_CONTINUATION_RESUME_CAPTURE_MODE_MARKER,
+)
+from release_readiness_runtime_closure_convergence_common import (
+    RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_PROBE_MARKER,
+    RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_PROBE_MARKER,
+    RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_RUNNER_MARKER,
 )
 from release_closure_surface_registry_common import (
     release_closure_surface_spec_by_bundle_surface_id,
@@ -70,6 +91,50 @@ if _SUMMARY_SURFACE_SPEC is None or _BOUNDARY_SURFACE_SPEC is None:
 
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def _release_closure_narrative_marker(stale_reason_suffix: str, marker_index: int) -> str:
+    spec = next(
+        (
+            marker_spec
+            for marker_spec in RELEASE_CLOSURE_NARRATIVE_MARKER_SPECS
+            if marker_spec.stale_reason_suffix == stale_reason_suffix
+        ),
+        None,
+    )
+    if spec is None:
+        raise RuntimeError(
+            f"release_closure_bundle_probe_missing_narrative_marker_spec:{stale_reason_suffix}"
+        )
+    try:
+        return spec.markers[marker_index]
+    except IndexError as exc:
+        raise RuntimeError(
+            "release_closure_bundle_probe_missing_narrative_marker_index:"
+            + f"{stale_reason_suffix}:{marker_index}"
+        ) from exc
+
+
+ACTIVE_REPORT_POINTER_SELECTOR_MARKER = _release_closure_narrative_marker(
+    "active_report_pointer_locality",
+    4,
+)
+STRICT_LIVE_ACTIVE_POINTER_CONTEXT_MARKER = _release_closure_narrative_marker(
+    "strict_live_active_pointer_locality",
+    2,
+)
+STRICT_LIVE_CONTRACT_RESOLUTION_MARKER = _release_closure_narrative_marker(
+    "strict_live_contract_resolution",
+    3,
+)
+WEAK_LIVE_POINTER_ABSORPTION_MARKER = _release_closure_narrative_marker(
+    "weak_live_pointer_absorption",
+    2,
+)
+EXECUTION_REPORT_SELECTION_MARKER = _release_closure_narrative_marker(
+    "execution_report_selection_convergence",
+    1,
+)
 
 
 def _collect_summary_doc_reference_expected_reasons(shadow_root: Path) -> tuple[str, ...]:
@@ -135,6 +200,67 @@ def _collect_boundary_foundational_expected_reasons(shadow_root: Path) -> tuple[
         collect_release_closure_boundary_foundational_bundle_stale_reasons(
             review_text,
             label="review_doc",
+        )
+    )
+    return tuple(expected_reasons)
+
+
+def _collect_summary_narrative_expected_reasons(shadow_root: Path) -> tuple[str, ...]:
+    summary_text = _read_text((shadow_root / RELEASE_CLOSURE_DOC_REL_PATHS.summary_doc).resolve())
+    return tuple(
+        collect_release_closure_summary_narrative_bundle_stale_reasons(
+            summary_text,
+            label="summary_doc",
+        )
+    )
+
+
+def _collect_boundary_narrative_expected_reasons(shadow_root: Path) -> tuple[str, ...]:
+    governance_text = _read_text((shadow_root / RELEASE_CLOSURE_DOC_REL_PATHS.governance_doc).resolve())
+    review_text = _read_text((shadow_root / RELEASE_CLOSURE_DOC_REL_PATHS.review_doc).resolve())
+    expected_reasons: list[str] = []
+    expected_reasons.extend(
+        collect_release_closure_boundary_narrative_bundle_stale_reasons(
+            governance_text,
+            label="governance_doc",
+        )
+    )
+    expected_reasons.extend(
+        collect_release_closure_boundary_narrative_bundle_stale_reasons(
+            review_text,
+            label="review_doc",
+        )
+    )
+    return tuple(expected_reasons)
+
+
+def _collect_summary_operational_marker_expected_reasons(shadow_root: Path) -> tuple[str, ...]:
+    summary_text = _read_text((shadow_root / RELEASE_CLOSURE_DOC_REL_PATHS.summary_doc).resolve())
+    return tuple(
+        collect_release_closure_operational_marker_bundle_stale_reasons(
+            summary_text,
+            label="summary_doc",
+            bundle_specs=RELEASE_CLOSURE_SUMMARY_OPERATIONAL_MARKER_BUNDLE_SPECS,
+        )
+    )
+
+
+def _collect_boundary_operational_marker_expected_reasons(shadow_root: Path) -> tuple[str, ...]:
+    governance_text = _read_text((shadow_root / RELEASE_CLOSURE_DOC_REL_PATHS.governance_doc).resolve())
+    review_text = _read_text((shadow_root / RELEASE_CLOSURE_DOC_REL_PATHS.review_doc).resolve())
+    expected_reasons: list[str] = []
+    expected_reasons.extend(
+        collect_release_closure_operational_marker_bundle_stale_reasons(
+            governance_text,
+            label="governance_doc",
+            bundle_specs=RELEASE_CLOSURE_BOUNDARY_OPERATIONAL_MARKER_BUNDLE_SPECS,
+        )
+    )
+    expected_reasons.extend(
+        collect_release_closure_operational_marker_bundle_stale_reasons(
+            review_text,
+            label="review_doc",
+            bundle_specs=RELEASE_CLOSURE_BOUNDARY_OPERATIONAL_MARKER_BUNDLE_SPECS,
         )
     )
     return tuple(expected_reasons)
@@ -240,11 +366,155 @@ RELEASE_CLOSURE_BOUNDARY_FOUNDATIONAL_BUNDLE_PROBE_PROFILE = ReleaseClosureBundl
     expected_reason_collector=_collect_boundary_foundational_expected_reasons,
 )
 
+RELEASE_CLOSURE_SUMMARY_NARRATIVE_BUNDLE_PROBE_PROFILE = ReleaseClosureBundleProbeProfile(
+    probe_id="summary_narrative",
+    validator_script_rel=_SUMMARY_SURFACE_SPEC.validator_script_rel,
+    status_key=_SUMMARY_SURFACE_SPEC.status_key,
+    shadow_copy_files=RELEASE_CLOSURE_SUMMARY_FULL_SHADOW_COPY_FILES,
+    mutations=(
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.summary_doc,
+            needle=ACTIVE_REPORT_POINTER_SELECTOR_MARKER,
+            replacement="latest_execution_report()",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.summary_doc,
+            needle=STRICT_LIVE_ACTIVE_POINTER_CONTEXT_MARKER,
+            replacement="resolve_current_execution_context()",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.summary_doc,
+            needle=STRICT_LIVE_CONTRACT_RESOLUTION_MARKER,
+            replacement="sample green failclose",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.summary_doc,
+            needle=WEAK_LIVE_POINTER_ABSORPTION_MARKER,
+            replacement="current_pointer_resolution_mode",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.summary_doc,
+            needle=EXECUTION_REPORT_SELECTION_MARKER,
+            replacement="primary_execution_report_selector.py",
+        ),
+    ),
+    expected_reason_collector=_collect_summary_narrative_expected_reasons,
+)
+
+RELEASE_CLOSURE_BOUNDARY_NARRATIVE_BUNDLE_PROBE_PROFILE = ReleaseClosureBundleProbeProfile(
+    probe_id="boundary_narrative",
+    validator_script_rel=_BOUNDARY_SURFACE_SPEC.validator_script_rel,
+    status_key=_BOUNDARY_SURFACE_SPEC.status_key,
+    shadow_copy_files=RELEASE_CLOSURE_BOUNDARY_FULL_SHADOW_COPY_FILES,
+    mutations=(
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.governance_doc,
+            needle=ACTIVE_REPORT_POINTER_SELECTOR_MARKER,
+            replacement="latest_execution_report()",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.governance_doc,
+            needle=STRICT_LIVE_CONTRACT_RESOLUTION_MARKER,
+            replacement="sample green failclose",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.review_doc,
+            needle=STRICT_LIVE_ACTIVE_POINTER_CONTEXT_MARKER,
+            replacement="resolve_current_execution_context()",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.review_doc,
+            needle=WEAK_LIVE_POINTER_ABSORPTION_MARKER,
+            replacement="current_pointer_resolution_mode",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.review_doc,
+            needle=EXECUTION_REPORT_SELECTION_MARKER,
+            replacement="primary_execution_report_selector.py",
+        ),
+    ),
+    expected_reason_collector=_collect_boundary_narrative_expected_reasons,
+)
+
+RELEASE_CLOSURE_SUMMARY_OPERATIONAL_MARKER_BUNDLE_PROBE_PROFILE = ReleaseClosureBundleProbeProfile(
+    probe_id="summary_operational_marker",
+    validator_script_rel=_SUMMARY_SURFACE_SPEC.validator_script_rel,
+    status_key=_SUMMARY_SURFACE_SPEC.status_key,
+    shadow_copy_files=RELEASE_CLOSURE_SUMMARY_FULL_SHADOW_COPY_FILES,
+    mutations=(
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.summary_doc,
+            needle=RELEASE_CLOSURE_SUMMARY_CONTINUATION_FINALIZED_MARKER,
+            replacement="summary_lifecycle_status=DONE",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.summary_doc,
+            needle=RELEASE_CLOSURE_SUMMARY_CONTINUATION_RESUME_CAPTURE_MODE_MARKER,
+            replacement="resume_capture_mode=resume_snapshot",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.summary_doc,
+            needle=RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_PROBE_MARKER,
+            replacement="scripts/ci/run_transport_fleet_convergence_probes_ci.sh",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.summary_doc,
+            needle=RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_PROBE_MARKER,
+            replacement="scripts/ci/run_runtime_pack_convergence_probes_ci.sh",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.summary_doc,
+            needle=RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_RUNNER_MARKER,
+            replacement="scripts/run_workspace_runtime_pack_checks.py",
+        ),
+    ),
+    expected_reason_collector=_collect_summary_operational_marker_expected_reasons,
+)
+
+RELEASE_CLOSURE_BOUNDARY_OPERATIONAL_MARKER_BUNDLE_PROBE_PROFILE = ReleaseClosureBundleProbeProfile(
+    probe_id="boundary_operational_marker",
+    validator_script_rel=_BOUNDARY_SURFACE_SPEC.validator_script_rel,
+    status_key=_BOUNDARY_SURFACE_SPEC.status_key,
+    shadow_copy_files=RELEASE_CLOSURE_BOUNDARY_FULL_SHADOW_COPY_FILES,
+    mutations=(
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.governance_doc,
+            needle=RELEASE_CLOSURE_CONTINUATION_STABLE_PREWRITE_SNAPSHOT_MARKER,
+            replacement="stable resume snapshot",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.governance_doc,
+            needle=RELEASE_CLOSURE_CONTINUATION_CALLER_CWD_MARKER,
+            replacement="caller working directory",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.governance_doc,
+            needle=RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_PROBE_MARKER,
+            replacement="scripts/ci/run_transport_fleet_convergence_probes_ci.sh",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.governance_doc,
+            needle=RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_RUNNER_MARKER,
+            replacement="scripts/run_workspace_runtime_pack_checks.py",
+        ),
+        ReleaseClosureBundleProbeMutationSpec(
+            target_relpath=RELEASE_CLOSURE_DOC_REL_PATHS.review_doc,
+            needle=RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_PROBE_MARKER,
+            replacement="scripts/ci/run_runtime_pack_convergence_probes_ci.sh",
+        ),
+    ),
+    expected_reason_collector=_collect_boundary_operational_marker_expected_reasons,
+)
+
 RELEASE_CLOSURE_BUNDLE_PROBE_PROFILES: tuple[ReleaseClosureBundleProbeProfile, ...] = (
     RELEASE_CLOSURE_SUMMARY_DOC_REFERENCE_BUNDLE_PROBE_PROFILE,
     RELEASE_CLOSURE_BOUNDARY_DOC_REFERENCE_BUNDLE_PROBE_PROFILE,
     RELEASE_CLOSURE_SUMMARY_FOUNDATIONAL_BUNDLE_PROBE_PROFILE,
     RELEASE_CLOSURE_BOUNDARY_FOUNDATIONAL_BUNDLE_PROBE_PROFILE,
+    RELEASE_CLOSURE_SUMMARY_NARRATIVE_BUNDLE_PROBE_PROFILE,
+    RELEASE_CLOSURE_BOUNDARY_NARRATIVE_BUNDLE_PROBE_PROFILE,
+    RELEASE_CLOSURE_SUMMARY_OPERATIONAL_MARKER_BUNDLE_PROBE_PROFILE,
+    RELEASE_CLOSURE_BOUNDARY_OPERATIONAL_MARKER_BUNDLE_PROBE_PROFILE,
 )
 
 
