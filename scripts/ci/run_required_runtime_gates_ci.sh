@@ -55,6 +55,32 @@ PY
   )
 }
 
+run_release_readiness_post_closure_governance_gates() {
+  while IFS=$'\t' read -r -a command_parts; do
+    if [ "${#command_parts[@]}" -gt 0 ] && [ -n "${command_parts[0]}" ]; then
+      run_cmd "${command_parts[@]}"
+    fi
+  done < <(
+    REPO_ROOT="${REPO_ROOT}" python3 - <<'PY'
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+repo_root = Path(os.environ["REPO_ROOT"]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from release_readiness_post_closure_adjudication_common import (  # noqa: E402
+    release_readiness_post_closure_governance_commands,
+)
+
+for command in release_readiness_post_closure_governance_commands():
+    print("\t".join(command))
+PY
+  )
+}
+
 run_global_protocol_gates() {
   run_cmd python3 scripts/validate_required_gate_surface_drift.py --json-only
   run_cmd bash scripts/ci/run_required_gate_surface_drift_probes_ci.sh
@@ -96,6 +122,7 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_executable_surface_runtime_literal_lock_probes_ci.sh
   run_cmd python3 scripts/validate_executable_surface_runtime_literal_lock.py --catalog "${CATALOG_PATH}" --include-active-pack-scripts --json-only
   run_cmd bash scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh
+  run_release_readiness_post_closure_governance_gates
   run_cmd bash scripts/ci/run_workbook_control_plane_probes_ci.sh
   run_cmd bash scripts/ci/run_workbook_family_scaffold_probes_ci.sh
   run_cmd bash scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh

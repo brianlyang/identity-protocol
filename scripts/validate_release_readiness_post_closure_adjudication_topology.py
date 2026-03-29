@@ -19,12 +19,24 @@ from release_readiness_governance_probe_projection_common import (
     release_readiness_governance_probe_structured_capture_specs,
     release_readiness_governance_probe_summary_defaults,
 )
+from release_readiness_governance_probe_topology_common import (
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROBE_COMMAND,
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_VALIDATOR_COMMAND,
+)
 from runtime_summary_surface_governance_common import (
     RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_COMMAND,
 )
 from health_report_experience_writeback_projection_common import (
     RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_PROBE_COMMAND,
     RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_VALIDATOR_COMMAND,
+)
+from release_readiness_active_runtime_closure_projection_common import (
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_COMMAND,
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_VALIDATOR_COMMAND,
+)
+from release_readiness_terminal_truth_bridge_common import (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_COMMAND,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR_COMMAND,
 )
 from release_readiness_post_closure_adjudication_common import (
     RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_COMMAND_SEQUENCE,
@@ -74,25 +86,14 @@ EXPECTED_COMMAND_SEQUENCE: tuple[tuple[str, ...], ...] = (
         "bash",
         "scripts/ci/run_release_readiness_repo_global_closure_topology_probes_ci.sh",
     ),
-    (
-        "python3",
-        "scripts/validate_release_readiness_active_runtime_closure_topology.py",
-        "--json-only",
-    ),
-    (
-        "bash",
-        "scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh",
-    ),
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_VALIDATOR_COMMAND,
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_COMMAND,
     RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_VALIDATOR_COMMAND,
     RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_PROBE_COMMAND,
-    ("python3", "scripts/validate_release_readiness_terminal_truth_bridge.py", "--json-only"),
-    ("bash", "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh"),
-    (
-        "python3",
-        "scripts/validate_release_readiness_governance_probe_topology.py",
-        "--json-only",
-    ),
-    ("bash", "scripts/ci/run_release_readiness_governance_probe_topology_probes_ci.sh"),
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR_COMMAND,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_COMMAND,
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_VALIDATOR_COMMAND,
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROBE_COMMAND,
 )
 EXPECTED_ORDER_MARKER = (
     "release_readiness_post_closure_adjudication_order="

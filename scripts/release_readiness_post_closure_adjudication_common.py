@@ -11,9 +11,21 @@ from release_readiness_repo_global_closure_projection_common import (
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_COMMAND,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_VALIDATOR_COMMAND,
 )
+from release_readiness_active_runtime_closure_projection_common import (
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_COMMAND,
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_VALIDATOR_COMMAND,
+)
 from health_report_experience_writeback_projection_common import (
     RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_PROBE_COMMAND,
     RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_VALIDATOR_COMMAND,
+)
+from release_readiness_governance_probe_topology_common import (
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROBE_COMMAND,
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_VALIDATOR_COMMAND,
+)
+from release_readiness_terminal_truth_bridge_common import (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_COMMAND,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR_COMMAND,
 )
 from runtime_summary_surface_governance_common import (
     RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_COMMAND,
@@ -46,15 +58,8 @@ RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_STAGE_SPECS: tuple[
     ),
     ReleaseReadinessPostClosureAdjudicationStageSpec(
         stage_id="active_runtime_closure_topology",
-        validator_command=(
-            "python3",
-            "scripts/validate_release_readiness_active_runtime_closure_topology.py",
-            "--json-only",
-        ),
-        probe_command=(
-            "bash",
-            "scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh",
-        ),
+        validator_command=RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_VALIDATOR_COMMAND,
+        probe_command=RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_COMMAND,
     ),
     ReleaseReadinessPostClosureAdjudicationStageSpec(
         stage_id="health_projection_bridge",
@@ -63,27 +68,13 @@ RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_STAGE_SPECS: tuple[
     ),
     ReleaseReadinessPostClosureAdjudicationStageSpec(
         stage_id="terminal_truth_bridge",
-        validator_command=(
-            "python3",
-            "scripts/validate_release_readiness_terminal_truth_bridge.py",
-            "--json-only",
-        ),
-        probe_command=(
-            "bash",
-            "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh",
-        ),
+        validator_command=RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR_COMMAND,
+        probe_command=RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_COMMAND,
     ),
     ReleaseReadinessPostClosureAdjudicationStageSpec(
         stage_id="governance_probe_topology",
-        validator_command=(
-            "python3",
-            "scripts/validate_release_readiness_governance_probe_topology.py",
-            "--json-only",
-        ),
-        probe_command=(
-            "bash",
-            "scripts/ci/run_release_readiness_governance_probe_topology_probes_ci.sh",
-        ),
+        validator_command=RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_VALIDATOR_COMMAND,
+        probe_command=RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROBE_COMMAND,
     ),
 )
 
@@ -119,6 +110,11 @@ RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_PROBE_COMMAND: tuple[str, ...] = (
     "bash",
     RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_PROBE,
 )
+RELEASE_READINESS_POST_CLOSURE_GOVERNANCE_COMMANDS: tuple[tuple[str, ...], ...] = (
+    *RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_COMMAND_SEQUENCE,
+    RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_VALIDATOR_COMMAND,
+    RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_PROBE_COMMAND,
+)
 RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_PROOF_LANES: tuple[str, ...] = (
     RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_VALIDATOR,
     RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_PROBE,
@@ -144,3 +140,11 @@ RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_SURFACE_CONSTRAINTS: tuple[str, ...]
     *RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_STAGE_MARKERS,
     *RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_PROOF_LANES,
 )
+
+
+def release_readiness_post_closure_adjudication_command_sequence() -> tuple[tuple[str, ...], ...]:
+    return RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_COMMAND_SEQUENCE
+
+
+def release_readiness_post_closure_governance_commands() -> tuple[tuple[str, ...], ...]:
+    return RELEASE_READINESS_POST_CLOSURE_GOVERNANCE_COMMANDS
