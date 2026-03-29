@@ -106,6 +106,25 @@ RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROOF_LANES: tuple[str, ...] = (
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE,
 )
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_BOUNDARY_COMPANION_FIELDS: tuple[str, ...] = (
+    "boundary_execution_closure_status",
+    "boundary_state_machine_status",
+    "boundary_negative_feedback_terminal_veto_status",
+    "boundary_loopback_required",
+    "boundary_next_state_after_veto",
+    "boundary_dirty_signals",
+    "boundary_terminal_truth_blockers",
+    "boundary_placeholder_result_fields",
+    "boundary_contradiction_fields",
+    "boundary_confidence_blocker_fields",
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ALIGNMENT_FIELDS: tuple[str, ...] = (
+    "execution_closure_alignment_status",
+    "state_machine_alignment_status",
+    "negative_feedback_veto_alignment_status",
+    "loopback_flag_alignment_status",
+    "next_state_after_veto_alignment_status",
+)
 RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS: tuple[str, ...] = (
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER,
     *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_MARKERS,

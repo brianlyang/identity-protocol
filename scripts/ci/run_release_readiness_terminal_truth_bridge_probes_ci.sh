@@ -154,6 +154,8 @@ sys.path.insert(0, str((repo_root / "scripts").resolve()))
 from blocker_taxonomy_common import BLOCKER_ALIAS_MAP_VERSION, CANONICAL_BLOCKER_TYPES
 from create_identity_pack import _collaboration_trigger_contract_skeleton
 from release_readiness_terminal_truth_bridge_common import (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ALIGNMENT_FIELDS,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_BOUNDARY_COMPANION_FIELDS,
     STATUS_PASS_REQUIRED,
     STATUS_SKIPPED_NOT_REQUIRED,
     build_release_readiness_terminal_truth_bridge_projection,
@@ -354,6 +356,20 @@ def _seed_identity(spec: dict[str, object]) -> dict[str, str]:
             "upgrade_required": bool(spec.get("upgrade_required", False)),
         }
     )
+    for optional_key in (
+        "fallback_reason",
+        "degrade_reason",
+        "needs_revalidation",
+        "revalidation_required",
+        "retry_required",
+        "repair_required",
+        "quarantine_required",
+        "review_required",
+        "requires_review",
+        "error_info",
+    ):
+        if optional_key in spec:
+            report_doc[optional_key] = spec[optional_key]
     if report_doc["upgrade_required"]:
         report_doc["writeback_status"] = "WRITTEN"
         report_doc["experience_writeback"] = {
@@ -418,6 +434,26 @@ identity_specs = (
         "terminal_truth_class": "review_required_execution_closure",
         "terminal_state_class": "review_pending",
         "negative_feedback_class": "review_required",
+        "upgrade_required": False,
+        "repair_before_release_readiness": True,
+    },
+    {
+        "case_name": "explicit_dirty_retry_execution_closure",
+        "identity_id": "release-readiness-terminal-truth-bridge-explicit-dirty-retry-e2e",
+        "report_suffix": "explicit-dirty-retry",
+        "run_id": "identity-upgrade-exec-release-readiness-terminal-truth-bridge-explicit-dirty-retry-e2e-explicit-dirty-retry",
+        "mode": "safe-auto",
+        "next_action": "publish_ready_if_clean",
+        "fallback_reason": "model_fallback_required_before_publish",
+        "needs_revalidation": True,
+        "retry_required": True,
+        "error_info": {"code": "retry_needed_after_fallback", "status": "degraded"},
+        "is_terminal_clean": False,
+        "publishable": False,
+        "canonical_result_eligible": False,
+        "terminal_truth_class": "dirty_terminal_execution_closure",
+        "terminal_state_class": "retry_pending",
+        "negative_feedback_class": "degraded_execution",
         "upgrade_required": False,
         "repair_before_release_readiness": True,
     },
@@ -523,6 +559,11 @@ results: list[dict[str, object]] = []
 for row in seeded:
     rc, summary, bridge = _run_release_readiness(row)
     case_name = row["case_name"]
+    for field_name in (
+        *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_BOUNDARY_COMPANION_FIELDS,
+        *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ALIGNMENT_FIELDS,
+    ):
+        assert field_name in bridge, (case_name, field_name, bridge)
     if case_name == "clean_terminal_truth":
         assert rc == 0, (case_name, rc, summary)
         assert summary["release_readiness_status"] == STATUS_PASS_REQUIRED, summary
@@ -597,6 +638,54 @@ for row in seeded:
         assert bridge["negative_feedback_veto_alignment_status"] == STATUS_PASS_REQUIRED, bridge
         assert bridge["loopback_flag_alignment_status"] == STATUS_PASS_REQUIRED, bridge
         assert bridge["next_state_after_veto_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+    elif case_name == "explicit_dirty_retry_execution_closure":
+        assert rc == 1, (case_name, rc, summary)
+        assert summary["release_readiness_status"] == "FAIL_REQUIRED", summary
+        assert bridge["terminal_truth_bridge_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["admission_lane_projection"] == "BLOCKED_BY_TERMINAL_TRUTH", bridge
+        assert bridge["repair_success_not_clean_terminal_truth"] is True, bridge
+        assert bridge["review_veto_semantics_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["boundary_terminal_truth_class"] == "dirty_terminal_execution_closure", bridge
+        assert bridge["boundary_terminal_state_class"] == "retry_pending", bridge
+        assert bridge["boundary_negative_feedback_class"] == "degraded_execution", bridge
+        assert bridge["boundary_publishable"] is False, bridge
+        assert bridge["boundary_canonical_result_eligible"] is False, bridge
+        assert bridge["boundary_execution_closure_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["boundary_state_machine_status"] == STATUS_PASS_REQUIRED, bridge
+        assert (
+            bridge["boundary_negative_feedback_terminal_veto_status"]
+            == STATUS_PASS_REQUIRED
+        ), bridge
+        assert bridge["boundary_loopback_required"] is True, bridge
+        assert bridge["boundary_next_state_after_veto"] == "retry_pending", bridge
+        assert bridge["active_runtime_execution_closure_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["active_runtime_state_machine_status"] == STATUS_PASS_REQUIRED, bridge
+        assert (
+            bridge["active_runtime_negative_feedback_terminal_veto_status"]
+            == STATUS_PASS_REQUIRED
+        ), bridge
+        assert bridge["active_runtime_loopback_required"] is True, bridge
+        assert bridge["active_runtime_next_state_after_veto"] == "retry_pending", bridge
+        assert bridge["active_runtime_alias_surface_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["execution_closure_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["state_machine_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["negative_feedback_veto_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["loopback_flag_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["next_state_after_veto_alignment_status"] == STATUS_PASS_REQUIRED, bridge
+        assert bridge["boundary_placeholder_result_fields"] == [], bridge
+        assert bridge["boundary_contradiction_fields"] == [], bridge
+        assert bridge["boundary_confidence_blocker_fields"] == [], bridge
+        for required_signal in [
+            "fallback_reason_present",
+            "explicit_revalidation_required",
+            "explicit_retry_required",
+            "error_info_dirty_signal",
+        ]:
+            assert required_signal in bridge["boundary_dirty_signals"], (required_signal, bridge)
+            assert required_signal in bridge["boundary_terminal_truth_blockers"], (
+                required_signal,
+                bridge,
+            )
     else:
         raise AssertionError(f"unexpected_case:{case_name}")
     results.append(
