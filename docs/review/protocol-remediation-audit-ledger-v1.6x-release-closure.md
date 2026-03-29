@@ -244,7 +244,8 @@ Audit consequence:
 
 1. review-required or otherwise dirty execution closure may still be repair-green;
 2. the same run must remain terminal-truth red if negative feedback veto / non-clean publishability conditions still hold;
-3. update preflight must fail for the terminal-truth reason itself, not be misreported as “repair executor broken”.
+3. update preflight must fail for the terminal-truth reason itself, not be misreported as “repair executor broken”;
+4. path-local repair outputs must now carry the richer observation companion too, so machine payload exposes `execution_closure_status`, `terminal_truth_cleanliness_status`, `terminal_truth_class`, `terminal_state_machine_status`, `terminal_state_class`, `negative_feedback_class`, `negative_feedback_terminal_veto_status`, `loopback_required`, `next_state_after_veto`, `publishable`, `canonical_result_eligible`, and the explicit dirty-signal families (`dirty_signals`, `terminal_truth_blockers`, `placeholder_result_fields`, `contradiction_fields`, `confidence_blocker_fields`) instead of forcing downstream audit to re-open nested validator payloads or infer dirty-state semantics from a single warning label.
 
 ## 5) Final audit sentence
 

@@ -245,6 +245,11 @@ def main() -> int:
     stale_reasons.extend(list(projection_result.get("stale_reasons") or []))
     observation_stale_reasons: list[str] = list(projection_result.get("observation_stale_reasons") or [])
     capability_missing_after = list(projection_result.get("capability_activation_missing_fields_after") or [])
+    terminal_truth_observation_projection = (
+        projection_result.get("terminal_truth_observation_projection")
+        if isinstance(projection_result.get("terminal_truth_observation_projection"), dict)
+        else {}
+    )
     if capability_missing_after:
         stale_reasons.append("capability_activation_required_fields_still_missing_after_repair")
     if report_changed and not args.apply:
@@ -300,18 +305,52 @@ def main() -> int:
         "terminal_truth_validation_status_after": str(
             ((projection_result.get("terminal_truth_validation") or {}).get("status", "")) or ""
         ).strip(),
+        "execution_closure_status_after": str(
+            (terminal_truth_observation_projection.get("execution_closure_status", "")) or ""
+        ).strip(),
+        "terminal_truth_cleanliness_status_after": str(
+            (terminal_truth_observation_projection.get("terminal_truth_cleanliness_status", "")) or ""
+        ).strip(),
         "terminal_truth_class_after": str(
-            (report_after.get("terminal_truth_class", "")) or ""
+            (terminal_truth_observation_projection.get("terminal_truth_class", "")) or ""
+        ).strip(),
+        "terminal_state_machine_status_after": str(
+            (terminal_truth_observation_projection.get("terminal_state_machine_status", "")) or ""
         ).strip(),
         "terminal_state_class_after": str(
-            (report_after.get("terminal_state_class", "")) or ""
+            (terminal_truth_observation_projection.get("terminal_state_class", "")) or ""
         ).strip(),
         "negative_feedback_class_after": str(
-            (report_after.get("negative_feedback_class", "")) or ""
+            (terminal_truth_observation_projection.get("negative_feedback_class", "")) or ""
         ).strip(),
-        "publishable_after": bool(report_after.get("publishable", False)),
-        "canonical_result_eligible_after": bool(report_after.get("canonical_result_eligible", False)),
+        "negative_feedback_terminal_veto_status_after": str(
+            (terminal_truth_observation_projection.get("negative_feedback_terminal_veto_status", "")) or ""
+        ).strip(),
+        "loopback_required_after": bool(
+            terminal_truth_observation_projection.get("loopback_required", False)
+        ),
+        "next_state_after_veto_after": str(
+            (terminal_truth_observation_projection.get("next_state_after_veto", "")) or ""
+        ).strip(),
+        "publishable_after": bool(terminal_truth_observation_projection.get("publishable", False)),
+        "canonical_result_eligible_after": bool(
+            terminal_truth_observation_projection.get("canonical_result_eligible", False)
+        ),
+        "dirty_signals_after": list(terminal_truth_observation_projection.get("dirty_signals") or []),
+        "terminal_truth_blockers_after": list(
+            terminal_truth_observation_projection.get("terminal_truth_blockers") or []
+        ),
+        "placeholder_result_fields_after": list(
+            terminal_truth_observation_projection.get("placeholder_result_fields") or []
+        ),
+        "contradiction_fields_after": list(
+            terminal_truth_observation_projection.get("contradiction_fields") or []
+        ),
+        "confidence_blocker_fields_after": list(
+            terminal_truth_observation_projection.get("confidence_blocker_fields") or []
+        ),
         "observation_stale_reasons": observation_stale_reasons,
+        "terminal_truth_observation_projection_after": terminal_truth_observation_projection,
         "projection_enrichment": projection_result,
         "stale_reasons": stale_reasons,
     }

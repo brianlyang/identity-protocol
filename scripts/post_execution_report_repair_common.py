@@ -17,8 +17,27 @@ from tool_vendor_governance_common import resolve_pack_and_task
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
+STATUS_UNKNOWN = "UNKNOWN"
 DEFAULT_OPERATION = "readiness"
 CANONICAL_EXECUTION_CLOSEOUT_PREFIX = "identity-upgrade-exec-"
+POST_EXECUTION_TERMINAL_TRUTH_OBSERVATION_FIELDS: tuple[str, ...] = (
+    "execution_closure_status",
+    "terminal_truth_cleanliness_status",
+    "terminal_truth_class",
+    "terminal_state_machine_status",
+    "terminal_state_class",
+    "negative_feedback_class",
+    "negative_feedback_terminal_veto_status",
+    "loopback_required",
+    "next_state_after_veto",
+    "publishable",
+    "canonical_result_eligible",
+    "dirty_signals",
+    "terminal_truth_blockers",
+    "placeholder_result_fields",
+    "contradiction_fields",
+    "confidence_blocker_fields",
+)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
@@ -43,6 +62,21 @@ def _parse_json_payload(raw: str) -> dict[str, Any] | None:
     except Exception:
         return None
     return data if isinstance(data, dict) else None
+
+
+def _clean_status_value(value: Any) -> str:
+    return str(value or "").strip().upper()
+
+
+def _clean_string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    cleaned: list[str] = []
+    for item in value:
+        token = str(item or "").strip()
+        if token:
+            cleaned.append(token)
+    return cleaned
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -302,6 +336,44 @@ def _project_and_validate_terminal_truth(
             pass
 
 
+def build_post_execution_terminal_truth_observation_projection(
+    report_doc: dict[str, Any] | None,
+) -> dict[str, Any]:
+    source = report_doc if isinstance(report_doc, dict) else {}
+    return {
+        "execution_closure_status": _clean_status_value(source.get("execution_closure_status"))
+        or STATUS_UNKNOWN,
+        "terminal_truth_cleanliness_status": _clean_status_value(
+            source.get("terminal_truth_cleanliness_status")
+        )
+        or STATUS_UNKNOWN,
+        "terminal_truth_class": str(source.get("terminal_truth_class", "") or "").strip(),
+        "terminal_state_machine_status": _clean_status_value(
+            source.get("terminal_state_machine_status")
+        )
+        or STATUS_UNKNOWN,
+        "terminal_state_class": str(source.get("terminal_state_class", "") or "").strip(),
+        "negative_feedback_class": str(source.get("negative_feedback_class", "") or "").strip(),
+        "negative_feedback_terminal_veto_status": _clean_status_value(
+            source.get("negative_feedback_terminal_veto_status")
+        )
+        or STATUS_UNKNOWN,
+        "loopback_required": bool(source.get("loopback_required", False)),
+        "next_state_after_veto": str(source.get("next_state_after_veto", "") or "").strip(),
+        "publishable": bool(source.get("publishable", False)),
+        "canonical_result_eligible": bool(source.get("canonical_result_eligible", False)),
+        "dirty_signals": _clean_string_list(source.get("dirty_signals")),
+        "terminal_truth_blockers": _clean_string_list(source.get("terminal_truth_blockers")),
+        "placeholder_result_fields": _clean_string_list(
+            source.get("placeholder_result_fields")
+        ),
+        "contradiction_fields": _clean_string_list(source.get("contradiction_fields")),
+        "confidence_blocker_fields": _clean_string_list(
+            source.get("confidence_blocker_fields")
+        ),
+    }
+
+
 def enrich_post_execution_report(
     *,
     report_doc: dict[str, Any],
@@ -433,6 +505,9 @@ def enrich_post_execution_report(
         operation=operation,
     )
     report_after = terminal_truth_projected
+    terminal_truth_observation_projection = build_post_execution_terminal_truth_observation_projection(
+        report_after
+    )
 
     blocking_stale_reasons: list[str] = []
     observation_stale_reasons: list[str] = []
@@ -470,6 +545,7 @@ def enrich_post_execution_report(
         "writeback_continuity_validation": writeback_result,
         "experience_writeback_validation": experience_writeback_result,
         "terminal_truth_validation": terminal_truth_result,
+        "terminal_truth_observation_projection": terminal_truth_observation_projection,
         "repair_projection_status": STATUS_PASS_REQUIRED if not blocking_stale_reasons else STATUS_FAIL_REQUIRED,
         "stale_reasons": sorted(
             set(str(reason).strip() for reason in blocking_stale_reasons if str(reason).strip())

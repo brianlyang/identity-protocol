@@ -13,6 +13,7 @@ PACK_PATH="${TMP_DIR}/${IDENTITY_ID}"
 CATALOG_PATH="${TMP_DIR}/catalog.local.yaml"
 REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-baseline-clean.json"
 REVIEW_REQUIRED_REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-review-required.json"
+EXPLICIT_DIRTY_RETRY_REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-explicit-dirty-retry.json"
 UPGRADE_CLOSED_REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-upgrade-closed.json"
 NON_CLOSEOUT_REPORT_PATH="${PACK_PATH}/runtime/reports/${IDENTITY_ID}-active-run.json"
 OUTLET_RECEIPT_PATH="${TMP_DIR}/outlet-preflight.json"
@@ -26,7 +27,7 @@ printf '{}\n' > "${PROMPT_CONTRACT_PATH}"
 printf '' > "${RULEBOOK_PATH}"
 printf '# Task History\n' > "${TASK_HISTORY_PATH}"
 
-python3 - <<'PY' "${CATALOG_PATH}" "${PACK_PATH}" "${IDENTITY_ID}" "${REPORT_PATH}" "${REVIEW_REQUIRED_REPORT_PATH}" "${UPGRADE_CLOSED_REPORT_PATH}" "${NON_CLOSEOUT_REPORT_PATH}" "${OUTLET_RECEIPT_PATH}" "${RULEBOOK_PATH}" "${TASK_HISTORY_PATH}" "${PROMPT_CONTRACT_PATH}"
+python3 - <<'PY' "${CATALOG_PATH}" "${PACK_PATH}" "${IDENTITY_ID}" "${REPORT_PATH}" "${REVIEW_REQUIRED_REPORT_PATH}" "${EXPLICIT_DIRTY_RETRY_REPORT_PATH}" "${UPGRADE_CLOSED_REPORT_PATH}" "${NON_CLOSEOUT_REPORT_PATH}" "${OUTLET_RECEIPT_PATH}" "${RULEBOOK_PATH}" "${TASK_HISTORY_PATH}" "${PROMPT_CONTRACT_PATH}"
 import json
 import sys
 from pathlib import Path
@@ -41,12 +42,13 @@ pack_path = Path(sys.argv[2])
 identity_id = sys.argv[3]
 report_path = Path(sys.argv[4])
 review_required_report_path = Path(sys.argv[5])
-upgrade_closed_report_path = Path(sys.argv[6])
-non_closeout_report_path = Path(sys.argv[7])
-outlet_receipt_path = Path(sys.argv[8])
-rulebook_path = Path(sys.argv[9])
-task_history_path = Path(sys.argv[10])
-prompt_contract_path = Path(sys.argv[11])
+explicit_dirty_retry_report_path = Path(sys.argv[6])
+upgrade_closed_report_path = Path(sys.argv[7])
+non_closeout_report_path = Path(sys.argv[8])
+outlet_receipt_path = Path(sys.argv[9])
+rulebook_path = Path(sys.argv[10])
+task_history_path = Path(sys.argv[11])
+prompt_contract_path = Path(sys.argv[12])
 
 catalog_doc = {
     "identities": [
@@ -170,6 +172,40 @@ review_required_report_path.write_text(
     encoding="utf-8",
 )
 
+explicit_dirty_retry_report_doc = dict(report_doc)
+explicit_dirty_retry_report_doc.update(
+    {
+        "run_id": f"identity-upgrade-exec-{identity_id}-explicit-dirty-retry",
+        "generated_at": "2026-03-25T00:02:30Z",
+        "mode": "safe-auto",
+        "upgrade_required": False,
+        "writeback_status": "NOT_REQUIRED",
+        "writeback_mode": "STRICT_WRITEBACK",
+        "next_action": "publish_ready_if_clean",
+        "next_recovery_action": "",
+        "experience_writeback": {
+            "required": False,
+            "status": "NOT_REQUIRED",
+            "error_code": "",
+            "mode": "safe-auto",
+        },
+        "fallback_reason": "model_fallback_required_before_publish",
+        "needs_revalidation": True,
+        "retry_required": True,
+        "error_info": {"code": "retry_needed_after_fallback", "status": "degraded"},
+        "is_terminal_clean": False,
+        "publishable": False,
+        "canonical_result_eligible": False,
+        "terminal_truth_class": "dirty_terminal_execution_closure",
+        "terminal_state_class": "retry_pending",
+        "negative_feedback_class": "degraded_execution",
+    }
+)
+explicit_dirty_retry_report_path.write_text(
+    json.dumps(explicit_dirty_retry_report_doc, ensure_ascii=False, indent=2) + "\n",
+    encoding="utf-8",
+)
+
 upgrade_closed_report_doc = dict(report_doc)
 upgrade_closed_report_doc.update(
     {
@@ -230,6 +266,9 @@ TERMINAL_JSON="${TMP_DIR}/terminal-validate.json"
 REVIEW_APPLY_JSON="${TMP_DIR}/repair-review-apply.json"
 REVIEW_POSTEXEC_JSON="${TMP_DIR}/postexec-review-validate.json"
 REVIEW_TERMINAL_JSON="${TMP_DIR}/terminal-review-validate.json"
+EXPLICIT_DIRTY_RETRY_APPLY_JSON="${TMP_DIR}/repair-explicit-dirty-retry-apply.json"
+EXPLICIT_DIRTY_RETRY_POSTEXEC_JSON="${TMP_DIR}/postexec-explicit-dirty-retry-validate.json"
+EXPLICIT_DIRTY_RETRY_TERMINAL_JSON="${TMP_DIR}/terminal-explicit-dirty-retry-validate.json"
 UPGRADE_APPLY_JSON="${TMP_DIR}/repair-upgrade-apply.json"
 UPGRADE_POSTEXEC_JSON="${TMP_DIR}/postexec-upgrade-closed-validate.json"
 
@@ -252,6 +291,12 @@ assert payload["capability_activation_missing_fields_after"] == [], payload
 assert payload["post_execution_validation_status_after"] == "PASS_REQUIRED", payload
 assert payload["writeback_continuity_status_after"] == "PASS_REQUIRED", payload
 assert payload["terminal_truth_validation_status_after"] == "PASS_REQUIRED", payload
+assert payload["execution_closure_status_after"] == "PASS_REQUIRED", payload
+assert payload["terminal_truth_cleanliness_status_after"] == "PASS_REQUIRED", payload
+assert payload["terminal_state_machine_status_after"] == "PASS_REQUIRED", payload
+assert payload["negative_feedback_terminal_veto_status_after"] == "PASS_REQUIRED", payload
+assert payload["dirty_signals_after"] == [], payload
+assert payload["terminal_truth_blockers_after"] == [], payload
 assert payload["changed_key_count"] > 0, payload
 PY
 
@@ -371,11 +416,19 @@ assert "terminal_truth_validator_not_green_after_projection" in (
     apply_payload.get("observation_stale_reasons") or []
 ), apply_payload
 assert apply_payload["terminal_truth_validation_status_after"] == "FAIL_REQUIRED", apply_payload
+assert apply_payload["execution_closure_status_after"] == "PASS_REQUIRED", apply_payload
+assert apply_payload["terminal_truth_cleanliness_status_after"] == "FAIL_REQUIRED", apply_payload
 assert apply_payload["terminal_truth_class_after"] == "review_required_execution_closure", apply_payload
+assert apply_payload["terminal_state_machine_status_after"] == "PASS_REQUIRED", apply_payload
 assert apply_payload["terminal_state_class_after"] == "review_pending", apply_payload
 assert apply_payload["negative_feedback_class_after"] == "review_required", apply_payload
+assert apply_payload["negative_feedback_terminal_veto_status_after"] == "PASS_REQUIRED", apply_payload
+assert apply_payload["loopback_required_after"] is False, apply_payload
+assert apply_payload["next_state_after_veto_after"] == "review_pending", apply_payload
 assert apply_payload["publishable_after"] is False, apply_payload
 assert apply_payload["canonical_result_eligible_after"] is False, apply_payload
+assert "review_required_next_action" in (apply_payload.get("dirty_signals_after") or []), apply_payload
+assert "review_required_next_action" in (apply_payload.get("terminal_truth_blockers_after") or []), apply_payload
 assert postexec_payload["post_execution_mandatory_status"] == "PASS_REQUIRED", postexec_payload
 assert postexec_payload["report_selected_path"] == str(Path(sys.argv[4]).resolve()), postexec_payload
 assert str(postexec_payload["report_logical_identity_key"]).strip(), postexec_payload
@@ -392,6 +445,79 @@ assert terminal_payload["report_selection_mode"] == "explicit_report_override", 
 assert terminal_payload["terminal_truth_class"] == "review_required_execution_closure", terminal_payload
 assert terminal_payload["execution_closure_status"] == "PASS_REQUIRED", terminal_payload
 assert report_payload["terminal_truth_class"] == "review_required_execution_closure", report_payload
+assert report_payload["publishable"] is False, report_payload
+assert report_payload["canonical_result_eligible"] is False, report_payload
+PY
+
+python3 scripts/repair_identity_post_execution_mandatory.py \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --report "${EXPLICIT_DIRTY_RETRY_REPORT_PATH}" \
+  --apply \
+  --json-only > "${EXPLICIT_DIRTY_RETRY_APPLY_JSON}"
+
+python3 scripts/validate_post_execution_mandatory.py \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --report "${EXPLICIT_DIRTY_RETRY_REPORT_PATH}" \
+  --operation readiness \
+  --json-only > "${EXPLICIT_DIRTY_RETRY_POSTEXEC_JSON}"
+
+python3 scripts/validate_terminal_truth_cleanliness.py \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --report "${EXPLICIT_DIRTY_RETRY_REPORT_PATH}" \
+  --operation readiness \
+  --json-only > "${EXPLICIT_DIRTY_RETRY_TERMINAL_JSON}" || true
+
+python3 - <<'PY' "${EXPLICIT_DIRTY_RETRY_APPLY_JSON}" "${EXPLICIT_DIRTY_RETRY_POSTEXEC_JSON}" "${EXPLICIT_DIRTY_RETRY_TERMINAL_JSON}" "${EXPLICIT_DIRTY_RETRY_REPORT_PATH}"
+import json
+import sys
+from pathlib import Path
+
+apply_payload = json.loads(Path(sys.argv[1]).read_text())
+postexec_payload = json.loads(Path(sys.argv[2]).read_text())
+terminal_payload = json.loads(Path(sys.argv[3]).read_text())
+report_payload = json.loads(Path(sys.argv[4]).read_text())
+
+assert apply_payload["post_execution_report_repair_status"] == "PASS_REQUIRED", apply_payload
+assert apply_payload["repair_blocking_status"] == "PASS_REQUIRED", apply_payload
+assert apply_payload["repair_observation_status"] == "WARN_NON_BLOCKING", apply_payload
+assert apply_payload["stale_reasons"] == [], apply_payload
+assert "terminal_truth_validator_not_green_after_projection" in (
+    apply_payload.get("observation_stale_reasons") or []
+), apply_payload
+assert apply_payload["post_execution_validation_status_after"] == "PASS_REQUIRED", apply_payload
+assert apply_payload["writeback_continuity_status_after"] == "PASS_REQUIRED", apply_payload
+assert apply_payload["terminal_truth_validation_status_after"] == "FAIL_REQUIRED", apply_payload
+assert apply_payload["execution_closure_status_after"] == "PASS_REQUIRED", apply_payload
+assert apply_payload["terminal_truth_cleanliness_status_after"] == "FAIL_REQUIRED", apply_payload
+assert apply_payload["terminal_truth_class_after"] == "dirty_terminal_execution_closure", apply_payload
+assert apply_payload["terminal_state_machine_status_after"] == "PASS_REQUIRED", apply_payload
+assert apply_payload["terminal_state_class_after"] == "retry_pending", apply_payload
+assert apply_payload["negative_feedback_class_after"] == "degraded_execution", apply_payload
+assert apply_payload["negative_feedback_terminal_veto_status_after"] == "PASS_REQUIRED", apply_payload
+assert apply_payload["loopback_required_after"] is True, apply_payload
+assert apply_payload["next_state_after_veto_after"] == "retry_pending", apply_payload
+assert apply_payload["publishable_after"] is False, apply_payload
+assert apply_payload["canonical_result_eligible_after"] is False, apply_payload
+for signal in [
+    "fallback_reason_present",
+    "explicit_revalidation_required",
+    "explicit_retry_required",
+    "error_info_dirty_signal",
+]:
+    assert signal in (apply_payload.get("dirty_signals_after") or []), (signal, apply_payload)
+    assert signal in (apply_payload.get("terminal_truth_blockers_after") or []), (signal, apply_payload)
+assert postexec_payload["post_execution_mandatory_status"] == "PASS_REQUIRED", postexec_payload
+assert terminal_payload["identity_terminal_truth_cleanliness_status"] == "FAIL_REQUIRED", terminal_payload
+assert terminal_payload["terminal_truth_class"] == "dirty_terminal_execution_closure", terminal_payload
+assert terminal_payload["execution_closure_status"] == "PASS_REQUIRED", terminal_payload
+assert report_payload["terminal_truth_class"] == "dirty_terminal_execution_closure", report_payload
+assert report_payload["terminal_state_class"] == "retry_pending", report_payload
 assert report_payload["publishable"] is False, report_payload
 assert report_payload["canonical_result_eligible"] is False, report_payload
 PY

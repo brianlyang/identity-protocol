@@ -266,7 +266,9 @@ Frozen consequence:
 1. `scripts/repair_identity_post_execution_mandatory.py` is a shared repair executor, not the clean-terminal-truth owner;
 2. `scripts/validate_terminal_truth_cleanliness.py` keeps fail-close authority over non-clean terminal truth;
 3. `scripts/repair_contract_backfill.py` must fail-close only when current-run terminal-truth projection integrity is not green; a coherently projected dirty/review-pending verdict remains observation, not a projection failure;
-4. shared probes must preserve this split rather than collapsing coherent dirty terminal truth back into “repair executor failed”.
+4. path-local repair consumers must preserve the same observation truth in machine-readable form instead of flattening it to `PASS/WARN` narrative; `scripts/post_execution_report_repair_common.py` therefore owns a bounded post-execution terminal-truth observation companion carrying `execution_closure_status`, `terminal_truth_cleanliness_status`, `terminal_truth_class`, `terminal_state_machine_status`, `terminal_state_class`, `negative_feedback_class`, `negative_feedback_terminal_veto_status`, `loopback_required`, `next_state_after_veto`, `publishable`, `canonical_result_eligible`, `dirty_signals`, `terminal_truth_blockers`, `placeholder_result_fields`, `contradiction_fields`, and `confidence_blocker_fields`;
+5. `scripts/repair_identity_post_execution_mandatory.py` must emit that companion on its own payload so explicit dirty terminal signals expressed as `fallback_reason`, `needs_revalidation`, `retry_required`, or structured `error_info` remain machine-visible observation truth rather than being compressed away behind a generic warning bit;
+6. shared probes must preserve this split rather than collapsing coherent dirty terminal truth back into “repair executor failed”.
 
 ## 5) Release-closure and future-admission rule
 
