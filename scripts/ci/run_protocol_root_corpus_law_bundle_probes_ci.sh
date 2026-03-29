@@ -453,28 +453,12 @@ PY
 
 COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/law-bundle-completeness-surface-order-drift-repo"
 mirror_repo "${COMPLETENESS_SURFACE_ORDER_REPO}"
-python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_REPO}/identity/protocol/README.md"
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-text = path.read_text(encoding="utf-8")
-section_marker = "## Root law-bundle component-row completeness discipline"
-next_marker = "\n---\n\n## Root-law bundle discipline"
-first = "1. required component-row and component-status-row rows must remain explicit as separate machine-readable row families;"
-second = "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
-swapped_first = "1. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
-swapped_second = "2. required component-row and component-status-row rows must remain explicit as separate machine-readable row families;"
-assert section_marker in text, text
-assert next_marker in text, text
-before, rest = text.split(section_marker, 1)
-section_body, after = rest.split(next_marker, 1)
-assert first in section_body and second in section_body, section_body
-section_body = section_body.replace(first, "__TEMP__", 1)
-section_body = section_body.replace(second, swapped_second, 1)
-section_body = section_body.replace("__TEMP__", swapped_first, 1)
-path.write_text(before + section_marker + section_body + next_marker + after, encoding="utf-8")
-PY
+protocol_root_probe_swap_numbered_surface_order_rows \
+  "${COMPLETENESS_SURFACE_ORDER_REPO}/identity/protocol/README.md" \
+  "## Root law-bundle component-row completeness discipline" \
+  $'\n---\n\n## Root-law bundle discipline' \
+  "1. required component-row and component-status-row rows must remain explicit as separate machine-readable row families;" \
+  "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
 
 COMPLETENESS_SURFACE_ORDER_JSON="${TMP_ROOT}/law-bundle-completeness-surface-order-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
