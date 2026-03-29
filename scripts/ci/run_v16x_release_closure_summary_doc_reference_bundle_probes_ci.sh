@@ -16,17 +16,17 @@ SUMMARY_SHADOW_PATH="${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-
 philosophy_ref_marker="$(
   resolve_python_module_expression \
     "release_closure_doc_reference_bundle_common" \
-    "RELEASE_CLOSURE_SUMMARY_REQUIRED_REFERENCE_MARKERS[0]"
+    "RELEASE_CLOSURE_SUMMARY_PHILOSOPHY_REFERENCE_MARKER"
 )"
 contract_binding_ref_marker="$(
   resolve_python_module_expression \
     "release_closure_doc_reference_bundle_common" \
-    "next(marker for marker in RELEASE_CLOSURE_SUMMARY_REQUIRED_REFERENCE_MARKERS if marker.endswith('contract-binding.current.yaml'))"
+    "RELEASE_CLOSURE_SUMMARY_CONTRACT_BINDING_REFERENCE_MARKER"
 )"
 workbook_ref_marker="$(
   resolve_python_module_expression \
     "release_closure_doc_reference_bundle_common" \
-    "RELEASE_CLOSURE_SUMMARY_REQUIRED_REFERENCE_MARKERS[-1]"
+    "RELEASE_CLOSURE_SUMMARY_WORKBOOK_REFERENCE_MARKER"
 )"
 
 printf '[RUN] positive release-closure summary doc-reference bundle validation\n'

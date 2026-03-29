@@ -19,20 +19,29 @@ class ReleaseClosureDocReferenceBundleSpec:
     bundle_key: str
     reference_specs: tuple[ReleaseClosureDocReferenceSpec, ...]
 
+RELEASE_CLOSURE_SUMMARY_PHILOSOPHY_REFERENCE_MARKER = (
+    RELEASE_CLOSURE_DOC_REL_PATHS.philosophy_doc
+)
+RELEASE_CLOSURE_SUMMARY_CONTRACT_BINDING_REFERENCE_MARKER = (
+    "identity/protocol/mappings/contract-binding.current.yaml"
+)
+RELEASE_CLOSURE_SUMMARY_WORKBOOK_REFERENCE_MARKER = (
+    RELEASE_CLOSURE_DOC_REL_PATHS.workbook_doc
+)
 
 RELEASE_CLOSURE_SUMMARY_REQUIRED_REFERENCE_MARKERS: tuple[str, ...] = (
-    RELEASE_CLOSURE_DOC_REL_PATHS.philosophy_doc,
+    RELEASE_CLOSURE_SUMMARY_PHILOSOPHY_REFERENCE_MARKER,
     RELEASE_CLOSURE_DOC_REL_PATHS.protocol_doc,
     RELEASE_CLOSURE_DOC_REL_PATHS.runtime_doc,
     RELEASE_CLOSURE_DOC_REL_PATHS.governance_doc,
     RELEASE_CLOSURE_DOC_REL_PATHS.review_doc,
     "identity/protocol/mappings/workbook-registry.current.yaml",
     "identity/protocol/mappings/stream-doc-registry.current.yaml",
-    "identity/protocol/mappings/contract-binding.current.yaml",
+    RELEASE_CLOSURE_SUMMARY_CONTRACT_BINDING_REFERENCE_MARKER,
     "identity/protocol/mappings/control-plane-status.current.yaml",
     "identity/protocol/mappings/control-plane-budget.current.yaml",
     RELEASE_CLOSURE_DOC_REL_PATHS.issue_register_doc,
-    RELEASE_CLOSURE_DOC_REL_PATHS.workbook_doc,
+    RELEASE_CLOSURE_SUMMARY_WORKBOOK_REFERENCE_MARKER,
 )
 
 RELEASE_CLOSURE_BOUNDARY_PHILOSOPHY_ANCHOR_MARKERS: tuple[str, ...] = (
