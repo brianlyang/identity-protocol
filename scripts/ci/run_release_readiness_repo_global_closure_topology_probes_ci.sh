@@ -225,12 +225,12 @@ if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-repo-global-closure
 fi
 echo "[PASS] repo-global boundary probe topology-lane resolution drift fail-closed as expected"
 
-restore_shadow_file "${TMP_ROOT}" "scripts/release_readiness_governance_probe_projection_common.py"
+restore_shadow_file "${TMP_ROOT}" "scripts/release_readiness_repo_global_closure_projection_common.py"
 # expected fail-close: governance_probe_projection_missing_one_look_field:one_look.release_readiness_repo_global_closure_topology_probe_status
 mutate_probe_literal \
-  "${TMP_ROOT}/scripts/release_readiness_governance_probe_projection_common.py" \
-  'one_look_field="release_readiness_repo_global_closure_topology_probe_status"' \
-  'one_look_field="release_readiness_repo_global_closure_topology_probe_state"'
+  "${TMP_ROOT}/scripts/release_readiness_repo_global_closure_projection_common.py" \
+  '"release_readiness_repo_global_closure_topology_probe_status"' \
+  '"release_readiness_repo_global_closure_topology_probe_state"'
 if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-repo-global-closure-topology-negative-governance-field.json; then
   echo "[FAIL] repo-global governance-probe absorption drift unexpectedly passed"
   exit 1

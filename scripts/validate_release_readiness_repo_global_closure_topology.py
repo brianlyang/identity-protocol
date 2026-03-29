@@ -465,10 +465,11 @@ def main() -> int:
 
     governance_projection_common_text = _read_text((repo_root / GOVERNANCE_PROJECTION_COMMON_REL).resolve())
     for required_token in (
-        EXPECTED_PROBE_SCRIPT,
-        EXPECTED_GOVERNANCE_SUMMARY_KEY,
-        EXPECTED_GOVERNANCE_ONE_LOOK_FIELD,
-        "positive_validator_output",
+        "release_readiness_repo_global_closure_projection_common",
+        "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT",
+        "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SUMMARY_KEY",
+        "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_ONE_LOOK_FIELD",
+        "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_KEEP_FIELDS",
     ):
         if required_token not in governance_projection_common_text:
             stale_reasons.append(f"governance_projection_common_missing_token:{required_token}")
