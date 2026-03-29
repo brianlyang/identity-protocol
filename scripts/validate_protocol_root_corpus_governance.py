@@ -22,9 +22,11 @@ from root_corpus_governance_common import (
     corpus_class_profiles_from_registry,
     forbidden_classes_from_registry,
     find_missing_markers,
+    governance_completeness_rows_from_registry,
     load_root_corpus_registry,
     merge_forbidden_content_classes,
     merge_required_markers,
+    readme_governance_completeness_surface,
     readme_root_maintenance_guardrail_surface,
     readme_root_index_class_projection_surface,
     root_index_class_projections_from_registry,
@@ -42,24 +44,51 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "### Governance row-family completeness must stay explicit",
         "Required registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class families must remain explicit as separate machine-readable row families.",
+        "README root governance completeness discipline must therefore stay congruent with admitted governance-completeness rows rather than becoming a freehand completeness summary.",
         "README maintenance guardrails about how protocol root is authored and kept law-bearing must therefore stay bound to canonical guardrail rows rather than remaining reviewer-memory advice.",
         "The machine world must not finalize governance legality while required rel-path, corpus-class, root-index-class-projection, root-maintenance-guardrail, or forbidden-content-class identity drift remains known only internally.",
     ),
     "identity/protocol/README.md": (
         "## Root governance completeness discipline",
         "Governance law is not a soft prose bundle.",
+        "These governance-completeness rules must remain bound to canonical governance-completeness rows rather than drifting into soft summary prose.",
         "1. required registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class rows must remain explicit as separate machine-readable row families;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root governance completeness boundary",
         "1. Governance law must remain machine-readable as separate registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class row families.",
         "4. Protocol legality must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, root-maintenance-guardrail, or forbidden-content-class identities remain known only inside validator logic.",
+        "6. README root governance completeness discipline rendered at protocol root must remain congruent with admitted governance-completeness rows rather than silently authoring an alternate completeness summary.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime governance consumption boundary",
         "1. Runtime consumes governance law as separate registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class row families rather than as undifferentiated governance prose.",
         "4. Runtime must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, root-maintenance-guardrail, or forbidden-content-class identities remain known only inside validator machinery.",
+        "6. Runtime consumes README root governance completeness discipline as a governed completeness projection bound to admitted governance-completeness rows rather than as a freehand completeness summary.",
     ),
+}
+
+EXPECTED_GOVERNANCE_COMPLETENESS_ROWS = {
+    "explicit_governance_row_families": {
+        "order": 1,
+        "contract_phrase": "required registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class rows must remain explicit as separate machine-readable row families;",
+    },
+    "congruent_governance_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_governance_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_governance_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, root-maintenance-guardrail, or forbidden-content-class identities remain known only internally;",
+    },
+    "fail_close_preserves_governance_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
 }
 
 EXPECTED_ROOT_MAINTENANCE_GUARDRAILS = {
@@ -147,7 +176,9 @@ def main() -> int:
     class_profiles = corpus_class_profiles_from_registry(registry_doc) if registry_doc else {}
     root_index_class_projections = root_index_class_projections_from_registry(registry_doc) if registry_doc else ()
     root_maintenance_guardrails = root_maintenance_guardrails_from_registry(registry_doc) if registry_doc else ()
+    governance_completeness_rows = governance_completeness_rows_from_registry(registry_doc) if registry_doc else ()
     root_doc_anchor_checks = root_doc_anchor_checks_from_doc(registry_doc) if registry_doc else ()
+    governance_completeness_surface = readme_governance_completeness_surface(repo_root)
     root_index_class_projection_surface = readme_root_index_class_projection_surface(repo_root)
     root_maintenance_guardrail_surface = readme_root_maintenance_guardrail_surface(repo_root)
     raw_forbidden_rows = registry_doc.get("forbidden_content_classes") if registry_doc else []
@@ -199,6 +230,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if not root_maintenance_guardrails:
             stale_reasons.append("root_maintenance_guardrails_missing")
+            error_code = ERR_REGISTRY
+        if not governance_completeness_rows:
+            stale_reasons.append("root_corpus_governance_completeness_rows_missing")
             error_code = ERR_REGISTRY
         for key in ("validator_script", "probe_script", "common_script"):
             rel_path = str(registry_doc.get(key) or "").strip()
@@ -278,6 +312,13 @@ def main() -> int:
             structure_violations.append(
                 {"field": "root_index_class_projection_surface", "reason": "projection_order_non_contiguous"}
             )
+        for reason in governance_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "governance_completeness_surface",
+                    "reason": f"governance_completeness_surface_{reason}",
+                }
+            )
         validate_contract_row_batches(
             batches=(
                 {
@@ -293,6 +334,34 @@ def main() -> int:
                     "missing_ids_key": "guardrail_labels",
                     "extra_ids_key": "guardrail_labels",
                     "violation_id_key": "guardrail_label",
+                },
+                {
+                    "actual_rows": governance_completeness_rows,
+                    "expected_rows": EXPECTED_GOVERNANCE_COMPLETENESS_ROWS,
+                    "field_name": "governance_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                },
+                {
+                    "actual_rows": governance_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_GOVERNANCE_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "governance_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_governance_completeness_surface_phrase",
+                    "non_contiguous_reason": "governance_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_governance_completeness_surface_rows",
+                    "extra_reason": "extra_governance_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "governance_completeness_surface_order_mismatch",
                 },
             ),
             structure_violations=structure_violations,
@@ -609,6 +678,20 @@ def main() -> int:
                 "id_attr": "guardrail_label",
             },
             {
+                "family_id": "governance_completeness_rows",
+                "member_id_key": "completeness_id",
+                "actual_rows": [SimpleNamespace(completeness_id=row.completeness_id) for row in governance_completeness_rows],
+                "expected_rows": {row_id: {} for row_id in EXPECTED_GOVERNANCE_COMPLETENESS_ROWS},
+                "id_attr": "completeness_id",
+            },
+            {
+                "family_id": "governance_completeness_surface",
+                "member_id_key": "contract_phrase",
+                "actual_rows": [SimpleNamespace(contract_phrase=row.contract_phrase) for row in governance_completeness_surface.rows],
+                "expected_rows": {row["contract_phrase"]: {} for row in EXPECTED_GOVERNANCE_COMPLETENESS_ROWS.values()},
+                "id_attr": "contract_phrase",
+            },
+            {
                 "family_id": "forbidden_content_classes",
                 "member_id_key": "class_id",
                 "actual_rows": [SimpleNamespace(class_id=class_id) for class_id in sorted(content_classes.keys())],
@@ -632,6 +715,7 @@ def main() -> int:
         "law_bearing_entry_count": sum(1 for entry in entries if entry.law_bearing),
         "validated_file_count": sum(1 for entry in entries if entry.entry_kind == "file"),
         "validated_directory_count": sum(1 for entry in entries if entry.entry_kind == "directory"),
+        "governance_completeness_row_count": len(governance_completeness_rows),
         **project_root_contract_support_projection(
             prefix="governance",
             row_family_projection_rows=row_family_projection_rows,
@@ -687,6 +771,26 @@ def main() -> int:
                 for row in root_maintenance_guardrail_surface.rows
             ],
             "extraction_violations": list(root_maintenance_guardrail_surface.extraction_violations),
+        },
+        "governance_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted(governance_completeness_rows, key=lambda item: item.order)
+        ],
+        "governance_completeness_surface": {
+            "rel_path": governance_completeness_surface.rel_path,
+            "entry_count": len(governance_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in governance_completeness_surface.rows
+            ],
+            "extraction_violations": list(governance_completeness_surface.extraction_violations),
         },
         "forbidden_content_class_ids": sorted(content_classes.keys()),
         "structure_violations": structure_violations,

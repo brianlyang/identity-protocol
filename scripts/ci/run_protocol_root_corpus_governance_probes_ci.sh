@@ -34,9 +34,12 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_governance_status"] == "PASS_REQUIRED", payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["governance_row_family_count"] == 7, payload
+assert payload["governance_row_family_count"] == 9, payload
 assert payload["governance_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["governance_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["governance_completeness_row_count"] == 5, payload
+assert payload["governance_completeness_surface"]["entry_count"] == 5, payload
+assert payload["governance_completeness_surface"]["extraction_violations"] == [], payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["registered_top_level_count"] == payload["actual_top_level_count"], payload
@@ -50,6 +53,57 @@ assert any(row["family_id"] == "root_index_class_projections" for row in payload
 assert any(row["family_id"] == "root_index_class_projection_surface" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "root_maintenance_guardrails" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "root_maintenance_guardrail_surface" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "governance_completeness_rows" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "governance_completeness_surface" for row in payload["row_family_projection_rows"]), payload
+PY
+
+MISSING_COMPLETENESS_REPO="${TMP_ROOT}/missing-governance-completeness-repo"
+mirror_repo "${MISSING_COMPLETENESS_REPO}"
+python3 - <<'PY' "${MISSING_COMPLETENESS_REPO}/identity/protocol/mappings/root-corpus-registry.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["governance_completeness_rows"] = doc["governance_completeness_rows"][:-1]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+MISSING_COMPLETENESS_JSON="${TMP_ROOT}/missing-governance-completeness.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
+  --repo-root "${MISSING_COMPLETENESS_REPO}" \
+  --json-only >"${MISSING_COMPLETENESS_JSON}"; then
+  echo "[FAIL] root corpus governance validator unexpectedly passed after removing governance completeness row"
+  exit 1
+fi
+
+python3 - <<'PY' "${MISSING_COMPLETENESS_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCG-002", payload
+assert payload["governance_row_family_count"] == 9, payload
+assert payload["governance_completeness_row_count"] == 4, payload
+assert any(
+    row["field"] == "governance_completeness_rows"
+    and row["reason"] == "missing_expected_rows"
+    and "fail_close_preserves_governance_identity_projection" in row.get("completeness_ids", [])
+    for row in payload["structure_violations"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "governance_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 4, payload
+assert completeness_row["missing_ids"] == ["fail_close_preserves_governance_identity_projection"], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 PROFILE_REPO="${TMP_ROOT}/missing-profile-repo"
@@ -197,6 +251,102 @@ assert any(
     and row["reason"] == "missing_expected_bound_corpus_classes"
     and "governed_subdomain_extension" in row.get("corpus_classes", [])
     for row in payload["structure_violations"]
+), payload
+PY
+
+GOVERNANCE_SURFACE_REPO="${TMP_ROOT}/governance-surface-drift-repo"
+mirror_repo "${GOVERNANCE_SURFACE_REPO}"
+python3 - <<'PY' "${GOVERNANCE_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+section_marker = "## Root governance completeness discipline"
+next_marker = "\n---\n\n## Root gateway-admissibility completeness discipline"
+old = "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+new = "2. expected row-family totals may be summarized informally once the corpus looks green;"
+assert section_marker in text, text
+assert next_marker in text, text
+before, rest = text.split(section_marker, 1)
+section_body, after = rest.split(next_marker, 1)
+assert old in section_body, section_body
+section_body = section_body.replace(old, new, 1)
+path.write_text(before + section_marker + section_body + next_marker + after, encoding="utf-8")
+PY
+
+GOVERNANCE_SURFACE_JSON="${TMP_ROOT}/governance-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
+  --repo-root "${GOVERNANCE_SURFACE_REPO}" \
+  --json-only >"${GOVERNANCE_SURFACE_JSON}"; then
+  echo "[FAIL] root corpus governance validator unexpectedly passed README governance completeness surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${GOVERNANCE_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCG-002", payload
+assert any(
+    row["field"] == "governance_completeness_surface"
+    and row["reason"] == "missing_governance_completeness_surface_rows"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "governance_completeness_surface"
+    and row["reason"] == "extra_governance_completeness_surface_rows"
+    for row in payload["structure_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "governance_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+GOVERNANCE_BINDING_REPO="${TMP_ROOT}/governance-binding-drift-repo"
+mirror_repo "${GOVERNANCE_BINDING_REPO}"
+python3 - <<'PY' "${GOVERNANCE_BINDING_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "These governance-completeness rules must remain bound to canonical governance-completeness rows rather than drifting into soft summary prose."
+new = "These governance completeness rules may be summarized freely once reviewers understand the intent."
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+GOVERNANCE_BINDING_JSON="${TMP_ROOT}/governance-binding-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
+  --repo-root "${GOVERNANCE_BINDING_REPO}" \
+  --json-only >"${GOVERNANCE_BINDING_JSON}"; then
+  echo "[FAIL] root corpus governance validator unexpectedly passed README governance binding drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${GOVERNANCE_BINDING_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCG-002", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md"
+    and row["reason"] == "required_marker_missing"
+    and "These governance-completeness rules must remain bound to canonical governance-completeness rows rather than drifting into soft summary prose." in row.get("marker", "")
+    for row in payload["root_doc_anchor_violations"]
 ), payload
 PY
 

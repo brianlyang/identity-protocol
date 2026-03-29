@@ -14,8 +14,10 @@ STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_CORPUS_REGISTRY_CURRENT = "identity/protocol/mappings/root-corpus-registry.current.yaml"
 ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
+ROOT_GOVERNANCE_COMPLETENESS_SECTION_MARKER = "## Root governance completeness discipline"
 ROOT_INDEX_CLASS_SECTION_MARKER = "## What belongs at protocol root"
 ROOT_MAINTENANCE_GUARDRAILS_SECTION_MARKER = "## Root maintenance guardrails"
+ORDERED_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+(.*\S)\s*$")
 ORDERED_BOLD_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+\*\*(.*?)\*\*")
 HEADING_RE = re.compile(r"^##\s+")
 HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
@@ -90,6 +92,26 @@ class RootMaintenanceGuardrailSurface:
 
 
 @dataclass(frozen=True)
+class GovernanceCompletenessRow:
+    order: int
+    completeness_id: str
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class GovernanceCompletenessSurfaceRow:
+    order: int
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class GovernanceCompletenessSurface:
+    rel_path: str
+    rows: tuple[GovernanceCompletenessSurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ForbiddenHit:
     class_id: str
     pattern: str
@@ -138,6 +160,11 @@ def _iter_root_index_class_projection_rows(registry_doc: Mapping[str, Any]) -> l
 
 def _iter_root_maintenance_guardrail_rows(registry_doc: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     raw = registry_doc.get("root_maintenance_guardrails")
+    return raw if isinstance(raw, list) else []
+
+
+def _iter_governance_completeness_rows(registry_doc: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    raw = registry_doc.get("governance_completeness_rows")
     return raw if isinstance(raw, list) else []
 
 
@@ -232,6 +259,31 @@ def root_maintenance_guardrails_from_registry(
             )
         )
     return tuple(guardrails)
+
+
+def governance_completeness_rows_from_registry(
+    registry_doc: Mapping[str, Any],
+) -> tuple[GovernanceCompletenessRow, ...]:
+    rows: list[GovernanceCompletenessRow] = []
+    for row in _iter_governance_completeness_rows(registry_doc):
+        if not isinstance(row, dict):
+            continue
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        completeness_id = _norm_path(row.get("completeness_id"))
+        contract_phrase = str(row.get("contract_phrase") or "").strip()
+        if order <= 0 or not completeness_id or not contract_phrase:
+            continue
+        rows.append(
+            GovernanceCompletenessRow(
+                order=order,
+                completeness_id=completeness_id,
+                contract_phrase=contract_phrase,
+            )
+        )
+    return tuple(rows)
 
 
 def root_corpus_entries_from_registry(registry_doc: Mapping[str, Any]) -> tuple[RootCorpusEntry, ...]:
@@ -430,6 +482,51 @@ def readme_root_maintenance_guardrail_surface(repo_root: Path) -> RootMaintenanc
             for row in surface.rows
         ),
         extraction_violations=surface.extraction_violations,
+    )
+
+
+def readme_governance_completeness_surface(repo_root: Path) -> GovernanceCompletenessSurface:
+    path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
+    if not path.exists() or not path.is_file():
+        return GovernanceCompletenessSurface(
+            rel_path=ROOT_PROTOCOL_README_REL_PATH,
+            rows=(),
+            extraction_violations=("target_missing",),
+        )
+
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    section_found = False
+    rows: list[GovernanceCompletenessSurfaceRow] = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == ROOT_GOVERNANCE_COMPLETENESS_SECTION_MARKER:
+            section_found = True
+            continue
+        if not section_found:
+            continue
+        if HEADING_RE.match(stripped) or HORIZONTAL_RULE_RE.match(stripped):
+            break
+        match = ORDERED_ITEM_RE.match(stripped)
+        if not match:
+            continue
+        rows.append(
+            GovernanceCompletenessSurfaceRow(
+                order=int(match.group(1)),
+                contract_phrase=match.group(2).strip(),
+            )
+        )
+
+    violations: list[str] = []
+    if not section_found:
+        violations.append("section_missing")
+    elif not rows:
+        violations.append("ordered_items_missing")
+
+    return GovernanceCompletenessSurface(
+        rel_path=ROOT_PROTOCOL_README_REL_PATH,
+        rows=tuple(rows),
+        extraction_violations=tuple(violations),
     )
 
 

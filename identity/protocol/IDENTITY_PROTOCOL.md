@@ -182,6 +182,7 @@ implicit.
 3. Expected row identity set and emitted row identity set for each governance family must also remain explicit; rel-path, corpus-class, root-index-class-projection, root-maintenance-guardrail, or forbidden-content-class identity drift may not be collapsed into summary-only counts.
 4. Protocol legality must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, root-maintenance-guardrail, or forbidden-content-class identities remain known only inside validator logic.
 5. Fail-close governance output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+6. README root governance completeness discipline rendered at protocol root must remain congruent with admitted governance-completeness rows rather than silently authoring an alternate completeness summary.
 
 ## Root gateway-admissibility completeness boundary
 
@@ -190,6 +191,7 @@ implicit.
 3. Expected row identity set and emitted row identity set for each gateway-admissibility family must also remain explicit; gateway identity drift may not be collapsed into summary-only counts.
 4. Protocol legality must not finalize gateway-admissibility legality while missing or unexpected gateway identities remain known only inside validator logic.
 5. Fail-close gateway-admissibility output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+6. README root gateway-admissibility completeness discipline rendered at protocol root must remain congruent with admitted gateway-admissibility-completeness rows rather than silently authoring an alternate completeness summary.
 
 ## Root derivation completeness boundary
 
@@ -207,6 +209,7 @@ implicit.
 3. Expected row identity set and emitted row identity set for each transition family must also remain explicit; surface, promotion-edge, or re-entry-gateway identity drift may not be collapsed into summary-only counts.
 4. Protocol legality must not finalize transition legality while missing or unexpected surface, promotion-edge, or re-entry-gateway identities remain known only inside validator logic.
 5. Fail-close transition output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+6. README root transition completeness discipline rendered at protocol root must remain congruent with admitted transition-completeness rows rather than silently authoring an alternate completeness summary.
 
 ## Root authority completeness boundary
 
@@ -215,7 +218,8 @@ implicit.
 3. Expected row identity set and emitted row identity set for each authority family must also remain explicit; corpus-class, entry, or authority-layer-stage identity drift may not be collapsed into summary-only counts.
 4. Protocol legality must not finalize authority legality while missing or unexpected corpus-class, entry, or authority-layer-stage identities remain known only inside validator logic.
 5. Fail-close authority output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
-6. README authority layering stages rendered at protocol root must remain congruent with admitted authority-layer-stage rows rather than silently authoring an alternate authority ladder.
+6. README root authority completeness discipline rendered at protocol root must remain congruent with admitted authority-completeness rows rather than silently authoring an alternate completeness summary.
+7. README authority layering stages rendered at protocol root must remain congruent with admitted authority-layer-stage rows rather than silently authoring an alternate authority ladder.
 
 ## Root conflict-precedence completeness boundary
 

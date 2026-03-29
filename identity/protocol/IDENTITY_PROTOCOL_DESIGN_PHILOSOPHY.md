@@ -1091,6 +1091,10 @@ README maintenance guardrails about how protocol root is authored and kept
 law-bearing must therefore stay bound to canonical guardrail rows rather than
 remaining reviewer-memory advice.
 
+README root governance completeness discipline must therefore stay congruent
+with admitted governance-completeness rows rather than becoming a freehand
+completeness summary.
+
 The machine world must not finalize governance legality while required
 rel-path, corpus-class, root-index-class-projection,
 root-maintenance-guardrail, or forbidden-content-class identity drift remains
@@ -1107,6 +1111,10 @@ behind aggregate counts.
 
 Required gateway-order, gateway-effect-target, and gateway-profile families must
 remain explicit as separate machine-readable row families.
+
+README root gateway-admissibility completeness discipline must therefore stay
+congruent with admitted gateway-admissibility-completeness rows rather than
+becoming a freehand completeness summary.
 
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left
@@ -1159,6 +1167,10 @@ Required surface-class-profile, direct-root-target-edge, and
 strengthening-gateway-edge families must remain explicit as separate
 machine-readable row families.
 
+README root transition completeness discipline must therefore stay congruent
+with admitted transition-completeness rows rather than becoming a freehand
+completeness summary.
+
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left
 implicit.
@@ -1191,6 +1203,10 @@ implicit.
 Expected row identity set and emitted row identity set for each family must
 also remain machine-readable rather than being collapsed into aggregate counts
 or generic structure failure.
+
+README root authority completeness discipline must therefore stay congruent
+with admitted authority-completeness rows rather than becoming a freehand
+completeness summary.
 
 The machine world must not finalize authority legality while required
 corpus-class, entry, or authority-layer-stage identity drift remains known

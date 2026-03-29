@@ -133,6 +133,7 @@ implicit.
 3. Runtime must also keep expected row identity set and emitted row identity set for each governance family explicit rather than collapsing rel-path, corpus-class, root-index-class-projection, root-maintenance-guardrail, or forbidden-content-class identity drift into summary-only counts.
 4. Runtime must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, root-maintenance-guardrail, or forbidden-content-class identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+6. Runtime consumes README root governance completeness discipline as a governed completeness projection bound to admitted governance-completeness rows rather than as a freehand completeness summary.
 
 ## Runtime gateway-admissibility consumption boundary
 
@@ -141,6 +142,7 @@ implicit.
 3. Runtime must also keep expected row identity set and emitted row identity set for each gateway-admissibility family explicit rather than collapsing gateway identity drift into summary-only counts.
 4. Runtime must not finalize gateway-admissibility legality while missing or unexpected gateway identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+6. Runtime consumes README root gateway-admissibility completeness discipline as a governed completeness projection bound to admitted gateway-admissibility-completeness rows rather than as a freehand completeness summary.
 
 ## Runtime derivation consumption boundary
 
@@ -158,6 +160,7 @@ implicit.
 3. Runtime must also keep expected row identity set and emitted row identity set for each transition family explicit rather than collapsing surface, promotion-edge, or re-entry-gateway identity drift into summary-only counts.
 4. Runtime must not finalize transition legality while missing or unexpected surface, promotion-edge, or re-entry-gateway identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+6. Runtime consumes README root transition completeness discipline as a governed completeness projection bound to admitted transition-completeness rows rather than as a freehand completeness summary.
 
 ## Runtime authority consumption boundary
 
@@ -166,7 +169,8 @@ implicit.
 3. Runtime must also keep expected row identity set and emitted row identity set for each authority family explicit rather than collapsing corpus-class, entry, or authority-layer-stage identity drift into summary-only counts.
 4. Runtime must not finalize authority legality while missing or unexpected corpus-class, entry, or authority-layer-stage identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
-6. Runtime consumes README authority layering as a governed stage projection bound to admitted authority-layer-stage rows rather than as a freehand alternate authority ladder.
+6. Runtime consumes README root authority completeness discipline as a governed completeness projection bound to admitted authority-completeness rows rather than as a freehand completeness summary.
+7. Runtime consumes README authority layering as a governed stage projection bound to admitted authority-layer-stage rows rather than as a freehand alternate authority ladder.
 
 ## Runtime conflict-precedence consumption boundary
 

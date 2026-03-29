@@ -441,6 +441,7 @@ binding must be explicitly declared in registry completeness law.
 ## Root governance completeness discipline
 
 Governance law is not a soft prose bundle.
+These governance-completeness rules must remain bound to canonical governance-completeness rows rather than drifting into soft summary prose.
 
 1. required registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class rows must remain explicit as separate machine-readable row families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
@@ -453,6 +454,7 @@ Governance law is not a soft prose bundle.
 ## Root gateway-admissibility completeness discipline
 
 Gateway-admissibility law is not a soft prose bundle.
+These gateway-admissibility-completeness rules must remain bound to canonical gateway-admissibility-completeness rows rather than drifting into soft summary prose.
 
 1. required gateway-order, gateway-effect-target, and gateway-profile rows must remain explicit as separate machine-readable row families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
@@ -478,6 +480,7 @@ These derivation-completeness rules must remain bound to canonical derivation-co
 ## Root transition completeness discipline
 
 Transition law is not a soft prose bundle.
+These transition-completeness rules must remain bound to canonical transition-completeness rows rather than drifting into soft summary prose.
 
 1. required surface-class-profile, direct-root-target-edge, and strengthening-gateway-edge rows must remain explicit as separate machine-readable row families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
@@ -490,11 +493,12 @@ Transition law is not a soft prose bundle.
 ## Root authority completeness discipline
 
 Authority law is not a soft prose bundle.
+These authority-completeness rules must remain bound to canonical authority-completeness rows rather than drifting into soft summary prose.
 
-1. required authority-class-profile and entry-authority-projection rows must remain explicit as separate machine-readable row families;
+1. required authority-class-profile, entry-authority-projection, authority-layer-stage, and authority-layer-stage-surface rows must remain explicit as separate machine-readable row families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
 3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
-4. runtime or validator code must not finalize authority legality while missing or unexpected corpus-class or entry identities remain known only internally;
+4. runtime or validator code must not finalize authority legality while missing or unexpected corpus-class, entry, or authority-layer-stage identities remain known only internally;
 5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
 
 ---
