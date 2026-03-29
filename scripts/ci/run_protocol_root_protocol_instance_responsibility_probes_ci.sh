@@ -100,6 +100,8 @@ assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 assert payload["protocol_instance_responsibility_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
 assert payload["protocol_instance_responsibility_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["protocol_instance_responsibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["protocol_instance_responsibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
