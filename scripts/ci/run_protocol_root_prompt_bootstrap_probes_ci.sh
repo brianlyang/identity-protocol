@@ -400,21 +400,12 @@ PY
 
 SURFACE_ORDER_REPO="${TMP_ROOT}/prompt-bootstrap-completeness-surface-order-drift-repo"
 mirror_repo "${SURFACE_ORDER_REPO}"
-python3 - <<'PY' "${SURFACE_ORDER_REPO}/identity/protocol/README.md"
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-text = path.read_text(encoding="utf-8")
-text = text.replace(
-    "1. required anchor, output-field, binding-field, proof, limit, and native-literal rows must remain explicit as separate machine-readable families;\n"
-    "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
-    "2. required anchor, output-field, binding-field, proof, limit, and native-literal rows must remain explicit as separate machine-readable families;\n"
-    "1. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
-    1,
-)
-path.write_text(text, encoding="utf-8")
-PY
+protocol_root_probe_swap_numbered_surface_order_rows \
+  "${SURFACE_ORDER_REPO}/identity/protocol/README.md" \
+  "## Root prompt-bootstrap completeness discipline" \
+  "## Root entry-surface legitimacy completeness discipline" \
+  "1. required anchor, output-field, binding-field, proof, limit, and native-literal rows must remain explicit as separate machine-readable families;" \
+  "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
 
 SURFACE_ORDER_JSON="${TMP_ROOT}/prompt-bootstrap-completeness-surface-order-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_prompt_bootstrap.py" \
