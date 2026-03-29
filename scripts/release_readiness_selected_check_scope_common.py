@@ -25,20 +25,20 @@ RELEASE_READINESS_SELECTED_CHECK_SCOPE_ONE_LOOK_PROJECTION_MARKER = (
     )
 )
 
-RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS: tuple[str, ...] = (
+RELEASE_READINESS_SELECTED_CHECK_SCOPE_TARGETED_SUBSET_MARKER = (
     "targeted_subset_selected_check_scope="
     "selected_check_scope_projection_status=PASS_REQUIRED|"
     "selected_check_scope_class=bounded_targeted_subset_exclusion|"
     "selected_check_scope_reason=selected_check_out_of_scope_for_targeted_subset|"
-    "selected_check_scope_excluded_summary_key_count",
+    "selected_check_scope_excluded_summary_key_count"
+)
+RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS: tuple[str, ...] = (
+    RELEASE_READINESS_SELECTED_CHECK_SCOPE_TARGETED_SUBSET_MARKER,
     RELEASE_READINESS_SELECTED_CHECK_SCOPE_ONE_LOOK_PROJECTION_MARKER,
     *(
         f"one_look.{field}"
         for field in RELEASE_READINESS_SELECTED_CHECK_SCOPE_ONE_LOOK_FIELDS
     ),
-)
-RELEASE_READINESS_SELECTED_CHECK_SCOPE_TARGETED_SUBSET_MARKER = (
-    RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS[0]
 )
 
 

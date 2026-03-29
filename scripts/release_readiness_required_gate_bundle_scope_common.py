@@ -14,19 +14,19 @@ REQUIRED_GATE_BUNDLE_SCOPE_REASON_TARGETED_SUBSET = (
     "required_gate_bundle_out_of_scope_for_targeted_subset"
 )
 
-RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS: tuple[str, ...] = (
+RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_TARGETED_SUBSET_MARKER = (
     "targeted_subset_required_gate_bundle_scope="
     "required_gate_bundle_status=SKIPPED_NOT_REQUIRED|"
     "required_gate_bundle_projection_status=SKIPPED_NOT_REQUIRED|"
-    "required_gate_bundle_scope_class=bounded_targeted_subset_exclusion",
-    "targeted_subset_required_gate_bundle_scope_reason="
-    "required_gate_bundle_scope_reason=required_gate_bundle_out_of_scope_for_targeted_subset",
-)
-RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_TARGETED_SUBSET_MARKER = (
-    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS[0]
+    "required_gate_bundle_scope_class=bounded_targeted_subset_exclusion"
 )
 RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_REASON_MARKER = (
-    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS[1]
+    "targeted_subset_required_gate_bundle_scope_reason="
+    "required_gate_bundle_scope_reason=required_gate_bundle_out_of_scope_for_targeted_subset"
+)
+RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS: tuple[str, ...] = (
+    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_TARGETED_SUBSET_MARKER,
+    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_REASON_MARKER,
 )
 
 

@@ -10,15 +10,15 @@ PROJECTION_PROFILE_EXCLUSION_SCOPE_CLASS = "bounded_projection_profile_exclusion
 PROJECTION_PROFILE_EXCLUSION_SCOPE_REASON = "projection_profile_out_of_scope"
 PROJECTION_PROFILE_EXCLUSION_SCOPE_MODE = "projection_profile_bounded"
 
-PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS: tuple[str, ...] = (
+PROJECTION_PROFILE_EXCLUSION_SCOPE_MARKER = (
     "projection_profile_exclusion_scope="
     "projection_skip_status=SKIPPED_NOT_REQUIRED|"
     "projection_skip_scope_class=bounded_projection_profile_exclusion|"
     "projection_skip_scope_reason=projection_profile_out_of_scope|"
-    "projection_excluded_area",
+    "projection_excluded_area"
 )
-PROJECTION_PROFILE_EXCLUSION_SCOPE_MARKER = (
-    PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS[0]
+PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS: tuple[str, ...] = (
+    PROJECTION_PROFILE_EXCLUSION_SCOPE_MARKER,
 )
 
 
