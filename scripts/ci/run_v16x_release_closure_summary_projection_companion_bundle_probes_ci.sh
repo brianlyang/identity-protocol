@@ -53,6 +53,21 @@ terminal_truth_bridge_marker="$(
     "release_closure_projection_companion_marker_bundle_common" \
     "RELEASE_CLOSURE_SUMMARY_TERMINAL_TRUTH_BRIDGE_COMPANION_MARKER"
 )"
+terminal_truth_bridge_rich_companion_stale_reason_prefix="$(
+  resolve_python_module_expression \
+    "release_closure_projection_companion_marker_bundle_common" \
+    "next(spec.stale_reason_prefix for spec in RELEASE_CLOSURE_SUMMARY_PROJECTION_COMPANION_MARKER_BUNDLE_SPECS if spec.markers == RELEASE_CLOSURE_SUMMARY_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_MARKERS)"
+)"
+terminal_truth_bridge_rich_boundary_marker="$(
+  resolve_python_module_expression \
+    "release_closure_projection_companion_marker_bundle_common" \
+    "RELEASE_CLOSURE_SUMMARY_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_MARKERS[0]"
+)"
+terminal_truth_bridge_rich_alignment_marker="$(
+  resolve_python_module_expression \
+    "release_closure_projection_companion_marker_bundle_common" \
+    "RELEASE_CLOSURE_SUMMARY_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_MARKERS[-1]"
+)"
 post_closure_adjudication_marker="$(
   resolve_python_module_expression \
     "release_closure_projection_companion_marker_bundle_common" \
@@ -98,6 +113,8 @@ mutate_probe_literal "${SUMMARY_SHADOW_PATH}" "${foundational_marker}" "release_
 mutate_probe_literal "${SUMMARY_SHADOW_PATH}" "${one_look_topology_marker}" "release_readiness_one_look_family_order=foundational|governance_probe"
 mutate_probe_literal "${SUMMARY_SHADOW_PATH}" "${support_preflight_marker}" "release_readiness_support_preflight_projection=one_look.control_plane_budget_status"
 mutate_probe_literal "${SUMMARY_SHADOW_PATH}" "${terminal_truth_bridge_marker}" "terminal_truth_bridge_surface=one_look.identity_terminal_truth_cleanliness_status"
+mutate_probe_literal "${SUMMARY_SHADOW_PATH}" "${terminal_truth_bridge_rich_boundary_marker}" "bridge_execution_closure_status_missing"
+mutate_probe_literal "${SUMMARY_SHADOW_PATH}" "${terminal_truth_bridge_rich_alignment_marker}" "bridge_next_state_alignment_status_missing"
 mutate_probe_literal "${SUMMARY_SHADOW_PATH}" "${post_closure_adjudication_marker}" "release_readiness_post_closure_adjudication_order=runtime_summary_surface_governance|governance_probe_topology"
 mutate_probe_literal "${SUMMARY_SHADOW_PATH}" "${root_grounding_marker}" "release_closure_root_grounding_order=protocol_root_corpus_precedence"
 mutate_probe_literal "${SUMMARY_SHADOW_PATH}" "${full_scan_required_gate_marker}" "scripts/ci/run_full_scan_required_gate_probes_ci.sh"
@@ -120,6 +137,9 @@ python3 - <<'PY' \
   "${one_look_topology_marker}" \
   "${support_preflight_marker}" \
   "${terminal_truth_bridge_marker}" \
+  "${terminal_truth_bridge_rich_companion_stale_reason_prefix}" \
+  "${terminal_truth_bridge_rich_boundary_marker}" \
+  "${terminal_truth_bridge_rich_alignment_marker}" \
   "${post_closure_adjudication_marker}" \
   "${root_grounding_marker}" \
   "${full_scan_required_gate_marker}" \
@@ -146,10 +166,12 @@ expected_reasons = {
     f"summary_doc_missing_release_readiness_one_look_topology_marker:{sys.argv[8]}",
     f"summary_doc_missing_release_readiness_support_preflight_marker:{sys.argv[9]}",
     f"summary_doc_missing_release_readiness_terminal_truth_bridge_marker:{sys.argv[10]}",
-    f"summary_doc_missing_release_readiness_post_closure_adjudication_marker:{sys.argv[11]}",
-    f"summary_doc_missing_release_closure_root_grounding_marker:{sys.argv[12]}",
-    f"summary_doc_missing_full_scan_required_gate_projection_marker:{sys.argv[13]}",
-    f"summary_doc_missing_active_runtime_closure_projection_marker:{sys.argv[14]}",
+    f"summary_doc_{sys.argv[11]}:{sys.argv[12]}",
+    f"summary_doc_{sys.argv[11]}:{sys.argv[13]}",
+    f"summary_doc_missing_release_readiness_post_closure_adjudication_marker:{sys.argv[14]}",
+    f"summary_doc_missing_release_closure_root_grounding_marker:{sys.argv[15]}",
+    f"summary_doc_missing_full_scan_required_gate_projection_marker:{sys.argv[16]}",
+    f"summary_doc_missing_active_runtime_closure_projection_marker:{sys.argv[17]}",
 }
 missing = sorted(expected_reasons - reasons)
 if missing:
