@@ -1152,7 +1152,9 @@ Root cause:
   - `bash scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh` now passes with:
     - clean fixture -> `identity_terminal_truth_cleanliness_status=PASS_REQUIRED`, `terminal_state_machine_status=PASS_REQUIRED`, `terminal_state_class=completed_clean`
     - review-required fixture -> `execution_closure_status=PASS_REQUIRED`, `terminal_truth_class=review_required_execution_closure`, `publishable=false`, `terminal_state_class=review_pending`
+    - explicit review flag fixture -> `review_required=true` still vetoes clean terminal truth even when `next_action` is otherwise neutral, and the payload remains coherently classified as `terminal_state_class=review_pending`
     - degraded fixture -> `negative_feedback_class=degraded_execution`, `loopback_required=true`, `next_state_after_veto=revalidation_pending`, `terminal_state_class=revalidation_pending`
+    - explicit dirty retry fixture -> execution closure may remain green while `fallback_reason`, `needs_revalidation=true`, `retry_required=true`, and structured `error_info` still veto clean terminal truth and force `terminal_state_class=retry_pending`
     - placeholder fixture -> `negative_feedback_class=placeholder_result`, `terminal_state_class=repair_pending`
     - adoption-mismatch fixture -> `terminal_state_machine_status=FAIL_REQUIRED` with explicit projection-drift blockers;
     - clean-alias-drift fixture -> `terminal_clean_alias_surface_status=FAIL_REQUIRED` once generic `status` / `done` surfaces claim completion while the higher-order lane stays non-clean;

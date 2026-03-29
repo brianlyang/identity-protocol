@@ -185,15 +185,23 @@ Hard semantics:
 The shared helper now freezes the following dirty-signal families as protocol-owned machine inputs:
 
 1. `review_required_next_action`
-2. `degraded_writeback_mode`
-3. `writeback_status=DEFERRED_*`
-4. `all_ok=false`
-5. `next_recovery_action_present`
-6. `degrade_reason_present`
-7. `prompt_change_pending`
-8. `placeholder_result_present`
-9. `unresolved_contradiction`
-10. `confidence_below_floor`
+2. explicit `review_required=true` / `requires_review=true`
+3. `degraded_writeback_mode`
+4. explicit `degraded=true`
+5. `writeback_status=DEFERRED_*`
+6. `all_ok=false`
+7. `next_recovery_action_present`
+8. `degrade_reason_present`
+9. `fallback_reason_present`
+10. explicit `needs_revalidation=true` / `revalidation_required=true`
+11. explicit `repair_required=true`
+12. explicit `retry_required=true`
+13. explicit `quarantine_required=true`
+14. structured `error_info` tokens that self-describe degraded / fallback / review-required / revalidation / retry / repair / quarantine demand
+15. `prompt_change_pending`
+16. `placeholder_result_present`
+17. `unresolved_contradiction`
+18. `confidence_below_floor`
 
 Interpretation rule:
 
@@ -212,7 +220,7 @@ Interpretation rule:
    - shared generic clean-completion alias-surface guard;
 2. `scripts/validate_terminal_truth_cleanliness.py`
    - canonical machine validator,
-   - including explicit terminal-state equivalence projection, clean-completion alias-surface fail-close, and state-coherence checks;
+   - including explicit terminal-state equivalence projection, clean-completion alias-surface fail-close, state-coherence checks, and explicit dirty-signal absorption from review/degraded/fallback/revalidation/retry/quarantine fields rather than only from `next_action` / writeback residue;
 3. `scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh`
    - positive clean fixture,
    - negative review-required fixture,
@@ -249,12 +257,14 @@ Current landed evidence:
 
 1. `bash scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh` now passes;
 2. `scripts/validate_terminal_truth_cleanliness.py` now preserves:
-   - clean fixture -> `identity_terminal_truth_cleanliness_status=PASS_REQUIRED`, `terminal_state_machine_status=PASS_REQUIRED`, `terminal_state_class=completed_clean`
-   - review-required fixture -> `execution_closure_status=PASS_REQUIRED`, `terminal_truth_class=review_required_execution_closure`, `publishable=false`, `terminal_state_class=review_pending`
-   - degraded fixture -> `execution_closure_status=FAIL_REQUIRED`, `negative_feedback_terminal_veto_status=PASS_REQUIRED`, `terminal_veto_required=false`, `loopback_required=true`, `next_state_after_veto=revalidation_pending`, `terminal_state_class=revalidation_pending`
-   - placeholder fixture -> `negative_feedback_class=placeholder_result`, `terminal_state_machine_status=PASS_REQUIRED`, `terminal_state_class=repair_pending`
-   - adoption-mismatch fixture -> `terminal_state_machine_status=FAIL_REQUIRED` with explicit `state_machine_blockers` projection mismatch evidence
-   - clean-alias-drift fixture -> `terminal_clean_alias_surface_status=FAIL_REQUIRED` when generic `status` / `done` surfaces claim completed-clean semantics while the higher-order lane remains non-clean
+    - clean fixture -> `identity_terminal_truth_cleanliness_status=PASS_REQUIRED`, `terminal_state_machine_status=PASS_REQUIRED`, `terminal_state_class=completed_clean`
+    - review-required fixture -> `execution_closure_status=PASS_REQUIRED`, `terminal_truth_class=review_required_execution_closure`, `publishable=false`, `terminal_state_class=review_pending`
+    - explicit review flag fixture -> `review_required=true` still vetoes clean terminal truth even when `next_action` itself is neutral, and the payload remains coherently classified as `terminal_state_class=review_pending`
+    - degraded fixture -> `execution_closure_status=FAIL_REQUIRED`, `negative_feedback_terminal_veto_status=PASS_REQUIRED`, `terminal_veto_required=false`, `loopback_required=true`, `next_state_after_veto=revalidation_pending`, `terminal_state_class=revalidation_pending`
+    - explicit dirty retry fixture -> execution closure may remain green while `fallback_reason`, `needs_revalidation=true`, `retry_required=true`, and structured `error_info` still veto clean terminal truth, drive `negative_feedback_class=degraded_execution`, and freeze `terminal_state_class=retry_pending`
+    - placeholder fixture -> `negative_feedback_class=placeholder_result`, `terminal_state_machine_status=PASS_REQUIRED`, `terminal_state_class=repair_pending`
+    - adoption-mismatch fixture -> `terminal_state_machine_status=FAIL_REQUIRED` with explicit `state_machine_blockers` projection mismatch evidence
+    - clean-alias-drift fixture -> `terminal_clean_alias_surface_status=FAIL_REQUIRED` when generic `status` / `done` surfaces claim completed-clean semantics while the higher-order lane remains non-clean
 3. the closeout consumer family (`scripts/validate_post_execution_mandatory.py`, `scripts/validate_writeback_continuity.py`, and `scripts/validate_terminal_truth_cleanliness.py`) now self-describes report provenance through `report_selection_mode`, `report_selected_authority_class`, and `report_pointer_resolution_mode`, so clean-terminal / writeback judgment no longer collapses down to a bare `report_selected_path`.
 4. direct runtime replay on `base-repo-audit-expert-v3` against its latest workspace-local execution report now fail-closes as non-clean terminal truth because the active report remains pre-mutation-gate blocked (`all_ok=false`, `writeback_status=MISSING`, `next_action=satisfy_pre_mutation_gate_and_rerun_update`). The higher-order validator now keeps the degraded loopback projection coherent (`negative_feedback_terminal_veto_status=PASS_REQUIRED`) while still refusing to promote the report into clean terminal truth, while separately projecting `terminal_state_machine_status=PASS_REQUIRED` when the non-clean state itself is coherent.
 

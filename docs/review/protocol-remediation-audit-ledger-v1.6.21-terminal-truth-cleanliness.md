@@ -56,6 +56,8 @@ Therefore the missing protocol law was never “execution closure semantics abse
 - canonical publishability,
 - instance adoption projection drift.
 
+That shared dirty-signal collection is now stronger than the original `next_action` / writeback-only shell: it also absorbs explicit `review_required`, `requires_review`, `degraded`, `needs_revalidation`, `revalidation_required`, `repair_required`, `retry_required`, `quarantine_required`, `fallback_reason`, and structured `error_info` tokens, so a report cannot stay execution-closed yet silently evade terminal-truth veto just because the dirty state was expressed through explicit fields rather than through `next_action`.
+
 ### 3.2 Shared validator landed
 
 `scripts/validate_terminal_truth_cleanliness.py` now emits the canonical machine payload:
@@ -78,10 +80,12 @@ Therefore the missing protocol law was never “execution closure semantics abse
 
 1. positive clean case;
 2. negative review-required case that preserves execution closure while vetoing clean truth;
-3. negative degraded case that requires revalidation;
-4. negative placeholder case that requires repair-before-publish;
-5. negative adoption-mismatch case that fail-closes terminal-state projection drift;
-6. negative clean-alias-drift case that fail-closes generic `completed` / `done` alias reuse while the higher-order lane remains non-clean.
+3. negative explicit-review-flag case that vetoes clean truth even when `next_action` itself is neutral;
+4. negative degraded case that requires revalidation;
+5. negative explicit-dirty-retry case that preserves execution closure while `fallback_reason`, `needs_revalidation=true`, `retry_required=true`, and structured `error_info` still veto clean truth and force `retry_pending`;
+6. negative placeholder case that requires repair-before-publish;
+7. negative adoption-mismatch case that fail-closes terminal-state projection drift;
+8. negative clean-alias-drift case that fail-closes generic `completed` / `done` alias reuse while the higher-order lane remains non-clean.
 
 ### 3.4 Shared producer/adoption wiring landed
 
@@ -137,6 +141,7 @@ Current evidence set:
 5. dirty terminal states now fail-close instead of ambiguously surviving as “done enough”;
 6. non-clean states are now machine-distinguished through explicit terminal-state equivalence classes rather than inferred only from narrative review;
 7. generic completed/done alias surfaces are now subordinated to the same higher-order machine law instead of remaining an ungoverned escape hatch.
-8. the closeout consumer family now also self-describes report-selection provenance (`report_selection_mode`, `report_selected_authority_class`, `report_pointer_resolution_mode`) so audit can distinguish explicit overrides from pack-local pointer authority instead of inferring that distinction from a path string.
+8. explicit dirty terminal signals expressed as report booleans / structured reason fields are now governed by the same higher-order veto lane rather than being treated as advisory side metadata.
+9. the closeout consumer family now also self-describes report-selection provenance (`report_selection_mode`, `report_selected_authority_class`, `report_pointer_resolution_mode`) so audit can distinguish explicit overrides from pack-local pointer authority instead of inferring that distinction from a path string.
 
 That is the correct 1.6.x outcome: the current universe now has one more root-closed / machine-closed boundary, and 1.7.x does not need to inherit this debt.

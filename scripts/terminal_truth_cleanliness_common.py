@@ -94,11 +94,54 @@ DIRTY_SIGNAL_FIELDS: tuple[str, ...] = (
     "writeback_mode",
     "writeback_status",
     "degrade_reason",
+    "fallback_reason",
+    "review_required",
+    "requires_review",
+    "degraded",
+    "needs_revalidation",
+    "revalidation_required",
+    "repair_required",
+    "retry_required",
+    "quarantine_required",
+    "error_info",
     "next_action",
     "next_recovery_action",
     "failure_reason",
     "prompt_change_required",
     "prompt_change_applied",
+)
+
+EXPLICIT_REVIEW_REQUIRED_FIELDS: tuple[str, ...] = (
+    "review_required",
+    "requires_review",
+)
+EXPLICIT_DEGRADED_FIELDS: tuple[str, ...] = ("degraded",)
+EXPLICIT_REVALIDATION_REQUIRED_FIELDS: tuple[str, ...] = (
+    "needs_revalidation",
+    "revalidation_required",
+)
+EXPLICIT_REPAIR_REQUIRED_FIELDS: tuple[str, ...] = ("repair_required",)
+EXPLICIT_RETRY_REQUIRED_FIELDS: tuple[str, ...] = ("retry_required",)
+EXPLICIT_QUARANTINE_REQUIRED_FIELDS: tuple[str, ...] = ("quarantine_required",)
+DIRTY_REASON_FIELDS: tuple[str, ...] = (
+    "degrade_reason",
+    "fallback_reason",
+    "next_recovery_action",
+    "failure_reason",
+)
+DIRTY_ERROR_INFO_TOKENS: tuple[str, ...] = (
+    "degraded",
+    "fallback",
+    "review_required",
+    "manual_review",
+    "needs_revalidation",
+    "revalidation",
+    "retry",
+    "retry_needed",
+    "rerun",
+    "replay",
+    "repair",
+    "quarantine",
 )
 
 PLACEHOLDER_SCAN_FIELDS: tuple[str, ...] = (
@@ -158,6 +201,10 @@ REQUIRED_REPORT_FIELDS: tuple[str, ...] = (
     "canonical_result_basis",
     "requires_repair_before_publish",
     "instance_adoption_terminal_truth_probe_status",
+    "dirty_signals",
+    "placeholder_result_fields",
+    "contradiction_fields",
+    "confidence_blocker_fields",
     "stale_reasons",
     "error_code",
 )
@@ -397,6 +444,71 @@ def _collect_confidence_hits(report_doc: dict[str, Any]) -> list[str]:
     return sorted(set(hits))
 
 
+def _structured_text(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if value is None:
+        return ""
+    try:
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    except Exception:
+        return clean_string(value)
+
+
+def _extract_explicit_terminal_dirty_signal_context(report_doc: dict[str, Any]) -> dict[str, Any]:
+    report_doc = report_doc if isinstance(report_doc, dict) else {}
+    fallback_reason = clean_string(report_doc.get("fallback_reason"))
+    error_info_text = _structured_text(report_doc.get("error_info"))
+    explicit_review_required = any(as_bool(report_doc.get(field)) for field in EXPLICIT_REVIEW_REQUIRED_FIELDS)
+    explicit_degraded = any(as_bool(report_doc.get(field)) for field in EXPLICIT_DEGRADED_FIELDS)
+    explicit_revalidation_required = any(
+        as_bool(report_doc.get(field)) for field in EXPLICIT_REVALIDATION_REQUIRED_FIELDS
+    )
+    explicit_repair_required = any(
+        as_bool(report_doc.get(field)) for field in EXPLICIT_REPAIR_REQUIRED_FIELDS
+    )
+    explicit_retry_required = any(as_bool(report_doc.get(field)) for field in EXPLICIT_RETRY_REQUIRED_FIELDS)
+    explicit_quarantine_required = any(
+        as_bool(report_doc.get(field)) for field in EXPLICIT_QUARANTINE_REQUIRED_FIELDS
+    )
+    error_info_dirty_signal = _contains_transition_token(
+        error_info_text,
+        tokens=DIRTY_ERROR_INFO_TOKENS,
+    )
+    error_info_review_required = _contains_transition_token(
+        error_info_text,
+        tokens=("review_required", "manual_review"),
+    )
+    error_info_degraded = _contains_transition_token(error_info_text, tokens=("degraded", "fallback"))
+    error_info_revalidation_required = _contains_transition_token(
+        error_info_text,
+        tokens=("needs_revalidation", "revalidation"),
+    )
+    error_info_retry_required = _contains_transition_token(
+        error_info_text,
+        tokens=("retry", "retry_needed", "rerun", "replay"),
+    )
+    error_info_repair_required = _contains_transition_token(error_info_text, tokens=("repair",))
+    error_info_quarantine_required = _contains_transition_token(error_info_text, tokens=("quarantine",))
+    return {
+        "fallback_reason": fallback_reason,
+        "error_info_text": error_info_text,
+        "explicit_review_required": explicit_review_required,
+        "explicit_degraded": explicit_degraded,
+        "explicit_revalidation_required": explicit_revalidation_required,
+        "explicit_repair_required": explicit_repair_required,
+        "explicit_retry_required": explicit_retry_required,
+        "explicit_quarantine_required": explicit_quarantine_required,
+        "error_info_dirty_signal": error_info_dirty_signal,
+        "error_info_review_required": error_info_review_required,
+        "error_info_degraded": error_info_degraded,
+        "error_info_revalidation_required": error_info_revalidation_required,
+        "error_info_retry_required": error_info_retry_required,
+        "error_info_repair_required": error_info_repair_required,
+        "error_info_quarantine_required": error_info_quarantine_required,
+    }
+
+
 def _execution_closure_basis(report_doc: dict[str, Any]) -> tuple[str, bool]:
     all_ok = as_bool(report_doc.get("all_ok"))
     upgrade_required = as_bool(report_doc.get("upgrade_required"))
@@ -478,26 +590,60 @@ def derive_terminal_state_projection(
     next_action = clean_string(report_doc.get("next_action"))
     next_recovery_action = clean_string(report_doc.get("next_recovery_action"))
     failure_reason = clean_string(report_doc.get("failure_reason"))
+    explicit_dirty_signal_context = _extract_explicit_terminal_dirty_signal_context(report_doc)
 
     is_terminal_clean = bool(truth.get("is_terminal_clean", False))
     publishable = bool(truth.get("publishable", False))
     negative_feedback_class = clean_string(truth.get("negative_feedback_class"))
     next_state_after_veto = clean_string(truth.get("next_state_after_veto"))
     loopback_required = bool(truth.get("loopback_required", False))
+    next_state_hint = next_state_after_veto if next_state_after_veto in TERMINAL_STATE_CLASSES else ""
 
-    explicit_quarantine = as_bool(report_doc.get("quarantine_required"))
-    explicit_retry = as_bool(report_doc.get("retry_required"))
+    explicit_review_required = bool(explicit_dirty_signal_context.get("explicit_review_required"))
+    explicit_revalidation = bool(explicit_dirty_signal_context.get("explicit_revalidation_required"))
+    explicit_repair = bool(explicit_dirty_signal_context.get("explicit_repair_required"))
+    explicit_quarantine = bool(explicit_dirty_signal_context.get("explicit_quarantine_required"))
+    explicit_retry = bool(explicit_dirty_signal_context.get("explicit_retry_required"))
     explicit_requires_human = as_bool(report_doc.get("requires_human"))
     explicit_terminal_failure = as_bool(report_doc.get("terminal_failure")) or as_bool(report_doc.get("failed_terminal"))
 
-    requires_review = negative_feedback_class == "review_required" or next_state_after_veto == "review_pending"
-    revalidation_required = next_state_after_veto == "revalidation_pending"
-    repair_required = next_state_after_veto == "repair_pending"
-    quarantine_required = explicit_quarantine or _contains_transition_token(
-        next_action, next_recovery_action, failure_reason, tokens=("quarantine", "quarantined")
+    requires_review = (
+        next_state_hint == "review_pending"
+        or negative_feedback_class == "review_required"
+        or (not next_state_hint and explicit_review_required)
     )
-    retry_required = explicit_retry or revalidation_required or repair_required or _contains_transition_token(
-        next_action, next_recovery_action, failure_reason, tokens=("retry", "rerun", "replay")
+    revalidation_required = next_state_hint == "revalidation_pending" or (
+        not next_state_hint and explicit_revalidation
+    )
+    repair_required = next_state_hint == "repair_pending" or (not next_state_hint and explicit_repair)
+    quarantine_required = next_state_hint == "quarantined" or (
+        not next_state_hint
+        and (
+            explicit_quarantine
+            or _contains_transition_token(
+                next_action,
+                next_recovery_action,
+                failure_reason,
+                next_state_after_veto,
+                tokens=("quarantine", "quarantined"),
+            )
+        )
+    )
+    retry_required = (
+        next_state_hint == "retry_pending"
+        or explicit_retry
+        or revalidation_required
+        or repair_required
+        or (
+            not next_state_hint
+            and _contains_transition_token(
+                next_action,
+                next_recovery_action,
+                failure_reason,
+                next_state_after_veto,
+                tokens=("retry", "rerun", "replay"),
+            )
+        )
     )
     requires_human = explicit_requires_human or requires_review or _contains_transition_token(
         next_action, next_recovery_action, failure_reason, tokens=("human", "manual_review", "approval")
@@ -655,17 +801,70 @@ def derive_terminal_truth_projection(
     all_ok = as_bool(report_doc.get("all_ok"))
     prompt_change_required = as_bool(report_doc.get("prompt_change_required"))
     prompt_change_applied = as_bool(report_doc.get("prompt_change_applied"))
+    explicit_dirty_signal_context = _extract_explicit_terminal_dirty_signal_context(report_doc)
+    fallback_reason = clean_string(explicit_dirty_signal_context.get("fallback_reason"))
+    error_info_text = clean_string(explicit_dirty_signal_context.get("error_info_text"))
+    explicit_review_required = bool(explicit_dirty_signal_context.get("explicit_review_required"))
+    explicit_degraded = bool(explicit_dirty_signal_context.get("explicit_degraded"))
+    explicit_revalidation_required = bool(
+        explicit_dirty_signal_context.get("explicit_revalidation_required")
+    )
+    explicit_repair_required = bool(explicit_dirty_signal_context.get("explicit_repair_required"))
+    explicit_retry_required = bool(explicit_dirty_signal_context.get("explicit_retry_required"))
+    explicit_quarantine_required = bool(
+        explicit_dirty_signal_context.get("explicit_quarantine_required")
+    )
+    error_info_dirty_signal = bool(explicit_dirty_signal_context.get("error_info_dirty_signal"))
+    error_info_review_required = bool(
+        explicit_dirty_signal_context.get("error_info_review_required")
+    )
+    error_info_degraded = bool(explicit_dirty_signal_context.get("error_info_degraded"))
+    error_info_revalidation_required = bool(
+        explicit_dirty_signal_context.get("error_info_revalidation_required")
+    )
+    error_info_retry_required = bool(explicit_dirty_signal_context.get("error_info_retry_required"))
+    error_info_repair_required = bool(explicit_dirty_signal_context.get("error_info_repair_required"))
+    error_info_quarantine_required = bool(
+        explicit_dirty_signal_context.get("error_info_quarantine_required")
+    )
 
-    review_required = next_action.startswith("review_required")
+    review_required = (
+        explicit_review_required
+        or error_info_review_required
+        or next_action.startswith("review_required")
+    )
     placeholder_hits = _collect_placeholder_hits(report_doc)
     contradiction_hits = _collect_contradiction_hits(report_doc)
     confidence_hits = _collect_confidence_hits(report_doc)
+    degraded_signal = (
+        explicit_degraded
+        or writeback_mode == "DEGRADED_WRITEBACK"
+        or writeback_status.startswith("DEFERRED_")
+        or not all_ok
+        or bool(next_recovery_action)
+        or bool(degrade_reason)
+        or bool(fallback_reason)
+        or error_info_degraded
+        or error_info_dirty_signal
+        or explicit_revalidation_required
+        or explicit_retry_required
+        or explicit_quarantine_required
+        or explicit_repair_required
+        or error_info_revalidation_required
+        or error_info_retry_required
+        or error_info_repair_required
+        or error_info_quarantine_required
+    )
 
     dirty_signals: list[str] = []
     if review_required:
         dirty_signals.append("review_required_next_action")
+    if explicit_review_required:
+        dirty_signals.append("review_required_flag")
     if writeback_mode == "DEGRADED_WRITEBACK":
         dirty_signals.append("degraded_writeback_mode")
+    if explicit_degraded:
+        dirty_signals.append("degraded_flag")
     if writeback_status.startswith("DEFERRED_"):
         dirty_signals.append(f"writeback_status:{writeback_status}")
     if not all_ok:
@@ -674,14 +873,27 @@ def derive_terminal_truth_projection(
         dirty_signals.append("next_recovery_action_present")
     if degrade_reason:
         dirty_signals.append("degrade_reason_present")
+    if fallback_reason:
+        dirty_signals.append("fallback_reason_present")
+    if explicit_revalidation_required:
+        dirty_signals.append("explicit_revalidation_required")
+    if explicit_repair_required:
+        dirty_signals.append("explicit_repair_required")
+    if explicit_retry_required:
+        dirty_signals.append("explicit_retry_required")
+    if explicit_quarantine_required:
+        dirty_signals.append("explicit_quarantine_required")
     if prompt_change_required and not prompt_change_applied:
         dirty_signals.append("prompt_change_pending")
+    if error_info_dirty_signal:
+        dirty_signals.append("error_info_dirty_signal")
     if placeholder_hits:
         dirty_signals.append("placeholder_result_present")
     if contradiction_hits:
         dirty_signals.append("unresolved_contradiction")
     if confidence_hits:
         dirty_signals.append("confidence_below_floor")
+    dirty_signals = sorted(set(dirty_signals))
 
     negative_feedback_class = "none"
     feedback_severity = "none"
@@ -695,15 +907,35 @@ def derive_terminal_truth_projection(
         feedback_severity = "medium"
         loopback_required = False
         loopback_target_stage = "human_review"
-        loopback_reason = next_action or "review_required"
+        loopback_reason = next_action or error_info_text or "review_required"
         next_state_after_veto = "review_pending"
-    elif writeback_mode == "DEGRADED_WRITEBACK" or writeback_status.startswith("DEFERRED_") or next_recovery_action or not all_ok or degrade_reason:
+    elif degraded_signal:
         negative_feedback_class = "degraded_execution"
         feedback_severity = "high"
-        loopback_required = True
-        loopback_target_stage = "first_loop_revalidation"
-        loopback_reason = next_recovery_action or degrade_reason or writeback_status or "degraded_execution"
-        next_state_after_veto = "revalidation_pending"
+        if explicit_quarantine_required or error_info_quarantine_required:
+            loopback_required = False
+            loopback_target_stage = "quarantine"
+            next_state_after_veto = "quarantined"
+        elif explicit_repair_required or error_info_repair_required:
+            loopback_required = True
+            loopback_target_stage = "repair_before_publish"
+            next_state_after_veto = "repair_pending"
+        elif explicit_retry_required or error_info_retry_required:
+            loopback_required = True
+            loopback_target_stage = "retry_lane"
+            next_state_after_veto = "retry_pending"
+        else:
+            loopback_required = True
+            loopback_target_stage = "first_loop_revalidation"
+            next_state_after_veto = "revalidation_pending"
+        loopback_reason = (
+            next_recovery_action
+            or fallback_reason
+            or degrade_reason
+            or error_info_text
+            or writeback_status
+            or "degraded_execution"
+        )
     elif contradiction_hits:
         negative_feedback_class = "unresolved_contradiction"
         feedback_severity = "high"
@@ -778,23 +1010,25 @@ def derive_terminal_truth_projection(
                 and next_state_after_veto == "review_pending"
             )
     else:
+        dirty_veto_state_ok = (
+            (next_state_after_veto in {"revalidation_pending", "repair_pending", "retry_pending"} and loopback_required is True)
+            or (next_state_after_veto == "quarantined" and loopback_required is False)
+        )
         if terminal_truth_candidate:
             veto_ok = (
                 terminal_veto_required
                 and terminal_veto_scope == list(TERMINAL_VETO_SCOPE)
                 and pre_terminal_veto_applied is True
-                and loopback_required is True
                 and bool(clean_string(loopback_reason))
-                and next_state_after_veto in {"revalidation_pending", "repair_pending"}
+                and dirty_veto_state_ok
             )
         else:
             veto_ok = (
                 not terminal_veto_required
                 and not terminal_veto_scope
                 and pre_terminal_veto_applied is False
-                and loopback_required is True
                 and bool(clean_string(loopback_reason))
-                and next_state_after_veto in {"revalidation_pending", "repair_pending"}
+                and dirty_veto_state_ok
             )
     negative_feedback_terminal_veto_status = STATUS_PASS_REQUIRED if veto_ok else STATUS_FAIL_REQUIRED
 
@@ -809,6 +1043,37 @@ def derive_terminal_truth_projection(
         adoption_probe_reasons.append("report_canonical_result_projection_mismatch")
     if clean_string(report_doc.get("terminal_truth_class")) and clean_string(report_doc.get("terminal_truth_class")) != terminal_truth_class:
         adoption_probe_reasons.append("report_terminal_truth_class_mismatch")
+    if clean_string(report_doc.get("negative_feedback_class")) and clean_string(report_doc.get("negative_feedback_class")) != negative_feedback_class:
+        adoption_probe_reasons.append("report_negative_feedback_class_mismatch")
+    if "negative_feedback_terminal_veto_status" in report_doc and clean_string(
+        report_doc.get("negative_feedback_terminal_veto_status")
+    ).upper() != negative_feedback_terminal_veto_status:
+        adoption_probe_reasons.append("report_negative_feedback_veto_status_projection_mismatch")
+    if "terminal_veto_required" in report_doc and _bool_or_false(report_doc.get("terminal_veto_required")) != terminal_veto_required:
+        adoption_probe_reasons.append("report_terminal_veto_required_projection_mismatch")
+    if "pre_terminal_veto_applied" in report_doc and _bool_or_false(report_doc.get("pre_terminal_veto_applied")) != pre_terminal_veto_applied:
+        adoption_probe_reasons.append("report_pre_terminal_veto_applied_projection_mismatch")
+    if "loopback_required" in report_doc and _bool_or_false(report_doc.get("loopback_required")) != loopback_required:
+        adoption_probe_reasons.append("report_loopback_required_projection_mismatch")
+    if clean_string(report_doc.get("next_state_after_veto")) and clean_string(
+        report_doc.get("next_state_after_veto")
+    ) != next_state_after_veto:
+        adoption_probe_reasons.append("report_next_state_after_veto_projection_mismatch")
+    if clean_string(report_doc.get("terminal_truth_cleanliness_status")).upper() and clean_string(
+        report_doc.get("terminal_truth_cleanliness_status")
+    ).upper() != terminal_truth_cleanliness_status:
+        adoption_probe_reasons.append("report_terminal_truth_cleanliness_status_projection_mismatch")
+    if clean_string(report_doc.get("canonical_publishable_result_status")).upper() and clean_string(
+        report_doc.get("canonical_publishable_result_status")
+    ).upper() != canonical_publishable_result_status:
+        adoption_probe_reasons.append("report_canonical_publishable_result_status_projection_mismatch")
+    if "terminal_veto_scope" in report_doc:
+        current_scope = report_doc.get("terminal_veto_scope")
+        if isinstance(current_scope, (list, tuple)):
+            if [clean_string(item) for item in current_scope if clean_string(item)] != terminal_veto_scope:
+                adoption_probe_reasons.append("report_terminal_veto_scope_projection_mismatch")
+        elif clean_string(current_scope):
+            adoption_probe_reasons.append("report_terminal_veto_scope_projection_mismatch")
 
     alias_surface_projection = derive_terminal_clean_alias_surface_projection(
         report_doc,
