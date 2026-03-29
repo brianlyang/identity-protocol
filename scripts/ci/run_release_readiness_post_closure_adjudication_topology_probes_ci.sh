@@ -158,8 +158,8 @@ restore_shadow_file "${TMP_ROOT}" "scripts/release_readiness_governance_probe_pr
 # expected fail-close: governance_probe_capture_map_missing_post_closure_adjudication_probe
 mutate_probe_literal \
   "${TMP_ROOT}/scripts/release_readiness_governance_probe_projection_common.py" \
-  "summary_key=\"${post_closure_adjudication_probe_summary_key}\"" \
-  'summary_key="release_readiness_post_closure_adjudication"'
+  "\"${post_closure_adjudication_probe_summary_key}\"" \
+  '"release_readiness_post_closure_adjudication"'
 if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-post-closure-adjudication-topology-negative-governance-projection.json; then
   echo "[FAIL] governance probe post-closure adjudication absorption drift unexpectedly passed"
   exit 1

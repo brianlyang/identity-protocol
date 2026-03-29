@@ -29,6 +29,21 @@ RELEASE_READINESS_ONE_LOOK_TOPOLOGY_GOVERNANCE_PROBE_STATUS_FIELDS: tuple[str, .
 RELEASE_READINESS_ONE_LOOK_TOPOLOGY_GOVERNANCE_PROBE_KEEP_FIELDS: tuple[str, ...] = (
     "positive_validator_output",
 )
+RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_SCRIPT = (
+    "scripts/ci/run_release_readiness_post_closure_adjudication_topology_probes_ci.sh"
+)
+RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_SUMMARY_KEY = (
+    "release_readiness_post_closure_adjudication_topology_probe"
+)
+RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_ONE_LOOK_FIELD = (
+    "release_readiness_post_closure_adjudication_topology_probe_status"
+)
+RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_STATUS_FIELDS: tuple[str, ...] = (
+    RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_ONE_LOOK_FIELD,
+)
+RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_KEEP_FIELDS: tuple[str, ...] = (
+    "positive_validator_output",
+)
 RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_SUMMARY_KEY = (
     "release_readiness_terminal_truth_bridge_probe"
 )
@@ -111,11 +126,11 @@ RELEASE_READINESS_GOVERNANCE_PROBE_SPECS: tuple[ReleaseReadinessGovernanceProbeP
         keep_fields=("positive_validator_output",),
     ),
     ReleaseReadinessGovernanceProbeProjectionSpec(
-        script_rel="scripts/ci/run_release_readiness_post_closure_adjudication_topology_probes_ci.sh",
-        summary_key="release_readiness_post_closure_adjudication_topology_probe",
-        one_look_field="release_readiness_post_closure_adjudication_topology_probe_status",
-        status_fields=("release_readiness_post_closure_adjudication_topology_probe_status",),
-        keep_fields=("positive_validator_output",),
+        script_rel=RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_SCRIPT,
+        summary_key=RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_SUMMARY_KEY,
+        one_look_field=RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_ONE_LOOK_FIELD,
+        status_fields=RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_STATUS_FIELDS,
+        keep_fields=RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_KEEP_FIELDS,
     ),
     ReleaseReadinessGovernanceProbeProjectionSpec(
         script_rel="scripts/ci/run_required_gate_surface_drift_probes_ci.sh",

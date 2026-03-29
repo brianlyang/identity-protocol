@@ -290,10 +290,10 @@ def main() -> int:
 
     governance_projection_text = _read_text((repo_root / PROJECTION_COMMON_REL).resolve())
     for required_token in (
-        EXPECTED_PROBE_COMMAND[1],
-        EXPECTED_PROBE_SUMMARY_KEY,
-        EXPECTED_PROBE_ONE_LOOK_FIELD,
-        "positive_validator_output",
+        "RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_SCRIPT",
+        "RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_SUMMARY_KEY",
+        "RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_ONE_LOOK_FIELD",
+        "RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_KEEP_FIELDS",
     ):
         if required_token not in governance_projection_text:
             stale_reasons.append(
@@ -304,9 +304,9 @@ def main() -> int:
         (repo_root / GOVERNANCE_TOPOLOGY_VALIDATOR_REL).resolve()
     )
     for required_token in (
-        EXPECTED_PROBE_COMMAND[1],
-        EXPECTED_PROBE_SUMMARY_KEY,
-        EXPECTED_PROBE_ONE_LOOK_FIELD,
+        "RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_SCRIPT",
+        "RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_SUMMARY_KEY",
+        "RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_GOVERNANCE_PROBE_ONE_LOOK_FIELD",
     ):
         if required_token not in governance_topology_text:
             stale_reasons.append(
