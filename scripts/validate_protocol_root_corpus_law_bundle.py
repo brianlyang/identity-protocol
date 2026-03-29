@@ -3976,7 +3976,10 @@ def main() -> int:
         f"structure_violation:{row['field']}:{row['reason']}" for row in structure_violations
     ]
     bundle_violation_stale_reasons = [
-        f"bundle_violation:{row['component_id']}:{row['reason']}" for row in bundle_violations
+        "bundle_violation:"
+        f"{str(row.get('component_id') or row.get('field') or 'root_corpus_law_bundle')}:"
+        f"{str(row.get('reason') or 'unknown')}"
+        for row in bundle_violations
     ]
     anchor_violation_stale_reasons = [
         f"anchor_violation:{row['rel_path']}:{row['reason']}" for row in anchor_violations
