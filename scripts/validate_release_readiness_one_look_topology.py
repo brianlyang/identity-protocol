@@ -89,13 +89,17 @@ TOPOLOGY_COMMON_REL = "scripts/release_readiness_one_look_topology_common.py"
 GOVERNANCE_PROJECTION_COMMON_REL = "scripts/release_readiness_governance_probe_projection_common.py"
 READINESS_CHECK_REL = "scripts/release_readiness_check.py"
 PROBE_REQUIRED_TOKENS: tuple[str, ...] = (
-    f"{EXPECTED_VALIDATOR_SCRIPT} --json-only",
-    EXPECTED_PROBE_SCRIPT,
+    "one_look_topology_validator",
+    "one_look_topology_probe",
+    "one_look_topology_validator_command_literal",
+    "one_look_topology_probe_command_literal",
+    "one_look_topology_probe_one_look_field",
+    "one_look_topology_probe_self_check_reason",
     "projection_common_missing_shared_topology_apply",
     "topology_family_ids_not_unique",
     f"governance_probe_projection_missing_one_look_field:one_look.{EXPECTED_ONE_LOOK_FIELD}",
-    f"post_closure_bundle_missing_validator:{EXPECTED_VALIDATOR_SCRIPT} --json-only",
-    f"post_closure_bundle_missing_probe:{EXPECTED_PROBE_SCRIPT}",
+    "post_closure_bundle_missing_validator:",
+    "post_closure_bundle_missing_probe:",
 )
 SHARED_TOPOLOGY_APPLY_CALL = "apply_release_readiness_one_look_families(summary, one_look)"
 
