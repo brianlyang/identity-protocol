@@ -35,7 +35,7 @@ from release_closure_active_runtime_projection_common import (
     collect_release_closure_active_runtime_projection_stale_reasons,
 )
 from release_closure_narrative_marker_common import (
-    collect_release_closure_narrative_stale_reasons,
+    collect_release_closure_summary_narrative_bundle_stale_reasons,
 )
 from release_closure_governance_probe_projection_common import (
     collect_release_closure_governance_probe_projection_stale_reasons,
@@ -344,7 +344,10 @@ def main() -> int:
                 f"summary_doc_missing_active_runtime_closure_projection_marker:{marker}"
             )
     stale_reasons.extend(
-        collect_release_closure_narrative_stale_reasons(summary_text, label="summary_doc")
+        collect_release_closure_summary_narrative_bundle_stale_reasons(
+            summary_text,
+            label="summary_doc",
+        )
     )
 
     for marker in FORBIDDEN_STALE_MARKERS:

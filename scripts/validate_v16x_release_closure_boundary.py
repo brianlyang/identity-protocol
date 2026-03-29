@@ -25,7 +25,7 @@ from release_closure_active_runtime_projection_common import (
     collect_release_closure_active_runtime_projection_stale_reasons,
 )
 from release_closure_narrative_marker_common import (
-    collect_release_closure_narrative_stale_reasons,
+    collect_release_closure_boundary_narrative_bundle_stale_reasons,
 )
 from release_closure_governance_probe_projection_common import (
     collect_release_closure_governance_probe_projection_stale_reasons,
@@ -217,7 +217,12 @@ def main() -> int:
                 label=label,
             )
         )
-        stale_reasons.extend(collect_release_closure_narrative_stale_reasons(text, label=label))
+        stale_reasons.extend(
+            collect_release_closure_boundary_narrative_bundle_stale_reasons(
+                text,
+                label=label,
+            )
+        )
         if not contains_release_closure_issue_horizon(text, highest_issue):
             stale_reasons.append(f"{label}_issue_horizon_mismatch")
         for target_issue in collect_release_closure_issue_horizon_targets(text):
