@@ -22,6 +22,12 @@ RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS: tuple[str, ...
     "targeted_subset_required_gate_bundle_scope_reason="
     "required_gate_bundle_scope_reason=required_gate_bundle_out_of_scope_for_targeted_subset",
 )
+RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_TARGETED_SUBSET_MARKER = (
+    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS[0]
+)
+RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_REASON_MARKER = (
+    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS[1]
+)
 
 
 def targeted_subset_excludes_required_gate_bundle(summary: dict[str, Any]) -> bool:

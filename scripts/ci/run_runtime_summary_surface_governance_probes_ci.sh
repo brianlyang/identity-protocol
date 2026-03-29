@@ -493,7 +493,7 @@ cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/go
 required_gate_bundle_scope_marker="$(
   resolve_python_module_expression \
     "release_readiness_required_gate_bundle_scope_common" \
-    "RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS[0]"
+    "RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_TARGETED_SUBSET_MARKER"
 )"
 
 mutate_probe_literal \
@@ -559,7 +559,7 @@ cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/go
 selected_check_scope_marker="$(
   resolve_python_module_expression \
     "release_readiness_selected_check_scope_common" \
-    "RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS[0]"
+    "RELEASE_READINESS_SELECTED_CHECK_SCOPE_TARGETED_SUBSET_MARKER"
 )"
 
 mutate_probe_literal \

@@ -25,11 +25,12 @@ from release_readiness_required_gate_bundle_projection_common import (
     RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_MARKER,
 )
 from release_readiness_required_gate_bundle_scope_common import (
-    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
+    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_REASON_MARKER,
+    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_TARGETED_SUBSET_MARKER,
 )
 from release_readiness_selected_check_scope_common import (
     RELEASE_READINESS_SELECTED_CHECK_SCOPE_ONE_LOOK_PROJECTION_MARKER,
-    RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+    RELEASE_READINESS_SELECTED_CHECK_SCOPE_TARGETED_SUBSET_MARKER,
 )
 from release_readiness_support_preflight_projection_common import (
     RELEASE_READINESS_SUPPORT_PREFLIGHT_PROJECTION_MARKER,
@@ -55,17 +56,17 @@ RELEASE_CLOSURE_BOUNDED_PROJECTION_LITERAL_CANONICALITY_SPECS: tuple[
     ),
     ReleaseClosureSurfaceLiteralCanonicalitySpec(
         literal_key="targeted_subset_required_gate_bundle_scope",
-        canonical_marker=RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS[0],
+        canonical_marker=RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_TARGETED_SUBSET_MARKER,
         stale_reason_suffix="targeted_subset_required_gate_bundle_scope_line_not_canonical",
     ),
     ReleaseClosureSurfaceLiteralCanonicalitySpec(
         literal_key="targeted_subset_required_gate_bundle_scope_reason",
-        canonical_marker=RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS[1],
+        canonical_marker=RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_REASON_MARKER,
         stale_reason_suffix="targeted_subset_required_gate_bundle_scope_reason_line_not_canonical",
     ),
     ReleaseClosureSurfaceLiteralCanonicalitySpec(
         literal_key="targeted_subset_selected_check_scope",
-        canonical_marker=RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS[0],
+        canonical_marker=RELEASE_READINESS_SELECTED_CHECK_SCOPE_TARGETED_SUBSET_MARKER,
         stale_reason_suffix="targeted_subset_selected_check_scope_line_not_canonical",
     ),
     ReleaseClosureSurfaceLiteralCanonicalitySpec(

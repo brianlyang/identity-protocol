@@ -26,17 +26,17 @@ release_cloud_evidence_projection_marker="$(
 targeted_subset_required_gate_bundle_scope_marker="$(
   resolve_python_module_expression \
     "release_readiness_required_gate_bundle_scope_common" \
-    "RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS[0]"
+    "RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_TARGETED_SUBSET_MARKER"
 )"
 targeted_subset_required_gate_bundle_scope_reason_marker="$(
   resolve_python_module_expression \
     "release_readiness_required_gate_bundle_scope_common" \
-    "RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS[1]"
+    "RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_REASON_MARKER"
 )"
 targeted_subset_selected_check_scope_marker="$(
   resolve_python_module_expression \
     "release_readiness_selected_check_scope_common" \
-    "RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS[0]"
+    "RELEASE_READINESS_SELECTED_CHECK_SCOPE_TARGETED_SUBSET_MARKER"
 )"
 release_readiness_selected_check_scope_projection_marker="$(
   resolve_python_module_expression \
