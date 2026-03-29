@@ -19,6 +19,7 @@ from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SPECS,
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROOF_LANES,
+    RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_NEGATIVE_FEEDBACK_VETO_STATUS_FIELD,
     release_readiness_active_runtime_closure_capture_script_map,
     release_readiness_active_runtime_closure_structured_capture_specs,
     release_readiness_active_runtime_closure_summary_defaults,
@@ -89,10 +90,13 @@ EXPECTED_DETAIL_FIELDS: tuple[str, ...] = (
     "one_look.identity_experience_writeback_report_pointer_resolution_mode",
     "one_look.identity_communication_transport_reply_transport_status",
     "one_look.identity_weak_live_operational_closure_class",
+    "one_look.identity_terminal_truth_execution_closure_status",
+    "one_look.identity_terminal_truth_canonical_publishable_result_status",
     "one_look.identity_terminal_truth_class",
     "one_look.identity_terminal_truth_state_machine_status",
     "one_look.identity_terminal_truth_state_class",
     "one_look.identity_terminal_truth_negative_feedback_class",
+    "one_look.identity_terminal_truth_negative_feedback_terminal_veto_status",
     "one_look.identity_terminal_truth_loopback_required",
     "one_look.identity_terminal_truth_publishable",
     "one_look.identity_terminal_truth_next_state_after_veto",
@@ -247,6 +251,49 @@ def main() -> int:
         "writeback_status",
     ):
         stale_reasons.append("active_runtime_closure_experience_writeback_keep_fields_drift")
+    terminal_truth_spec = structured_specs.get("identity_terminal_truth_cleanliness") or {}
+    if tuple(terminal_truth_spec.get("keep_fields", ())) != (
+        "execution_closure_status",
+        "canonical_publishable_result_status",
+        "terminal_truth_class",
+        "terminal_state_machine_status",
+        "terminal_state_class",
+        "negative_feedback_class",
+        "negative_feedback_terminal_veto_status",
+        "loopback_required",
+        "publishable",
+        "next_state_after_veto",
+        "terminal_clean_alias_surface_status",
+    ):
+        stale_reasons.append("active_runtime_closure_terminal_truth_keep_fields_drift")
+    if tuple(
+        (
+            spec.one_look_passthrough_fields
+            for spec in RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SPECS
+            if spec.summary_key == "identity_terminal_truth_cleanliness"
+        ),
+    ) != (
+        (
+            ("execution_closure_status", "identity_terminal_truth_execution_closure_status"),
+            (
+                "canonical_publishable_result_status",
+                "identity_terminal_truth_canonical_publishable_result_status",
+            ),
+            ("terminal_truth_class", "identity_terminal_truth_class"),
+            ("terminal_state_machine_status", "identity_terminal_truth_state_machine_status"),
+            ("terminal_state_class", "identity_terminal_truth_state_class"),
+            ("negative_feedback_class", "identity_terminal_truth_negative_feedback_class"),
+            (
+                "negative_feedback_terminal_veto_status",
+                "identity_terminal_truth_negative_feedback_terminal_veto_status",
+            ),
+            ("loopback_required", "identity_terminal_truth_loopback_required"),
+            ("publishable", "identity_terminal_truth_publishable"),
+            ("next_state_after_veto", "identity_terminal_truth_next_state_after_veto"),
+            ("terminal_clean_alias_surface_status", "identity_terminal_truth_alias_surface_status"),
+        ),
+    ):
+        stale_reasons.append("active_runtime_closure_terminal_truth_passthrough_fields_drift")
 
     summary_defaults = release_readiness_active_runtime_closure_summary_defaults()
     if tuple(summary_defaults.keys()) != EXPECTED_SUMMARY_KEY_ORDER:
@@ -349,7 +396,7 @@ def main() -> int:
     for required_token in (
         '"release_readiness_active_runtime_closure_projection_common"',
         '"RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION_MARKER"',
-        '"RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_DETAIL_FIELDS[-1]"',
+        '"RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_NEGATIVE_FEEDBACK_VETO_STATUS_FIELD"',
     ):
         if required_token not in summary_probe_text:
             stale_reasons.append("active_runtime_summary_probe_missing_projection_marker_resolution")
@@ -366,7 +413,7 @@ def main() -> int:
             "active_runtime_boundary_probe_missing_projection_marker_resolution",
         ),
         (
-            '"RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_DETAIL_FIELDS[-1]"',
+            '"RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_NEGATIVE_FEEDBACK_VETO_STATUS_FIELD"',
             "active_runtime_boundary_probe_missing_detail_field_resolution",
         ),
     ):

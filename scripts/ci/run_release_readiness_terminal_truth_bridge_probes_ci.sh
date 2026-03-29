@@ -125,6 +125,8 @@ from release_readiness_terminal_truth_bridge_common import (
 )
 from terminal_truth_cleanliness_common import terminal_truth_cleanliness_contract_skeleton
 
+FAIL_REQUIRED = "FAIL_REQUIRED"
+
 protocol_commit_sha = (
     subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -493,7 +495,17 @@ for row in seeded:
         assert bridge["review_veto_semantics_alignment_status"] == STATUS_SKIPPED_NOT_REQUIRED, bridge
         assert bridge["admission_lane_projection"] == "NOT_BLOCKED_BY_TERMINAL_TRUTH", bridge
         assert bridge["boundary_publishable"] is True, bridge
+        assert bridge["boundary_canonical_result_eligible"] is True, bridge
         assert bridge["active_runtime_publishable"] is True, bridge
+        assert (
+            bridge["active_runtime_canonical_publishable_result_status"]
+            == STATUS_PASS_REQUIRED
+        ), bridge
+        assert (
+            bridge["active_runtime_negative_feedback_terminal_veto_status"]
+            == STATUS_PASS_REQUIRED
+        ), bridge
+        assert bridge["active_runtime_alias_surface_status"] == STATUS_PASS_REQUIRED, bridge
     elif case_name == "review_required_execution_closure":
         assert rc == 1, (case_name, rc, summary)
         assert summary["release_readiness_status"] == "FAIL_REQUIRED", summary
@@ -501,7 +513,18 @@ for row in seeded:
         assert bridge["review_veto_semantics_alignment_status"] == STATUS_PASS_REQUIRED, bridge
         assert bridge["repair_success_not_clean_terminal_truth"] is True, bridge
         assert bridge["admission_lane_projection"] == "BLOCKED_BY_TERMINAL_TRUTH", bridge
+        assert bridge["boundary_canonical_result_eligible"] is False, bridge
         assert bridge["active_runtime_negative_feedback_class"] == "review_required", bridge
+        assert (
+            bridge["active_runtime_canonical_publishable_result_status"]
+            == FAIL_REQUIRED
+        ), bridge
+        assert (
+            bridge["active_runtime_negative_feedback_terminal_veto_status"]
+            == STATUS_PASS_REQUIRED
+        ), bridge
+        assert bridge["active_runtime_loopback_required"] is False, bridge
+        assert bridge["active_runtime_alias_surface_status"] == STATUS_PASS_REQUIRED, bridge
         assert bridge["active_runtime_next_state_after_veto"] == "review_pending", bridge
     else:
         raise AssertionError(f"unexpected_case:{case_name}")

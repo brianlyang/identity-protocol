@@ -32,6 +32,9 @@ RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_ONE_LOOK_FIELDS: tuple[str, ...] = (
     "repair_success_not_clean_terminal_truth",
     "terminal_truth_class",
     "terminal_state_class",
+    "terminal_truth_negative_feedback_class",
+    "terminal_truth_publishable",
+    "terminal_truth_canonical_result_eligible",
 )
 RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_PROJECTION_MARKER = (
     "release_readiness_terminal_truth_boundary_projection="
@@ -272,6 +275,13 @@ def build_release_readiness_terminal_truth_boundary_one_look_projection(
         ),
         "terminal_truth_class": _clean_string(source.get("terminal_truth_class")),
         "terminal_state_class": _clean_string(source.get("terminal_state_class")),
+        "terminal_truth_negative_feedback_class": _clean_string(
+            source.get("negative_feedback_class")
+        ),
+        "terminal_truth_publishable": bool(source.get("publishable")),
+        "terminal_truth_canonical_result_eligible": bool(
+            source.get("canonical_result_eligible")
+        ),
     }
 
 

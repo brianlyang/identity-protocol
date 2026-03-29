@@ -14,6 +14,7 @@ from release_readiness_active_runtime_closure_projection_common import (
 )
 from release_readiness_governance_probe_projection_common import (
     RELEASE_READINESS_GOVERNANCE_PROBE_SPECS,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_ONE_LOOK_FIELD,
     release_readiness_governance_probe_capture_script_map,
     release_readiness_governance_probe_structured_capture_specs,
     release_readiness_governance_probe_summary_defaults,
@@ -22,6 +23,7 @@ from release_readiness_terminal_truth_bridge_common import (
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ACTIVE_RUNTIME_FIELDS,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_BOUNDARY_FIELDS,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_MARKERS,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_MARKER,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER,
@@ -44,16 +46,23 @@ EXPECTED_BOUNDARY_FIELDS: tuple[str, ...] = (
     "one_look.repair_success_not_clean_terminal_truth",
     "one_look.terminal_truth_class",
     "one_look.terminal_state_class",
+    "one_look.terminal_truth_negative_feedback_class",
+    "one_look.terminal_truth_publishable",
+    "one_look.terminal_truth_canonical_result_eligible",
 )
 EXPECTED_ACTIVE_RUNTIME_FIELDS: tuple[str, ...] = (
     "one_look.identity_terminal_truth_cleanliness_status",
     "one_look.identity_terminal_truth_execution_closure_status",
+    "one_look.identity_terminal_truth_canonical_publishable_result_status",
     "one_look.identity_terminal_truth_class",
     "one_look.identity_terminal_truth_state_machine_status",
     "one_look.identity_terminal_truth_state_class",
     "one_look.identity_terminal_truth_negative_feedback_class",
+    "one_look.identity_terminal_truth_negative_feedback_terminal_veto_status",
+    "one_look.identity_terminal_truth_loopback_required",
     "one_look.identity_terminal_truth_publishable",
     "one_look.identity_terminal_truth_next_state_after_veto",
+    "one_look.identity_terminal_truth_alias_surface_status",
 )
 EXPECTED_CASE_MARKERS: tuple[str, ...] = (
     "terminal_truth_bridge_case=clean_terminal_truth",
@@ -70,7 +79,7 @@ EXPECTED_SURFACE_CONSTRAINTS: tuple[str, ...] = (
     "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh",
 )
 EXPECTED_PROBE_SUMMARY_KEY = "release_readiness_terminal_truth_bridge_probe"
-EXPECTED_PROBE_ONE_LOOK_FIELD = "release_readiness_terminal_truth_bridge_probe_status"
+EXPECTED_PROBE_ONE_LOOK_FIELD = RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_ONE_LOOK_FIELD
 EXPECTED_PROBE_STATUS_FIELDS: tuple[str, ...] = (
     "release_readiness_terminal_truth_bridge_probe_status",
 )
@@ -170,6 +179,11 @@ def main() -> int:
         stale_reasons.append("terminal_truth_bridge_validator_path_drift")
     if RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE != EXPECTED_PROBE_COMMAND[1]:
         stale_reasons.append("terminal_truth_bridge_probe_path_drift")
+    if (
+        EXPECTED_CASE_MARKERS[1]
+        != RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_MARKER
+    ):
+        stale_reasons.append("terminal_truth_bridge_review_required_case_marker_drift")
 
     expected_boundary_source_fields = tuple(
         f"one_look.{field}"

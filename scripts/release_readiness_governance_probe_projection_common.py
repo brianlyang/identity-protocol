@@ -335,6 +335,9 @@ RELEASE_READINESS_GOVERNANCE_PROBE_SPECS: tuple[ReleaseReadinessGovernanceProbeP
 RELEASE_READINESS_GOVERNANCE_PROBE_ONE_LOOK_FIELDS: tuple[str, ...] = tuple(
     spec.one_look_field for spec in RELEASE_READINESS_GOVERNANCE_PROBE_SPECS
 )
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_ONE_LOOK_FIELD = (
+    "release_readiness_terminal_truth_bridge_probe_status"
+)
 RELEASE_READINESS_GOVERNANCE_PROBE_DETAIL_FIELDS: tuple[str, ...] = (
     "one_look.execution_report_selection_convergence_candidate_count",
     "one_look.execution_report_selection_convergence_freshness_status",

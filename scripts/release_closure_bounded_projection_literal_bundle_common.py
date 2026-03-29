@@ -34,6 +34,9 @@ from release_readiness_selected_check_scope_common import (
 from release_readiness_support_preflight_projection_common import (
     RELEASE_READINESS_SUPPORT_PREFLIGHT_PROJECTION_MARKER,
 )
+from terminal_truth_boundary_projection_common import (
+    RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_PROJECTION_MARKER,
+)
 
 
 RELEASE_CLOSURE_BOUNDED_PROJECTION_LITERAL_CANONICALITY_SPECS: tuple[
@@ -84,6 +87,11 @@ RELEASE_CLOSURE_BOUNDED_PROJECTION_LITERAL_CANONICALITY_SPECS: tuple[
         literal_key="release_readiness_support_preflight_projection",
         canonical_marker=RELEASE_READINESS_SUPPORT_PREFLIGHT_PROJECTION_MARKER,
         stale_reason_suffix="release_readiness_support_preflight_projection_line_not_canonical",
+    ),
+    ReleaseClosureSurfaceLiteralCanonicalitySpec(
+        literal_key="release_readiness_terminal_truth_boundary_projection",
+        canonical_marker=RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_PROJECTION_MARKER,
+        stale_reason_suffix="release_readiness_terminal_truth_boundary_projection_line_not_canonical",
     ),
     ReleaseClosureSurfaceLiteralCanonicalitySpec(
         literal_key="required_gate_bundle_projection",

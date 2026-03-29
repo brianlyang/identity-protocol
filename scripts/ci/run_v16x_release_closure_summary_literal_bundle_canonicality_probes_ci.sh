@@ -58,6 +58,11 @@ release_readiness_support_preflight_projection_marker="$(
     "release_readiness_support_preflight_projection_common" \
     "RELEASE_READINESS_SUPPORT_PREFLIGHT_PROJECTION_MARKER"
 )"
+release_readiness_terminal_truth_boundary_projection_marker="$(
+  resolve_python_module_expression \
+    "terminal_truth_boundary_projection_common" \
+    "RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_PROJECTION_MARKER"
+)"
 required_gate_bundle_projection_marker="$(
   resolve_python_module_expression \
     "release_readiness_required_gate_bundle_projection_common" \
@@ -128,6 +133,10 @@ mutate_probe_literal \
   "release_readiness_support_preflight_projection=one_look.control_plane_budget_status"
 mutate_probe_literal \
   "${SUMMARY_SHADOW_PATH}" \
+  "${release_readiness_terminal_truth_boundary_projection_marker}" \
+  "release_readiness_terminal_truth_boundary_projection=one_look.terminal_truth_boundary_projection_status"
+mutate_probe_literal \
+  "${SUMMARY_SHADOW_PATH}" \
   "${required_gate_bundle_projection_marker}" \
   "required_gate_bundle_projection=one_look.required_gate_bundle_status"
 mutate_probe_literal \
@@ -169,6 +178,7 @@ expected_reasons = {
     "summary_doc_release_readiness_one_look_family_order_line_not_canonical",
     "summary_doc_release_readiness_foundational_projection_line_not_canonical",
     "summary_doc_release_readiness_support_preflight_projection_line_not_canonical",
+    "summary_doc_release_readiness_terminal_truth_boundary_projection_line_not_canonical",
     "summary_doc_required_gate_bundle_projection_line_not_canonical",
     "summary_doc_full_scan_required_gate_bundle_projection_line_not_canonical",
     "summary_doc_full_scan_required_gate_bundle_summary_line_not_canonical",

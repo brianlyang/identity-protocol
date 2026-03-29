@@ -146,8 +146,8 @@ restore_shadow_file "${TMP_ROOT}" "scripts/ci/run_v16x_release_closure_boundary_
 # expected fail-close: active_runtime_boundary_probe_missing_detail_field_resolution
 mutate_probe_literal \
   "${TMP_ROOT}/scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh" \
-  '"RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_DETAIL_FIELDS[-1]"' \
-  '"RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_DETAIL_FIELDS[-2]"'
+  '"RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_NEGATIVE_FEEDBACK_VETO_STATUS_FIELD"' \
+  '"RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_ALIAS_SURFACE_FIELD"'
 if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-active-runtime-closure-topology-negative-boundary-probe-detail.json; then
   echo "[FAIL] active-runtime boundary probe detail resolution drift unexpectedly passed"
   exit 1

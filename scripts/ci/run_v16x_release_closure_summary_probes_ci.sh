@@ -99,12 +99,12 @@ terminal_truth_bridge_surface_marker="$(
 terminal_truth_bridge_case_marker="$(
   resolve_python_module_expression \
     "release_readiness_terminal_truth_bridge_common" \
-    "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_MARKERS[1]"
+    "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_MARKER"
 )"
-active_runtime_terminal_truth_class_marker="$(
+active_runtime_terminal_truth_veto_marker="$(
   resolve_python_module_expression \
     "release_readiness_active_runtime_closure_projection_common" \
-    "RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_DETAIL_FIELDS[-1]"
+    "RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_NEGATIVE_FEEDBACK_VETO_STATUS_FIELD"
 )"
 
 printf '[RUN] positive release-closure summary validation\n'
@@ -123,7 +123,7 @@ python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
   --copy-file docs/release/identity-v1.6x-release-closure-summary.md \
   --json-only > /dev/null
 
-python3 - <<'PY' "${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${one_look_topology_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${active_runtime_terminal_truth_class_marker}" "${post_closure_adjudication_order_marker}" "${governance_probe_projection_marker}" "${release_closure_root_grounding_order_marker}" "${release_closure_root_grounding_lane_marker}" "${release_closure_root_grounding_validator_path}" "${release_closure_root_grounding_probe_path}"
+python3 - <<'PY' "${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${one_look_topology_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${active_runtime_terminal_truth_veto_marker}" "${post_closure_adjudication_order_marker}" "${governance_probe_projection_marker}" "${release_closure_root_grounding_order_marker}" "${release_closure_root_grounding_lane_marker}" "${release_closure_root_grounding_validator_path}" "${release_closure_root_grounding_probe_path}"
 from pathlib import Path
 import sys
 
@@ -140,7 +140,7 @@ selected_check_scope_projection_marker = sys.argv[10]
 one_look_topology_marker = sys.argv[11]
 terminal_truth_bridge_surface_marker = sys.argv[12]
 terminal_truth_bridge_case_marker = sys.argv[13]
-active_runtime_terminal_truth_class_marker = sys.argv[14]
+active_runtime_terminal_truth_veto_marker = sys.argv[14]
 post_closure_adjudication_order_marker = sys.argv[15]
 governance_probe_projection_marker = sys.argv[16]
 release_closure_root_grounding_order_marker = sys.argv[17]
@@ -223,8 +223,8 @@ text = text.replace(
     "active_runtime_closure_projection=one_look.identity_codex_launcher_status",
 )
 text = text.replace(
-    active_runtime_terminal_truth_class_marker,
-    "one_look.identity_terminal_truth_kind",
+    active_runtime_terminal_truth_veto_marker,
+    "one_look.identity_terminal_truth_veto_state",
 )
 path.write_text(text, encoding="utf-8")
 PY
@@ -235,7 +235,7 @@ if python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_summary.py" --rep
   exit 1
 fi
 
-python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${one_look_topology_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${active_runtime_terminal_truth_class_marker}" "${post_closure_adjudication_order_marker}" "${governance_probe_projection_marker}" "${release_closure_root_grounding_order_marker}" "${release_closure_root_grounding_lane_marker}" "${release_closure_root_grounding_validator_path}" "${release_closure_root_grounding_probe_path}"
+python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${one_look_topology_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${active_runtime_terminal_truth_veto_marker}" "${post_closure_adjudication_order_marker}" "${governance_probe_projection_marker}" "${release_closure_root_grounding_order_marker}" "${release_closure_root_grounding_lane_marker}" "${release_closure_root_grounding_validator_path}" "${release_closure_root_grounding_probe_path}"
 import json
 import sys
 from pathlib import Path

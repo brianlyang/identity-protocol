@@ -277,6 +277,9 @@ assert clean_projection["terminal_truth_observation_status"] == "PASS_REQUIRED",
 assert clean_projection["admission_lane_projection"] == "NOT_BLOCKED_BY_TERMINAL_TRUTH", clean_projection
 assert clean_projection["boundary_health_class"] == "repair_green_terminal_truth_clean", clean_projection
 assert clean_projection["repair_success_not_clean_terminal_truth"] is False, clean_projection
+assert clean_projection["negative_feedback_class"] == "none", clean_projection
+assert clean_projection["publishable"] is True, clean_projection
+assert clean_projection["canonical_result_eligible"] is True, clean_projection
 
 review_projection = build_terminal_truth_boundary_projection_from_report(
     report_doc=load_doc(review_report_path),
@@ -296,6 +299,9 @@ assert review_projection["boundary_health_class"] == "repair_green_terminal_trut
 assert review_projection["repair_success_not_clean_terminal_truth"] is True, review_projection
 assert review_projection["terminal_truth_class"] == "review_required_execution_closure", review_projection
 assert review_projection["terminal_state_class"] == "review_pending", review_projection
+assert review_projection["negative_feedback_class"] == "review_required", review_projection
+assert review_projection["publishable"] is False, review_projection
+assert review_projection["canonical_result_eligible"] is False, review_projection
 
 repair_blocked_projection = build_terminal_truth_boundary_projection_from_report(
     report_doc=load_doc(repair_blocked_report_path),
@@ -313,6 +319,8 @@ assert repair_blocked_projection["admission_lane_projection"] == "BLOCKED_BY_TER
 assert repair_blocked_projection["boundary_health_class"] == "repair_blocked_terminal_truth_blocked", repair_blocked_projection
 assert repair_blocked_projection["terminal_truth_class"] == "non_terminal_or_failed_execution", repair_blocked_projection
 assert repair_blocked_projection["terminal_state_class"] == "non_terminal_pending", repair_blocked_projection
+assert repair_blocked_projection["publishable"] is False, repair_blocked_projection
+assert repair_blocked_projection["canonical_result_eligible"] is False, repair_blocked_projection
 assert "rulebook_missing_run_link" in " ".join(
     repair_blocked_projection.get("experience_writeback_validation_stale_reasons", [])
 ), repair_blocked_projection

@@ -43,10 +43,22 @@ from release_closure_operational_marker_bundle_common import (
     RELEASE_CLOSURE_SUMMARY_OPERATIONAL_MARKER_BUNDLE_SPECS,
     collect_release_closure_operational_marker_bundle_stale_reasons,
 )
+from release_readiness_active_runtime_closure_projection_common import (
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_terminal_truth_bridge_common import (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS,
+)
 from repo_root_resolution_common import resolve_protocol_repo_root
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_RELEASE_SUMMARY = "IP-RCSUM-001"
+SUMMARY_DOC_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_STALE_REASON_PREFIX = (
+    "summary_doc_missing_active_runtime_closure_projection_marker"
+)
+SUMMARY_DOC_TERMINAL_TRUTH_BRIDGE_STALE_REASON_PREFIX = (
+    "summary_doc_missing_release_readiness_terminal_truth_bridge_marker"
+)
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
@@ -156,6 +168,14 @@ def main() -> int:
             label="summary_doc",
         )
     )
+    if not RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS:
+        stale_reasons.append(
+            f"{SUMMARY_DOC_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_STALE_REASON_PREFIX}:active_runtime_surface_constraints_empty"
+        )
+    if not RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS:
+        stale_reasons.append(
+            f"{SUMMARY_DOC_TERMINAL_TRUTH_BRIDGE_STALE_REASON_PREFIX}:terminal_truth_bridge_surface_constraints_empty"
+        )
     stale_reasons.extend(
         collect_release_closure_operational_marker_bundle_stale_reasons(
             summary_text,
