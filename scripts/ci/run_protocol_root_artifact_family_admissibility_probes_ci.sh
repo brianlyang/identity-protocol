@@ -56,6 +56,8 @@ doc["artifact_family_admissibility_completeness_rows"] = [
     row for row in doc["artifact_family_admissibility_completeness_rows"]
     if row.get("completeness_id") != "explicit_artifact_family_admissibility_row_families"
 ]
+for idx, row in enumerate(doc["artifact_family_admissibility_completeness_rows"], start=1):
+    row["order"] = idx
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -231,6 +233,10 @@ assert payload["protocol_root_artifact_family_admissibility_status"] == "FAIL_RE
 assert payload["error_code"] == "IP-AFA-002", payload
 assert payload["artifact_family_row_coverage_status"] == "FAIL_REQUIRED", payload
 assert payload["artifact_family_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["artifact_family_admissibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "demotion_quarantine_family_admission_proof" in row.get("row_ids", [])
     for row in payload["structure_violations"]

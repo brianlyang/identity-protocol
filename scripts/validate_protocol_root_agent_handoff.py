@@ -640,32 +640,72 @@ def main() -> int:
             ),
             fail_status=STATUS_FAIL_REQUIRED,
         ),
-        "role_row_coverage_status": row_family_projection_by_id["role_rows"]["coverage_status"],
-        "role_row_identity_projection_status": row_family_projection_by_id["role_rows"]["identity_projection_status"],
-        "payload_row_coverage_status": row_family_projection_by_id["payload_rows"]["coverage_status"],
-        "payload_row_identity_projection_status": row_family_projection_by_id["payload_rows"][
-            "identity_projection_status"
-        ],
-        "anchor_row_coverage_status": row_family_projection_by_id["anchor_rows"]["coverage_status"],
-        "anchor_row_identity_projection_status": row_family_projection_by_id["anchor_rows"][
-            "identity_projection_status"
-        ],
-        "handoff_proof_row_coverage_status": row_family_projection_by_id["handoff_proof_rows"][
-            "coverage_status"
-        ],
-        "handoff_proof_row_identity_projection_status": row_family_projection_by_id["handoff_proof_rows"][
-            "identity_projection_status"
-        ],
-        "handoff_limit_row_coverage_status": row_family_projection_by_id["handoff_limit_rows"][
-            "coverage_status"
-        ],
-        "handoff_limit_row_identity_projection_status": row_family_projection_by_id["handoff_limit_rows"][
-            "identity_projection_status"
-        ],
-        "collapse_row_coverage_status": row_family_projection_by_id["collapse_rows"]["coverage_status"],
-        "collapse_row_identity_projection_status": row_family_projection_by_id["collapse_rows"][
-            "identity_projection_status"
-        ],
+        **project_named_row_family_statuses(
+            row_family_projection_rows_by_id=row_family_projection_by_id,
+            specs=(
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="role_row_coverage_status",
+                    family_id="role_rows",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="role_row_identity_projection_status",
+                    family_id="role_rows",
+                    status_key="identity_projection_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="payload_row_coverage_status",
+                    family_id="payload_rows",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="payload_row_identity_projection_status",
+                    family_id="payload_rows",
+                    status_key="identity_projection_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="anchor_row_coverage_status",
+                    family_id="anchor_rows",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="anchor_row_identity_projection_status",
+                    family_id="anchor_rows",
+                    status_key="identity_projection_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="handoff_proof_row_coverage_status",
+                    family_id="handoff_proof_rows",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="handoff_proof_row_identity_projection_status",
+                    family_id="handoff_proof_rows",
+                    status_key="identity_projection_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="handoff_limit_row_coverage_status",
+                    family_id="handoff_limit_rows",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="handoff_limit_row_identity_projection_status",
+                    family_id="handoff_limit_rows",
+                    status_key="identity_projection_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="collapse_row_coverage_status",
+                    family_id="collapse_rows",
+                    status_key="coverage_status",
+                ),
+                NamedRowFamilyStatusProjectionSpec(
+                    payload_key="collapse_row_identity_projection_status",
+                    family_id="collapse_rows",
+                    status_key="identity_projection_status",
+                ),
+            ),
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "agent_handoff_completeness_rows": [
             {
                 "order": row.order,

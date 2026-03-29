@@ -45,8 +45,10 @@ from root_machine_registry_completeness_common import (
     require_self_describing_families,
 )
 from root_row_family_projection_common import (
+    NamedRowFamilyStatusProjectionSpec,
     aggregate_row_family_status,
     index_row_family_projection_rows,
+    project_named_row_family_statuses,
     project_root_contract_support_projection,
     project_row_families,
 )
@@ -1198,34 +1200,6 @@ def main() -> int:
             error_code = ERR_COMPLETENESS
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
-    family_status_row_coverage_status = (
-        STATUS_FAIL_REQUIRED if family_status_row_coverage_incomplete else STATUS_PASS_REQUIRED
-    )
-    family_status_row_identity_projection_status = (
-        STATUS_FAIL_REQUIRED
-        if family_status_row_identity_projection_incomplete
-        else STATUS_PASS_REQUIRED
-    )
-    validator_surface_contract_row_coverage_status = (
-        STATUS_FAIL_REQUIRED
-        if validator_surface_contract_row_coverage_incomplete
-        else STATUS_PASS_REQUIRED
-    )
-    validator_surface_contract_row_identity_projection_status = (
-        STATUS_FAIL_REQUIRED
-        if validator_surface_contract_row_identity_projection_incomplete
-        else STATUS_PASS_REQUIRED
-    )
-    probe_surface_contract_row_coverage_status = (
-        STATUS_FAIL_REQUIRED
-        if probe_surface_contract_row_coverage_incomplete
-        else STATUS_PASS_REQUIRED
-    )
-    probe_surface_contract_row_identity_projection_status = (
-        STATUS_FAIL_REQUIRED
-        if probe_surface_contract_row_identity_projection_incomplete
-        else STATUS_PASS_REQUIRED
-    )
     root_doc_anchor_status = (
         STATUS_FAIL_REQUIRED if anchor_violations else STATUS_PASS_REQUIRED
     )
@@ -1310,6 +1284,62 @@ def main() -> int:
     row_family_projection_by_id = index_row_family_projection_rows(
         row_family_projection_rows
     )
+    named_row_family_status_payload = project_named_row_family_statuses(
+        row_family_projection_rows_by_id=row_family_projection_by_id,
+        specs=(
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="family_status_row_coverage_status",
+                family_id="family_status_rows",
+                status_key="coverage_status",
+            ),
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="family_status_row_identity_projection_status",
+                family_id="family_status_rows",
+                status_key="identity_projection_status",
+            ),
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="validator_surface_contract_row_coverage_status",
+                family_id="family_validator_surface_contract_rows",
+                status_key="coverage_status",
+            ),
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="validator_surface_contract_row_identity_projection_status",
+                family_id="family_validator_surface_contract_rows",
+                status_key="identity_projection_status",
+            ),
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="probe_surface_contract_row_coverage_status",
+                family_id="family_probe_surface_contract_rows",
+                status_key="coverage_status",
+            ),
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="probe_surface_contract_row_identity_projection_status",
+                family_id="family_probe_surface_contract_rows",
+                status_key="identity_projection_status",
+            ),
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="machine_registry_completeness_canonical_row_coverage_status",
+                family_id="machine_registry_completeness_rows",
+                status_key="coverage_status",
+            ),
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="machine_registry_completeness_canonical_row_identity_projection_status",
+                family_id="machine_registry_completeness_rows",
+                status_key="identity_projection_status",
+            ),
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="machine_registry_completeness_surface_coverage_status",
+                family_id="machine_registry_completeness_surface",
+                status_key="coverage_status",
+            ),
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="machine_registry_completeness_surface_identity_projection_status",
+                family_id="machine_registry_completeness_surface",
+                status_key="identity_projection_status",
+            ),
+        ),
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload = {
         STATUS_KEY: status,
         "completeness_family": str(completeness_doc.get("completeness_family") or ""),
@@ -1344,15 +1374,17 @@ def main() -> int:
         "registered_complete_family_ids": registered_complete_family_ids,
         "family_status_row_count": len(family_status_rows),
         "expected_family_status_row_count": expected_family_status_row_count,
-        "family_status_row_coverage_status": family_status_row_coverage_status,
+        "family_status_row_coverage_status": named_row_family_status_payload[
+            "family_status_row_coverage_status"
+        ],
         "discovered_family_count": len(discovered_family_ids),
         "discovered_family_ids": discovered_family_ids,
         "family_status_row_ids": family_status_row_ids,
         "missing_family_status_row_ids": missing_family_status_row_ids,
         "unexpected_family_status_row_ids": unexpected_family_status_row_ids,
-        "family_status_row_identity_projection_status": (
-            family_status_row_identity_projection_status
-        ),
+        "family_status_row_identity_projection_status": named_row_family_status_payload[
+            "family_status_row_identity_projection_status"
+        ],
         "validator_surface_contract_row_count": len(validator_surface_contract_row_ids),
         "expected_family_validator_surface_contract_row_count": (
             len(discovered_family_ids) * len(required_validator_surface_contract_fields)
@@ -1364,12 +1396,12 @@ def main() -> int:
         "unexpected_validator_surface_contract_row_ids": (
             unexpected_validator_surface_contract_row_ids
         ),
-        "validator_surface_contract_row_coverage_status": (
-            validator_surface_contract_row_coverage_status
-        ),
-        "validator_surface_contract_row_identity_projection_status": (
-            validator_surface_contract_row_identity_projection_status
-        ),
+        "validator_surface_contract_row_coverage_status": named_row_family_status_payload[
+            "validator_surface_contract_row_coverage_status"
+        ],
+        "validator_surface_contract_row_identity_projection_status": named_row_family_status_payload[
+            "validator_surface_contract_row_identity_projection_status"
+        ],
         "probe_surface_contract_row_count": len(probe_surface_contract_row_ids),
         "expected_family_probe_surface_contract_row_count": (
             len(discovered_family_ids) * len(required_probe_surface_contract_fields)
@@ -1381,12 +1413,12 @@ def main() -> int:
         "unexpected_probe_surface_contract_row_ids": (
             unexpected_probe_surface_contract_row_ids
         ),
-        "probe_surface_contract_row_coverage_status": (
-            probe_surface_contract_row_coverage_status
-        ),
-        "probe_surface_contract_row_identity_projection_status": (
-            probe_surface_contract_row_identity_projection_status
-        ),
+        "probe_surface_contract_row_coverage_status": named_row_family_status_payload[
+            "probe_surface_contract_row_coverage_status"
+        ],
+        "probe_surface_contract_row_identity_projection_status": named_row_family_status_payload[
+            "probe_surface_contract_row_identity_projection_status"
+        ],
         "machine_registry_completeness_row_count": len(machine_registry_completeness_rows),
         **project_root_contract_support_projection(
             prefix="machine_registry_completeness",
@@ -1396,18 +1428,18 @@ def main() -> int:
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         ),
-        "machine_registry_completeness_canonical_row_coverage_status": row_family_projection_by_id[
-            "machine_registry_completeness_rows"
-        ]["coverage_status"],
-        "machine_registry_completeness_canonical_row_identity_projection_status": row_family_projection_by_id[
-            "machine_registry_completeness_rows"
-        ]["identity_projection_status"],
-        "machine_registry_completeness_surface_coverage_status": row_family_projection_by_id[
-            "machine_registry_completeness_surface"
-        ]["coverage_status"],
-        "machine_registry_completeness_surface_identity_projection_status": row_family_projection_by_id[
-            "machine_registry_completeness_surface"
-        ]["identity_projection_status"],
+        "machine_registry_completeness_canonical_row_coverage_status": named_row_family_status_payload[
+            "machine_registry_completeness_canonical_row_coverage_status"
+        ],
+        "machine_registry_completeness_canonical_row_identity_projection_status": named_row_family_status_payload[
+            "machine_registry_completeness_canonical_row_identity_projection_status"
+        ],
+        "machine_registry_completeness_surface_coverage_status": named_row_family_status_payload[
+            "machine_registry_completeness_surface_coverage_status"
+        ],
+        "machine_registry_completeness_surface_identity_projection_status": named_row_family_status_payload[
+            "machine_registry_completeness_surface_identity_projection_status"
+        ],
         "structure_violation_count": len(structure_violations),
         "completeness_violation_count": len(completeness_violations),
         "anchor_violation_count": len(anchor_violations),
