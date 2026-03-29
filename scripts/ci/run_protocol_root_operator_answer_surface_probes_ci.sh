@@ -36,6 +36,10 @@ assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["operator_answer_row_family_count"] == 13, payload
 assert payload["operator_answer_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["operator_answer_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["operator_answer_surface_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["operator_answer_surface_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["operator_answer_surface_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["operator_answer_surface_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["answer_surface_stage_surface"]["entry_count"] == 4, payload
@@ -117,6 +121,10 @@ assert completeness_row["missing_ids"] == ["explicit_operator_answer_surface_row
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["operator_answer_surface_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["operator_answer_surface_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["operator_answer_surface_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["operator_answer_surface_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 STAGE_REPO="${TMP_ROOT}/stage-drift-repo"
@@ -496,6 +504,10 @@ assert surface_row["unexpected_ids"] == [
 ], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["operator_answer_surface_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["operator_answer_surface_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["operator_answer_surface_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["operator_answer_surface_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 EPISTEMIC_REPO="${TMP_ROOT}/epistemic-drift-repo"

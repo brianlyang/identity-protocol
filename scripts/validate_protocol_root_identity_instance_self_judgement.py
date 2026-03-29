@@ -247,6 +247,7 @@ def main() -> int:
     contract_marker_violations: list[dict[str, Any]] = []
     root_doc_anchor_violations: list[dict[str, Any]] = []
     row_family_projection_rows: list[dict[str, Any]] = []
+    row_family_projection_by_id: dict[str, dict[str, Any]] = {}
     error_code = ""
 
     if self_alias_error:
@@ -400,6 +401,15 @@ def main() -> int:
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         )
+        row_family_projection_by_id = {
+            row["family_id"]: row for row in row_family_projection_rows
+        }
+
+        def _family_status(family_id: str, status_key: str) -> str:
+            row = row_family_projection_by_id.get(family_id)
+            if not row:
+                return STATUS_FAIL_REQUIRED
+            return str(row.get(status_key) or STATUS_FAIL_REQUIRED)
         validate_contract_row_batches(
             batches=(
                 {
@@ -604,6 +614,18 @@ def main() -> int:
         "collapse_count": len(collapse_rows),
         "identity_instance_self_judgement_completeness_row_count": len(
             identity_instance_self_judgement_completeness_rows
+        ),
+        "identity_instance_self_judgement_completeness_row_coverage_status": _family_status(
+            "identity_instance_self_judgement_completeness_rows", "coverage_status"
+        ),
+        "identity_instance_self_judgement_completeness_row_identity_projection_status": _family_status(
+            "identity_instance_self_judgement_completeness_rows", "identity_projection_status"
+        ),
+        "identity_instance_self_judgement_completeness_surface_coverage_status": _family_status(
+            "identity_instance_self_judgement_completeness_surface", "coverage_status"
+        ),
+        "identity_instance_self_judgement_completeness_surface_identity_projection_status": _family_status(
+            "identity_instance_self_judgement_completeness_surface", "identity_projection_status"
         ),
         **project_root_contract_support_projection(
             prefix="self_judgement",

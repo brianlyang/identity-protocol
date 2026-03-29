@@ -31,6 +31,10 @@ assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["self_judgement_row_family_count"] == 7, payload
 assert payload["self_judgement_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["self_judgement_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["identity_instance_self_judgement_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_instance_self_judgement_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["identity_instance_self_judgement_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_instance_self_judgement_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["identity_instance_self_judgement_completeness_surface"]["entry_count"] == 5, payload
@@ -93,6 +97,10 @@ assert completeness_row["missing_ids"] == ["explicit_identity_instance_self_judg
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["identity_instance_self_judgement_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["identity_instance_self_judgement_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["identity_instance_self_judgement_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_instance_self_judgement_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -453,6 +461,10 @@ assert any(
     and row["reason"] == "extra_identity_instance_self_judgement_completeness_surface_rows"
     for row in payload["structure_violations"]
 ), payload
+assert payload["identity_instance_self_judgement_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_instance_self_judgement_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["identity_instance_self_judgement_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_instance_self_judgement_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 surface_row = next(
     row for row in payload["row_family_projection_rows"]
     if row["family_id"] == "identity_instance_self_judgement_completeness_surface"

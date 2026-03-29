@@ -434,6 +434,7 @@ def main() -> int:
     contract_marker_violations: list[dict[str, Any]] = []
     root_doc_anchor_violations: list[dict[str, Any]] = []
     row_family_projection_rows: list[dict[str, Any]] = []
+    row_family_projection_by_id: dict[str, dict[str, Any]] = {}
     error_code = ""
 
     if answer_alias_error:
@@ -650,6 +651,9 @@ def main() -> int:
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         )
+        row_family_projection_by_id = {
+            row["family_id"]: row for row in row_family_projection_rows
+        }
 
         validate_contract_row_batches(
             batches=(
@@ -1159,6 +1163,12 @@ def main() -> int:
     )
     error_code = str(verdict["error_code"])
     status = str(verdict["status"])
+    operator_answer_surface_completeness_row_projection = row_family_projection_by_id.get(
+        "operator_answer_surface_completeness_rows", {}
+    )
+    operator_answer_surface_completeness_surface_projection = row_family_projection_by_id.get(
+        "operator_answer_surface_completeness_surface", {}
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_ANSWER),
@@ -1191,6 +1201,18 @@ def main() -> int:
             anchor_violations=root_doc_anchor_violations,
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        "operator_answer_surface_completeness_row_coverage_status": str(
+            operator_answer_surface_completeness_row_projection.get("coverage_status") or STATUS_FAIL_REQUIRED
+        ),
+        "operator_answer_surface_completeness_row_identity_projection_status": str(
+            operator_answer_surface_completeness_row_projection.get("identity_projection_status") or STATUS_FAIL_REQUIRED
+        ),
+        "operator_answer_surface_completeness_surface_coverage_status": str(
+            operator_answer_surface_completeness_surface_projection.get("coverage_status") or STATUS_FAIL_REQUIRED
+        ),
+        "operator_answer_surface_completeness_surface_identity_projection_status": str(
+            operator_answer_surface_completeness_surface_projection.get("identity_projection_status") or STATUS_FAIL_REQUIRED
         ),
         "row_family_projection_rows": row_family_projection_rows,
         "surface_ids": [row.surface_id for row in sorted(surface_rows, key=lambda item: item.order)],
