@@ -19,6 +19,9 @@ from release_readiness_governance_probe_projection_common import (
     release_readiness_governance_probe_structured_capture_specs,
     release_readiness_governance_probe_summary_defaults,
 )
+from runtime_summary_surface_governance_common import (
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_COMMAND,
+)
 from release_readiness_post_closure_adjudication_common import (
     RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_COMMAND_SEQUENCE,
     RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_ORDER,
@@ -54,7 +57,7 @@ EXPECTED_STAGE_ORDER: tuple[str, ...] = (
     "governance_probe_topology",
 )
 EXPECTED_COMMAND_SEQUENCE: tuple[tuple[str, ...], ...] = (
-    ("bash", "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh"),
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_COMMAND,
     ("python3", "scripts/validate_release_readiness_one_look_topology.py", "--json-only"),
     ("bash", "scripts/ci/run_release_readiness_one_look_topology_probes_ci.sh"),
     (

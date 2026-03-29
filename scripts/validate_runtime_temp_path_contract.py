@@ -25,6 +25,14 @@ TARGET_RULES = {
         "required": ("source \"$ROOT/scripts/runtime_temp_path_common.sh\"", "identity_runtime_mktemp_dir_sh"),
         "forbidden": ("mktemp -d \"$TMP_ROOT_BASE",),
     },
+    "scripts/ci/protocol_root_probe_shadow_common.sh": {
+        "required": (
+            'source "${ROOT}/scripts/runtime_temp_path_common.sh"',
+            'IDENTITY_RUNTIME_TMP_ROOT:-${ROOT}/.tmp',
+            'identity_runtime_mktemp_dir_sh "protocol-root-probes" "${tmp_prefix}"',
+        ),
+        "forbidden": ('mktemp -d "${TMPDIR:-/tmp}/',),
+    },
 }
 
 

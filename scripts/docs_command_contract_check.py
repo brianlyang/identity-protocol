@@ -39,6 +39,9 @@ from doc_command_surface_common import (
     surface_mode_profiles_from_doc,
 )
 from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
+from runtime_summary_surface_governance_common import (
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_VALIDATOR,
+)
 from reference_visual_atlas_governance_common import discover_visual_atlas_governance_scripts
 
 
@@ -1283,7 +1286,7 @@ def main() -> int:
     else:
         failures.append("[MISSING_SCRIPT] scripts/validate_audit_snapshot_index.py not found")
 
-    runtime_summary_surface_script = repo_root / "scripts/validate_runtime_summary_surface_governance.py"
+    runtime_summary_surface_script = repo_root / RUNTIME_SUMMARY_SURFACE_GOVERNANCE_VALIDATOR
     if runtime_summary_surface_script.exists():
         proc = subprocess.run(
             [sys.executable, str(runtime_summary_surface_script), "--repo-root", str(repo_root), "--json-only"],
@@ -1301,7 +1304,7 @@ def main() -> int:
                 )
             )
     else:
-        failures.append("[MISSING_SCRIPT] scripts/validate_runtime_summary_surface_governance.py not found")
+        failures.append(f"[MISSING_SCRIPT] {RUNTIME_SUMMARY_SURFACE_GOVERNANCE_VALIDATOR} not found")
 
     doc_command_surface_registry_script = repo_root / "scripts/validate_doc_command_surface_registry.py"
     if doc_command_surface_registry_script.exists():

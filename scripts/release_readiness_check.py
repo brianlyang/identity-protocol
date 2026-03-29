@@ -38,6 +38,9 @@ from governed_runtime_summary_checkpoint_common import (
 from health_report_experience_writeback_projection_common import (
     build_health_report_experience_writeback_closure_projection as build_health_report_experience_writeback_closure_projection_shared,
 )
+from runtime_summary_surface_governance_common import (
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_COMMAND,
+)
 from protocol_infra_contract import (
     build_required_gate_bundle_cmd,
     CANONICAL_FINAL_EMIT_SCRIPT,
@@ -172,7 +175,7 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_protocol_root_corpus_precedence_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh"],
-    ["bash", "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh"],
+    list(RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_COMMAND),
     ["python3", "scripts/validate_release_readiness_one_look_topology.py", "--json-only"],
     ["bash", "scripts/ci/run_release_readiness_one_look_topology_probes_ci.sh"],
     ["python3", "scripts/validate_release_readiness_repo_global_closure_topology.py", "--json-only"],
