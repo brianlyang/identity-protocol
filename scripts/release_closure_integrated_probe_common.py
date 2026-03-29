@@ -21,6 +21,7 @@ from release_closure_projection_companion_marker_bundle_common import (
     RELEASE_CLOSURE_SUMMARY_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_MARKERS,
 )
 from release_closure_control_surface_probe_common import (
+    RELEASE_CLOSURE_POST_CLOSURE_ADJUDICATION_ORDER_ADDITIVE_POLLUTION_MARKER,
     RELEASE_CLOSURE_TERMINAL_TRUTH_BRIDGE_SURFACE_ADDITIVE_POLLUTION_MARKER,
 )
 from release_readiness_active_runtime_closure_projection_common import (
@@ -210,8 +211,9 @@ RELEASE_CLOSURE_SUMMARY_MAIN_PROBE_MUTATION_SPECS: tuple[LiteralMutationSpec, ..
     ),
     LiteralMutationSpec(
         RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_ORDER_MARKER,
-        "release_readiness_post_closure_adjudication_order="
-        "runtime_summary_surface_governance|governance_probe_topology",
+        RELEASE_CLOSURE_POST_CLOSURE_ADJUDICATION_ORDER_ADDITIVE_POLLUTION_MARKER,
+        mode="first",
+        require_absent_after=False,
     ),
     LiteralMutationSpec(
         RELEASE_CLOSURE_ROOT_GROUNDING_ORDER_MARKER,
@@ -312,8 +314,9 @@ RELEASE_CLOSURE_BOUNDARY_MAIN_PROBE_MUTATION_SPECS: tuple[LiteralMutationSpec, .
     ),
     LiteralMutationSpec(
         RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_ORDER_MARKER,
-        "release_readiness_post_closure_adjudication_order="
-        "runtime_summary_surface_governance|terminal_truth_bridge",
+        RELEASE_CLOSURE_POST_CLOSURE_ADJUDICATION_ORDER_ADDITIVE_POLLUTION_MARKER,
+        mode="first",
+        require_absent_after=False,
     ),
     LiteralMutationSpec(
         RELEASE_CLOSURE_ROOT_GROUNDING_ORDER_MARKER,
