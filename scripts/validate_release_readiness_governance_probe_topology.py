@@ -130,14 +130,17 @@ READINESS_CHECK_REL = "scripts/release_readiness_check.py"
 SUMMARY_BINDING_PROBE_REL = "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh"
 CONTINUATION_MARKER_REL = "scripts/release_closure_continuation_marker_common.py"
 PROBE_REQUIRED_TOKENS: tuple[str, ...] = (
-    "scripts/validate_release_readiness_governance_probe_topology.py --json-only",
-    "scripts/ci/run_release_readiness_governance_probe_topology_probes_ci.sh",
+    "release_readiness_governance_probe_topology_common",
+    "governance_probe_topology_validator",
+    "governance_probe_topology_probe",
+    "governance_probe_topology_validator_command_literal",
+    "governance_probe_topology_probe_command_literal",
+    "governance_probe_topology_self_summary_key",
+    "governance_probe_topology_self_one_look_field",
+    "governance_probe_topology_self_check_reason",
     "governance_probe_summary_keys_not_unique",
     "governance_probe_one_look_field_order_changed",
-    "post_closure_bundle_missing_validator:scripts/validate_release_readiness_governance_probe_topology.py --json-only",
-    "post_closure_bundle_missing_probe:scripts/ci/run_release_readiness_governance_probe_topology_probes_ci.sh",
     "continuation_markers_missing_governance_probe_surface_constraints",
-    "summary_binding_probe_missing_token:release_readiness_governance_probe_topology_probe",
 )
 
 
