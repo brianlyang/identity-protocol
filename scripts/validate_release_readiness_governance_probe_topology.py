@@ -21,6 +21,18 @@ from release_readiness_governance_probe_projection_common import (
     release_readiness_governance_probe_structured_capture_specs,
     release_readiness_governance_probe_summary_defaults,
 )
+from release_readiness_governance_probe_topology_common import (
+    RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_MARKER,
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROBE,
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROBE_COMMAND,
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROOF_LANES,
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_KEEP_FIELDS,
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_ONE_LOOK_FIELD,
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_STATUS_FIELDS,
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_SUMMARY_KEY,
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_VALIDATOR,
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_VALIDATOR_COMMAND,
+)
 
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -100,16 +112,18 @@ EXPECTED_PROJECTION_MARKER = (
     "governance_probe_projection="
     + "|".join(f"one_look.{field}" for field in EXPECTED_ONE_LOOK_FIELD_ORDER)
 )
-EXPECTED_VALIDATOR_SCRIPT = "scripts/validate_release_readiness_governance_probe_topology.py"
-EXPECTED_PROBE_SCRIPT = "scripts/ci/run_release_readiness_governance_probe_topology_probes_ci.sh"
-EXPECTED_VALIDATOR_COMMAND = ("python3", EXPECTED_VALIDATOR_SCRIPT, "--json-only")
-EXPECTED_PROBE_COMMAND = ("bash", EXPECTED_PROBE_SCRIPT)
-EXPECTED_SELF_SUMMARY_KEY = "release_readiness_governance_probe_topology_probe"
-EXPECTED_SELF_ONE_LOOK_FIELD = "release_readiness_governance_probe_topology_probe_status"
+EXPECTED_VALIDATOR_SCRIPT = RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_VALIDATOR
+EXPECTED_PROBE_SCRIPT = RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROBE
+EXPECTED_VALIDATOR_COMMAND = RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_VALIDATOR_COMMAND
+EXPECTED_PROBE_COMMAND = RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROBE_COMMAND
+EXPECTED_SELF_SUMMARY_KEY = RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_SUMMARY_KEY
+EXPECTED_SELF_ONE_LOOK_FIELD = RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_ONE_LOOK_FIELD
 EXPECTED_SELF_STATUS_FIELDS: tuple[str, ...] = (
-    "release_readiness_governance_probe_topology_probe_status",
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_STATUS_FIELDS
 )
-EXPECTED_SELF_KEEP_FIELDS: tuple[str, ...] = ("positive_validator_output",)
+EXPECTED_SELF_KEEP_FIELDS: tuple[str, ...] = (
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_KEEP_FIELDS
+)
 
 PROJECTION_COMMON_REL = "scripts/release_readiness_governance_probe_projection_common.py"
 READINESS_CHECK_REL = "scripts/release_readiness_check.py"
@@ -192,10 +206,12 @@ def main() -> int:
         stale_reasons.append("governance_probe_one_look_fields_constant_drift")
     if RELEASE_READINESS_GOVERNANCE_PROBE_PROJECTION_MARKER != EXPECTED_PROJECTION_MARKER:
         stale_reasons.append("governance_probe_projection_marker_drift")
+    if RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_MARKER != EXPECTED_PROJECTION_MARKER:
+        stale_reasons.append("governance_probe_surface_marker_drift")
     if not RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS:
         stale_reasons.append("governance_probe_surface_constraints_empty")
     else:
-        if RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS[0] != EXPECTED_PROJECTION_MARKER:
+        if RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_MARKER not in RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS:
             stale_reasons.append("governance_probe_surface_constraints_marker_drift")
         for owner_lane in EXPECTED_SCRIPT_ORDER:
             if owner_lane not in RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS:
@@ -265,6 +281,21 @@ def main() -> int:
     ):
         if required_token not in projection_common_text:
             stale_reasons.append(f"governance_probe_projection_common_missing_token:{required_token}")
+
+    topology_common_text = _read_text(
+        (repo_root / "scripts/release_readiness_governance_probe_topology_common.py").resolve()
+    )
+    for required_token in (
+        "RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_VALIDATOR",
+        "RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROBE",
+        "RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_VALIDATOR_COMMAND",
+        "RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROBE_COMMAND",
+        "RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROOF_LANES",
+        "RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_SUMMARY_KEY",
+        "RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_ONE_LOOK_FIELD",
+    ):
+        if required_token not in topology_common_text:
+            stale_reasons.append(f"governance_probe_topology_common_missing_token:{required_token}")
 
     readiness_check_text = _read_text((repo_root / READINESS_CHECK_REL).resolve())
     for required_token in (
