@@ -132,7 +132,13 @@ from root_machine_registry_completeness_common import (
     required_descriptor_field_modes_from_doc as registry_required_descriptor_field_modes_from_doc,
     required_descriptor_fields_from_doc as registry_required_descriptor_fields_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
+from root_row_family_projection_common import (
+    NamedRowFamilyStatusProjectionSpec,
+    index_row_family_projection_rows,
+    project_named_row_family_statuses,
+    project_root_contract_support_projection,
+    project_row_families,
+)
 
 STATUS_KEY = "protocol_root_corpus_law_bundle_status"
 ERR_REGISTRY = "IP-RCLB-001"
@@ -3834,9 +3840,6 @@ def main() -> int:
                     "actual_count": len(component_status_rows),
                 }
             )
-    component_status_row_coverage_status = (
-        STATUS_FAIL_REQUIRED if component_status_row_coverage_incomplete else STATUS_PASS_REQUIRED
-    )
     row_family_projection_rows = project_row_families(
         families=(
             {
@@ -3884,13 +3887,44 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
-    component_status_row_identity_projection_status = next(
-        (
-            row["identity_projection_status"]
-            for row in row_family_projection_rows
-            if row["family_id"] == "component_status_rows"
+    row_family_projection_by_id = index_row_family_projection_rows(
+        row_family_projection_rows
+    )
+    named_row_family_status_payload = project_named_row_family_statuses(
+        row_family_projection_rows_by_id=row_family_projection_by_id,
+        specs=(
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="component_status_row_coverage_status",
+                family_id="component_status_rows",
+                status_key="coverage_status",
+            ),
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="component_status_row_identity_projection_status",
+                family_id="component_status_rows",
+                status_key="identity_projection_status",
+            ),
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="law_bundle_component_row_completeness_row_coverage_status",
+                family_id="law_bundle_component_row_completeness_rows",
+                status_key="coverage_status",
+            ),
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="law_bundle_component_row_completeness_row_identity_projection_status",
+                family_id="law_bundle_component_row_completeness_rows",
+                status_key="identity_projection_status",
+            ),
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="law_bundle_component_row_completeness_surface_coverage_status",
+                family_id="law_bundle_component_row_completeness_surface",
+                status_key="coverage_status",
+            ),
+            NamedRowFamilyStatusProjectionSpec(
+                payload_key="law_bundle_component_row_completeness_surface_identity_projection_status",
+                family_id="law_bundle_component_row_completeness_surface",
+                status_key="identity_projection_status",
+            ),
         ),
-        STATUS_FAIL_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
     )
 
     (
@@ -4302,10 +4336,7 @@ def main() -> int:
         ),
         "component_status_row_count": len(component_status_rows),
         "expected_component_status_row_count": len(sorted_components),
-        "component_status_row_coverage_status": component_status_row_coverage_status,
-        "component_status_row_identity_projection_status": (
-            component_status_row_identity_projection_status
-        ),
+        **named_row_family_status_payload,
         **project_root_contract_support_projection(
             prefix="law_bundle",
             row_family_projection_rows=row_family_projection_rows,

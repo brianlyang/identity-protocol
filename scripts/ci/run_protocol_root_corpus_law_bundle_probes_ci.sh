@@ -200,6 +200,10 @@ assert payload["expected_component_status_row_count"] == payload["component_coun
 assert payload["component_status_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["component_status_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["law_bundle_component_row_completeness_row_count"] == 5, payload
+assert payload["law_bundle_component_row_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["law_bundle_row_family_count"] == 4, payload
 assert payload["law_bundle_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["law_bundle_row_identity_projection_status"] == "PASS_REQUIRED", payload
@@ -393,6 +397,10 @@ assert completeness_row["missing_ids"] == ["explicit_law_bundle_component_row_fa
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["law_bundle_row_coverage_status"] == "FAIL_REQUIRED", payload
 assert payload["law_bundle_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
@@ -449,6 +457,10 @@ assert surface_row["missing_ids"] == ["required component-row and component-stat
 assert surface_row["unexpected_ids"] == ["required component-row rows must remain explicit as separate machine-readable row families;"], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/law-bundle-completeness-surface-order-drift-repo"
@@ -491,6 +503,8 @@ assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 COMPONENT_VALIDATOR_STATUS_REQUIREMENT_REPO="${TMP_ROOT}/component-validator-status-requirement-drift-repo"
@@ -2474,6 +2488,10 @@ assert payload["component_validator_observation_reason_partition_total_count"] =
 assert payload["component_status_row_count"] == payload["component_count"] - 1, payload
 assert payload["expected_component_status_row_count"] == payload["component_count"], payload
 assert payload["component_status_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["bundle_violation_count"] >= 2, payload
 assert payload["registry_precedence_reason_count"] == 0, payload
 assert payload["projected_violation_reason_count"] == (
@@ -4447,6 +4465,10 @@ assert status_row["unexpected_ids"] == [], payload
 assert status_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert status_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 assert payload["component_status_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 ANCHOR_REPO="${TMP_ROOT}/anchor-drift-repo"
