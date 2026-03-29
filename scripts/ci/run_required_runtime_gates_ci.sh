@@ -29,6 +29,32 @@ run_cmd() {
   "$@"
 }
 
+run_release_closure_surface_probe_gates() {
+  while IFS= read -r probe_rel; do
+    if [ -n "${probe_rel}" ]; then
+      run_cmd bash "${probe_rel}"
+    fi
+  done < <(
+    REPO_ROOT="${REPO_ROOT}" python3 - <<'PY'
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+repo_root = Path(os.environ["REPO_ROOT"]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from release_closure_surface_registry_common import (  # noqa: E402
+    release_closure_surface_probe_script_rels,
+)
+
+for probe_rel in release_closure_surface_probe_script_rels():
+    print(probe_rel)
+PY
+  )
+}
+
 run_global_protocol_gates() {
   run_cmd python3 scripts/validate_required_gate_surface_drift.py --json-only
   run_cmd bash scripts/ci/run_required_gate_surface_drift_probes_ci.sh
@@ -37,9 +63,7 @@ run_global_protocol_gates() {
   run_cmd python3 scripts/validate_control_plane_budget_sync.py --json-only
   run_cmd bash scripts/ci/run_control_plane_budget_sync_probes_ci.sh
   run_cmd bash scripts/ci/run_control_plane_surface_materialization_probes_ci.sh
-  run_cmd bash scripts/ci/run_release_doc_surface_governance_probes_ci.sh
-  run_cmd bash scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh
-  run_cmd bash scripts/ci/run_v16x_release_closure_summary_probes_ci.sh
+  run_release_closure_surface_probe_gates
   run_cmd bash scripts/ci/run_release_readiness_health_projection_probes_ci.sh
   run_cmd bash scripts/ci/run_full_scan_required_gate_projection_probes_ci.sh
   run_cmd bash scripts/ci/run_full_scan_health_projection_probes_ci.sh

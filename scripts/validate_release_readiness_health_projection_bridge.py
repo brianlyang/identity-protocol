@@ -11,6 +11,9 @@ from governed_runtime_summary_surface_common import (
     build_governed_runtime_summary_surface_payload,
 )
 from release_closure_doc_common import resolve_release_closure_doc_paths
+from release_closure_surface_registry_common import (
+    release_closure_surface_spec_by_bundle_surface_id,
+)
 from repo_root_resolution_common import resolve_repo_root
 from health_report_experience_writeback_projection_common import (
     RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_BRIDGE_BOUNDARY_FIELDS,
@@ -81,7 +84,12 @@ EXPECTED_SURFACE_CONSTRAINTS: tuple[str, ...] = (
 )
 EXPECTED_VALIDATOR_COMMAND: tuple[str, ...] = ("python3", EXPECTED_VALIDATOR, "--json-only")
 EXPECTED_PROBE_COMMAND: tuple[str, ...] = ("bash", EXPECTED_PROBE)
-SUMMARY_VALIDATOR_REL = "scripts/validate_v16x_release_closure_summary.py"
+_SUMMARY_SURFACE_SPEC = release_closure_surface_spec_by_bundle_surface_id("summary")
+if _SUMMARY_SURFACE_SPEC is None:
+    raise RuntimeError(
+        "release_readiness_health_projection_bridge_missing_summary_surface_spec"
+    )
+SUMMARY_VALIDATOR_REL = _SUMMARY_SURFACE_SPEC.validator_script_rel
 RUNTIME_SUMMARY_SURFACE_GOVERNANCE_REL = "scripts/validate_runtime_summary_surface_governance.py"
 READINESS_CHECK_REL = "scripts/release_readiness_check.py"
 THREE_PLANE_REL = "scripts/report_three_plane_status.py"

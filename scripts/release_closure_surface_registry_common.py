@@ -72,6 +72,10 @@ def release_closure_surface_post_closure_governance_commands() -> tuple[tuple[st
     return tuple(spec.probe_command() for spec in RELEASE_CLOSURE_SURFACE_SPECS)
 
 
+def release_closure_surface_probe_script_rels() -> tuple[str, ...]:
+    return tuple(spec.probe_script_rel for spec in RELEASE_CLOSURE_SURFACE_SPECS)
+
+
 def release_closure_surface_spec_by_name(name: str) -> ReleaseClosureSurfaceSpec | None:
     return next((spec for spec in RELEASE_CLOSURE_SURFACE_SPECS if spec.name == name), None)
 
