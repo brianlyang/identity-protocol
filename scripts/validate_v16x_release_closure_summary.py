@@ -6,18 +6,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-from full_scan_required_gate_bundle_projection_common import (
-    FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
-)
-from health_report_experience_writeback_projection_common import (
-    RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_ONE_LOOK_FIELDS,
-)
-from release_cloud_evidence_projection_common import (
-    RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_SURFACE_CONSTRAINTS,
-)
-from release_closure_continuation_marker_common import (
-    RELEASE_CLOSURE_SUMMARY_CONTINUATION_MARKERS,
-)
 from release_closure_doc_common import (
     RELEASE_CLOSURE_DOC_REL_PATHS,
     collect_release_closure_issue_horizon_targets,
@@ -36,8 +24,8 @@ from release_closure_narrative_marker_common import (
 from release_closure_control_surface_literal_bundle_common import (
     collect_release_closure_summary_control_surface_literal_bundle_stale_reasons,
 )
-from release_closure_root_grounding_common import (
-    RELEASE_CLOSURE_ROOT_GROUNDING_SURFACE_CONSTRAINTS,
+from release_closure_projection_companion_marker_bundle_common import (
+    collect_release_closure_summary_projection_companion_bundle_stale_reasons,
 )
 from release_closure_bounded_projection_literal_bundle_common import (
     collect_release_closure_bounded_projection_literal_bundle_stale_reasons,
@@ -47,81 +35,12 @@ from release_closure_operational_marker_bundle_common import (
     collect_release_closure_operational_marker_bundle_stale_reasons,
 )
 from repo_root_resolution_common import resolve_protocol_repo_root
-from release_readiness_active_runtime_closure_projection_common import (
-    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
-)
-from release_readiness_repo_global_closure_projection_common import (
-    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OUTER_SURFACE_E2E_MARKERS,
-    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
-)
-from release_readiness_selected_check_scope_common import (
-    RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
-)
-from release_readiness_foundational_projection_common import (
-    RELEASE_READINESS_FOUNDATIONAL_SURFACE_CONSTRAINTS,
-)
-from release_readiness_one_look_topology_common import (
-    RELEASE_READINESS_ONE_LOOK_TOPOLOGY_SURFACE_CONSTRAINTS,
-)
-from release_readiness_post_closure_adjudication_common import (
-    RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_SURFACE_CONSTRAINTS,
-)
-from release_readiness_terminal_truth_bridge_common import (
-    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS,
-)
-from release_readiness_support_preflight_projection_common import (
-    RELEASE_READINESS_SUPPORT_PREFLIGHT_SURFACE_CONSTRAINTS,
-)
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_RELEASE_SUMMARY = "IP-RCSUM-001"
 FORBIDDEN_STALE_MARKERS = (
     "Workspace-local core-role required closure: **Go**",
     "workspace-local core release scope is now green on required closure",
-)
-REQUIRED_OUTER_SURFACE_E2E_MARKERS = (
-    "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh",
-    "terminal_truth_boundary_projection",
-    "three_plane_terminal_truth_boundary_projection",
-    "summary_terminal_truth_boundary",
-    "one_look.terminal_truth_boundary_projection_status",
-    *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OUTER_SURFACE_E2E_MARKERS,
-)
-REQUIRED_RELEASE_READINESS_HEALTH_PROJECTION_MARKERS = (
-    "scripts/ci/run_release_readiness_health_projection_probes_ci.sh",
-    "health_report_experience_writeback_closure",
-    *(
-        f"one_look.{field}"
-        for field in RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_ONE_LOOK_FIELDS
-    ),
-)
-REQUIRED_RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_MARKERS = (
-    *RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_SURFACE_CONSTRAINTS,
-)
-REQUIRED_RELEASE_READINESS_SELECTED_CHECK_SCOPE_MARKERS = (
-    *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
-)
-REQUIRED_RELEASE_READINESS_FOUNDATIONAL_MARKERS = (
-    *RELEASE_READINESS_FOUNDATIONAL_SURFACE_CONSTRAINTS,
-)
-REQUIRED_RELEASE_READINESS_ONE_LOOK_TOPOLOGY_MARKERS = (
-    *RELEASE_READINESS_ONE_LOOK_TOPOLOGY_SURFACE_CONSTRAINTS,
-)
-REQUIRED_RELEASE_READINESS_SUPPORT_PREFLIGHT_MARKERS = (
-    *RELEASE_READINESS_SUPPORT_PREFLIGHT_SURFACE_CONSTRAINTS,
-)
-REQUIRED_RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_MARKERS = (
-    *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS,
-)
-REQUIRED_RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_MARKERS = (
-    *RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_SURFACE_CONSTRAINTS,
-)
-REQUIRED_RELEASE_CLOSURE_ROOT_GROUNDING_MARKERS = (
-    *RELEASE_CLOSURE_ROOT_GROUNDING_SURFACE_CONSTRAINTS,
-)
-REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS = (
-    "scripts/ci/run_full_scan_required_gate_projection_probes_ci.sh",
-    *FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
 )
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -244,57 +163,12 @@ def main() -> int:
             label="summary_doc",
         )
     )
-    for marker in REQUIRED_OUTER_SURFACE_E2E_MARKERS:
-        if marker not in summary_text:
-            stale_reasons.append(f"summary_doc_missing_outer_surface_e2e_marker:{marker}")
-    for marker in REQUIRED_RELEASE_READINESS_HEALTH_PROJECTION_MARKERS:
-        if marker not in summary_text:
-            stale_reasons.append(
-                f"summary_doc_missing_release_readiness_health_projection_marker:{marker}"
-            )
-    for marker in REQUIRED_RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_MARKERS:
-        if marker not in summary_text:
-            stale_reasons.append(
-                f"summary_doc_missing_release_readiness_release_cloud_evidence_marker:{marker}"
-            )
-    for marker in REQUIRED_RELEASE_READINESS_SELECTED_CHECK_SCOPE_MARKERS:
-        if marker not in summary_text:
-            stale_reasons.append(
-                f"summary_doc_missing_release_readiness_selected_check_scope_marker:{marker}"
-            )
-    for marker in REQUIRED_RELEASE_READINESS_FOUNDATIONAL_MARKERS:
-        if marker not in summary_text:
-            stale_reasons.append(
-                f"summary_doc_missing_release_readiness_foundational_marker:{marker}"
-            )
-    for marker in REQUIRED_RELEASE_READINESS_ONE_LOOK_TOPOLOGY_MARKERS:
-        if marker not in summary_text:
-            stale_reasons.append(
-                f"summary_doc_missing_release_readiness_one_look_topology_marker:{marker}"
-            )
-    for marker in REQUIRED_RELEASE_READINESS_SUPPORT_PREFLIGHT_MARKERS:
-        if marker not in summary_text:
-            stale_reasons.append(
-                f"summary_doc_missing_release_readiness_support_preflight_marker:{marker}"
-            )
-    for marker in REQUIRED_RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_MARKERS:
-        if marker not in summary_text:
-            stale_reasons.append(
-                f"summary_doc_missing_release_readiness_terminal_truth_bridge_marker:{marker}"
-            )
-    for marker in REQUIRED_RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_MARKERS:
-        if marker not in summary_text:
-            stale_reasons.append(
-                f"summary_doc_missing_release_readiness_post_closure_adjudication_marker:{marker}"
-            )
-    for marker in REQUIRED_RELEASE_CLOSURE_ROOT_GROUNDING_MARKERS:
-        if marker not in summary_text:
-            stale_reasons.append(
-                f"summary_doc_missing_release_closure_root_grounding_marker:{marker}"
-            )
-    for marker in REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS:
-        if marker not in summary_text:
-            stale_reasons.append(f"summary_doc_missing_full_scan_required_gate_projection_marker:{marker}")
+    stale_reasons.extend(
+        collect_release_closure_summary_projection_companion_bundle_stale_reasons(
+            summary_text,
+            label="summary_doc",
+        )
+    )
     stale_reasons.extend(
         collect_release_closure_operational_marker_bundle_stale_reasons(
             summary_text,
@@ -302,11 +176,6 @@ def main() -> int:
             bundle_specs=RELEASE_CLOSURE_SUMMARY_OPERATIONAL_MARKER_BUNDLE_SPECS,
         )
     )
-    for marker in RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS:
-        if marker not in summary_text:
-            stale_reasons.append(
-                f"summary_doc_missing_active_runtime_closure_projection_marker:{marker}"
-            )
     stale_reasons.extend(
         collect_release_closure_summary_narrative_bundle_stale_reasons(
             summary_text,

@@ -13,9 +13,6 @@ from release_closure_doc_common import (
     parse_release_closure_issue_register,
     resolve_release_closure_doc_paths,
 )
-from release_closure_continuation_marker_common import (
-    RELEASE_CLOSURE_BOUNDARY_CONTINUATION_MARKERS,
-)
 from release_closure_foundational_marker_common import (
     collect_release_closure_boundary_foundational_bundle_stale_reasons,
     collect_release_closure_foundational_philosophy_bundle_stale_reasons,
@@ -26,8 +23,8 @@ from release_closure_narrative_marker_common import (
 from release_closure_control_surface_literal_bundle_common import (
     collect_release_closure_boundary_control_surface_literal_bundle_stale_reasons,
 )
-from release_closure_root_grounding_common import (
-    RELEASE_CLOSURE_ROOT_GROUNDING_SURFACE_CONSTRAINTS,
+from release_closure_projection_companion_marker_bundle_common import (
+    collect_release_closure_boundary_projection_companion_bundle_stale_reasons,
 )
 from release_closure_bounded_projection_literal_bundle_common import (
     collect_release_closure_bounded_projection_literal_bundle_stale_reasons,
@@ -37,29 +34,9 @@ from release_closure_operational_marker_bundle_common import (
     collect_release_closure_operational_marker_bundle_stale_reasons,
 )
 from repo_root_resolution_common import resolve_protocol_repo_root
-from release_readiness_active_runtime_closure_projection_common import (
-    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
-)
-from release_readiness_post_closure_adjudication_common import (
-    RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_SURFACE_CONSTRAINTS,
-)
-from release_readiness_repo_global_closure_projection_common import (
-    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
-)
-from release_readiness_terminal_truth_bridge_common import (
-    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS,
-)
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_RELEASE_CLOSURE = "IP-RCLOS-001"
-REQUIRED_OUTER_SURFACE_E2E_BOUNDARY_MARKERS = (
-    "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh",
-    "terminal_truth_boundary_projection",
-    "summary_terminal_truth_boundary",
-)
-REQUIRED_REPO_GLOBAL_CLOSURE_BOUNDARY_MARKERS = (
-    *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
-)
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
@@ -146,43 +123,23 @@ def main() -> int:
                 label=label,
             )
         )
-        for marker in REQUIRED_OUTER_SURFACE_E2E_BOUNDARY_MARKERS:
-            if marker not in text:
-                stale_reasons.append(f"{label}_missing_outer_surface_e2e_marker:{marker}")
+        stale_reasons.extend(
+            collect_release_closure_boundary_control_surface_literal_bundle_stale_reasons(
+                text,
+                label=label,
+            )
+        )
+        stale_reasons.extend(
+            collect_release_closure_boundary_projection_companion_bundle_stale_reasons(
+                text,
+                label=label,
+            )
+        )
         stale_reasons.extend(
             collect_release_closure_operational_marker_bundle_stale_reasons(
                 text,
                 label=label,
                 bundle_specs=RELEASE_CLOSURE_BOUNDARY_OPERATIONAL_MARKER_BUNDLE_SPECS,
-            )
-        )
-        for marker in RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS:
-            if marker not in text:
-                stale_reasons.append(
-                    f"{label}_missing_active_runtime_closure_projection_marker:{marker}"
-                )
-        for marker in RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS:
-            if marker not in text:
-                stale_reasons.append(
-                    f"{label}_missing_terminal_truth_bridge_marker:{marker}"
-                )
-        for marker in RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_SURFACE_CONSTRAINTS:
-            if marker not in text:
-                stale_reasons.append(
-                    f"{label}_missing_post_closure_adjudication_marker:{marker}"
-                )
-        for marker in RELEASE_CLOSURE_ROOT_GROUNDING_SURFACE_CONSTRAINTS:
-            if marker not in text:
-                stale_reasons.append(
-                    f"{label}_missing_release_closure_root_grounding_marker:{marker}"
-                )
-        for marker in REQUIRED_REPO_GLOBAL_CLOSURE_BOUNDARY_MARKERS:
-            if marker not in text:
-                stale_reasons.append(f"{label}_missing_repo_global_closure_boundary_marker:{marker}")
-        stale_reasons.extend(
-            collect_release_closure_boundary_control_surface_literal_bundle_stale_reasons(
-                text,
-                label=label,
             )
         )
         stale_reasons.extend(
