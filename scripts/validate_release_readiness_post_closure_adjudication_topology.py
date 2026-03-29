@@ -122,14 +122,17 @@ GOVERNANCE_TOPOLOGY_VALIDATOR_REL = (
     "scripts/validate_release_readiness_governance_probe_topology.py"
 )
 PROBE_REQUIRED_TOKENS: tuple[str, ...] = (
-    "scripts/validate_release_readiness_post_closure_adjudication_topology.py --json-only",
-    "scripts/ci/run_release_readiness_post_closure_adjudication_topology_probes_ci.sh",
+    "release_readiness_post_closure_adjudication_common",
+    "post_closure_adjudication_validator",
+    "post_closure_adjudication_probe",
+    "post_closure_adjudication_validator_command_literal",
+    "post_closure_adjudication_probe_command_literal",
+    "post_closure_adjudication_probe_summary_key",
+    "post_closure_adjudication_probe_one_look_field",
+    "post_closure_adjudication_probe_self_check_reason",
     "post_closure_adjudication_stage_order_changed",
     "post_closure_adjudication_command_slice_drift",
-    "post_closure_bundle_missing_validator:scripts/validate_release_readiness_post_closure_adjudication_topology.py --json-only",
-    "post_closure_bundle_missing_probe:scripts/ci/run_release_readiness_post_closure_adjudication_topology_probes_ci.sh",
     "governance_probe_capture_map_missing_post_closure_adjudication_probe",
-    "summary_binding_probe_missing_token:release_readiness_post_closure_adjudication_topology_probe",
 )
 
 
