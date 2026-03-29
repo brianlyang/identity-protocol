@@ -7,9 +7,9 @@ from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from root_contract_anchor_checks_common import (
+    append_expected_root_doc_anchor_stale_reasons,
     evaluate_root_doc_anchor_checks,
     root_doc_anchor_checks_from_doc,
-    validate_expected_root_doc_anchor_checks,
 )
 from root_contract_marker_checks_common import (
     contract_required_markers_from_doc,
@@ -28,16 +28,18 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
+from root_row_family_projection_common import project_root_contract_support_projection, project_row_families
 from root_error_terminality_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     collapse_rows_from_doc,
     differentiation_rows_from_doc,
+    error_class_rows_from_doc,
+    error_terminality_completeness_rows_from_doc,
     error_terminality_limit_rows_from_doc,
     error_terminality_proof_rows_from_doc,
-    error_class_rows_from_doc,
     load_root_error_terminality,
+    readme_error_terminality_completeness_surface,
 )
 
 STATUS_KEY = "protocol_root_error_terminality_status"
@@ -209,6 +211,28 @@ EXPECTED_COLLAPSE_ROWS = {
         "contract_phrase": "convenience, impatience, or local familiarity is treated as if it could lawfully demote a fail-close error.",
     },
 }
+EXPECTED_ERROR_TERMINALITY_COMPLETENESS_ROWS = {
+    "explicit_error_terminality_row_families": {
+        "order": 1,
+        "contract_phrase": "required error-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;",
+    },
+    "congruent_error_terminality_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_error_terminality_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_error_terminality_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize error-terminality truth while missing or unexpected row identities remain known only internally;",
+    },
+    "fail_close_preserves_error_terminality_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for error terminality law",
     "## Error terminality law",
@@ -226,30 +250,32 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "### Error-terminality row-family completeness must stay explicit",
         "Required error-class, differentiation, proof, limit, and collapse families must remain explicit as separate machine-readable row families.",
+        "README root error-terminality completeness discipline must therefore stay congruent with admitted error-terminality-completeness rows rather than becoming a freehand completeness summary.",
         "The machine world must not finalize error-terminality legality while required row identity drift remains known only internally.",
     ),
     "identity/protocol/README.md": (
         "## Root error-terminality completeness discipline",
         "Error-terminality law is not a soft prose bundle.",
+        "These error-terminality-completeness rules must remain bound to canonical error-terminality-completeness rows rather than drifting into soft summary prose.",
         "1. required error-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root error-terminality completeness boundary",
         "1. Error-terminality law must remain machine-readable as separate error-class, differentiation, proof, limit, and collapse row families.",
         "4. Protocol legality must not finalize error-terminality truth while missing or unexpected row identities remain known only inside validator logic.",
+        "6. README root error-terminality completeness discipline rendered at protocol root must remain congruent with admitted error-terminality-completeness rows rather than silently authoring an alternate completeness summary.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime error-terminality consumption boundary",
         "1. Runtime consumes error-terminality law as separate error-class, differentiation, proof, limit, and collapse row families rather than as undifferentiated terminality prose.",
         "4. Runtime must not finalize error-terminality legality while missing or unexpected row identities remain known only inside validator machinery.",
+        "6. Runtime consumes README root error-terminality completeness discipline as a governed completeness projection bound to admitted error-terminality-completeness rows rather than as a freehand completeness summary.",
     ),
 }
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
-
-
 
 
 def main() -> int:
@@ -299,6 +325,8 @@ def main() -> int:
     error_terminality_proof_rows = error_terminality_proof_rows_from_doc(error_doc) if error_doc else ()
     error_terminality_limit_rows = error_terminality_limit_rows_from_doc(error_doc) if error_doc else ()
     collapse_rows = collapse_rows_from_doc(error_doc) if error_doc else ()
+    error_terminality_completeness_rows = error_terminality_completeness_rows_from_doc(error_doc) if error_doc else ()
+    error_terminality_completeness_surface = readme_error_terminality_completeness_surface(repo_root)
     root_doc_anchor_checks = root_doc_anchor_checks_from_doc(error_doc) if error_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -333,6 +361,7 @@ def main() -> int:
             ("required_error_terminality_proof_rows", error_terminality_proof_rows),
             ("required_error_terminality_limit_rows", error_terminality_limit_rows),
             ("required_collapse_rows", collapse_rows),
+            ("error_terminality_completeness_rows", error_terminality_completeness_rows),
         ):
             if not rows:
                 stale_reasons.append(f"root_error_terminality_{field}_missing")
@@ -340,15 +369,12 @@ def main() -> int:
         if not error_doc.get("contract_required_markers"):
             stale_reasons.append("root_error_terminality_contract_required_markers_missing")
             error_code = ERR_REGISTRY
-        anchor_reason_count_before = len(stale_reasons)
-        stale_reasons.extend(
-            validate_expected_root_doc_anchor_checks(
-                root_doc_anchor_checks,
-                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
-                stale_reason_prefix="root_error_terminality",
-            )
-        )
-        if len(stale_reasons) > anchor_reason_count_before:
+        if append_expected_root_doc_anchor_stale_reasons(
+            stale_reasons,
+            root_doc_anchor_checks,
+            EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+            stale_reason_prefix="root_error_terminality",
+        ):
             error_code = ERR_REGISTRY
 
         for field in ("contract_file", "philosophy_anchor_file", "validator_script", "probe_script", "common_script"):
@@ -395,6 +421,20 @@ def main() -> int:
                     "expected_rows": EXPECTED_COLLAPSE_ROWS,
                     "id_attr": "row_id",
                 },
+                {
+                    "family_id": "error_terminality_completeness_rows",
+                    "member_id_key": "completeness_id",
+                    "actual_rows": error_terminality_completeness_rows,
+                    "expected_rows": EXPECTED_ERROR_TERMINALITY_COMPLETENESS_ROWS,
+                    "id_attr": "completeness_id",
+                },
+                {
+                    "family_id": "error_terminality_completeness_surface",
+                    "member_id_key": "contract_phrase",
+                    "actual_rows": error_terminality_completeness_surface.rows,
+                    "expected_rows": {row["contract_phrase"]: {"order": int(row["order"])} for row in EXPECTED_ERROR_TERMINALITY_COMPLETENESS_ROWS.values()},
+                    "id_attr": "contract_phrase",
+                },
             ),
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
@@ -437,10 +477,70 @@ def main() -> int:
                     "id_attr": "row_id",
                     "compare_fields": ("contract_phrase",),
                 },
+                {
+                    "actual_rows": error_terminality_completeness_rows,
+                    "expected_rows": EXPECTED_ERROR_TERMINALITY_COMPLETENESS_ROWS,
+                    "field_name": "error_terminality_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "duplicate_reason": "duplicate_error_terminality_completeness_id",
+                    "non_contiguous_reason": "error_terminality_completeness_row_order_non_contiguous",
+                    "missing_reason": "missing_error_terminality_completeness_rows",
+                    "extra_reason": "extra_error_terminality_completeness_rows",
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                    "order_reason": "error_terminality_completeness_row_order_mismatch",
+                },
+                {
+                    "actual_rows": error_terminality_completeness_surface.rows,
+                    "expected_rows": {row["contract_phrase"]: {"order": int(row["order"])} for row in EXPECTED_ERROR_TERMINALITY_COMPLETENESS_ROWS.values()},
+                    "field_name": "error_terminality_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_error_terminality_completeness_surface_phrase",
+                    "non_contiguous_reason": "error_terminality_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_error_terminality_completeness_surface_rows",
+                    "extra_reason": "extra_error_terminality_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "error_terminality_completeness_surface_order_mismatch",
+                },
             ),
             structure_violations=structure_violations,
             terminality_violations=terminality_violations,
         )
+
+        expected_phrases = [row["contract_phrase"] for row in EXPECTED_ERROR_TERMINALITY_COMPLETENESS_ROWS.values()]
+        actual_phrases = [row.contract_phrase for row in error_terminality_completeness_surface.rows]
+        expected_orders = [int(row["order"]) for row in EXPECTED_ERROR_TERMINALITY_COMPLETENESS_ROWS.values()]
+        actual_orders = [row.order for row in error_terminality_completeness_surface.rows]
+        for reason in error_terminality_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "error_terminality_completeness_surface",
+                    "reason": f"error_terminality_completeness_surface_{reason}",
+                }
+            )
+        if actual_phrases and tuple(actual_phrases) != tuple(expected_phrases):
+            terminality_violations.append(
+                {
+                    "field": "error_terminality_completeness_surface",
+                    "reason": "error_terminality_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_phrases,
+                    "actual": actual_phrases,
+                }
+            )
+        if actual_orders and tuple(actual_orders) != tuple(expected_orders):
+            terminality_violations.append(
+                {
+                    "field": "error_terminality_completeness_surface",
+                    "reason": "error_terminality_completeness_surface_order_mismatch",
+                    "expected": expected_orders,
+                    "actual": actual_orders,
+                }
+            )
 
         contract_file = str(error_doc.get("contract_file") or "").strip()
         contract_path = (repo_root / contract_file).resolve()
@@ -489,7 +589,7 @@ def main() -> int:
                 routing_anchors=routing_anchors,
                 routing_projections=routing_projections,
                 expected_registry_markers=EXPECTED_REGISTRY_MARKERS,
-                mappings_required_children=('root-error-terminality.current.yaml', 'root-error-terminality.v1.yaml'),
+                mappings_required_children=("root-error-terminality.current.yaml", "root-error-terminality.v1.yaml"),
                 expected_authority_markers=EXPECTED_AUTHORITY_MARKERS,
                 expected_routing_markers=EXPECTED_ROUTING_MARKERS,
             )
@@ -526,6 +626,7 @@ def main() -> int:
         "error_terminality_proof_count": len(error_terminality_proof_rows),
         "error_terminality_limit_count": len(error_terminality_limit_rows),
         "collapse_count": len(collapse_rows),
+        "error_terminality_completeness_row_count": len(error_terminality_completeness_rows),
         **project_root_contract_support_projection(
             prefix="error_terminality",
             row_family_projection_rows=row_family_projection_rows,
@@ -540,6 +641,19 @@ def main() -> int:
         "error_terminality_proof_ids": [row.proof_id for row in sorted(error_terminality_proof_rows, key=lambda item: item.order)],
         "error_terminality_limit_ids": [row.row_id for row in sorted(error_terminality_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
+        "error_terminality_completeness_rows": [
+            {"order": row.order, "completeness_id": row.completeness_id, "contract_phrase": row.contract_phrase}
+            for row in sorted(error_terminality_completeness_rows, key=lambda item: item.order)
+        ],
+        "error_terminality_completeness_surface": {
+            "rel_path": error_terminality_completeness_surface.rel_path,
+            "entry_count": len(error_terminality_completeness_surface.rows),
+            "entries": [
+                {"order": row.order, "contract_phrase": row.contract_phrase}
+                for row in error_terminality_completeness_surface.rows
+            ],
+            "extraction_violations": list(error_terminality_completeness_surface.extraction_violations),
+        },
         "structure_violations": structure_violations,
         "terminality_violations": terminality_violations,
         "integration_violations": integration_violations,

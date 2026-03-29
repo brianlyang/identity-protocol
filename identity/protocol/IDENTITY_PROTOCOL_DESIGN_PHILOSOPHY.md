@@ -1470,6 +1470,10 @@ rows behind aggregate counts.
 Required error-class, differentiation, proof, limit, and collapse families
 must remain explicit as separate machine-readable row families.
 
+README root error-terminality completeness discipline must therefore stay
+congruent with admitted error-terminality-completeness rows rather than
+becoming a freehand completeness summary.
+
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left
 implicit.
@@ -1764,6 +1768,10 @@ machine rows behind aggregate counts.
 
 Required component-row and component-status-row families must remain explicit
 as separate machine-readable row families.
+
+README root law-bundle component-row completeness discipline must therefore
+stay congruent with admitted law-bundle-component-row-completeness rows
+rather than becoming a freehand completeness summary.
 
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left

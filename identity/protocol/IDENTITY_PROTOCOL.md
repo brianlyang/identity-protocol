@@ -325,6 +325,7 @@ implicit.
 3. Expected row identity set and emitted row identity set for each error-terminality family must also remain explicit; identity drift may not be collapsed into summary-only counts.
 4. Protocol legality must not finalize error-terminality truth while missing or unexpected row identities remain known only inside validator logic.
 5. Fail-close error-terminality output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+6. README root error-terminality completeness discipline rendered at protocol root must remain congruent with admitted error-terminality-completeness rows rather than silently authoring an alternate completeness summary.
 
 ## Root truth-lifecycle completeness boundary
 
@@ -406,6 +407,7 @@ implicit.
 3. Expected row identity set and emitted row identity set for each law-bundle family must also remain explicit; component identity drift may not be collapsed into summary-only counts.
 4. Protocol legality must not finalize root-law bundle legality while missing or unexpected component identities remain known only inside validator logic.
 5. Fail-close root-law bundle output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+6. README root law-bundle component-row completeness discipline rendered at protocol root must remain congruent with admitted law-bundle-component-row-completeness rows rather than silently authoring an alternate completeness summary.
 
 ## Root-law bundle boundary
 

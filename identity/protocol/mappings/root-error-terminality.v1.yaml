@@ -35,23 +35,47 @@ anchor_checks:
       - '### Error-terminality row-family completeness must stay explicit'
       - Required error-class, differentiation, proof, limit, and collapse families
         must remain explicit as separate machine-readable row families.
+      - README root error-terminality completeness discipline must therefore stay
+        congruent with admitted error-terminality-completeness rows rather than
+        becoming a freehand completeness summary.
       - The machine world must not finalize error-terminality legality while required
         row identity drift remains known only internally.
   - rel_path: identity/protocol/README.md
     required_markers:
       - '## Root error-terminality completeness discipline'
       - Error-terminality law is not a soft prose bundle.
+      - These error-terminality-completeness rules must remain bound to canonical
+        error-terminality-completeness rows rather than drifting into soft
+        summary prose.
       - '1. required error-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;'
   - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
     required_markers:
       - '## Root error-terminality completeness boundary'
       - '1. Error-terminality law must remain machine-readable as separate error-class, differentiation, proof, limit, and collapse row families.'
       - '4. Protocol legality must not finalize error-terminality truth while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root error-terminality completeness discipline rendered at protocol root must remain congruent with admitted error-terminality-completeness rows rather than silently authoring an alternate completeness summary.'
   - rel_path: identity/protocol/IDENTITY_RUNTIME.md
     required_markers:
       - '## Runtime error-terminality consumption boundary'
       - '1. Runtime consumes error-terminality law as separate error-class, differentiation, proof, limit, and collapse row families rather than as undifferentiated terminality prose.'
       - '4. Runtime must not finalize error-terminality legality while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root error-terminality completeness discipline as a governed completeness projection bound to admitted error-terminality-completeness rows rather than as a freehand completeness summary.'
+error_terminality_completeness_rows:
+  - order: 1
+    completeness_id: explicit_error_terminality_row_families
+    contract_phrase: required error-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;
+  - order: 2
+    completeness_id: congruent_error_terminality_row_family_totals
+    contract_phrase: expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+  - order: 3
+    completeness_id: explicit_error_terminality_row_identity_sets
+    contract_phrase: expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+  - order: 4
+    completeness_id: hidden_error_terminality_identity_drift_forbidden
+    contract_phrase: runtime or validator code must not finalize error-terminality truth while missing or unexpected row identities remain known only internally;
+  - order: 5
+    completeness_id: fail_close_preserves_error_terminality_identity_projection
+    contract_phrase: fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
 required_error_class_rows:
   - order: 1
     error_class_id: frozen_error_definition

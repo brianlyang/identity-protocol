@@ -642,6 +642,7 @@ Identity-discovery law is not a soft prose bundle.
 ## Root error-terminality completeness discipline
 
 Error-terminality law is not a soft prose bundle.
+These error-terminality-completeness rules must remain bound to canonical error-terminality-completeness rows rather than drifting into soft summary prose.
 
 1. required error-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
@@ -776,6 +777,7 @@ These identity-instance-self-judgement-completeness rules must remain bound to c
 ## Root law-bundle component-row completeness discipline
 
 Root-law bundle coherence is not a soft prose bundle.
+These law-bundle-component-row-completeness rules must remain bound to canonical law-bundle-component-row-completeness rows rather than drifting into soft summary prose.
 
 1. required component-row and component-status-row rows must remain explicit as separate machine-readable row families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
