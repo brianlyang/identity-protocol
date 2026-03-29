@@ -421,6 +421,14 @@ the most convenient file discovered on disk.
 
 Hidden enforcement knowledge does not satisfy registry completeness.
 
+These machine-registry-completeness rules must remain bound to canonical machine-registry-completeness rows rather than drifting into soft summary prose.
+
+1. required registered-complete-root-mapping-family, family-status-row, family-validator-surface-contract-row, and family-probe-surface-contract-row rows must remain explicit as separate machine-readable row families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize machine-registry completeness truth while missing or unexpected family or contract-row identities remain known only internally;
+5. fail-close machine output must preserve violation-reason projection and row-identity drift rather than hiding registry completeness drift behind shorthand counts or generic structure failure.
+
 Repo-relative descriptor surfaces must also stay repo-root relative and
 repo-contained; absolute paths and parent-escape paths are non-compliant even
 if they exist locally.

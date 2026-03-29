@@ -13,6 +13,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_row_validation_common import validate_contract_row_batches
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_machine_registry_completeness_common import (
     default_surface_stem_from_family_id,
@@ -26,10 +27,12 @@ from root_machine_registry_completeness_common import (
     extract_validator_status_key,
     load_mapping_descriptor,
     load_root_machine_registry_completeness,
+    machine_registry_completeness_rows_from_doc,
     repo_rel_path_escape_policy_from_doc,
     repo_rel_path_pattern_matches,
     repo_rel_path_role_typing_policy_from_doc,
     repo_rel_path_surface_stem_policy_from_doc,
+    readme_machine_registry_completeness_surface,
     repo_rel_path_scope_policy_from_doc,
     resolve_repo_relative_surface,
     required_probe_surface_contract_fields_from_doc,
@@ -64,6 +67,28 @@ REQUIRED_PROBE_SURFACE_CONTRACT_VALUES = {
     "probe_shadow_bootstrap_contract": (
         "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings"
     ),
+}
+EXPECTED_MACHINE_REGISTRY_COMPLETENESS_ROWS = {
+    "explicit_machine_registry_row_families": {
+        "order": 1,
+        "contract_phrase": "required registered-complete-root-mapping-family, family-status-row, family-validator-surface-contract-row, and family-probe-surface-contract-row rows must remain explicit as separate machine-readable row families;",
+    },
+    "congruent_machine_registry_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_machine_registry_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_machine_registry_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize machine-registry completeness truth while missing or unexpected family or contract-row identities remain known only internally;",
+    },
+    "fail_close_preserves_machine_registry_violation_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve violation-reason projection and row-identity drift rather than hiding registry completeness drift behind shorthand counts or generic structure failure.",
+    },
 }
 
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
@@ -100,6 +125,8 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "5. an admitted root mapping family must also disclose its validator root-doc-anchor and row-projection contract surfaces as machine-readable surface rows;",
         "5a. an admitted root mapping family must also disclose its probe shadow-bootstrap contract surfaces as machine-readable surface rows;",
         "Hidden enforcement knowledge does not satisfy registry completeness.",
+        "These machine-registry-completeness rules must remain bound to canonical machine-registry-completeness rows rather than drifting into soft summary prose.",
+        "1. required registered-complete-root-mapping-family, family-status-row, family-validator-surface-contract-row, and family-probe-surface-contract-row rows must remain explicit as separate machine-readable row families;",
         "Repo-relative descriptor surfaces must also stay repo-root relative and",
         "if they exist locally.",
         "Repo-relative descriptor surfaces must also remain role-typed; validator, probe, and shared-common paths are not interchangeable repo files.",
@@ -198,6 +225,14 @@ def main() -> int:
             error_code = ERR_REGISTRY
 
     anchor_checks = anchor_checks_from_doc(completeness_doc) if completeness_doc else ()
+    machine_registry_completeness_rows = (
+        machine_registry_completeness_rows_from_doc(completeness_doc)
+        if completeness_doc
+        else ()
+    )
+    machine_registry_completeness_surface = (
+        readme_machine_registry_completeness_surface(repo_root)
+    )
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     self_describing_required = require_self_describing_families(completeness_doc) if completeness_doc else False
     required_descriptor_fields = required_descriptor_fields_from_doc(completeness_doc) if completeness_doc else ()
@@ -327,6 +362,9 @@ def main() -> int:
 
         if not anchor_checks:
             stale_reasons.append("root_machine_registry_completeness_anchor_checks_missing")
+            error_code = ERR_REGISTRY
+        if not machine_registry_completeness_rows:
+            stale_reasons.append("root_machine_registry_completeness_rows_missing")
             error_code = ERR_REGISTRY
 
         for field in ("registry_current_file", "validator_script", "probe_script", "common_script"):
@@ -1030,6 +1068,87 @@ def main() -> int:
                     }
                 )
 
+        for reason in machine_registry_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "machine_registry_completeness_surface",
+                    "reason": f"machine_registry_completeness_surface_{reason}",
+                }
+            )
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": machine_registry_completeness_rows,
+                    "expected_rows": EXPECTED_MACHINE_REGISTRY_COMPLETENESS_ROWS,
+                    "field_name": "machine_registry_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "duplicate_reason": "duplicate_machine_registry_completeness_id",
+                    "non_contiguous_reason": "machine_registry_completeness_row_order_non_contiguous",
+                    "missing_reason": "missing_machine_registry_completeness_rows",
+                    "extra_reason": "extra_machine_registry_completeness_rows",
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                    "order_reason": "machine_registry_completeness_row_order_mismatch",
+                },
+                {
+                    "actual_rows": machine_registry_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_MACHINE_REGISTRY_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "machine_registry_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_machine_registry_completeness_surface_phrase",
+                    "non_contiguous_reason": "machine_registry_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_machine_registry_completeness_surface_rows",
+                    "extra_reason": "extra_machine_registry_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "machine_registry_completeness_surface_order_mismatch",
+                },
+            ),
+            structure_violations=structure_violations,
+            support_violations=completeness_violations,
+        )
+        expected_machine_registry_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_MACHINE_REGISTRY_COMPLETENESS_ROWS.values()
+        ]
+        actual_machine_registry_completeness_phrases = [
+            row.contract_phrase for row in machine_registry_completeness_surface.rows
+        ]
+        expected_machine_registry_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_MACHINE_REGISTRY_COMPLETENESS_ROWS.values()
+        ]
+        actual_machine_registry_completeness_orders = [
+            row.order for row in machine_registry_completeness_surface.rows
+        ]
+        if actual_machine_registry_completeness_phrases and tuple(
+            actual_machine_registry_completeness_phrases
+        ) != tuple(expected_machine_registry_completeness_phrases):
+            completeness_violations.append(
+                {
+                    "field": "machine_registry_completeness_surface",
+                    "reason": "machine_registry_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_machine_registry_completeness_phrases,
+                    "actual": actual_machine_registry_completeness_phrases,
+                }
+            )
+        if actual_machine_registry_completeness_orders and tuple(
+            actual_machine_registry_completeness_orders
+        ) != tuple(expected_machine_registry_completeness_orders):
+            completeness_violations.append(
+                {
+                    "field": "machine_registry_completeness_surface",
+                    "reason": "machine_registry_completeness_surface_order_mismatch",
+                    "expected": expected_machine_registry_completeness_orders,
+                    "actual": actual_machine_registry_completeness_orders,
+                }
+            )
+
         anchor_violations.extend(
             evaluate_root_doc_anchor_checks(
                 repo_root,
@@ -1159,10 +1278,33 @@ def main() -> int:
                 },
                 "id_attr": "contract_row_id",
             },
+            {
+                "family_id": "machine_registry_completeness_rows",
+                "member_id_key": "completeness_id",
+                "actual_rows": machine_registry_completeness_rows,
+                "expected_rows": {
+                    completeness_id: {}
+                    for completeness_id in EXPECTED_MACHINE_REGISTRY_COMPLETENESS_ROWS
+                },
+                "id_attr": "completeness_id",
+            },
+            {
+                "family_id": "machine_registry_completeness_surface",
+                "member_id_key": "contract_phrase",
+                "actual_rows": machine_registry_completeness_surface.rows,
+                "expected_rows": {
+                    row["contract_phrase"]: {}
+                    for row in EXPECTED_MACHINE_REGISTRY_COMPLETENESS_ROWS.values()
+                },
+                "id_attr": "contract_phrase",
+            },
         ),
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    row_family_projection_by_id = {
+        row["family_id"]: row for row in row_family_projection_rows
+    }
     payload = {
         STATUS_KEY: status,
         "completeness_family": str(completeness_doc.get("completeness_family") or ""),
@@ -1240,6 +1382,7 @@ def main() -> int:
         "probe_surface_contract_row_identity_projection_status": (
             probe_surface_contract_row_identity_projection_status
         ),
+        "machine_registry_completeness_row_count": len(machine_registry_completeness_rows),
         **project_root_contract_support_projection(
             prefix="machine_registry_completeness",
             row_family_projection_rows=row_family_projection_rows,
@@ -1248,6 +1391,18 @@ def main() -> int:
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         ),
+        "machine_registry_completeness_canonical_row_coverage_status": row_family_projection_by_id[
+            "machine_registry_completeness_rows"
+        ]["coverage_status"],
+        "machine_registry_completeness_canonical_row_identity_projection_status": row_family_projection_by_id[
+            "machine_registry_completeness_rows"
+        ]["identity_projection_status"],
+        "machine_registry_completeness_surface_coverage_status": row_family_projection_by_id[
+            "machine_registry_completeness_surface"
+        ]["coverage_status"],
+        "machine_registry_completeness_surface_identity_projection_status": row_family_projection_by_id[
+            "machine_registry_completeness_surface"
+        ]["identity_projection_status"],
         "structure_violation_count": len(structure_violations),
         "completeness_violation_count": len(completeness_violations),
         "anchor_violation_count": len(anchor_violations),
@@ -1258,6 +1413,28 @@ def main() -> int:
         "violation_projection_status": violation_projection_status,
         "family_ids": [row["family_id"] for row in family_status_rows],
         "row_family_projection_rows": row_family_projection_rows,
+        "machine_registry_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted(machine_registry_completeness_rows, key=lambda item: item.order)
+        ],
+        "machine_registry_completeness_surface": {
+            "rel_path": machine_registry_completeness_surface.rel_path,
+            "entry_count": len(machine_registry_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in machine_registry_completeness_surface.rows
+            ],
+            "extraction_violations": list(
+                machine_registry_completeness_surface.extraction_violations
+            ),
+        },
         "family_status_rows": family_status_rows,
         "structure_violations": structure_violations,
         "completeness_violations": completeness_violations,

@@ -64,9 +64,14 @@ assert payload["probe_surface_contract_row_count"] == payload["family_count"], p
 assert payload["expected_family_probe_surface_contract_row_count"] == payload["family_count"], payload
 assert payload["probe_surface_contract_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["probe_surface_contract_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["machine_registry_completeness_row_family_count"] == 4, payload
+assert payload["machine_registry_completeness_row_family_count"] == 6, payload
 assert payload["machine_registry_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["machine_registry_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["machine_registry_completeness_row_count"] == 5, payload
+assert payload["machine_registry_completeness_canonical_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_registry_completeness_canonical_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["machine_registry_completeness_surface"]["entry_count"] == 5, payload
+assert payload["machine_registry_completeness_surface"]["extraction_violations"] == [], payload
 assert payload["family_ids"] == payload["family_status_row_ids"] == payload["discovered_family_ids"], payload
 assert payload["registered_complete_family_ids"] == payload["discovered_family_ids"], payload
 assert payload["missing_family_status_row_ids"] == [], payload
@@ -131,6 +136,8 @@ assert {row["family_id"] for row in payload["row_family_projection_rows"]} == {
     "family_status_rows",
     "family_validator_surface_contract_rows",
     "family_probe_surface_contract_rows",
+    "machine_registry_completeness_rows",
+    "machine_registry_completeness_surface",
 }, payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
@@ -149,6 +156,14 @@ contract_row = next(
 probe_contract_row = next(
     row for row in payload["row_family_projection_rows"]
     if row["family_id"] == "family_probe_surface_contract_rows"
+)
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "machine_registry_completeness_rows"
+)
+completeness_surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "machine_registry_completeness_surface"
 )
 assert registered_row["expected_count"] == payload["registered_complete_family_count"], payload
 assert registered_row["actual_count"] == payload["discovered_family_count"], payload
@@ -174,6 +189,156 @@ assert probe_contract_row["missing_ids"] == [], payload
 assert probe_contract_row["unexpected_ids"] == [], payload
 assert probe_contract_row["coverage_status"] == "PASS_REQUIRED", payload
 assert probe_contract_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == payload["machine_registry_completeness_row_count"], payload
+assert completeness_row["missing_ids"] == [], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "PASS_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert completeness_surface_row["expected_count"] == 5, payload
+assert completeness_surface_row["actual_count"] == payload["machine_registry_completeness_surface"]["entry_count"], payload
+assert completeness_surface_row["missing_ids"] == [], payload
+assert completeness_surface_row["unexpected_ids"] == [], payload
+assert completeness_surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert completeness_surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+MISSING_COMPLETENESS_REPO="${TMP_ROOT}/missing-machine-registry-completeness-row-repo"
+mirror_repo "${MISSING_COMPLETENESS_REPO}"
+python3 - <<'PY' "${MISSING_COMPLETENESS_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["machine_registry_completeness_rows"] = doc["machine_registry_completeness_rows"][:-1]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+MISSING_COMPLETENESS_JSON="${TMP_ROOT}/missing-machine-registry-completeness-row.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${MISSING_COMPLETENESS_REPO}" \
+  --json-only >"${MISSING_COMPLETENESS_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed missing canonical completeness row"
+  exit 1
+fi
+
+python3 - <<'PY' "${MISSING_COMPLETENESS_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-002", payload
+assert payload["machine_registry_completeness_row_family_count"] == 6, payload
+assert payload["machine_registry_completeness_row_count"] == 4, payload
+assert any(
+    row["field"] == "machine_registry_completeness_rows"
+    and row["reason"] == "missing_machine_registry_completeness_rows"
+    and "fail_close_preserves_machine_registry_violation_projection" in row.get("completeness_ids", [])
+    for row in payload["structure_violations"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "machine_registry_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 4, payload
+assert completeness_row["missing_ids"] == ["fail_close_preserves_machine_registry_violation_projection"], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/machine-registry-completeness-surface-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+new = "2. expected row-family totals may be summarized informally once registry output still looks green;"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_JSON="${TMP_ROOT}/machine-registry-completeness-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${COMPLETENESS_SURFACE_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed canonical completeness surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-002", payload
+assert any(
+    row["field"] == "machine_registry_completeness_surface"
+    and row["reason"] == "missing_machine_registry_completeness_surface_rows"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "machine_registry_completeness_surface"
+    and row["reason"] == "extra_machine_registry_completeness_surface_rows"
+    for row in payload["structure_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "machine_registry_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+COMPLETENESS_BINDING_REPO="${TMP_ROOT}/machine-registry-completeness-binding-drift-repo"
+mirror_repo "${COMPLETENESS_BINDING_REPO}"
+python3 - <<'PY' "${COMPLETENESS_BINDING_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "These machine-registry-completeness rules must remain bound to canonical machine-registry-completeness rows rather than drifting into soft summary prose."
+new = "These machine-registry completeness rules may be summarized freely once reviewers understand the intent."
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPLETENESS_BINDING_JSON="${TMP_ROOT}/machine-registry-completeness-binding-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${COMPLETENESS_BINDING_REPO}" \
+  --json-only >"${COMPLETENESS_BINDING_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed canonical completeness binding drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_BINDING_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md"
+    and row["reason"] == "required_marker_missing"
+    and "These machine-registry-completeness rules must remain bound to canonical machine-registry-completeness rows rather than drifting into soft summary prose." in row.get("marker", "")
+    for row in payload["anchor_violations"]
+), payload
 PY
 
 SOURCE_POLICY_REPO="${TMP_ROOT}/source-policy-drift-repo"
@@ -879,7 +1044,7 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RMRC-003", payload
+assert payload["error_code"] == "IP-RMRC-002", payload
 assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["rel_path"] == "identity/protocol/README.md" and row["reason"] == "required_marker_missing"
