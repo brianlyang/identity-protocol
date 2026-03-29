@@ -32,6 +32,12 @@ gateway_anchor_checks:
     incoming motivation may not retag gateway output as a different answer class;
   - gateway admission does not let an incoming surface inherit the gateway's authorship.
   - 'The governed re-entry chain stays explicit as: constitution -> runtime constitution -> root contract -> machine-registry.'
+  - '## Root gateway-admissibility completeness discipline'
+  - These gateway-admissibility-completeness rules must remain bound to canonical
+    gateway-admissibility-completeness rows rather than drifting into soft summary
+    prose.
+  - '1. required gateway-order, gateway-effect-target, and gateway-profile rows
+    must remain explicit as separate machine-readable row families;'
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
   - '### Gateway admission must preserve source order'
@@ -43,6 +49,12 @@ gateway_anchor_checks:
   - gateway output must also retain the question class governed for that target layer,
     rather than inheriting a new answer class from incoming motivation;
   - 'The governed re-entry chain must stay explicit as: constitution -> runtime constitution -> root contract -> machine-registry.'
+  - '### Gateway-admissibility row-family completeness must stay explicit'
+  - README root gateway-admissibility completeness discipline must therefore stay
+    congruent with admitted gateway-admissibility-completeness rows rather than
+    becoming a freehand completeness summary.
+  - The machine world must not finalize gateway-admissibility legality while required
+    gateway identity drift remains known only internally.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root gateway-admissibility boundary'
@@ -54,6 +66,15 @@ gateway_anchor_checks:
   - Machine-registry gateway may terminate current-turn legality, but that does not
     let incoming motivation surfaces author upstream law.
   - '   - governed re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry'
+  - '## Root gateway-admissibility completeness boundary'
+  - '1. Gateway-admissibility law must remain machine-readable as separate gateway-order,
+    gateway-effect-target, and gateway-profile row families.'
+  - '4. Protocol legality must not finalize gateway-admissibility legality while
+    missing or unexpected gateway identities remain known only inside validator
+    logic.'
+  - '6. README root gateway-admissibility completeness discipline rendered at protocol
+    root must remain congruent with admitted gateway-admissibility-completeness
+    rows rather than silently authoring an alternate completeness summary.'
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime-origin gateway-admissibility boundary'
@@ -66,6 +87,32 @@ gateway_anchor_checks:
   - Runtime motivation entering a gateway still requires governed refreezing or governed
     projection before it becomes shared law.
   - 'Runtime-origin gateway progression still follows the explicit re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry.'
+  - '## Runtime gateway-admissibility consumption boundary'
+  - '1. Runtime consumes gateway-admissibility law as separate gateway-order, gateway-effect-target,
+    and gateway-profile row families rather than as undifferentiated gateway prose.'
+  - '4. Runtime must not finalize gateway-admissibility legality while missing or
+    unexpected gateway identities remain known only inside validator machinery.'
+  - '6. Runtime consumes README root gateway-admissibility completeness discipline
+    as a governed completeness projection bound to admitted gateway-admissibility-completeness
+    rows rather than as a freehand completeness summary.'
+gateway_admissibility_completeness_rows:
+- order: 1
+  completeness_id: explicit_gateway_admissibility_row_families
+  contract_phrase: 'required gateway-order, gateway-effect-target, and gateway-profile rows must remain explicit as separate machine-readable row families;'
+- order: 2
+  completeness_id: congruent_gateway_admissibility_row_family_totals
+  contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+- order: 3
+  completeness_id: explicit_gateway_admissibility_row_identity_sets
+  contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+- order: 4
+  completeness_id: hidden_gateway_admissibility_identity_drift_forbidden
+  contract_phrase: 'runtime or validator code must not finalize gateway-admissibility legality while missing or unexpected gateway identities remain known only internally;'
+- order: 5
+  completeness_id: fail_close_preserves_gateway_admissibility_identity_projection
+  contract_phrase: fail-close machine output must preserve missing/unexpected row identity
+    projection rather than hiding drift behind row-count shorthand or generic structure
+    failure.
 gateway_order:
 - order: 1
   gateway_class: constitution

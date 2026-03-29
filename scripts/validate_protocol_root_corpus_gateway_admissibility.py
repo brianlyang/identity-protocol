@@ -13,17 +13,19 @@ from root_contract_anchor_checks_common import (
     validate_expected_root_doc_anchor_checks,
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
-from root_contract_row_validation_common import contiguous_orders
+from root_contract_row_validation_common import contiguous_orders, validate_contract_row_batches
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_authority_common import authority_class_profiles_from_doc, load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     gateway_anchor_checks_from_doc,
+    gateway_admissibility_completeness_rows_from_doc,
     gateway_effect_targets_from_doc,
     gateway_order_rows_from_doc,
     gateway_profiles_from_doc,
     load_root_corpus_gateway_admissibility,
+    readme_gateway_admissibility_completeness_surface,
 )
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, source_order_rows_from_doc
@@ -82,6 +84,28 @@ EXPECTED_GATEWAY_METADATA = {
         "expected_effect_target_answer_mode": "machine_registry_answer",
     },
 }
+EXPECTED_GATEWAY_ADMISSIBILITY_COMPLETENESS_ROWS = {
+    "explicit_gateway_admissibility_row_families": {
+        "order": 1,
+        "contract_phrase": "required gateway-order, gateway-effect-target, and gateway-profile rows must remain explicit as separate machine-readable row families;",
+    },
+    "congruent_gateway_admissibility_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_gateway_admissibility_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_gateway_admissibility_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize gateway-admissibility legality while missing or unexpected gateway identities remain known only internally;",
+    },
+    "fail_close_preserves_gateway_admissibility_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/README.md": (
         "## Root gateway-admissibility discipline",
@@ -91,6 +115,9 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "gateway effect target also keeps the question class governed for that target layer; incoming motivation may not retag gateway output as a different answer class;",
         "gateway admission does not let an incoming surface inherit the gateway's authorship.",
         "The governed re-entry chain stays explicit as: constitution -> runtime constitution -> root contract -> machine-registry.",
+        "## Root gateway-admissibility completeness discipline",
+        "These gateway-admissibility-completeness rules must remain bound to canonical gateway-admissibility-completeness rows rather than drifting into soft summary prose.",
+        "1. required gateway-order, gateway-effect-target, and gateway-profile rows must remain explicit as separate machine-readable row families;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "### Gateway admission must preserve source order",
@@ -99,6 +126,9 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "gateway effect target stays fixed by gateway kind; entering one gateway does not let incoming motivation choose a different downstream root class;",
         "gateway output must also retain the question class governed for that target layer, rather than inheriting a new answer class from incoming motivation;",
         "The governed re-entry chain must stay explicit as: constitution -> runtime constitution -> root contract -> machine-registry.",
+        "### Gateway-admissibility row-family completeness must stay explicit",
+        "README root gateway-admissibility completeness discipline must therefore stay congruent with admitted gateway-admissibility-completeness rows rather than becoming a freehand completeness summary.",
+        "The machine world must not finalize gateway-admissibility legality while required gateway identity drift remains known only internally.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root gateway-admissibility boundary",
@@ -107,6 +137,10 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "Gateway effect target also retains the question class governed for that target layer rather than inheriting a new answer class from incoming motivation.",
         "Machine-registry gateway may terminate current-turn legality, but that does not let incoming motivation surfaces author upstream law.",
         "- governed re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry",
+        "## Root gateway-admissibility completeness boundary",
+        "1. Gateway-admissibility law must remain machine-readable as separate gateway-order, gateway-effect-target, and gateway-profile row families.",
+        "4. Protocol legality must not finalize gateway-admissibility legality while missing or unexpected gateway identities remain known only inside validator logic.",
+        "6. README root gateway-admissibility completeness discipline rendered at protocol root must remain congruent with admitted gateway-admissibility-completeness rows rather than silently authoring an alternate completeness summary.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime-origin gateway-admissibility boundary",
@@ -115,6 +149,10 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "Runtime-origin admission also cannot retag gateway output into a different question class than the one governed for that target layer.",
         "Runtime motivation entering a gateway still requires governed refreezing or governed projection before it becomes shared law.",
         "Runtime-origin gateway progression still follows the explicit re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry.",
+        "## Runtime gateway-admissibility consumption boundary",
+        "1. Runtime consumes gateway-admissibility law as separate gateway-order, gateway-effect-target, and gateway-profile row families rather than as undifferentiated gateway prose.",
+        "4. Runtime must not finalize gateway-admissibility legality while missing or unexpected gateway identities remain known only inside validator machinery.",
+        "6. Runtime consumes README root gateway-admissibility completeness discipline as a governed completeness projection bound to admitted gateway-admissibility-completeness rows rather than as a freehand completeness summary.",
     ),
 }
 
@@ -211,6 +249,9 @@ def main() -> int:
         error_code = ERR_REGISTRY
 
     anchor_checks = gateway_anchor_checks_from_doc(admissibility_doc) if admissibility_doc else ()
+    gateway_admissibility_completeness_rows = (
+        gateway_admissibility_completeness_rows_from_doc(admissibility_doc) if admissibility_doc else ()
+    )
     gateway_order_rows = gateway_order_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     gateway_effect_targets = gateway_effect_targets_from_doc(admissibility_doc) if admissibility_doc else ()
     gateway_profiles = gateway_profiles_from_doc(admissibility_doc) if admissibility_doc else ()
@@ -220,6 +261,7 @@ def main() -> int:
     authority_profiles = authority_class_profiles_from_doc(authority_doc) if authority_doc else ()
     question_profiles = question_class_profiles_from_doc(question_routing_doc) if question_routing_doc else ()
     adjudication_redirect = adjudication_redirect_from_doc(question_routing_doc) if question_routing_doc else adjudication_redirect_from_doc({})
+    gateway_admissibility_completeness_surface = readme_gateway_admissibility_completeness_surface(repo_root)
 
     if not stale_reasons:
         if str(admissibility_doc.get("admissibility_family") or "").strip() != "protocol_root_corpus_gateway_admissibility":
@@ -262,6 +304,9 @@ def main() -> int:
                 error_code = ERR_REGISTRY
         if not anchor_checks:
             stale_reasons.append("root_corpus_gateway_admissibility_anchor_checks_missing")
+            error_code = ERR_REGISTRY
+        if not gateway_admissibility_completeness_rows:
+            stale_reasons.append("root_corpus_gateway_admissibility_completeness_rows_missing")
             error_code = ERR_REGISTRY
         if not gateway_order_rows:
             stale_reasons.append("root_corpus_gateway_admissibility_gateway_order_missing")
@@ -351,6 +396,81 @@ def main() -> int:
                     "field": "transition_surface_profiles",
                     "reason": "unknown_transition_strengthening_gateways",
                     "gateways": unknown_transition_gateways,
+                }
+            )
+        for reason in gateway_admissibility_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "gateway_admissibility_completeness_surface",
+                    "reason": f"gateway_admissibility_completeness_surface_{reason}",
+                }
+            )
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": gateway_admissibility_completeness_rows,
+                    "expected_rows": EXPECTED_GATEWAY_ADMISSIBILITY_COMPLETENESS_ROWS,
+                    "field_name": "gateway_admissibility_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                },
+                {
+                    "actual_rows": gateway_admissibility_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_GATEWAY_ADMISSIBILITY_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "gateway_admissibility_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_gateway_admissibility_completeness_surface_phrase",
+                    "non_contiguous_reason": "gateway_admissibility_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_gateway_admissibility_completeness_surface_rows",
+                    "extra_reason": "extra_gateway_admissibility_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "gateway_admissibility_completeness_surface_order_mismatch",
+                },
+            ),
+            structure_violations=structure_violations,
+            support_violations=admissibility_violations,
+        )
+        expected_gateway_admissibility_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_GATEWAY_ADMISSIBILITY_COMPLETENESS_ROWS.values()
+        ]
+        actual_gateway_admissibility_completeness_phrases = [
+            row.contract_phrase for row in gateway_admissibility_completeness_surface.rows
+        ]
+        expected_gateway_admissibility_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_GATEWAY_ADMISSIBILITY_COMPLETENESS_ROWS.values()
+        ]
+        actual_gateway_admissibility_completeness_orders = [
+            row.order for row in gateway_admissibility_completeness_surface.rows
+        ]
+        if actual_gateway_admissibility_completeness_phrases and tuple(
+            actual_gateway_admissibility_completeness_phrases
+        ) != tuple(expected_gateway_admissibility_completeness_phrases):
+            admissibility_violations.append(
+                {
+                    "field": "gateway_admissibility_completeness_surface",
+                    "reason": "gateway_admissibility_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_gateway_admissibility_completeness_phrases,
+                    "actual": actual_gateway_admissibility_completeness_phrases,
+                }
+            )
+        if actual_gateway_admissibility_completeness_orders and tuple(
+            actual_gateway_admissibility_completeness_orders
+        ) != tuple(expected_gateway_admissibility_completeness_orders):
+            admissibility_violations.append(
+                {
+                    "field": "gateway_admissibility_completeness_surface",
+                    "reason": "gateway_admissibility_completeness_surface_order_mismatch",
+                    "expected": expected_gateway_admissibility_completeness_orders,
+                    "actual": actual_gateway_admissibility_completeness_orders,
                 }
             )
 
@@ -715,10 +835,31 @@ def main() -> int:
                 "expected_rows": {gateway_class: {} for gateway_class in EXPECTED_GATEWAY_METADATA},
                 "id_attr": "gateway_class",
             },
+            {
+                "family_id": "gateway_admissibility_completeness_rows",
+                "member_id_key": "completeness_id",
+                "actual_rows": gateway_admissibility_completeness_rows,
+                "expected_rows": {
+                    completeness_id: {}
+                    for completeness_id in EXPECTED_GATEWAY_ADMISSIBILITY_COMPLETENESS_ROWS
+                },
+                "id_attr": "completeness_id",
+            },
+            {
+                "family_id": "gateway_admissibility_completeness_surface",
+                "member_id_key": "contract_phrase",
+                "actual_rows": gateway_admissibility_completeness_surface.rows,
+                "expected_rows": {
+                    row["contract_phrase"]: {}
+                    for row in EXPECTED_GATEWAY_ADMISSIBILITY_COMPLETENESS_ROWS.values()
+                },
+                "id_attr": "contract_phrase",
+            },
         ),
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    row_family_projection_by_id = {row["family_id"]: row for row in row_family_projection_rows}
 
     payload = {
         STATUS_KEY: status,
@@ -737,6 +878,7 @@ def main() -> int:
         "question_routing_active_path": str(question_routing_active_path),
         "root_dir": str(admissibility_doc.get("root_dir") or ""),
         "gateway_anchor_check_count": len(anchor_checks),
+        "gateway_admissibility_completeness_row_count": len(gateway_admissibility_completeness_rows),
         "gateway_order_count": len(gateway_order_rows),
         "gateway_effect_target_count": len(gateway_effect_targets),
         "gateway_profile_count": len(gateway_profiles),
@@ -748,6 +890,10 @@ def main() -> int:
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         ),
+        "gateway_admissibility_completeness_row_coverage_status": row_family_projection_by_id["gateway_admissibility_completeness_rows"]["coverage_status"],
+        "gateway_admissibility_completeness_row_identity_projection_status": row_family_projection_by_id["gateway_admissibility_completeness_rows"]["identity_projection_status"],
+        "gateway_admissibility_completeness_surface_coverage_status": row_family_projection_by_id["gateway_admissibility_completeness_surface"]["coverage_status"],
+        "gateway_admissibility_completeness_surface_identity_projection_status": row_family_projection_by_id["gateway_admissibility_completeness_surface"]["identity_projection_status"],
         "row_family_projection_rows": row_family_projection_rows,
         "current_turn_terminal_gateway": next(
             (row.gateway_class for row in gateway_profiles if row.current_turn_legality_terminal),
@@ -786,6 +932,26 @@ def main() -> int:
             }
             for row in sorted(gateway_profiles, key=lambda item: item.gateway_class)
         ],
+        "gateway_admissibility_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted(gateway_admissibility_completeness_rows, key=lambda item: item.order)
+        ],
+        "gateway_admissibility_completeness_surface": {
+            "rel_path": gateway_admissibility_completeness_surface.rel_path,
+            "entry_count": len(gateway_admissibility_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in gateway_admissibility_completeness_surface.rows
+            ],
+            "extraction_violations": list(gateway_admissibility_completeness_surface.extraction_violations),
+        },
         "structure_violations": structure_violations,
         "admissibility_violations": admissibility_violations,
         "anchor_violations": anchor_violations,
