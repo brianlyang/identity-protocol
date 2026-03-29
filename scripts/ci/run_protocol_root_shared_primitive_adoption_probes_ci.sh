@@ -92,6 +92,19 @@ assert any(
 ), payload
 PY
 
+python3 - <<'PY' "${PROJECTION_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("stale_reasons"):
+    assert any(
+        reason.startswith("primitive_binding_violation:")
+        for reason in payload["stale_reasons"]
+    ), payload["stale_reasons"]
+PY
+
 ROW_BATCH_DRIFT_REPO="${TMP_ROOT}/row-batch-drift-repo"
 mirror_repo "${ROW_BATCH_DRIFT_REPO}"
 python3 - <<'PY' "${ROW_BATCH_DRIFT_REPO}/scripts/validate_protocol_root_identity_discovery.py"
@@ -134,6 +147,18 @@ assert any(
 ), payload
 PY
 
+python3 - <<'PY' "${ROW_BATCH_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("stale_reasons"):
+    assert any(
+        reason.startswith("primitive_binding_violation:")
+        for reason in payload["stale_reasons"]
+    ), payload["stale_reasons"]
+PY
 ASSIGNMENT_DRIFT_REPO="${TMP_ROOT}/assignment-drift-repo"
 mirror_repo "${ASSIGNMENT_DRIFT_REPO}"
 python3 - <<'PY' "${ASSIGNMENT_DRIFT_REPO}/scripts/validate_protocol_root_identity_discovery.py"
@@ -143,8 +168,14 @@ import sys
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
 import_line = (
-    "from root_row_family_projection_common import aggregate_row_family_status, "
-    "project_root_contract_support_projection, project_row_families\n"
+    "from root_row_family_projection_common import (\n"
+    "    NamedRowFamilyStatusProjectionSpec,\n"
+    "    aggregate_row_family_status,\n"
+    "    index_row_family_projection_rows,\n"
+    "    project_named_row_family_statuses,\n"
+    "    project_root_contract_support_projection,\n"
+    "    project_row_families,\n"
+    ")\n"
 )
 helper = "def manual_projection_rows(*_args, **_kwargs):\n    return []\n\n"
 assert import_line in text, text[:5000]
@@ -179,6 +210,19 @@ assert any(
 ), payload
 PY
 
+python3 - <<'PY' "${ASSIGNMENT_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("stale_reasons"):
+    assert any(
+        reason.startswith("row_family_projection_assignment_violation:")
+        and "manual_projection_rows" in reason
+        for reason in payload["stale_reasons"]
+    ), payload["stale_reasons"]
+PY
 MISSING_EFFECTIVE_REPO="${TMP_ROOT}/missing-effective-repo"
 mirror_repo "${MISSING_EFFECTIVE_REPO}"
 python3 - <<'PY' "${MISSING_EFFECTIVE_REPO}/scripts/validate_protocol_root_identity_discovery.py"
@@ -218,6 +262,20 @@ assert any(
 ), payload
 PY
 
+python3 - <<'PY' "${MISSING_EFFECTIVE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("stale_reasons"):
+    assert any(
+        reason == "primitive_binding_violation:scripts/validate_protocol_root_identity_discovery.py::row_family_projection_missing_effective_assignment"
+        or reason
+        == "row_family_projection_assignment_violation:scripts/validate_protocol_root_identity_discovery.py:initializer_empty_list:List"
+        for reason in payload["stale_reasons"]
+    ), payload["stale_reasons"]
+PY
 PROBE_SHADOW_DRIFT_REPO="${TMP_ROOT}/probe-shadow-drift-repo"
 mirror_repo "${PROBE_SHADOW_DRIFT_REPO}"
 python3 - <<'PY' "${PROBE_SHADOW_DRIFT_REPO}/scripts/ci/run_protocol_root_identity_discovery_probes_ci.sh"
@@ -261,6 +319,18 @@ assert any(
 ), payload
 PY
 
+python3 - <<'PY' "${PROBE_SHADOW_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("stale_reasons"):
+    assert any(
+        reason.startswith("root_probe_shadow_violation:")
+        for reason in payload["stale_reasons"]
+    ), payload["stale_reasons"]
+PY
 SHADOW_COMMON_DRIFT_REPO="${TMP_ROOT}/probe-shadow-common-drift-repo"
 mirror_repo "${SHADOW_COMMON_DRIFT_REPO}"
 python3 - <<'PY' "${SHADOW_COMMON_DRIFT_REPO}/scripts/ci/protocol_root_probe_shadow_common.sh"
@@ -300,4 +370,16 @@ assert any(
 ), payload
 PY
 
+python3 - <<'PY' "${SHADOW_COMMON_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("stale_reasons"):
+    assert any(
+        reason.startswith("root_probe_shadow_common_violation:")
+        for reason in payload["stale_reasons"]
+    ), payload["stale_reasons"]
+PY
 echo "[PASS] protocol root shared-primitive adoption probes passed"

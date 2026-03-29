@@ -211,6 +211,18 @@ assert completeness_row["coverage_status"] == "PASS_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
+python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert any(
+    reason == "structure_violation:agent_handoff_completeness_rows:agent_handoff_completeness_row_order_non_contiguous"
+    for reason in payload["stale_reasons"]
+), payload["stale_reasons"]
+PY
+
 COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/completeness-surface-drift-repo"
 mirror_repo "${COMPLETENESS_SURFACE_REPO}"
 python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
@@ -362,6 +374,18 @@ assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert any(
+    reason == "structure_violation:agent_handoff_completeness_surface:agent_handoff_completeness_surface_order_non_contiguous"
+    for reason in payload["stale_reasons"]
+), payload["stale_reasons"]
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"

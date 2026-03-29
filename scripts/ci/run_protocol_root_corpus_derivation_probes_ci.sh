@@ -258,6 +258,57 @@ assert payload["derivation_completeness_surface_coverage_status"] == "PASS_REQUI
 assert payload["derivation_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
+COMPLETENESS_ROW_ORDER_REPO="${TMP_ROOT}/derivation-completeness-row-order-noncontiguous-repo"
+mirror_repo "${COMPLETENESS_ROW_ORDER_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_REPO}/identity/protocol/mappings/root-corpus-derivation.v1.yaml" "congruent_derivation_row_family_totals"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+target_id = sys.argv[2]
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["derivation_completeness_rows"]:
+    if row.get("completeness_id") == target_id:
+        row["order"] = 1
+        break
+else:
+    raise SystemExit("expected derivation completeness row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_ORDER_JSON="${TMP_ROOT}/derivation-completeness-row-order-noncontiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_derivation.py" \
+  --repo-root "${COMPLETENESS_ROW_ORDER_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_ORDER_JSON}"; then
+  echo "[FAIL] root corpus derivation validator unexpectedly passed derivation completeness row order non-contiguous"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCD-002", payload
+assert payload["derivation_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    reason
+    == "structure_violation:derivation_completeness_rows:derivation_completeness_row_order_non_contiguous"
+    for reason in payload["stale_reasons"]
+), payload["stale_reasons"]
+assert any(
+    reason
+    == "derivation_violation:derivation_completeness_rows:derivation_completeness_row_order_mismatch"
+    for reason in payload["stale_reasons"]
+), payload["stale_reasons"]
+PY
+
 SURFACE_REPO="${TMP_ROOT}/surface-drift-repo"
 mirror_repo "${SURFACE_REPO}"
 python3 - <<'PY' "${SURFACE_REPO}/identity/protocol/README.md"

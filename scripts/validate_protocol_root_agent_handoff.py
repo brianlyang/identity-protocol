@@ -574,7 +574,7 @@ def main() -> int:
         support_violations=support_violations,
         structure_error_code=ERR_STRUCTURE,
         support_error_code=ERR_HANDOFF,
-        project_structure_reasons=False,
+        project_structure_reasons=True,
         project_support_reasons=False,
         include_summary_markers=True,
         anchor_violations=root_doc_anchor_violations,

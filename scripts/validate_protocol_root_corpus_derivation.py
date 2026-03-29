@@ -383,6 +383,8 @@ def main() -> int:
                     "missing_ids_key": "completeness_ids",
                     "extra_ids_key": "completeness_ids",
                     "violation_id_key": "completeness_id",
+                    "non_contiguous_reason": "derivation_completeness_row_order_non_contiguous",
+                    "order_reason": "derivation_completeness_row_order_mismatch",
                 },
                 {
                     "actual_rows": derivation_completeness_surface.rows,
