@@ -11,6 +11,13 @@ from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_STATUS_FIELDS,
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_SUMMARY_KEY,
 )
+from release_readiness_repo_global_closure_projection_common import (
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_KEEP_FIELDS,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_ONE_LOOK_FIELD,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_STATUS_FIELDS,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SUMMARY_KEY,
+)
 from runtime_summary_surface_governance_common import (
     RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE,
     RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_KEEP_FIELDS,
@@ -105,11 +112,11 @@ RELEASE_READINESS_GOVERNANCE_PROBE_SPECS: tuple[ReleaseReadinessGovernanceProbeP
         keep_fields=RELEASE_READINESS_ONE_LOOK_TOPOLOGY_GOVERNANCE_PROBE_KEEP_FIELDS,
     ),
     ReleaseReadinessGovernanceProbeProjectionSpec(
-        script_rel="scripts/ci/run_release_readiness_repo_global_closure_topology_probes_ci.sh",
-        summary_key="release_readiness_repo_global_closure_topology_probe",
-        one_look_field="release_readiness_repo_global_closure_topology_probe_status",
-        status_fields=("release_readiness_repo_global_closure_topology_probe_status",),
-        keep_fields=("positive_validator_output",),
+        script_rel=RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT,
+        summary_key=RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SUMMARY_KEY,
+        one_look_field=RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_ONE_LOOK_FIELD,
+        status_fields=RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_STATUS_FIELDS,
+        keep_fields=RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_KEEP_FIELDS,
     ),
     ReleaseReadinessGovernanceProbeProjectionSpec(
         script_rel=RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_SCRIPT,

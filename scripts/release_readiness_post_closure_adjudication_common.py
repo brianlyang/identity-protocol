@@ -7,6 +7,10 @@ from release_readiness_one_look_topology_common import (
     RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_COMMAND,
     RELEASE_READINESS_ONE_LOOK_TOPOLOGY_VALIDATOR_COMMAND,
 )
+from release_readiness_repo_global_closure_projection_common import (
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_COMMAND,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_VALIDATOR_COMMAND,
+)
 from runtime_summary_surface_governance_common import (
     RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_COMMAND,
 )
@@ -33,15 +37,8 @@ RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_STAGE_SPECS: tuple[
     ),
     ReleaseReadinessPostClosureAdjudicationStageSpec(
         stage_id="repo_global_closure_topology",
-        validator_command=(
-            "python3",
-            "scripts/validate_release_readiness_repo_global_closure_topology.py",
-            "--json-only",
-        ),
-        probe_command=(
-            "bash",
-            "scripts/ci/run_release_readiness_repo_global_closure_topology_probes_ci.sh",
-        ),
+        validator_command=RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_VALIDATOR_COMMAND,
+        probe_command=RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_COMMAND,
     ),
     ReleaseReadinessPostClosureAdjudicationStageSpec(
         stage_id="active_runtime_closure_topology",
