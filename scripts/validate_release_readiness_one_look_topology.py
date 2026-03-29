@@ -22,7 +22,15 @@ from release_readiness_one_look_topology_common import (
     RELEASE_READINESS_ONE_LOOK_FAMILY_ORDER,
     RELEASE_READINESS_ONE_LOOK_FAMILY_ORDER_MARKER,
     RELEASE_READINESS_ONE_LOOK_FAMILY_SPECS,
+    RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE,
+    RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_COMMAND,
+    RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_KEEP_FIELDS,
+    RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_ONE_LOOK_FIELD,
+    RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_STATUS_FIELDS,
+    RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_SUMMARY_KEY,
     RELEASE_READINESS_ONE_LOOK_TOPOLOGY_SURFACE_CONSTRAINTS,
+    RELEASE_READINESS_ONE_LOOK_TOPOLOGY_VALIDATOR,
+    RELEASE_READINESS_ONE_LOOK_TOPOLOGY_VALIDATOR_COMMAND,
 )
 
 
@@ -65,27 +73,29 @@ EXPECTED_TOPOLOGY_SURFACE_CONSTRAINTS: tuple[str, ...] = (
     *(f"release_readiness_one_look_family={family_id}" for family_id in EXPECTED_FAMILY_ORDER),
 )
 
-EXPECTED_VALIDATOR_SCRIPT = "scripts/validate_release_readiness_one_look_topology.py"
-EXPECTED_PROBE_SCRIPT = "scripts/ci/run_release_readiness_one_look_topology_probes_ci.sh"
-EXPECTED_VALIDATOR_COMMAND = ("python3", EXPECTED_VALIDATOR_SCRIPT, "--json-only")
-EXPECTED_PROBE_COMMAND = ("bash", EXPECTED_PROBE_SCRIPT)
-EXPECTED_SUMMARY_KEY = "release_readiness_one_look_topology_probe"
-EXPECTED_ONE_LOOK_FIELD = "release_readiness_one_look_topology_probe_status"
-EXPECTED_KEEP_FIELDS: tuple[str, ...] = ("positive_validator_output",)
-EXPECTED_STATUS_FIELDS: tuple[str, ...] = (EXPECTED_ONE_LOOK_FIELD,)
+EXPECTED_VALIDATOR_SCRIPT = RELEASE_READINESS_ONE_LOOK_TOPOLOGY_VALIDATOR
+EXPECTED_PROBE_SCRIPT = RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE
+EXPECTED_VALIDATOR_COMMAND = RELEASE_READINESS_ONE_LOOK_TOPOLOGY_VALIDATOR_COMMAND
+EXPECTED_PROBE_COMMAND = RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_COMMAND
+EXPECTED_SUMMARY_KEY = RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_SUMMARY_KEY
+EXPECTED_ONE_LOOK_FIELD = RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_ONE_LOOK_FIELD
+EXPECTED_KEEP_FIELDS: tuple[str, ...] = RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_KEEP_FIELDS
+EXPECTED_STATUS_FIELDS: tuple[str, ...] = (
+    RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_STATUS_FIELDS
+)
 
 PROJECTION_COMMON_REL = "scripts/release_readiness_one_look_projection_common.py"
 TOPOLOGY_COMMON_REL = "scripts/release_readiness_one_look_topology_common.py"
 GOVERNANCE_PROJECTION_COMMON_REL = "scripts/release_readiness_governance_probe_projection_common.py"
 READINESS_CHECK_REL = "scripts/release_readiness_check.py"
 PROBE_REQUIRED_TOKENS: tuple[str, ...] = (
-    "scripts/validate_release_readiness_one_look_topology.py --json-only",
-    "scripts/ci/run_release_readiness_one_look_topology_probes_ci.sh",
+    f"{EXPECTED_VALIDATOR_SCRIPT} --json-only",
+    EXPECTED_PROBE_SCRIPT,
     "projection_common_missing_shared_topology_apply",
     "topology_family_ids_not_unique",
-    "governance_probe_projection_missing_one_look_field:one_look.release_readiness_one_look_topology_probe_status",
-    "post_closure_bundle_missing_validator:scripts/validate_release_readiness_one_look_topology.py --json-only",
-    "post_closure_bundle_missing_probe:scripts/ci/run_release_readiness_one_look_topology_probes_ci.sh",
+    f"governance_probe_projection_missing_one_look_field:one_look.{EXPECTED_ONE_LOOK_FIELD}",
+    f"post_closure_bundle_missing_validator:{EXPECTED_VALIDATOR_SCRIPT} --json-only",
+    f"post_closure_bundle_missing_probe:{EXPECTED_PROBE_SCRIPT}",
 )
 SHARED_TOPOLOGY_APPLY_CALL = "apply_release_readiness_one_look_families(summary, one_look)"
 
@@ -265,8 +275,8 @@ def main() -> int:
 
     readiness_check_text = _read_text((repo_root / READINESS_CHECK_REL).resolve())
     for required_token in (
-        '["python3", "scripts/validate_release_readiness_one_look_topology.py", "--json-only"]',
-        '["bash", "scripts/ci/run_release_readiness_one_look_topology_probes_ci.sh"]',
+        json.dumps(list(EXPECTED_VALIDATOR_COMMAND)),
+        json.dumps(list(EXPECTED_PROBE_COMMAND)),
     ):
         if required_token not in readiness_check_text:
             stale_reasons.append(f"release_readiness_check_missing_token:{required_token}")
