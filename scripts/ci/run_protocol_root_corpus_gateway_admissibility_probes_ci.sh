@@ -23,6 +23,50 @@ PROBE_REL_PATHS=(
 
 protocol_root_probe_define_relpath_mirror "${PROBE_REL_PATHS[@]}"
 
+export PROBE_FIXTURE_REPO_ROOT="${ROOT}"
+# shellcheck source=../probe_fixture_shell_common.sh
+source "${ROOT}/scripts/probe_fixture_shell_common.sh"
+
+GATEWAY_COMPLETENESS_SURFACE_SECTION_MARKER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_gateway_admissibility" \
+    "next(marker for marker in EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'] if marker.startswith('## Root ') and marker.endswith('completeness discipline'))"
+)"
+GATEWAY_COMPLETENESS_SURFACE_FIRST_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_gateway_admissibility" \
+    "list(EXPECTED_GATEWAY_ADMISSIBILITY_COMPLETENESS_ROWS.values())[0]['order']"
+)"
+GATEWAY_COMPLETENESS_SURFACE_FIRST_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_gateway_admissibility" \
+    "list(EXPECTED_GATEWAY_ADMISSIBILITY_COMPLETENESS_ROWS.values())[0]['contract_phrase']"
+)"
+GATEWAY_COMPLETENESS_SURFACE_SECOND_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_gateway_admissibility" \
+    "list(EXPECTED_GATEWAY_ADMISSIBILITY_COMPLETENESS_ROWS.values())[1]['order']"
+)"
+GATEWAY_COMPLETENESS_SURFACE_SECOND_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_gateway_admissibility" \
+    "list(EXPECTED_GATEWAY_ADMISSIBILITY_COMPLETENESS_ROWS.values())[1]['contract_phrase']"
+)"
+
+assert_stale_reason_present() {
+  local json_file="$1"
+  local expected_reason="$2"
+  python3 - <<'PY' "${json_file}" "${expected_reason}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+reason = sys.argv[2]
+assert reason in payload.get("stale_reasons", []), payload
+PY
+}
+
 
 PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_corpus_gateway_admissibility.py" \
@@ -481,12 +525,11 @@ PY
 
 GATEWAY_SURFACE_ORDER_REPO="${TMP_ROOT}/gateway-surface-order-drift-repo"
 mirror_repo "${GATEWAY_SURFACE_ORDER_REPO}"
-protocol_root_probe_swap_numbered_surface_order_rows \
+protocol_root_probe_swap_numbered_surface_order_rows_in_section \
   "${GATEWAY_SURFACE_ORDER_REPO}/identity/protocol/README.md" \
-  "## Root gateway-admissibility completeness discipline" \
-  "## Root derivation completeness discipline" \
-  "1. required gateway-order, gateway-effect-target, and gateway-profile rows must remain explicit as separate machine-readable row families;" \
-  "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+  "${GATEWAY_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${GATEWAY_COMPLETENESS_SURFACE_FIRST_PHRASE}" \
+  "${GATEWAY_COMPLETENESS_SURFACE_SECOND_PHRASE}"
 
 GATEWAY_SURFACE_ORDER_JSON="${TMP_ROOT}/gateway-surface-order-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_corpus_gateway_admissibility.py" \
@@ -527,6 +570,119 @@ assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["gateway_admissibility_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["gateway_admissibility_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["gateway_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["gateway_admissibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+GATEWAY_SURFACE_ORDER_NONCONTIG_REPO="${TMP_ROOT}/gateway-surface-order-non-contiguous-repo"
+mirror_repo "${GATEWAY_SURFACE_ORDER_NONCONTIG_REPO}"
+protocol_root_probe_set_numbered_surface_row_order_in_section \
+  "${GATEWAY_SURFACE_ORDER_NONCONTIG_REPO}/identity/protocol/README.md" \
+  "${GATEWAY_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${GATEWAY_COMPLETENESS_SURFACE_SECOND_ORDER}" \
+  "${GATEWAY_COMPLETENESS_SURFACE_SECOND_PHRASE}" \
+  "${GATEWAY_COMPLETENESS_SURFACE_FIRST_ORDER}"
+
+GATEWAY_SURFACE_ORDER_NONCONTIG_JSON="${TMP_ROOT}/gateway-surface-order-non-contiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_gateway_admissibility.py" \
+  --repo-root "${GATEWAY_SURFACE_ORDER_NONCONTIG_REPO}" \
+  --json-only >"${GATEWAY_SURFACE_ORDER_NONCONTIG_JSON}"; then
+  echo "[FAIL] gateway admissibility validator unexpectedly passed README gateway completeness surface non-contiguous order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${GATEWAY_SURFACE_ORDER_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_gateway_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RGA-002", payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
+assert payload["gateway_admissibility_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["gateway_admissibility_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["gateway_admissibility_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["gateway_admissibility_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["gateway_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["gateway_admissibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "gateway_admissibility_completeness_surface"
+    and row["reason"] == "gateway_admissibility_completeness_surface_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "gateway_admissibility_completeness_surface"
+    and row["reason"] == "gateway_admissibility_completeness_surface_order_mismatch"
+    for row in payload["admissibility_violations"]
+), payload
+assert not any(
+    row["field"] == "gateway_admissibility_completeness_surface"
+    and row["reason"] == "gateway_admissibility_completeness_surface_phrase_order_mismatch"
+    for row in payload["admissibility_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "gateway_admissibility_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+COMPLETENESS_ROW_ORDER_REPO="${TMP_ROOT}/gateway-completeness-row-order-drift-repo"
+mirror_repo "${COMPLETENESS_ROW_ORDER_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_REPO}/identity/protocol/mappings/root-corpus-gateway-admissibility.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+rows = doc["gateway_admissibility_completeness_rows"]
+if len(rows) < 2:
+    raise SystemExit("expected at least two completeness rows")
+rows[1]["order"] = rows[0]["order"]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_ORDER_JSON="${TMP_ROOT}/gateway-completeness-row-order-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_gateway_admissibility.py" \
+  --repo-root "${COMPLETENESS_ROW_ORDER_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_ORDER_JSON}"; then
+  echo "[FAIL] gateway admissibility validator unexpectedly passed gateway completeness row order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_gateway_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RGA-002", payload
+assert any(
+    row["field"] == "gateway_admissibility_completeness_rows"
+    and row["reason"] in {
+        "gateway_admissibility_completeness_row_order_non_contiguous",
+        "gateway_admissibility_completeness_rows_order_non_contiguous",
+    }
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "gateway_admissibility_completeness_rows"
+    and row["reason"] in {
+        "gateway_admissibility_completeness_row_order_mismatch",
+        "order_mismatch",
+    }
+    for row in payload["admissibility_violations"]
+), payload
 assert payload["gateway_admissibility_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["gateway_admissibility_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["gateway_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload

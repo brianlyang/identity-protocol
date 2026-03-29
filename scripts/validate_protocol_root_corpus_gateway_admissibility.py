@@ -422,6 +422,9 @@ def main() -> int:
                     "missing_ids_key": "completeness_ids",
                     "extra_ids_key": "completeness_ids",
                     "violation_id_key": "completeness_id",
+                    "duplicate_reason": "duplicate_gateway_admissibility_completeness_id",
+                    "non_contiguous_reason": "gateway_admissibility_completeness_row_order_non_contiguous",
+                    "order_reason": "gateway_admissibility_completeness_row_order_mismatch",
                 },
                 {
                     "actual_rows": gateway_admissibility_completeness_surface.rows,

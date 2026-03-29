@@ -19,6 +19,36 @@ PROBE_REL_PATHS=(
 
 protocol_root_probe_define_relpath_mirror "${PROBE_REL_PATHS[@]}"
 
+export PROBE_FIXTURE_REPO_ROOT="${ROOT}"
+# shellcheck source=../probe_fixture_shell_common.sh
+source "${ROOT}/scripts/probe_fixture_shell_common.sh"
+
+GOVERNANCE_COMPLETENESS_SURFACE_SECTION_MARKER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_governance" \
+    "next(marker for marker in EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'] if marker.startswith('## Root ') and marker.endswith('completeness discipline'))"
+)"
+GOVERNANCE_COMPLETENESS_SURFACE_FIRST_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_governance" \
+    "list(EXPECTED_GOVERNANCE_COMPLETENESS_ROWS.values())[0]['order']"
+)"
+GOVERNANCE_COMPLETENESS_SURFACE_FIRST_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_governance" \
+    "list(EXPECTED_GOVERNANCE_COMPLETENESS_ROWS.values())[0]['contract_phrase']"
+)"
+GOVERNANCE_COMPLETENESS_SURFACE_SECOND_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_governance" \
+    "list(EXPECTED_GOVERNANCE_COMPLETENESS_ROWS.values())[1]['order']"
+)"
+GOVERNANCE_COMPLETENESS_SURFACE_SECOND_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_governance" \
+    "list(EXPECTED_GOVERNANCE_COMPLETENESS_ROWS.values())[1]['contract_phrase']"
+)"
+
 
 PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
@@ -325,12 +355,11 @@ PY
 
 GOVERNANCE_SURFACE_ORDER_REPO="${TMP_ROOT}/governance-surface-order-drift-repo"
 mirror_repo "${GOVERNANCE_SURFACE_ORDER_REPO}"
-protocol_root_probe_swap_numbered_surface_order_rows \
+protocol_root_probe_swap_numbered_surface_order_rows_in_section \
   "${GOVERNANCE_SURFACE_ORDER_REPO}/identity/protocol/README.md" \
-  "## Root governance completeness discipline" \
-  $'\n---\n\n## Root gateway-admissibility completeness discipline' \
-  "1. required registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class rows must remain explicit as separate machine-readable row families;" \
-  "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+  "${GOVERNANCE_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${GOVERNANCE_COMPLETENESS_SURFACE_FIRST_PHRASE}" \
+  "${GOVERNANCE_COMPLETENESS_SURFACE_SECOND_PHRASE}"
 
 GOVERNANCE_SURFACE_ORDER_JSON="${TMP_ROOT}/governance-surface-order-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
@@ -361,6 +390,68 @@ assert any(
     and row["reason"] == "required_marker_missing"
     and row["marker"] == "1. required registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class rows must remain explicit as separate machine-readable row families;"
     for row in payload["root_doc_anchor_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "governance_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+GOVERNANCE_SURFACE_ORDER_NONCONTIG_REPO="${TMP_ROOT}/governance-surface-order-non-contiguous-repo"
+mirror_repo "${GOVERNANCE_SURFACE_ORDER_NONCONTIG_REPO}"
+protocol_root_probe_set_numbered_surface_row_order_in_section \
+  "${GOVERNANCE_SURFACE_ORDER_NONCONTIG_REPO}/identity/protocol/README.md" \
+  "${GOVERNANCE_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${GOVERNANCE_COMPLETENESS_SURFACE_SECOND_ORDER}" \
+  "${GOVERNANCE_COMPLETENESS_SURFACE_SECOND_PHRASE}" \
+  "${GOVERNANCE_COMPLETENESS_SURFACE_FIRST_ORDER}"
+
+GOVERNANCE_SURFACE_ORDER_NONCONTIG_JSON="${TMP_ROOT}/governance-surface-order-non-contiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
+  --repo-root "${GOVERNANCE_SURFACE_ORDER_NONCONTIG_REPO}" \
+  --json-only >"${GOVERNANCE_SURFACE_ORDER_NONCONTIG_JSON}"; then
+  echo "[FAIL] root corpus governance validator unexpectedly passed README governance completeness surface non-contiguous order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${GOVERNANCE_SURFACE_ORDER_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCG-002", payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
+assert payload["governance_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["governance_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["governance_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["governance_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["governance_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["governance_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "governance_completeness_surface"
+    and row["reason"] == "governance_completeness_surface_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "governance_completeness_surface"
+    and row["reason"] == "governance_completeness_surface_order_mismatch"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    reason == "structure_violation:governance_completeness_surface:governance_completeness_surface_order_non_contiguous"
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
+    reason == "structure_violation:governance_completeness_surface:governance_completeness_surface_order_mismatch"
+    for reason in payload["stale_reasons"]
 ), payload
 surface_row = next(
     row for row in payload["row_family_projection_rows"]

@@ -19,6 +19,69 @@ PROBE_REL_PATHS=(
 
 protocol_root_probe_define_relpath_mirror "${PROBE_REL_PATHS[@]}"
 
+export PROBE_FIXTURE_REPO_ROOT="${ROOT}"
+# shellcheck source=../probe_fixture_shell_common.sh
+source "${ROOT}/scripts/probe_fixture_shell_common.sh"
+
+bump_yaml_row_order_by_id() {
+  local path="$1"
+  local collection_key="$2"
+  local id_field="$3"
+  local row_id="$4"
+  python3 - "$path" "$collection_key" "$id_field" "$row_id" <<'PY'
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+collection_key = sys.argv[2]
+id_field = sys.argv[3]
+row_id = sys.argv[4]
+
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+rows = doc[collection_key]
+for row in rows:
+    if str(row.get(id_field) or "") == row_id:
+        row["order"] = int(row["order"]) + 1
+        break
+else:
+    raise SystemExit(f"{row_id} not found in {collection_key}")
+
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+}
+
+AUTHORITY_COMPLETENESS_NONCONTIG_ID="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_authority" \
+    "tuple(EXPECTED_AUTHORITY_COMPLETENESS_ROWS.keys())[1]"
+)"
+AUTHORITY_COMPLETENESS_SURFACE_SECTION_MARKER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_authority" \
+    "next(marker for marker in EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'] if marker.startswith('## Root ') and marker.endswith('completeness discipline'))"
+)"
+AUTHORITY_COMPLETENESS_SURFACE_FIRST_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_authority" \
+    "list(EXPECTED_AUTHORITY_COMPLETENESS_ROWS.values())[0]['order']"
+)"
+AUTHORITY_COMPLETENESS_SURFACE_FIRST_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_authority" \
+    "list(EXPECTED_AUTHORITY_COMPLETENESS_ROWS.values())[0]['contract_phrase']"
+)"
+AUTHORITY_COMPLETENESS_SURFACE_SECOND_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_authority" \
+    "list(EXPECTED_AUTHORITY_COMPLETENESS_ROWS.values())[1]['order']"
+)"
+AUTHORITY_COMPLETENESS_SURFACE_SECOND_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_authority" \
+    "list(EXPECTED_AUTHORITY_COMPLETENESS_ROWS.values())[1]['contract_phrase']"
+)"
+
 
 PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_corpus_authority.py" \
@@ -590,12 +653,11 @@ PY
 
 COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/authority-completeness-surface-order-drift-repo"
 mirror_repo "${COMPLETENESS_SURFACE_ORDER_REPO}"
-protocol_root_probe_swap_numbered_surface_order_rows \
+protocol_root_probe_swap_numbered_surface_order_rows_in_section \
   "${COMPLETENESS_SURFACE_ORDER_REPO}/identity/protocol/README.md" \
-  "## Root authority completeness discipline" \
-  "## Root conflict-precedence completeness discipline" \
-  "1. required authority-class-profile, entry-authority-projection, authority-layer-stage, and authority-layer-stage-surface rows must remain explicit as separate machine-readable row families;" \
-  "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+  "${AUTHORITY_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${AUTHORITY_COMPLETENESS_SURFACE_FIRST_PHRASE}" \
+  "${AUTHORITY_COMPLETENESS_SURFACE_SECOND_PHRASE}"
 
 COMPLETENESS_SURFACE_ORDER_JSON="${TMP_ROOT}/authority-completeness-surface-order-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_corpus_authority.py" \
@@ -635,6 +697,77 @@ assert payload["authority_completeness_row_coverage_status"] == "PASS_REQUIRED",
 assert payload["authority_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["authority_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["authority_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO="${TMP_ROOT}/authority-completeness-surface-order-non-contiguous-repo"
+mirror_repo "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}"
+protocol_root_probe_set_numbered_surface_row_order_in_section \
+  "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}/identity/protocol/README.md" \
+  "${AUTHORITY_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${AUTHORITY_COMPLETENESS_SURFACE_SECOND_ORDER}" \
+  "${AUTHORITY_COMPLETENESS_SURFACE_SECOND_PHRASE}" \
+  "${AUTHORITY_COMPLETENESS_SURFACE_FIRST_ORDER}"
+
+COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON="${TMP_ROOT}/authority-completeness-surface-order-non-contiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_authority.py" \
+  --repo-root "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"; then
+  echo "[FAIL] root corpus authority validator unexpectedly passed authority completeness surface non-contiguous order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_authority_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCA-002", payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
+assert payload["authority_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["authority_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "authority_completeness_surface"
+    and row["reason"] == "authority_completeness_surface_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "authority_completeness_surface"
+    and row["reason"] == "authority_completeness_surface_order_mismatch"
+    for row in payload["authority_violations"]
+), payload
+assert not any(
+    row["field"] == "authority_completeness_surface"
+    and row["reason"] == "authority_completeness_surface_phrase_order_mismatch"
+    for row in payload["authority_violations"]
+), payload
+assert any(
+    reason == "structure_violation:authority_completeness_surface:authority_completeness_surface_order_non_contiguous"
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
+    reason == "authority_violation:authority_completeness_surface:authority_completeness_surface_order_mismatch"
+    for reason in payload["stale_reasons"]
+), payload
+assert not any(
+    reason == "authority_violation:authority_completeness_surface:authority_completeness_surface_phrase_order_mismatch"
+    for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "authority_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 CASE_REPO="${TMP_ROOT}/case-normalization-repo"
