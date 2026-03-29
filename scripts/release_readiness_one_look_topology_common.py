@@ -132,18 +132,6 @@ RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROOF_LANES: tuple[str, ...] = (
     RELEASE_READINESS_ONE_LOOK_TOPOLOGY_VALIDATOR,
     RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE,
 )
-RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_SUMMARY_KEY = (
-    "release_readiness_one_look_topology_probe"
-)
-RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_ONE_LOOK_FIELD = (
-    "release_readiness_one_look_topology_probe_status"
-)
-RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_STATUS_FIELDS: tuple[str, ...] = (
-    RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_ONE_LOOK_FIELD,
-)
-RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_KEEP_FIELDS: tuple[str, ...] = (
-    "positive_validator_output",
-)
 
 
 def apply_release_readiness_one_look_families(

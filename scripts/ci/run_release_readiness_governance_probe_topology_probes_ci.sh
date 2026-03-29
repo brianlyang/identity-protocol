@@ -29,6 +29,11 @@ governance_probe_topology_self_one_look_field="$(
     "release_readiness_governance_probe_topology_common" \
     "RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_ONE_LOOK_FIELD"
 )"
+one_look_topology_probe_summary_key="$(
+  resolve_python_module_expression \
+    "release_readiness_governance_probe_projection_common" \
+    "RELEASE_READINESS_ONE_LOOK_TOPOLOGY_GOVERNANCE_PROBE_SUMMARY_KEY"
+)"
 governance_probe_topology_validator_command_literal="[\"python3\", \"${governance_probe_topology_validator}\", \"--json-only\"],"
 governance_probe_topology_probe_command_literal="[\"bash\", \"${governance_probe_topology_probe}\"],"
 governance_probe_topology_self_check_reason="summary_binding_probe_missing_token:${governance_probe_topology_self_summary_key}"
@@ -75,7 +80,7 @@ restore_shadow_file "${TMP_ROOT}" "scripts/release_readiness_governance_probe_pr
 mutate_probe_literal \
   "${TMP_ROOT}/scripts/release_readiness_governance_probe_projection_common.py" \
   "summary_key=\"${governance_probe_topology_self_summary_key}\"" \
-  'summary_key="release_readiness_one_look_topology_probe"'
+  "summary_key=\"${one_look_topology_probe_summary_key}\""
 if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-governance-probe-topology-negative-summary-key.json; then
   echo "[FAIL] governance probe summary-key drift unexpectedly passed"
   exit 1

@@ -23,8 +23,8 @@ one_look_topology_validator_command_literal="[\"python3\", \"${one_look_topology
 one_look_topology_probe_command_literal="[\"bash\", \"${one_look_topology_probe}\"],"
 one_look_topology_probe_one_look_field="$(
   resolve_python_module_expression \
-    "release_readiness_one_look_topology_common" \
-    "RELEASE_READINESS_ONE_LOOK_TOPOLOGY_PROBE_ONE_LOOK_FIELD"
+    "release_readiness_governance_probe_projection_common" \
+    "RELEASE_READINESS_ONE_LOOK_TOPOLOGY_GOVERNANCE_PROBE_ONE_LOOK_FIELD"
 )"
 one_look_topology_probe_self_check_reason="post_closure_bundle_missing_probe:${one_look_topology_probe}"
 
@@ -93,8 +93,8 @@ restore_shadow_file "${TMP_ROOT}" "scripts/release_readiness_governance_probe_pr
 # expected fail-close: governance_probe_projection_missing_one_look_field:one_look.release_readiness_one_look_topology_probe_status
 mutate_probe_literal \
   "${TMP_ROOT}/scripts/release_readiness_governance_probe_projection_common.py" \
-  "one_look_field=\"${one_look_topology_probe_one_look_field}\"" \
-  'one_look_field="release_readiness_one_look_topology_probe_state"'
+  "\"${one_look_topology_probe_one_look_field}\"" \
+  '"release_readiness_one_look_topology_probe_state"'
 if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-one-look-topology-negative-governance-field.json; then
   echo "[FAIL] governance probe one-look field drift unexpectedly passed"
   exit 1
