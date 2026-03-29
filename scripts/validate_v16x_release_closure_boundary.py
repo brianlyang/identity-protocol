@@ -42,6 +42,10 @@ from release_closure_root_grounding_common import (
 from release_closure_bounded_projection_literal_bundle_common import (
     collect_release_closure_bounded_projection_literal_bundle_stale_reasons,
 )
+from release_closure_operational_marker_bundle_common import (
+    RELEASE_CLOSURE_BOUNDARY_OPERATIONAL_MARKER_BUNDLE_SPECS,
+    collect_release_closure_operational_marker_bundle_stale_reasons,
+)
 from release_closure_terminal_truth_bridge_surface_common import (
     collect_release_closure_terminal_truth_bridge_surface_stale_reasons,
 )
@@ -58,12 +62,6 @@ from release_readiness_repo_global_closure_projection_common import (
 from release_readiness_terminal_truth_bridge_common import (
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS,
 )
-from release_readiness_runtime_closure_convergence_common import (
-    RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS,
-    RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS,
-    RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_CONVERGENCE_MARKERS,
-)
-
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_RELEASE_CLOSURE = "IP-RCLOS-001"
@@ -158,9 +156,13 @@ def main() -> int:
         for marker in REQUIRED_OUTER_SURFACE_E2E_BOUNDARY_MARKERS:
             if marker not in text:
                 stale_reasons.append(f"{label}_missing_outer_surface_e2e_marker:{marker}")
-        for marker in RELEASE_CLOSURE_BOUNDARY_CONTINUATION_MARKERS:
-            if marker not in text:
-                stale_reasons.append(f"{label}_missing_release_readiness_continuation_marker:{marker}")
+        stale_reasons.extend(
+            collect_release_closure_operational_marker_bundle_stale_reasons(
+                text,
+                label=label,
+                bundle_specs=RELEASE_CLOSURE_BOUNDARY_OPERATIONAL_MARKER_BUNDLE_SPECS,
+            )
+        )
         for marker in RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS:
             if marker not in text:
                 stale_reasons.append(
@@ -216,17 +218,6 @@ def main() -> int:
             )
         )
         stale_reasons.extend(collect_release_closure_narrative_stale_reasons(text, label=label))
-        for marker in RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS:
-            if marker not in text:
-                stale_reasons.append(f"{label}_missing_transport_fleet_closure_convergence_marker:{marker}")
-        for marker in RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS:
-            if marker not in text:
-                stale_reasons.append(f"{label}_missing_active_runtime_pack_closure_convergence_marker:{marker}")
-        for marker in RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_CONVERGENCE_MARKERS:
-            if marker not in text:
-                stale_reasons.append(
-                    f"{label}_missing_workspace_runtime_closure_command_convergence_marker:{marker}"
-                )
         if not contains_release_closure_issue_horizon(text, highest_issue):
             stale_reasons.append(f"{label}_issue_horizon_mismatch")
         for target_issue in collect_release_closure_issue_horizon_targets(text):
