@@ -412,21 +412,12 @@ PY
 
 MACHINE_LAW_PRIMACY_SURFACE_ORDER_REPO="${TMP_ROOT}/machine-law-primacy-completeness-surface-order-drift-repo"
 mirror_repo "${MACHINE_LAW_PRIMACY_SURFACE_ORDER_REPO}"
-python3 - <<'PY' "${MACHINE_LAW_PRIMACY_SURFACE_ORDER_REPO}/identity/protocol/README.md"
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-text = path.read_text(encoding="utf-8")
-text = text.replace(
-    "1. required commitment, anchor, primacy-proof, primacy-limit, and collapse rows must remain explicit as separate machine-readable families;\n"
-    "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
-    "2. required commitment, anchor, primacy-proof, primacy-limit, and collapse rows must remain explicit as separate machine-readable families;\n"
-    "1. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
-    1,
-)
-path.write_text(text, encoding="utf-8")
-PY
+protocol_root_probe_swap_numbered_surface_order_rows \
+  "${MACHINE_LAW_PRIMACY_SURFACE_ORDER_REPO}/identity/protocol/README.md" \
+  "## Root machine-law primacy completeness discipline" \
+  "## Root machine-world ontology completeness discipline" \
+  "1. required commitment, anchor, primacy-proof, primacy-limit, and collapse rows must remain explicit as separate machine-readable families;" \
+  "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
 
 MACHINE_LAW_PRIMACY_SURFACE_ORDER_JSON="${TMP_ROOT}/machine-law-primacy-completeness-surface-order-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_machine_law_primacy.py" \

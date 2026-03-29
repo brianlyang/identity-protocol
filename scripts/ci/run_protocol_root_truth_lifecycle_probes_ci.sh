@@ -422,21 +422,12 @@ PY
 
 TRUTH_LIFECYCLE_SURFACE_ORDER_REPO="${TMP_ROOT}/truth-lifecycle-completeness-surface-order-drift-repo"
 mirror_repo "${TRUTH_LIFECYCLE_SURFACE_ORDER_REPO}"
-python3 - <<'PY' "${TRUTH_LIFECYCLE_SURFACE_ORDER_REPO}/identity/protocol/README.md"
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-text = path.read_text(encoding="utf-8")
-text = text.replace(
-    "1. required lifecycle-stage, memory-strata, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;\n"
-    "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
-    "2. required lifecycle-stage, memory-strata, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;\n"
-    "1. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
-    1,
-)
-path.write_text(text, encoding="utf-8")
-PY
+protocol_root_probe_swap_numbered_surface_order_rows \
+  "${TRUTH_LIFECYCLE_SURFACE_ORDER_REPO}/identity/protocol/README.md" \
+  "## Root truth-lifecycle completeness discipline" \
+  "## Root artifact-family admissibility completeness discipline" \
+  "1. required lifecycle-stage, memory-strata, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;" \
+  "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
 
 TRUTH_LIFECYCLE_SURFACE_ORDER_JSON="${TMP_ROOT}/truth-lifecycle-completeness-surface-order-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_truth_lifecycle.py" \

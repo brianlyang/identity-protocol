@@ -467,21 +467,12 @@ PY
 
 SUCCESS_PATH_SURFACE_ORDER_REPO="${TMP_ROOT}/success-path-completeness-surface-order-drift-repo"
 mirror_repo "${SUCCESS_PATH_SURFACE_ORDER_REPO}"
-python3 - <<'PY' "${SUCCESS_PATH_SURFACE_ORDER_REPO}/identity/protocol/README.md"
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-text = path.read_text(encoding="utf-8")
-text = text.replace(
-    "1. required state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;\n"
-    "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
-    "2. required state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;\n"
-    "1. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
-    1,
-)
-path.write_text(text, encoding="utf-8")
-PY
+protocol_root_probe_swap_numbered_surface_order_rows \
+  "${SUCCESS_PATH_SURFACE_ORDER_REPO}/identity/protocol/README.md" \
+  "## Root success-path state admissibility completeness discipline" \
+  "## Root decision-evidence admissibility completeness discipline" \
+  "1. required state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;" \
+  "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
 
 SUCCESS_PATH_SURFACE_ORDER_JSON="${TMP_ROOT}/success-path-completeness-surface-order-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_success_path_state_admissibility.py" \
