@@ -395,11 +395,11 @@ def main() -> int:
             "repo_global_summary_probe_missing_projection_marker_resolution",
         ),
         (
-            '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS[0]"',
+            '"RELEASE_READINESS_REPO_GLOBAL_CODEX_LAUNCHER_CHECKED_IDENTITY_COUNT_FIELD"',
             "repo_global_summary_probe_missing_checked_count_resolution",
         ),
         (
-            '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROOF_LANES[-1]"',
+            '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT"',
             "repo_global_summary_probe_missing_topology_lane_resolution",
         ),
     ):
@@ -417,11 +417,11 @@ def main() -> int:
             "repo_global_boundary_probe_missing_projection_marker_resolution",
         ),
         (
-            '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS[0]"',
+            '"RELEASE_READINESS_REPO_GLOBAL_CODEX_LAUNCHER_CHECKED_IDENTITY_COUNT_FIELD"',
             "repo_global_boundary_probe_missing_checked_count_resolution",
         ),
         (
-            '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROOF_LANES[-1]"',
+            '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT"',
             "repo_global_boundary_probe_missing_topology_lane_resolution",
         ),
     ):

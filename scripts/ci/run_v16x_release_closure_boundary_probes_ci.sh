@@ -19,12 +19,12 @@ repo_global_projection_marker="$(
 repo_global_checked_count_marker="$(
   resolve_python_module_expression \
     "release_readiness_repo_global_closure_projection_common" \
-    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS[0]"
+    "RELEASE_READINESS_REPO_GLOBAL_CODEX_LAUNCHER_CHECKED_IDENTITY_COUNT_FIELD"
 )"
 repo_global_topology_probe_marker="$(
   resolve_python_module_expression \
     "release_readiness_repo_global_closure_projection_common" \
-    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROOF_LANES[-1]"
+    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT"
 )"
 active_runtime_projection_marker="$(
   resolve_python_module_expression \

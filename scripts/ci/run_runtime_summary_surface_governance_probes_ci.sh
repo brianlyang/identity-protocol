@@ -392,7 +392,7 @@ cp docs/release/identity-v1.6x-release-closure-summary.md "$tmpdir/docs/release/
 repo_global_closure_proof_strength_marker="$(
   resolve_python_module_expression \
     "release_readiness_repo_global_closure_projection_common" \
-    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS[0]"
+    "RELEASE_READINESS_REPO_GLOBAL_CODEX_LAUNCHER_CHECKED_IDENTITY_COUNT_FIELD"
 )"
 
 mutate_probe_literal \
@@ -461,7 +461,7 @@ cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/go
 repo_global_closure_owner_lane_marker="$(
   resolve_python_module_expression \
     "release_readiness_repo_global_closure_projection_common" \
-    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OWNER_LANES[0]"
+    "RELEASE_READINESS_REPO_GLOBAL_EXECUTABLE_SURFACE_RUNTIME_LITERAL_LOCK_LANE"
 )"
 
 mutate_probe_literal \
@@ -624,7 +624,7 @@ cp docs/release/identity-v1.6x-release-closure-summary.md "$tmpdir/docs/release/
 repo_global_prefix_one_look_marker="$(
   resolve_python_module_expression \
     "release_readiness_repo_global_closure_projection_common" \
-    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_ONE_LOOK_MARKERS[1]"
+    "RELEASE_READINESS_REPO_GLOBAL_REQUIRED_GATE_SURFACE_DRIFT_ONE_LOOK_MARKER"
 )"
 
 mutate_probe_literal \
@@ -642,7 +642,7 @@ cp docs/release/identity-v1.6x-release-closure-summary.md "$tmpdir/docs/release/
 repo_global_tail_one_look_marker="$(
   resolve_python_module_expression \
     "release_readiness_repo_global_closure_projection_common" \
-    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_ONE_LOOK_MARKERS[-1]"
+    "RELEASE_READINESS_REPO_GLOBAL_VERSION_BASELINE_ONE_LOOK_MARKER"
 )"
 
 mutate_probe_literal \
