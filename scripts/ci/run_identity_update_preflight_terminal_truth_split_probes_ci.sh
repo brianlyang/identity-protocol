@@ -224,10 +224,29 @@ assert postexec["post_execution_report_repair_status"] == "PASS_REQUIRED", poste
 assert postexec["repair_blocking_status"] == "PASS_REQUIRED", postexec
 assert postexec["repair_observation_status"] == "WARN_NON_BLOCKING", postexec
 assert postexec["terminal_truth_validation_status_after"] == "FAIL_REQUIRED", postexec
+assert postexec["execution_closure_status_after"] == "PASS_REQUIRED", postexec
+assert postexec["terminal_truth_cleanliness_status_after"] == "FAIL_REQUIRED", postexec
 assert postexec["terminal_truth_class_after"] == "review_required_execution_closure", postexec
+assert postexec["terminal_state_machine_status_after"] == "PASS_REQUIRED", postexec
 assert postexec["terminal_state_class_after"] == "review_pending", postexec
+assert postexec["negative_feedback_class_after"] == "review_required", postexec
+assert postexec["negative_feedback_terminal_veto_status_after"] == "PASS_REQUIRED", postexec
+assert postexec["loopback_required_after"] is False, postexec
+assert postexec["next_state_after_veto_after"] == "review_pending", postexec
 assert postexec["publishable_after"] is False, postexec
 assert postexec["canonical_result_eligible_after"] is False, postexec
+assert "review_required_next_action" in (postexec.get("dirty_signals_after") or []), postexec
+assert "review_required_next_action" in (postexec.get("terminal_truth_blockers_after") or []), postexec
+observation_projection = postexec.get("terminal_truth_observation_projection_after") or {}
+assert observation_projection["execution_closure_status"] == "PASS_REQUIRED", observation_projection
+assert observation_projection["terminal_truth_cleanliness_status"] == "FAIL_REQUIRED", observation_projection
+assert observation_projection["terminal_truth_class"] == "review_required_execution_closure", observation_projection
+assert observation_projection["terminal_state_machine_status"] == "PASS_REQUIRED", observation_projection
+assert observation_projection["terminal_state_class"] == "review_pending", observation_projection
+assert observation_projection["negative_feedback_class"] == "review_required", observation_projection
+assert observation_projection["negative_feedback_terminal_veto_status"] == "PASS_REQUIRED", observation_projection
+assert observation_projection["loopback_required"] is False, observation_projection
+assert observation_projection["next_state_after_veto"] == "review_pending", observation_projection
 assert "terminal_truth_validator_not_green_after_projection" in (
     postexec.get("observation_stale_reasons") or []
 ), postexec

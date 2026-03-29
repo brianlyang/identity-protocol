@@ -13,6 +13,7 @@ PACK_PATH="${TMP_DIR}/${IDENTITY_ID}"
 CATALOG_PATH="${TMP_DIR}/catalog.local.yaml"
 CLEAN_REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-clean.json"
 REVIEW_REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-review-required.json"
+EXPLICIT_DIRTY_RETRY_REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-explicit-dirty-retry.json"
 REPAIR_BLOCKED_REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-repair-blocked.json"
 NON_CLOSEOUT_REPORT_PATH="${PACK_PATH}/runtime/reports/${IDENTITY_ID}-active-run.json"
 RULEBOOK_PATH="${PACK_PATH}/RULEBOOK.jsonl"
@@ -21,7 +22,7 @@ PROMPT_CONTRACT_PATH="${PACK_PATH}/runtime/state/prompt_contract.json"
 
 mkdir -p "${PACK_PATH}/runtime/reports" "${PACK_PATH}/runtime/state"
 
-python3 - <<'PY' "${CATALOG_PATH}" "${PACK_PATH}" "${IDENTITY_ID}" "${CLEAN_REPORT_PATH}" "${REVIEW_REPORT_PATH}" "${REPAIR_BLOCKED_REPORT_PATH}" "${NON_CLOSEOUT_REPORT_PATH}" "${RULEBOOK_PATH}" "${TASK_HISTORY_PATH}" "${PROMPT_CONTRACT_PATH}"
+python3 - <<'PY' "${CATALOG_PATH}" "${PACK_PATH}" "${IDENTITY_ID}" "${CLEAN_REPORT_PATH}" "${REVIEW_REPORT_PATH}" "${EXPLICIT_DIRTY_RETRY_REPORT_PATH}" "${REPAIR_BLOCKED_REPORT_PATH}" "${NON_CLOSEOUT_REPORT_PATH}" "${RULEBOOK_PATH}" "${TASK_HISTORY_PATH}" "${PROMPT_CONTRACT_PATH}"
 import json
 import sys
 from pathlib import Path
@@ -40,11 +41,12 @@ pack_path = Path(sys.argv[2]).resolve()
 identity_id = sys.argv[3]
 clean_report_path = Path(sys.argv[4]).resolve()
 review_report_path = Path(sys.argv[5]).resolve()
-repair_blocked_report_path = Path(sys.argv[6]).resolve()
-non_closeout_report_path = Path(sys.argv[7]).resolve()
-rulebook_path = Path(sys.argv[8]).resolve()
-task_history_path = Path(sys.argv[9]).resolve()
-prompt_contract_path = Path(sys.argv[10]).resolve()
+explicit_dirty_retry_report_path = Path(sys.argv[6]).resolve()
+repair_blocked_report_path = Path(sys.argv[7]).resolve()
+non_closeout_report_path = Path(sys.argv[8]).resolve()
+rulebook_path = Path(sys.argv[9]).resolve()
+task_history_path = Path(sys.argv[10]).resolve()
+prompt_contract_path = Path(sys.argv[11]).resolve()
 
 canonical_blockers = list(CANONICAL_BLOCKER_TYPES)
 catalog_doc = {
@@ -192,6 +194,29 @@ review_doc.update(
 )
 review_report_path.write_text(json.dumps(review_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
+explicit_dirty_retry_doc = dict(base_doc)
+explicit_dirty_retry_doc.update(
+    {
+        "run_id": f"identity-upgrade-exec-{identity_id}-explicit-dirty-retry",
+        "mode": "safe-auto",
+        "next_action": "publish_ready_if_clean",
+        "fallback_reason": "model_fallback_required_before_publish",
+        "needs_revalidation": True,
+        "retry_required": True,
+        "error_info": {"code": "retry_needed_after_fallback", "status": "degraded"},
+        "is_terminal_clean": False,
+        "publishable": False,
+        "canonical_result_eligible": False,
+        "terminal_truth_class": "dirty_terminal_execution_closure",
+        "terminal_state_class": "retry_pending",
+        "negative_feedback_class": "degraded_execution",
+    }
+)
+explicit_dirty_retry_report_path.write_text(
+    json.dumps(explicit_dirty_retry_doc, ensure_ascii=False, indent=2) + "\n",
+    encoding="utf-8",
+)
+
 repair_blocked_doc = dict(base_doc)
 repair_blocked_doc.update(
     {
@@ -237,7 +262,7 @@ non_closeout_report_path.write_text(
 )
 PY
 
-python3 - <<'PY' "${CATALOG_PATH}" "${CLEAN_REPORT_PATH}" "${REVIEW_REPORT_PATH}" "${REPAIR_BLOCKED_REPORT_PATH}" "${NON_CLOSEOUT_REPORT_PATH}" "${IDENTITY_ID}"
+python3 - <<'PY' "${CATALOG_PATH}" "${CLEAN_REPORT_PATH}" "${REVIEW_REPORT_PATH}" "${EXPLICIT_DIRTY_RETRY_REPORT_PATH}" "${REPAIR_BLOCKED_REPORT_PATH}" "${NON_CLOSEOUT_REPORT_PATH}" "${IDENTITY_ID}"
 import json
 import sys
 from pathlib import Path
@@ -255,9 +280,10 @@ from terminal_truth_boundary_projection_common import (
 catalog_path = Path(sys.argv[1]).resolve()
 clean_report_path = Path(sys.argv[2]).resolve()
 review_report_path = Path(sys.argv[3]).resolve()
-repair_blocked_report_path = Path(sys.argv[4]).resolve()
-non_closeout_report_path = Path(sys.argv[5]).resolve()
-identity_id = sys.argv[6]
+explicit_dirty_retry_report_path = Path(sys.argv[4]).resolve()
+repair_blocked_report_path = Path(sys.argv[5]).resolve()
+non_closeout_report_path = Path(sys.argv[6]).resolve()
+identity_id = sys.argv[7]
 
 def load_doc(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -280,6 +306,13 @@ assert clean_projection["repair_success_not_clean_terminal_truth"] is False, cle
 assert clean_projection["negative_feedback_class"] == "none", clean_projection
 assert clean_projection["publishable"] is True, clean_projection
 assert clean_projection["canonical_result_eligible"] is True, clean_projection
+assert clean_projection["terminal_truth_execution_closure_status"] == "PASS_REQUIRED", clean_projection
+assert clean_projection["terminal_truth_state_machine_status"] == "PASS_REQUIRED", clean_projection
+assert clean_projection["terminal_truth_negative_feedback_terminal_veto_status"] == "PASS_REQUIRED", clean_projection
+assert clean_projection["terminal_truth_loopback_required"] is False, clean_projection
+assert clean_projection["terminal_truth_next_state_after_veto"] == "", clean_projection
+assert clean_projection["terminal_truth_dirty_signals"] == [], clean_projection
+assert clean_projection["terminal_truth_blockers"] == [], clean_projection
 
 review_projection = build_terminal_truth_boundary_projection_from_report(
     report_doc=load_doc(review_report_path),
@@ -302,6 +335,46 @@ assert review_projection["terminal_state_class"] == "review_pending", review_pro
 assert review_projection["negative_feedback_class"] == "review_required", review_projection
 assert review_projection["publishable"] is False, review_projection
 assert review_projection["canonical_result_eligible"] is False, review_projection
+assert review_projection["terminal_truth_execution_closure_status"] == "PASS_REQUIRED", review_projection
+assert review_projection["terminal_truth_state_machine_status"] == "PASS_REQUIRED", review_projection
+assert review_projection["terminal_truth_negative_feedback_terminal_veto_status"] == "PASS_REQUIRED", review_projection
+assert review_projection["terminal_truth_loopback_required"] is False, review_projection
+assert review_projection["terminal_truth_next_state_after_veto"] == "review_pending", review_projection
+assert "review_required_next_action" in review_projection["terminal_truth_dirty_signals"], review_projection
+assert "review_required_next_action" in review_projection["terminal_truth_blockers"], review_projection
+
+explicit_dirty_retry_projection = build_terminal_truth_boundary_projection_from_report(
+    report_doc=load_doc(explicit_dirty_retry_report_path),
+    report_path=explicit_dirty_retry_report_path,
+    catalog_path=catalog_path,
+    repo_catalog_path=catalog_path,
+    identity_id=identity_id,
+    operation="readiness",
+)
+assert explicit_dirty_retry_projection["terminal_truth_boundary_projection_status"] == "PASS_REQUIRED", explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["repair_lane_status"] == "PASS_REQUIRED", explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["repair_observation_status"] == "WARN_NON_BLOCKING", explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["terminal_truth_observation_status"] == "FAIL_REQUIRED", explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["boundary_health_class"] == "repair_green_terminal_truth_blocked", explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["admission_lane_projection"] == "BLOCKED_BY_TERMINAL_TRUTH", explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["terminal_truth_execution_closure_status"] == "PASS_REQUIRED", explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["terminal_truth_class"] == "dirty_terminal_execution_closure", explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["terminal_truth_state_machine_status"] == "PASS_REQUIRED", explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["terminal_state_class"] == "retry_pending", explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["negative_feedback_class"] == "degraded_execution", explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["terminal_truth_negative_feedback_terminal_veto_status"] == "PASS_REQUIRED", explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["terminal_truth_loopback_required"] is True, explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["terminal_truth_next_state_after_veto"] == "retry_pending", explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["publishable"] is False, explicit_dirty_retry_projection
+assert explicit_dirty_retry_projection["canonical_result_eligible"] is False, explicit_dirty_retry_projection
+for required_signal in [
+    "fallback_reason_present",
+    "explicit_revalidation_required",
+    "explicit_retry_required",
+    "error_info_dirty_signal",
+]:
+    assert required_signal in explicit_dirty_retry_projection["terminal_truth_dirty_signals"], (required_signal, explicit_dirty_retry_projection)
+    assert required_signal in explicit_dirty_retry_projection["terminal_truth_blockers"], (required_signal, explicit_dirty_retry_projection)
 
 repair_blocked_projection = build_terminal_truth_boundary_projection_from_report(
     report_doc=load_doc(repair_blocked_report_path),
@@ -321,6 +394,12 @@ assert repair_blocked_projection["terminal_truth_class"] == "non_terminal_or_fai
 assert repair_blocked_projection["terminal_state_class"] == "non_terminal_pending", repair_blocked_projection
 assert repair_blocked_projection["publishable"] is False, repair_blocked_projection
 assert repair_blocked_projection["canonical_result_eligible"] is False, repair_blocked_projection
+assert repair_blocked_projection["terminal_truth_execution_closure_status"] == "FAIL_REQUIRED", repair_blocked_projection
+assert repair_blocked_projection["terminal_truth_state_machine_status"] == "FAIL_REQUIRED", repair_blocked_projection
+assert repair_blocked_projection["terminal_truth_negative_feedback_terminal_veto_status"] == "PASS_REQUIRED", repair_blocked_projection
+assert repair_blocked_projection["terminal_truth_loopback_required"] is False, repair_blocked_projection
+assert repair_blocked_projection["terminal_truth_next_state_after_veto"] == "non_terminal_pending", repair_blocked_projection
+assert "execution_closure_not_reached" in repair_blocked_projection["terminal_truth_blockers"], repair_blocked_projection
 assert "rulebook_missing_run_link" in " ".join(
     repair_blocked_projection.get("experience_writeback_validation_stale_reasons", [])
 ), repair_blocked_projection
@@ -360,6 +439,7 @@ for field_name, expected_value in expected_one_look.items():
 print(json.dumps({
     "terminal_truth_boundary_projection_probe_status": "PASS_REQUIRED",
     "review_boundary_health_class": review_projection["boundary_health_class"],
+    "explicit_dirty_retry_boundary_health_class": explicit_dirty_retry_projection["boundary_health_class"],
     "clean_boundary_health_class": clean_projection["boundary_health_class"],
     "repair_blocked_boundary_health_class": repair_blocked_projection["boundary_health_class"],
 }, ensure_ascii=False))
