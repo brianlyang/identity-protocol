@@ -39,6 +39,10 @@ assert payload["authority_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["authority_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["authority_completeness_row_count"] == 5, payload
 assert payload["authority_completeness_surface"]["entry_count"] == 5, payload
+assert payload["authority_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["root_index_entry"] == "identity/protocol/README.md", payload
@@ -516,6 +520,10 @@ assert completeness_row["missing_ids"] == ["fail_close_preserves_authority_ident
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["authority_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["authority_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["authority_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/authority-completeness-surface-drift-repo"
@@ -566,6 +574,10 @@ assert surface_row["unexpected_ids"] == [
 ], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["authority_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["field"] == "authority_completeness_surface" and row["reason"] == "missing_authority_completeness_surface_rows"
     for row in payload["structure_violations"]
@@ -602,6 +614,10 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_authority_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCA-003", payload
 assert any(
+    "authority_violation:authority_completeness_surface:authority_completeness_surface_phrase_order_mismatch" == reason
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
     "authority_violation:authority_completeness_surface:authority_completeness_surface_order_mismatch" == reason
     for reason in payload["stale_reasons"]
 ), payload
@@ -615,6 +631,10 @@ assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["authority_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 CASE_REPO="${TMP_ROOT}/case-normalization-repo"

@@ -39,9 +39,15 @@ assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["derivation_row_family_count"] == 3, payload
 assert payload["derivation_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["derivation_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_class_profile_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_class_profile_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["derivation_completeness_row_count"] == 5, payload
 assert payload["derivation_completeness_surface"]["entry_count"] == 5, payload
 assert payload["derivation_completeness_surface"]["extraction_violations"] == [], payload
+assert payload["derivation_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["permitted_current_turn_root_corpus_class"] == "machine_registry_directory", payload
@@ -80,6 +86,8 @@ assert payload["derivation_row_family_count"] == 3, payload
 assert payload["derivation_completeness_row_count"] == 4, payload
 assert payload["derivation_row_coverage_status"] == "FAIL_REQUIRED", payload
 assert payload["derivation_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["derivation_class_profile_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_class_profile_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert any(
     row["field"] == "derivation_completeness_rows"
     and row["reason"] == "missing_expected_rows"
@@ -96,6 +104,10 @@ assert completeness_row["missing_ids"] == ["fail_close_preserves_derivation_iden
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["derivation_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["derivation_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["derivation_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 MISSING_CLASS_REPO="${TMP_ROOT}/missing-class-repo"
@@ -132,6 +144,8 @@ assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", pay
 assert payload["error_code"] == "IP-RCD-002", payload
 assert payload["derivation_row_coverage_status"] == "FAIL_REQUIRED", payload
 assert payload["derivation_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["derivation_class_profile_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["derivation_class_profile_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["field"] == "derivation_class_profiles" and row["reason"] == "missing_registry_classes" and "demoted_support_directory" in row.get("corpus_classes", [])
     for row in payload["structure_violations"]
@@ -146,6 +160,10 @@ assert class_row["missing_ids"] == ["demoted_support_directory"], payload
 assert class_row["unexpected_ids"] == [], payload
 assert class_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert class_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["derivation_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 IDENTITY_REPO="${TMP_ROOT}/identity-drift-repo"
@@ -184,6 +202,8 @@ assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", pay
 assert payload["error_code"] == "IP-RCD-002", payload
 assert payload["derivation_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["derivation_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["derivation_class_profile_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_class_profile_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["field"] == "derivation_class_profiles" and row["reason"] == "missing_registry_classes" and "demoted_support_directory" in row.get("corpus_classes", [])
     for row in payload["structure_violations"]
@@ -202,6 +222,10 @@ assert class_row["missing_ids"] == ["demoted_support_directory"], payload
 assert class_row["unexpected_ids"] == ["demoted_support_directory_alias"], payload
 assert class_row["coverage_status"] == "PASS_REQUIRED", payload
 assert class_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["derivation_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 SURFACE_REPO="${TMP_ROOT}/surface-drift-repo"
@@ -260,6 +284,12 @@ assert surface_row["expected_count"] == 5, payload
 assert surface_row["actual_count"] == 5, payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["derivation_class_profile_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_class_profile_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/derivation-completeness-surface-order-drift-repo"
@@ -309,6 +339,12 @@ assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_class_profile_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_class_profile_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 BINDING_REPO="${TMP_ROOT}/binding-drift-repo"

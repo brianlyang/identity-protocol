@@ -46,6 +46,10 @@ assert payload["strengthening_gateway_edge_count"] == 40, payload
 assert payload["transition_completeness_row_count"] == 5, payload
 assert payload["transition_completeness_surface"]["entry_count"] == 5, payload
 assert payload["transition_completeness_surface"]["extraction_violations"] == [], payload
+assert payload["transition_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["transition_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["transition_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["transition_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 PY
@@ -99,6 +103,10 @@ assert completeness_row["missing_ids"] == ["fail_close_preserves_transition_iden
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["transition_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["transition_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["transition_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["transition_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 MISSING_PROFILE_REPO="${TMP_ROOT}/missing-profile-repo"
@@ -384,6 +392,10 @@ assert any(
     row["field"] == "transition_completeness_surface" and row["reason"] == "extra_transition_completeness_surface_rows"
     for row in payload["structure_violations"]
 ), payload
+assert payload["transition_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["transition_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["transition_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["transition_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 TRANSITION_SURFACE_ORDER_REPO="${TMP_ROOT}/transition-completeness-surface-order-drift-repo"
@@ -412,6 +424,10 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_transition_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCT-003", payload
 assert any(
+    "transition_violation:transition_completeness_surface:transition_completeness_surface_phrase_order_mismatch" == reason
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
     "transition_violation:transition_completeness_surface:transition_completeness_surface_order_mismatch" == reason
     for reason in payload["stale_reasons"]
 ), payload
@@ -425,6 +441,10 @@ assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["transition_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["transition_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["transition_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["transition_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 TRANSITION_BINDING_REPO="${TMP_ROOT}/transition-binding-drift-repo"

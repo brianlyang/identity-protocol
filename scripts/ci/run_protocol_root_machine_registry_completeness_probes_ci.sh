@@ -72,6 +72,8 @@ assert payload["machine_registry_completeness_canonical_row_coverage_status"] ==
 assert payload["machine_registry_completeness_canonical_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["machine_registry_completeness_surface"]["entry_count"] == 5, payload
 assert payload["machine_registry_completeness_surface"]["extraction_violations"] == [], payload
+assert payload["machine_registry_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_registry_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["family_ids"] == payload["family_status_row_ids"] == payload["discovered_family_ids"], payload
 assert payload["registered_complete_family_ids"] == payload["discovered_family_ids"], payload
 assert payload["missing_family_status_row_ids"] == [], payload
@@ -250,6 +252,8 @@ assert completeness_row["missing_ids"] == ["fail_close_preserves_machine_registr
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_registry_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_registry_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/machine-registry-completeness-surface-drift-repo"
@@ -306,6 +310,8 @@ assert surface_row["expected_count"] == 5, payload
 assert surface_row["actual_count"] == 5, payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_registry_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_registry_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 COMPLETENESS_BINDING_REPO="${TMP_ROOT}/machine-registry-completeness-binding-drift-repo"
@@ -379,6 +385,41 @@ assert payload["error_code"] == "IP-RMRC-001", payload
 assert "root_machine_registry_completeness_required_validator_surface_contract_fields_invalid" in payload["stale_reasons"], payload
 PY
 
+VALIDATOR_VALUE_POLICY_REPO="${TMP_ROOT}/validator-value-policy-drift-repo"
+mirror_repo "${VALIDATOR_VALUE_POLICY_REPO}"
+python3 - <<'PY' "${VALIDATOR_VALUE_POLICY_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_validator_surface_contract_values"] = {
+    "validator_root_doc_anchor_contract": "advisory_only",
+    "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+}
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+VALIDATOR_VALUE_POLICY_JSON="${TMP_ROOT}/validator-value-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${VALIDATOR_VALUE_POLICY_REPO}" \
+  --json-only >"${VALIDATOR_VALUE_POLICY_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed source validator-surface value policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${VALIDATOR_VALUE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-001", payload
+assert "root_machine_registry_completeness_required_validator_surface_contract_values_invalid" in payload["stale_reasons"], payload
+PY
+
 PROBE_POLICY_REPO="${TMP_ROOT}/probe-policy-drift-repo"
 mirror_repo "${PROBE_POLICY_REPO}"
 python3 - <<'PY' "${PROBE_POLICY_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
@@ -409,6 +450,40 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RMRC-001", payload
 assert "root_machine_registry_completeness_required_probe_surface_contract_fields_invalid" in payload["stale_reasons"], payload
+PY
+
+PROBE_VALUE_POLICY_REPO="${TMP_ROOT}/probe-value-policy-drift-repo"
+mirror_repo "${PROBE_VALUE_POLICY_REPO}"
+python3 - <<'PY' "${PROBE_VALUE_POLICY_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_probe_surface_contract_values"] = {
+    "probe_shadow_bootstrap_contract": "advisory_only",
+}
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+PROBE_VALUE_POLICY_JSON="${TMP_ROOT}/probe-value-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${PROBE_VALUE_POLICY_REPO}" \
+  --json-only >"${PROBE_VALUE_POLICY_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed source probe-surface value policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${PROBE_VALUE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-001", payload
+assert "root_machine_registry_completeness_required_probe_surface_contract_values_invalid" in payload["stale_reasons"], payload
 PY
 
 VALIDATOR_SURFACE_FIELD_REPO="${TMP_ROOT}/validator-surface-field-drift-repo"
@@ -1323,6 +1398,11 @@ assert payload["machine_registry_completeness_row_coverage_status"] == "PASS_REQ
 assert payload["machine_registry_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert any(
     row["field"] == "machine_registry_completeness_surface"
+    and row["reason"] == "machine_registry_completeness_surface_phrase_order_mismatch"
+    for row in payload["completeness_violations"]
+), payload
+assert any(
+    row["field"] == "machine_registry_completeness_surface"
     and row["reason"] == "machine_registry_completeness_surface_order_mismatch"
     for row in payload["completeness_violations"]
 ), payload
@@ -1342,6 +1422,8 @@ assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["machine_registry_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_registry_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 echo "[PASS] protocol root machine-registry completeness probes passed"
