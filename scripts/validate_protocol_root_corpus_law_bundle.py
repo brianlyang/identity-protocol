@@ -15,13 +15,14 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
-from root_contract_row_validation_common import contiguous_orders
+from root_contract_row_validation_common import contiguous_orders, validate_contract_row_batches
 from root_corpus_governance_common import root_corpus_entries_from_registry
 from root_corpus_law_bundle_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     bundle_anchor_checks_from_doc,
     bundle_components_from_doc,
+    law_bundle_component_row_completeness_rows_from_doc,
     component_registry_child_membership_fallback_policy_from_doc,
     component_registry_child_membership_inheritance_mode_from_doc,
     component_registry_child_membership_local_redeclaration_policy_from_doc,
@@ -99,6 +100,7 @@ from root_corpus_law_bundle_common import (
     load_mapping_descriptor,
     load_root_corpus_law_bundle,
     machine_registry_completeness_current_file_from_doc,
+    readme_law_bundle_component_row_completeness_surface,
     required_component_descriptor_field_modes_from_doc,
     required_component_descriptor_fields_from_doc,
     require_component_descriptor_concordance,
@@ -352,11 +354,37 @@ EXPECTED_COMPONENTS = {
     },
 }
 
+EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS = {
+    "explicit_law_bundle_component_row_families": {
+        "order": 1,
+        "contract_phrase": "required component-row and component-status-row rows must remain explicit as separate machine-readable row families;",
+    },
+    "congruent_law_bundle_component_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_law_bundle_component_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_law_bundle_component_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize root-law bundle legality while missing or unexpected component identities remain known only internally;",
+    },
+    "fail_close_preserves_law_bundle_component_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
+
 
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md': ('### Root-law bundle must stay explicit and jointly governed',
                                                               '### Root-law bundle component-row completeness must stay explicit',
                                                               'Required component-row and component-status-row families must remain '
                                                               'explicit',
+                                                              'README root law-bundle component-row completeness discipline must therefore '
+                                                              'stay congruent with admitted law-bundle-component-row-completeness rows '
+                                                              'rather than becoming a freehand completeness summary.',
                                                               'Constitutional spine, root admission/governance, source-order, authority,',
                                                               'machine-registry completeness, and conflict precedence are not optional',
                                                               'Weakening one slice while keeping the others green is a root-law coherence',
@@ -691,6 +719,9 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
                                                               'observation reason rather than silently expanding bundle observation '
                                                               'ontology.'),
  'identity/protocol/README.md': ('## Root law-bundle component-row completeness discipline',
+                                 'These law-bundle-component-row-completeness rules must remain bound to canonical '
+                                 'law-bundle-component-row-completeness rows rather than drifting into soft summary '
+                                 'prose.',
                                  '1. required component-row and component-status-row rows must remain explicit as separate '
                                  'machine-readable row families;',
                                  '## Root-law bundle discipline',
@@ -925,6 +956,10 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
  'identity/protocol/IDENTITY_PROTOCOL.md': ('## Root law-bundle component-row completeness boundary',
                                             '1. Root-law bundle coherence must remain machine-readable as separate component-row and '
                                             'component-status-row families.',
+                                            '6. README root law-bundle component-row completeness discipline rendered at '
+                                            'protocol root must remain congruent with admitted '
+                                            'law-bundle-component-row-completeness rows rather than silently authoring an '
+                                            'alternate completeness summary.',
                                             '## Root-law bundle boundary',
                                             '1. constitutional spine;',
                                             '9. machine-registry completeness;',
@@ -1154,6 +1189,10 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
  'identity/protocol/IDENTITY_RUNTIME.md': ('## Runtime law-bundle component-row consumption boundary',
                                            '1. Runtime consumes root-law bundle coherence as separate component-row and '
                                            'component-status-row families rather than as undifferentiated bundle prose.',
+                                           '6. Runtime consumes README root law-bundle component-row completeness '
+                                           'discipline as a governed completeness projection bound to admitted '
+                                           'law-bundle-component-row-completeness rows rather than as a freehand '
+                                           'completeness summary.',
                                            '## Runtime consumption of the root-law bundle',
                                            'constitutional spine, admission/governance, ordering, authority, question-routing,',
                                            'machine-registry completeness,',
@@ -1897,6 +1936,12 @@ def main() -> int:
 
     anchor_checks = bundle_anchor_checks_from_doc(bundle_doc) if bundle_doc else ()
     components = bundle_components_from_doc(bundle_doc) if bundle_doc else ()
+    law_bundle_component_row_completeness_rows = (
+        law_bundle_component_row_completeness_rows_from_doc(bundle_doc) if bundle_doc else ()
+    )
+    law_bundle_component_row_completeness_surface = (
+        readme_law_bundle_component_row_completeness_surface(repo_root)
+    )
     descriptor_concordance_required = require_component_descriptor_concordance(bundle_doc) if bundle_doc else False
     required_component_descriptor_fields = (
         required_component_descriptor_fields_from_doc(bundle_doc) if bundle_doc else ()
@@ -3186,6 +3231,9 @@ def main() -> int:
         if not components:
             stale_reasons.append("root_corpus_law_bundle_components_missing")
             error_code = ERR_REGISTRY
+        if not law_bundle_component_row_completeness_rows:
+            stale_reasons.append("root_corpus_law_bundle_component_row_completeness_rows_missing")
+            error_code = ERR_REGISTRY
         anchor_reason_count_before = len(stale_reasons)
         stale_reasons.extend(
             validate_expected_root_doc_anchor_checks(
@@ -3294,6 +3342,53 @@ def main() -> int:
             structure_violations.append(
                 {"field": "component_rows", "reason": "extra_components", "component_ids": extra_components}
             )
+
+        for reason in law_bundle_component_row_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "law_bundle_component_row_completeness_surface",
+                    "reason": f"law_bundle_component_row_completeness_surface_{reason}",
+                }
+            )
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": law_bundle_component_row_completeness_rows,
+                    "expected_rows": EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS,
+                    "field_name": "law_bundle_component_row_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "duplicate_reason": "duplicate_law_bundle_component_row_completeness_id",
+                    "non_contiguous_reason": "law_bundle_component_row_completeness_row_order_non_contiguous",
+                    "missing_reason": "missing_law_bundle_component_row_completeness_rows",
+                    "extra_reason": "extra_law_bundle_component_row_completeness_rows",
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                    "order_reason": "law_bundle_component_row_completeness_row_order_mismatch",
+                },
+                {
+                    "actual_rows": law_bundle_component_row_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "law_bundle_component_row_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_law_bundle_component_row_completeness_surface_phrase",
+                    "non_contiguous_reason": "law_bundle_component_row_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_law_bundle_component_row_completeness_surface_rows",
+                    "extra_reason": "extra_law_bundle_component_row_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "law_bundle_component_row_completeness_surface_order_mismatch",
+                },
+            ),
+            structure_violations=structure_violations,
+            support_violations=bundle_violations,
+        )
 
         for row in sorted_components:
             expected = EXPECTED_COMPONENTS.get(row.component_id)
@@ -3765,6 +3860,26 @@ def main() -> int:
                 },
                 "id_attr": "component_id",
             },
+            {
+                "family_id": "law_bundle_component_row_completeness_rows",
+                "member_id_key": "completeness_id",
+                "actual_rows": law_bundle_component_row_completeness_rows,
+                "expected_rows": {
+                    completeness_id: {}
+                    for completeness_id in EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS
+                },
+                "id_attr": "completeness_id",
+            },
+            {
+                "family_id": "law_bundle_component_row_completeness_surface",
+                "member_id_key": "contract_phrase",
+                "actual_rows": law_bundle_component_row_completeness_surface.rows,
+                "expected_rows": {
+                    row["contract_phrase"]: {}
+                    for row in EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS.values()
+                },
+                "id_attr": "contract_phrase",
+            },
         ),
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
@@ -4179,6 +4294,9 @@ def main() -> int:
         "derived_error_code_from_precedence": derived_error_code_from_precedence,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
+        "law_bundle_component_row_completeness_row_count": len(
+            law_bundle_component_row_completeness_rows
+        ),
         "component_status_row_count": len(component_status_rows),
         "expected_component_status_row_count": len(sorted_components),
         "component_status_row_coverage_status": component_status_row_coverage_status,
@@ -4297,6 +4415,28 @@ def main() -> int:
         "bundle_local_registry_child_membership_governance": dict(bundle_local_registry_child_membership_governance),
         "source_required_repo_rel_path_patterns": dict(source_required_repo_rel_path_patterns),
         "row_family_projection_rows": row_family_projection_rows,
+        "law_bundle_component_row_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in law_bundle_component_row_completeness_rows
+        ],
+        "law_bundle_component_row_completeness_surface": {
+            "rel_path": law_bundle_component_row_completeness_surface.rel_path,
+            "entry_count": len(law_bundle_component_row_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in law_bundle_component_row_completeness_surface.rows
+            ],
+            "extraction_violations": list(
+                law_bundle_component_row_completeness_surface.extraction_violations
+            ),
+        },
         "component_status_rows": component_status_rows,
         "structure_violations": structure_violations,
         "bundle_violations": bundle_violations,

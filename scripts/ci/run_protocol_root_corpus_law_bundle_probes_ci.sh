@@ -199,9 +199,12 @@ assert payload["component_status_row_count"] == payload["component_count"] == 10
 assert payload["expected_component_status_row_count"] == payload["component_count"] == 10, payload
 assert payload["component_status_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["component_status_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["law_bundle_row_family_count"] == 2, payload
+assert payload["law_bundle_component_row_completeness_row_count"] == 5, payload
+assert payload["law_bundle_row_family_count"] == 4, payload
 assert payload["law_bundle_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["law_bundle_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface"]["entry_count"] == 5, payload
+assert payload["law_bundle_component_row_completeness_surface"]["extraction_violations"] == [], payload
 assert payload["structure_violation_count"] == 0, payload
 assert payload["bundle_violation_count"] == 0, payload
 assert payload["anchor_violation_count"] == 0, payload
@@ -331,6 +334,121 @@ assert any(
 ), payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert any(
+    row["family_id"] == "law_bundle_component_row_completeness_rows"
+    for row in payload["row_family_projection_rows"]
+), payload
+assert any(
+    row["family_id"] == "law_bundle_component_row_completeness_surface"
+    for row in payload["row_family_projection_rows"]
+), payload
+PY
+
+COMPLETENESS_ROW_REPO="${TMP_ROOT}/missing-law-bundle-completeness-row-repo"
+mirror_repo "${COMPLETENESS_ROW_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["law_bundle_component_row_completeness_rows"] = [
+    row
+    for row in doc["law_bundle_component_row_completeness_rows"]
+    if row.get("completeness_id") != "explicit_law_bundle_component_row_families"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_JSON="${TMP_ROOT}/missing-law-bundle-completeness-row.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPLETENESS_ROW_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing completeness row"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-002", payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_rows"
+    and row["reason"] == "missing_law_bundle_component_row_completeness_rows"
+    and "explicit_law_bundle_component_row_families" in row.get("completeness_ids", [])
+    for row in payload["structure_violations"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "law_bundle_component_row_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 4, payload
+assert completeness_row["missing_ids"] == ["explicit_law_bundle_component_row_families"], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/law-bundle-completeness-surface-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "1. required component-row and component-status-row rows must remain explicit as separate machine-readable row families;"
+new = "1. required component-row rows must remain explicit as separate machine-readable row families;"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_JSON="${TMP_ROOT}/law-bundle-completeness-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPLETENESS_SURFACE_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed completeness surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-002", payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_surface"
+    and row["reason"] == "missing_law_bundle_component_row_completeness_surface_rows"
+    and "required component-row and component-status-row rows must remain explicit as separate machine-readable row families;" in row.get("contract_phrases", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_surface"
+    and row["reason"] == "extra_law_bundle_component_row_completeness_surface_rows"
+    and "required component-row rows must remain explicit as separate machine-readable row families;" in row.get("contract_phrases", [])
+    for row in payload["structure_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "law_bundle_component_row_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == ["required component-row and component-status-row rows must remain explicit as separate machine-readable row families;"], payload
+assert surface_row["unexpected_ids"] == ["required component-row rows must remain explicit as separate machine-readable row families;"], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 COMPONENT_VALIDATOR_STATUS_REQUIREMENT_REPO="${TMP_ROOT}/component-validator-status-requirement-drift-repo"
@@ -4334,8 +4452,8 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-old = "## Root law-bundle component-row completeness discipline"
-new = "## Root law bundle component-row completeness discipline"
+old = "These law-bundle-component-row-completeness rules must remain bound to canonical law-bundle-component-row-completeness rows rather than drifting into soft summary prose."
+new = "These law-bundle-component-row rules may be summarized directly in README prose."
 assert old in text, text[:2600]
 path.write_text(text.replace(old, new, 1), encoding="utf-8")
 PY
@@ -4359,7 +4477,7 @@ assert payload["error_code"] == "IP-RCLB-003", payload
 assert any(
     row["rel_path"] == "identity/protocol/README.md"
     and row["reason"] == "required_marker_missing"
-    and row["marker"] == "## Root law-bundle component-row completeness discipline"
+    and row["marker"] == "These law-bundle-component-row-completeness rules must remain bound to canonical law-bundle-component-row-completeness rows rather than drifting into soft summary prose."
     for row in payload["anchor_violations"]
 ), payload
 PY

@@ -118,6 +118,9 @@ bundle_anchor_checks:
   - '### Root-law bundle must stay explicit and jointly governed'
   - '### Root-law bundle component-row completeness must stay explicit'
   - Required component-row and component-status-row families must remain explicit
+  - README root law-bundle component-row completeness discipline must therefore
+    stay congruent with admitted law-bundle-component-row-completeness rows
+    rather than becoming a freehand completeness summary.
   - Constitutional spine, root admission/governance, source-order, authority,
   - machine-registry completeness, and conflict precedence are not optional
   - Weakening one slice while keeping the others green is a root-law coherence
@@ -446,6 +449,7 @@ bundle_anchor_checks:
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root law-bundle component-row completeness discipline'
+  - These law-bundle-component-row-completeness rules must remain bound to canonical law-bundle-component-row-completeness rows rather than drifting into soft summary prose.
   - 1. required component-row and component-status-row rows must remain explicit as separate machine-readable row families;
   - '## Root-law bundle discipline'
   - Constitutional spine, root admission/governance, source-order, authority
@@ -768,6 +772,7 @@ bundle_anchor_checks:
   required_markers:
   - '## Root law-bundle component-row completeness boundary'
   - 1. Root-law bundle coherence must remain machine-readable as separate component-row and component-status-row families.
+  - 6. README root law-bundle component-row completeness discipline rendered at protocol root must remain congruent with admitted law-bundle-component-row-completeness rows rather than silently authoring an alternate completeness summary.
   - '## Root-law bundle boundary'
   - 1. constitutional spine;
   - 9. machine-registry completeness;
@@ -1048,6 +1053,7 @@ bundle_anchor_checks:
   required_markers:
   - '## Runtime law-bundle component-row consumption boundary'
   - 1. Runtime consumes root-law bundle coherence as separate component-row and component-status-row families rather than as undifferentiated bundle prose.
+  - 6. Runtime consumes README root law-bundle component-row completeness discipline as a governed completeness projection bound to admitted law-bundle-component-row-completeness rows rather than as a freehand completeness summary.
   - '## Runtime consumption of the root-law bundle'
   - constitutional spine, admission/governance, ordering, authority, question-routing,
   - machine-registry completeness,
@@ -1326,6 +1332,22 @@ bundle_anchor_checks:
     remain fail-closed.
   - Runtime must fail-close on unclassified component-validator observation
     reason rather than silently expanding bundle observation ontology.
+law_bundle_component_row_completeness_rows:
+- order: 1
+  completeness_id: explicit_law_bundle_component_row_families
+  contract_phrase: required component-row and component-status-row rows must remain explicit as separate machine-readable row families;
+- order: 2
+  completeness_id: congruent_law_bundle_component_row_family_totals
+  contract_phrase: expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+- order: 3
+  completeness_id: explicit_law_bundle_component_row_identity_sets
+  contract_phrase: expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+- order: 4
+  completeness_id: hidden_law_bundle_component_identity_drift_forbidden
+  contract_phrase: runtime or validator code must not finalize root-law bundle legality while missing or unexpected component identities remain known only internally;
+- order: 5
+  completeness_id: fail_close_preserves_law_bundle_component_identity_projection
+  contract_phrase: fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
 component_rows:
 - order: 1
   component_id: root_corpus_governance
