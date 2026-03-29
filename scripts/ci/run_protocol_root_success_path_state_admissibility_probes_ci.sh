@@ -464,4 +464,63 @@ assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
+
+SUCCESS_PATH_SURFACE_ORDER_REPO="${TMP_ROOT}/success-path-completeness-surface-order-drift-repo"
+mirror_repo "${SUCCESS_PATH_SURFACE_ORDER_REPO}"
+python3 - <<'PY' "${SUCCESS_PATH_SURFACE_ORDER_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace(
+    "1. required state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;\n"
+    "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    "2. required state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;\n"
+    "1. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    1,
+)
+path.write_text(text, encoding="utf-8")
+PY
+
+SUCCESS_PATH_SURFACE_ORDER_JSON="${TMP_ROOT}/success-path-completeness-surface-order-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_success_path_state_admissibility.py" \
+  --repo-root "${SUCCESS_PATH_SURFACE_ORDER_REPO}" \
+  --json-only >"${SUCCESS_PATH_SURFACE_ORDER_JSON}"; then
+  echo "[FAIL] root success-path state admissibility validator unexpectedly passed completeness surface order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SUCCESS_PATH_SURFACE_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_success_path_state_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-SPSA-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert payload["success_path_state_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["success_path_state_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "success_path_state_admissibility_completeness_surface"
+    and row["reason"] == "success_path_state_admissibility_completeness_surface_order_mismatch"
+    for row in payload["admissibility_violations"]
+), payload
+assert any(
+    reason == "success_path_state_admissibility_violation:success_path_state_admissibility_completeness_surface:success_path_state_admissibility_completeness_surface_order_mismatch"
+    for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "success_path_state_admissibility_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
 echo "[PASS] protocol root success-path state admissibility probes passed"
