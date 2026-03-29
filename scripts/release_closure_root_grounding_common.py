@@ -95,6 +95,11 @@ RELEASE_CLOSURE_ROOT_GROUNDING_LANE_SPECS: tuple[
         probe_rel="scripts/ci/run_protocol_root_identity_discovery_probes_ci.sh",
     ),
     ReleaseClosureRootGroundingLaneSpec(
+        lane_id="protocol_root_agent_handoff",
+        validator_rel="scripts/validate_protocol_root_agent_handoff.py",
+        probe_rel="scripts/ci/run_protocol_root_agent_handoff_probes_ci.sh",
+    ),
+    ReleaseClosureRootGroundingLaneSpec(
         lane_id="protocol_root_operator_answer_surface",
         validator_rel="scripts/validate_protocol_root_operator_answer_surface.py",
         probe_rel="scripts/ci/run_protocol_root_operator_answer_surface_probes_ci.sh",

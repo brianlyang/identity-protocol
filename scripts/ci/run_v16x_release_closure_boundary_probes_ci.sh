@@ -44,17 +44,17 @@ release_closure_root_grounding_order_marker="$(
 release_closure_root_grounding_lane_marker="$(
   resolve_python_module_expression \
     "release_closure_root_grounding_common" \
-    "next(marker for marker in RELEASE_CLOSURE_ROOT_GROUNDING_LANE_MARKERS if marker.endswith('protocol_root_identity_discovery'))"
+    "next(marker for marker in RELEASE_CLOSURE_ROOT_GROUNDING_LANE_MARKERS if marker.endswith('protocol_root_agent_handoff'))"
 )"
 release_closure_root_grounding_validator_path="$(
   resolve_python_module_expression \
     "release_closure_root_grounding_common" \
-    "next(spec.validator_rel for spec in RELEASE_CLOSURE_ROOT_GROUNDING_LANE_SPECS if spec.lane_id == 'protocol_root_identity_discovery')"
+    "next(spec.validator_rel for spec in RELEASE_CLOSURE_ROOT_GROUNDING_LANE_SPECS if spec.lane_id == 'protocol_root_agent_handoff')"
 )"
 release_closure_root_grounding_probe_path="$(
   resolve_python_module_expression \
     "release_closure_root_grounding_common" \
-    "next(spec.probe_rel for spec in RELEASE_CLOSURE_ROOT_GROUNDING_LANE_SPECS if spec.lane_id == 'protocol_root_identity_discovery')"
+    "next(spec.probe_rel for spec in RELEASE_CLOSURE_ROOT_GROUNDING_LANE_SPECS if spec.lane_id == 'protocol_root_agent_handoff')"
 )"
 terminal_truth_bridge_surface_marker="$(
   resolve_python_module_expression \
