@@ -594,8 +594,7 @@ def _assert_release_closure_summary_probe_results(
     )
     _require_reason(
         reasons,
-        "summary_doc_missing_release_readiness_post_closure_adjudication_marker:"
-        f"{RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_ORDER_MARKER}",
+        "summary_doc_post_closure_adjudication_order_line_not_canonical",
         "negative release-closure summary must detect post-closure adjudication-order drift",
     )
     _require_reason(
@@ -758,8 +757,7 @@ def _assert_release_closure_boundary_probe_results(
     )
     _require_reason(
         reasons,
-        "governance_doc_missing_post_closure_adjudication_marker:"
-        f"{RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_ORDER_MARKER}",
+        "governance_doc_post_closure_adjudication_order_line_not_canonical",
         "negative release-closure boundary must detect post-closure adjudication-order drift",
     )
     _require_reason(
