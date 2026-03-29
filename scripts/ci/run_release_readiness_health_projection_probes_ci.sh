@@ -41,7 +41,17 @@ def write_json(path: Path, doc: dict) -> None:
     path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def summary_template(*, mode: str, selected: list[str], failed_scripts: list[str], first_failed: str, boundary_status: str) -> dict:
+def summary_template(
+    *,
+    mode: str,
+    selected: list[str],
+    failed_scripts: list[str],
+    first_failed: str,
+    boundary_status: str,
+    repair_lane_status: str = STATUS_PASS_REQUIRED,
+    post_execution_obligation_status: str = STATUS_PASS_REQUIRED,
+    writeback_continuity_status: str = STATUS_PASS_REQUIRED,
+) -> dict:
     return {
         "selected_check_mode": mode,
         "selected_check_names": list(selected),
@@ -51,7 +61,9 @@ def summary_template(*, mode: str, selected: list[str], failed_scripts: list[str
         },
         "terminal_truth_boundary_projection": {
             "terminal_truth_boundary_projection_status": STATUS_PASS_REQUIRED,
-            "repair_lane_status": STATUS_PASS_REQUIRED,
+            "repair_lane_status": repair_lane_status,
+            "post_execution_obligation_status": post_execution_obligation_status,
+            "writeback_continuity_status": writeback_continuity_status,
             "experience_writeback_validation_status": boundary_status,
             "terminal_truth_observation_status": STATUS_PASS_REQUIRED,
             "admission_lane_projection": "NOT_BLOCKED_BY_TERMINAL_TRUTH",
@@ -100,6 +112,13 @@ pass_projection = build_health_report_experience_writeback_closure_projection(
     command_execution=pass_summary["command_execution"],
     selected_check_mode=pass_summary["selected_check_mode"],
     selected_check_names=pass_summary["selected_check_names"],
+    boundary_repair_lane_status=pass_summary["terminal_truth_boundary_projection"]["repair_lane_status"],
+    boundary_post_execution_obligation_status=pass_summary["terminal_truth_boundary_projection"][
+        "post_execution_obligation_status"
+    ],
+    boundary_writeback_continuity_status=pass_summary["terminal_truth_boundary_projection"][
+        "writeback_continuity_status"
+    ],
     boundary_experience_writeback_validation_status=pass_summary["terminal_truth_boundary_projection"][
         "experience_writeback_validation_status"
     ],
@@ -111,6 +130,7 @@ assert pass_projection["execution_report_ref_matches"] is True, pass_projection
 assert pass_projection["report_selected_path_matches_execution_report"] is True, pass_projection
 assert pass_projection["report_logical_identity_key_matches_execution_report"] is True, pass_projection
 assert pass_projection["validation_status"] == STATUS_PASS_REQUIRED, pass_projection
+assert pass_projection["boundary_bridge_status"] == STATUS_PASS_REQUIRED, pass_projection
 pass_summary["health_report_experience_writeback_closure"] = pass_projection
 _hydrate_one_look_projection(pass_summary)
 pass_one_look = pass_summary["one_look"]
@@ -126,6 +146,9 @@ skip_summary = summary_template(
     failed_scripts=[],
     first_failed="",
     boundary_status=STATUS_SKIPPED_NOT_REQUIRED,
+    repair_lane_status=STATUS_SKIPPED_NOT_REQUIRED,
+    post_execution_obligation_status=STATUS_SKIPPED_NOT_REQUIRED,
+    writeback_continuity_status=STATUS_SKIPPED_NOT_REQUIRED,
 )
 skip_projection = build_health_report_experience_writeback_closure_projection(
     identity_id=identity_id,
@@ -134,11 +157,19 @@ skip_projection = build_health_report_experience_writeback_closure_projection(
     command_execution=skip_summary["command_execution"],
     selected_check_mode=skip_summary["selected_check_mode"],
     selected_check_names=skip_summary["selected_check_names"],
+    boundary_repair_lane_status=skip_summary["terminal_truth_boundary_projection"]["repair_lane_status"],
+    boundary_post_execution_obligation_status=skip_summary["terminal_truth_boundary_projection"][
+        "post_execution_obligation_status"
+    ],
+    boundary_writeback_continuity_status=skip_summary["terminal_truth_boundary_projection"][
+        "writeback_continuity_status"
+    ],
     boundary_experience_writeback_validation_status=skip_summary["terminal_truth_boundary_projection"][
         "experience_writeback_validation_status"
     ],
 )
 assert skip_projection["projection_status"] == STATUS_SKIPPED_NOT_REQUIRED, skip_projection
+assert skip_projection["boundary_bridge_status"] == STATUS_SKIPPED_NOT_REQUIRED, skip_projection
 assert "post_execution_health_projection_not_selected" in skip_projection["stale_reasons"], skip_projection
 
 blocked_summary = summary_template(
@@ -147,6 +178,9 @@ blocked_summary = summary_template(
     failed_scripts=["scripts/validate_identity_protocol_version_alignment.py"],
     first_failed="scripts/validate_identity_protocol_version_alignment.py",
     boundary_status=STATUS_SKIPPED_NOT_REQUIRED,
+    repair_lane_status=STATUS_SKIPPED_NOT_REQUIRED,
+    post_execution_obligation_status=STATUS_SKIPPED_NOT_REQUIRED,
+    writeback_continuity_status=STATUS_SKIPPED_NOT_REQUIRED,
 )
 blocked_projection = build_health_report_experience_writeback_closure_projection(
     identity_id=identity_id,
@@ -155,6 +189,13 @@ blocked_projection = build_health_report_experience_writeback_closure_projection
     command_execution=blocked_summary["command_execution"],
     selected_check_mode=blocked_summary["selected_check_mode"],
     selected_check_names=blocked_summary["selected_check_names"],
+    boundary_repair_lane_status=blocked_summary["terminal_truth_boundary_projection"]["repair_lane_status"],
+    boundary_post_execution_obligation_status=blocked_summary["terminal_truth_boundary_projection"][
+        "post_execution_obligation_status"
+    ],
+    boundary_writeback_continuity_status=blocked_summary["terminal_truth_boundary_projection"][
+        "writeback_continuity_status"
+    ],
     boundary_experience_writeback_validation_status=blocked_summary["terminal_truth_boundary_projection"][
         "experience_writeback_validation_status"
     ],
@@ -162,6 +203,7 @@ blocked_projection = build_health_report_experience_writeback_closure_projection
 assert blocked_projection["projection_status"] == STATUS_SKIPPED_NOT_REQUIRED, blocked_projection
 assert blocked_projection["health_report_collection_status"] == STATUS_SKIPPED_NOT_REQUIRED, blocked_projection
 assert blocked_projection["health_report_contract_status"] == STATUS_SKIPPED_NOT_REQUIRED, blocked_projection
+assert blocked_projection["boundary_bridge_status"] == STATUS_SKIPPED_NOT_REQUIRED, blocked_projection
 assert "health_report_projection_blocked_by_upstream_failure" in blocked_projection["stale_reasons"], blocked_projection
 
 fail_health_dir = (tmp_dir / "health-fail").resolve()
@@ -202,11 +244,19 @@ fail_projection = build_health_report_experience_writeback_closure_projection(
     command_execution=fail_summary["command_execution"],
     selected_check_mode=fail_summary["selected_check_mode"],
     selected_check_names=fail_summary["selected_check_names"],
+    boundary_repair_lane_status=fail_summary["terminal_truth_boundary_projection"]["repair_lane_status"],
+    boundary_post_execution_obligation_status=fail_summary["terminal_truth_boundary_projection"][
+        "post_execution_obligation_status"
+    ],
+    boundary_writeback_continuity_status=fail_summary["terminal_truth_boundary_projection"][
+        "writeback_continuity_status"
+    ],
     boundary_experience_writeback_validation_status=fail_summary["terminal_truth_boundary_projection"][
         "experience_writeback_validation_status"
     ],
 )
 assert fail_projection["projection_status"] == STATUS_FAIL_REQUIRED, fail_projection
+assert fail_projection["boundary_bridge_status"] == STATUS_FAIL_REQUIRED, fail_projection
 assert "health_report_boundary_validation_status_mismatch" in fail_projection["stale_reasons"], fail_projection
 
 print(

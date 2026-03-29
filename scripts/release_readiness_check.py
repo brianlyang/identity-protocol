@@ -145,6 +145,7 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_identity_update_preflight_terminal_truth_split_probes_ci.sh"],
     ["bash", "scripts/ci/run_terminal_truth_boundary_projection_probes_ci.sh"],
     ["bash", "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh"],
+    ["bash", "scripts/ci/run_release_readiness_health_projection_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_broadcast_delivery_probes_ci.sh"],
     ["python3", "scripts/validate_protocol_broadcast_doc_control.py", "--json-only"],
     ["bash", "scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh"],
@@ -182,6 +183,8 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_release_readiness_repo_global_closure_topology_probes_ci.sh"],
     ["python3", "scripts/validate_release_readiness_active_runtime_closure_topology.py", "--json-only"],
     ["bash", "scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh"],
+    ["python3", "scripts/validate_release_readiness_health_projection_bridge.py", "--json-only"],
+    ["bash", "scripts/ci/run_release_readiness_health_projection_bridge_probes_ci.sh"],
     ["python3", "scripts/validate_release_readiness_terminal_truth_bridge.py", "--json-only"],
     ["bash", "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh"],
     ["python3", "scripts/validate_release_readiness_governance_probe_topology.py", "--json-only"],
@@ -1240,6 +1243,16 @@ def _build_health_report_experience_writeback_closure_projection(
         command_execution=summary.get("command_execution") or {},
         selected_check_mode=_clean_str(summary.get("selected_check_mode")) or "full",
         selected_check_names=_clean_list(summary.get("selected_check_names")),
+        boundary_repair_lane_status=_clean_str(boundary_projection.get("repair_lane_status")).upper()
+        or STATUS_UNKNOWN,
+        boundary_post_execution_obligation_status=_clean_str(
+            boundary_projection.get("post_execution_obligation_status")
+        ).upper()
+        or STATUS_UNKNOWN,
+        boundary_writeback_continuity_status=_clean_str(
+            boundary_projection.get("writeback_continuity_status")
+        ).upper()
+        or STATUS_UNKNOWN,
         boundary_experience_writeback_validation_status=_clean_str(
             boundary_projection.get("experience_writeback_validation_status")
         ).upper()

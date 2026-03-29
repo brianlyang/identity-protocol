@@ -69,6 +69,9 @@ pass_projection = _build_three_plane_health_report_experience_writeback_closure(
     identity_id=identity_id,
     health_report_dir=str(pass_health_dir),
     execution_report_path=execution_report,
+    boundary_repair_lane_status=STATUS_PASS_REQUIRED,
+    boundary_post_execution_obligation_status=STATUS_PASS_REQUIRED,
+    boundary_writeback_continuity_status=STATUS_PASS_REQUIRED,
     boundary_experience_writeback_validation_status=STATUS_PASS_REQUIRED,
     failed_scripts=[],
     first_failed_script="",
@@ -79,12 +82,16 @@ assert pass_projection["health_report_contract_status"] == STATUS_PASS_REQUIRED,
 assert pass_projection["report_selected_path_matches_execution_report"] is True, pass_projection
 assert pass_projection["report_logical_identity_key_matches_execution_report"] is True, pass_projection
 assert pass_projection["validation_status"] == STATUS_PASS_REQUIRED, pass_projection
+assert pass_projection["boundary_bridge_status"] == STATUS_PASS_REQUIRED, pass_projection
 
 projection_only = _build_three_plane_health_report_experience_writeback_closure(
     projection_profile=resolve_three_plane_projection_profile("terminal_truth_boundary_projection"),
     identity_id=identity_id,
     health_report_dir=str(pass_health_dir),
     execution_report_path=execution_report,
+    boundary_repair_lane_status=STATUS_SKIPPED_NOT_REQUIRED,
+    boundary_post_execution_obligation_status=STATUS_SKIPPED_NOT_REQUIRED,
+    boundary_writeback_continuity_status=STATUS_SKIPPED_NOT_REQUIRED,
     boundary_experience_writeback_validation_status=STATUS_PASS_REQUIRED,
     failed_scripts=[],
     first_failed_script="",
@@ -93,6 +100,7 @@ assert projection_only["projection_status"] == STATUS_SKIPPED_NOT_REQUIRED, proj
 assert projection_only["projection_skip_status"] == STATUS_SKIPPED_NOT_REQUIRED, projection_only
 assert projection_only["projection_excluded_area"] == HEALTH_REPORT_EXPERIENCE_WRITEBACK_CLOSURE_EXCLUDED_AREA, projection_only
 assert projection_only["validation_status"] == STATUS_SKIPPED_NOT_REQUIRED, projection_only
+assert projection_only["boundary_bridge_status"] == STATUS_SKIPPED_NOT_REQUIRED, projection_only
 
 fail_health_dir = (tmp_dir / "health-fail").resolve()
 write_json(
@@ -123,11 +131,15 @@ fail_projection = _build_three_plane_health_report_experience_writeback_closure(
     identity_id=identity_id,
     health_report_dir=str(fail_health_dir),
     execution_report_path=execution_report,
+    boundary_repair_lane_status=STATUS_PASS_REQUIRED,
+    boundary_post_execution_obligation_status=STATUS_PASS_REQUIRED,
+    boundary_writeback_continuity_status=STATUS_PASS_REQUIRED,
     boundary_experience_writeback_validation_status=STATUS_PASS_REQUIRED,
     failed_scripts=[],
     first_failed_script="",
 )
 assert fail_projection["projection_status"] == STATUS_FAIL_REQUIRED, fail_projection
+assert fail_projection["boundary_bridge_status"] == STATUS_FAIL_REQUIRED, fail_projection
 assert "health_report_boundary_validation_status_mismatch" in fail_projection["stale_reasons"], fail_projection
 
 summary_skeleton = build_health_report_experience_writeback_closure_summary_skeleton()
@@ -136,6 +148,8 @@ assert summary_skeleton["projection_pass"] == 0, summary_skeleton
 assert summary_skeleton["projection_fail"] == 0, summary_skeleton
 assert summary_skeleton["projection_skipped_not_required"] == 0, summary_skeleton
 assert summary_skeleton["projection_fail_identity_ids"] == [], summary_skeleton
+assert summary_skeleton["boundary_bridge_fail"] == 0, summary_skeleton
+assert summary_skeleton["boundary_bridge_fail_identity_ids"] == [], summary_skeleton
 assert summary_skeleton["projection_scope_excluded_identity_ids"] == [], summary_skeleton
 assert summary_skeleton["projection_scope_classes"] == [], summary_skeleton
 assert summary_skeleton["projection_scope_reasons"] == [], summary_skeleton

@@ -1739,6 +1739,10 @@ def _record_summary_health_report_experience_writeback_closure(
         summary["execution_report_ref_mismatch"] = int(summary.get("execution_report_ref_mismatch", 0)) + 1
     if "health_report_boundary_validation_status_mismatch" in stale_reasons:
         summary["boundary_validation_mismatch"] = int(summary.get("boundary_validation_mismatch", 0)) + 1
+    if str(projection.get("boundary_bridge_status", "")).strip().upper() == STATUS_FAIL_REQUIRED:
+        summary["boundary_bridge_fail"] = int(summary.get("boundary_bridge_fail", 0)) + 1
+        if identity_token and identity_token not in summary["boundary_bridge_fail_identity_ids"]:
+            summary["boundary_bridge_fail_identity_ids"].append(identity_token)
 
 
 def _apply_three_plane_projection(

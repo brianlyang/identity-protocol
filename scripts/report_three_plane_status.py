@@ -1045,6 +1045,9 @@ def _build_three_plane_health_report_experience_writeback_closure(
     identity_id: str,
     health_report_dir: str,
     execution_report_path: Path | None,
+    boundary_repair_lane_status: str,
+    boundary_post_execution_obligation_status: str,
+    boundary_writeback_continuity_status: str,
     boundary_experience_writeback_validation_status: str,
     failed_scripts: list[str] | None = None,
     first_failed_script: str = "",
@@ -1066,6 +1069,9 @@ def _build_three_plane_health_report_experience_writeback_closure(
         },
         selected_check_mode="full",
         selected_check_names=(),
+        boundary_repair_lane_status=boundary_repair_lane_status,
+        boundary_post_execution_obligation_status=boundary_post_execution_obligation_status,
+        boundary_writeback_continuity_status=boundary_writeback_continuity_status,
         boundary_experience_writeback_validation_status=boundary_experience_writeback_validation_status,
     )
 
@@ -1211,6 +1217,9 @@ def _instance_plane_status(
                 identity_id=args.identity_id,
                 health_report_dir=str(default_health_report_dir()),
                 execution_report_path=report_path,
+                boundary_repair_lane_status=STATUS_SKIPPED_NOT_REQUIRED,
+                boundary_post_execution_obligation_status=STATUS_SKIPPED_NOT_REQUIRED,
+                boundary_writeback_continuity_status=STATUS_SKIPPED_NOT_REQUIRED,
                 boundary_experience_writeback_validation_status=STATUS_SKIPPED_NOT_REQUIRED,
             )
         )
@@ -4017,6 +4026,15 @@ def _instance_plane_status(
         identity_id=args.identity_id,
         health_report_dir=str(health_report_dir_path),
         execution_report_path=report_path,
+        boundary_repair_lane_status=str(
+            terminal_truth_boundary_projection.get("repair_lane_status", "")
+        ).strip().upper(),
+        boundary_post_execution_obligation_status=str(
+            terminal_truth_boundary_projection.get("post_execution_obligation_status", "")
+        ).strip().upper(),
+        boundary_writeback_continuity_status=str(
+            terminal_truth_boundary_projection.get("writeback_continuity_status", "")
+        ).strip().upper(),
         boundary_experience_writeback_validation_status=str(
             terminal_truth_boundary_projection.get("experience_writeback_validation_status", "")
         ).strip().upper(),
