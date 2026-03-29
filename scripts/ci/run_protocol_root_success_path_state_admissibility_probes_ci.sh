@@ -32,6 +32,10 @@ assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["success_path_state_row_family_count"] == 8, payload
 assert payload["success_path_state_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["success_path_state_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["success_path_state_admissibility_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["success_path_state_admissibility_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["success_path_state_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["success_path_state_admissibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["success_path_state_admissibility_completeness_surface"]["entry_count"] == 5, payload
@@ -64,6 +68,8 @@ doc["success_path_state_admissibility_completeness_rows"] = [
     row for row in doc["success_path_state_admissibility_completeness_rows"]
     if row.get("completeness_id") != "explicit_success_path_state_admissibility_row_families"
 ]
+for idx, row in enumerate(doc["success_path_state_admissibility_completeness_rows"], start=1):
+    row["order"] = idx
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -99,6 +105,10 @@ assert completeness_row["missing_ids"] == ["explicit_success_path_state_admissib
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["success_path_state_admissibility_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["success_path_state_admissibility_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["success_path_state_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["success_path_state_admissibility_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -462,6 +472,10 @@ assert surface_row["unexpected_ids"] == [
 ], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["success_path_state_admissibility_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["success_path_state_admissibility_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["success_path_state_admissibility_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["success_path_state_admissibility_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 

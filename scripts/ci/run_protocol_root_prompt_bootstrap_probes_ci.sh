@@ -34,6 +34,10 @@ assert payload["prompt_bootstrap_row_coverage_status"] == "PASS_REQUIRED", paylo
 assert payload["prompt_bootstrap_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["prompt_bootstrap_completeness_surface"]["entry_count"] == 5, payload
 assert payload["prompt_bootstrap_completeness_surface"]["extraction_violations"] == [], payload
+assert payload["prompt_bootstrap_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["prompt_bootstrap_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["prompt_bootstrap_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["prompt_bootstrap_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "prompt_bootstrap_completeness_rows" for row in payload["row_family_projection_rows"]), payload
@@ -88,6 +92,10 @@ assert completeness_row["missing_ids"] == ["explicit_prompt_bootstrap_row_famili
 assert completeness_row["unexpected_ids"] == [], payload
 assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["prompt_bootstrap_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["prompt_bootstrap_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["prompt_bootstrap_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["prompt_bootstrap_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
