@@ -3,8 +3,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/active-runtime-pack-closure-convergence-ci.XXXXXX")"
-trap 'rm -rf "${TMP_ROOT}"' EXIT
+# shellcheck source=./probe_runtime_tmp_common.sh
+source "${ROOT}/scripts/ci/probe_runtime_tmp_common.sh"
+probe_runtime_tmp_bootstrap "${ROOT}" "active-runtime-pack-closure-convergence-probes" "run"
 
 WORKSPACE_ROOT="${TMP_ROOT}/workspace"
 IDENTITY_HOME="${WORKSPACE_ROOT}/.identity"

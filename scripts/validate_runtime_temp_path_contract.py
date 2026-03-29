@@ -65,6 +65,34 @@ TARGET_RULES = {
         ),
         "forbidden": ('mktemp -d "${TMPDIR:-/tmp}/',),
     },
+    "scripts/ci/run_identity_codex_launcher_probes_ci.sh": {
+        "required": (
+            'source "${REPO_ROOT}/scripts/ci/probe_runtime_tmp_common.sh"',
+            'probe_runtime_tmp_bootstrap "${REPO_ROOT}" "identity-codex-launcher-probes" "run"',
+        ),
+        "forbidden": ('mktemp -d "${TMPDIR:-/tmp}/',),
+    },
+    "scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh": {
+        "required": (
+            'source "${REPO_ROOT}/scripts/ci/probe_runtime_tmp_common.sh"',
+            'probe_runtime_tmp_bootstrap "${REPO_ROOT}" "identity-codex-launcher-convergence-probes" "run"',
+        ),
+        "forbidden": ('mktemp -d "${TMPDIR:-/tmp}/',),
+    },
+    "scripts/ci/run_identity_transport_fleet_closure_convergence_probes_ci.sh": {
+        "required": (
+            'source "${ROOT}/scripts/ci/probe_runtime_tmp_common.sh"',
+            'probe_runtime_tmp_bootstrap "${ROOT}" "identity-transport-fleet-closure-convergence-probes" "run"',
+        ),
+        "forbidden": ('mktemp -d "${TMPDIR:-/tmp}/',),
+    },
+    "scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh": {
+        "required": (
+            'source "${ROOT}/scripts/ci/probe_runtime_tmp_common.sh"',
+            'probe_runtime_tmp_bootstrap "${ROOT}" "active-runtime-pack-closure-convergence-probes" "run"',
+        ),
+        "forbidden": ('mktemp -d "${TMPDIR:-/tmp}/',),
+    },
 }
 
 

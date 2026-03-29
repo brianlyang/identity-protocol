@@ -8,8 +8,9 @@ source "${REPO_ROOT}/scripts/shell_strict_entry_common.sh"
 IDENTITY_ID="${IDENTITY_ID:-base-repo-closure-orchestrator}"
 CATALOG_PATH="$(protocol_shell_entry_resolve_project_catalog "${CATALOG_PATH:-}")"
 
-TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/identity-codex-launcher-ci.XXXXXX")"
-trap 'rm -rf "${TMP_ROOT}"' EXIT
+# shellcheck source=./probe_runtime_tmp_common.sh
+source "${REPO_ROOT}/scripts/ci/probe_runtime_tmp_common.sh"
+probe_runtime_tmp_bootstrap "${REPO_ROOT}" "identity-codex-launcher-probes" "run"
 
 CODEX_HOME="${TMP_ROOT}/codex-home"
 IDENTITY_HOME="${CODEX_HOME}/.identity"
