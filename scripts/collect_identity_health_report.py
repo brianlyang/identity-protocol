@@ -20,6 +20,16 @@ from resolve_identity_context import (
     resolve_local_catalog_path,
     resolve_repo_catalog_path,
 )
+from health_report_experience_writeback_projection_common import (
+    build_health_report_experience_writeback_boundary_companions,
+)
+from post_execution_report_repair_common import enrich_post_execution_report
+from terminal_truth_boundary_projection_common import (
+    STATUS_FAIL_REQUIRED,
+    STATUS_PASS_REQUIRED,
+    STATUS_SKIPPED_NOT_REQUIRED,
+    build_terminal_truth_boundary_projection_from_enrichment,
+)
 
 PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
 
@@ -468,6 +478,118 @@ def _parse_json_payload(raw: str) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def _load_json_doc(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data if isinstance(data, dict) else {}
+
+
+def _resolve_experience_writeback_boundary_companions(
+    *,
+    identity_id: str,
+    execution_report: str,
+    report_selected_path: str,
+    validation_status: str,
+    catalog_path: Path,
+    repo_catalog_path: Path,
+    operation: str,
+) -> dict[str, Any]:
+    execution_report_ref = str(execution_report or report_selected_path or "").strip()
+    if not execution_report_ref:
+        return build_health_report_experience_writeback_boundary_companions(
+            validation_status=validation_status,
+            report_selected_path=report_selected_path,
+            execution_report_ref="",
+            boundary_repair_lane_status=STATUS_SKIPPED_NOT_REQUIRED,
+            boundary_post_execution_obligation_status=STATUS_SKIPPED_NOT_REQUIRED,
+            boundary_writeback_continuity_status=STATUS_SKIPPED_NOT_REQUIRED,
+        )
+
+    report_path = Path(execution_report_ref).expanduser().resolve()
+    if not report_path.exists():
+        return build_health_report_experience_writeback_boundary_companions(
+            validation_status=validation_status,
+            report_selected_path=report_selected_path,
+            execution_report_ref=str(report_path),
+            boundary_repair_lane_status=STATUS_FAIL_REQUIRED,
+            boundary_post_execution_obligation_status=STATUS_FAIL_REQUIRED,
+            boundary_writeback_continuity_status=STATUS_FAIL_REQUIRED,
+        )
+
+    try:
+        report_doc = _load_json_doc(report_path)
+    except Exception:
+        return build_health_report_experience_writeback_boundary_companions(
+            validation_status=validation_status,
+            report_selected_path=report_selected_path,
+            execution_report_ref=str(report_path),
+            boundary_repair_lane_status=STATUS_FAIL_REQUIRED,
+            boundary_post_execution_obligation_status=STATUS_FAIL_REQUIRED,
+            boundary_writeback_continuity_status=STATUS_FAIL_REQUIRED,
+        )
+
+    enrichment = enrich_post_execution_report(
+        report_doc=report_doc,
+        report_path=report_path,
+        catalog_path=catalog_path,
+        repo_catalog_path=repo_catalog_path,
+        identity_id=identity_id,
+        operation=operation,
+    )
+    boundary_projection = build_terminal_truth_boundary_projection_from_enrichment(
+        enrichment,
+        report_selected_path=str(report_path),
+    )
+    boundary_repair_lane_status = str(boundary_projection.get("repair_lane_status", "")).strip().upper()
+    boundary_post_execution_obligation_status = str(
+        boundary_projection.get("post_execution_obligation_status", "")
+    ).strip().upper()
+    boundary_writeback_continuity_status = str(
+        boundary_projection.get("writeback_continuity_status", "")
+    ).strip().upper()
+    if (
+        str(boundary_projection.get("terminal_truth_boundary_projection_status", "")).strip().upper()
+        == STATUS_FAIL_REQUIRED
+    ):
+        boundary_repair_lane_status = boundary_repair_lane_status or STATUS_FAIL_REQUIRED
+        boundary_post_execution_obligation_status = (
+            boundary_post_execution_obligation_status or STATUS_FAIL_REQUIRED
+        )
+        boundary_writeback_continuity_status = (
+            boundary_writeback_continuity_status or STATUS_FAIL_REQUIRED
+        )
+    elif (
+        str(boundary_projection.get("terminal_truth_boundary_projection_status", "")).strip().upper()
+        == STATUS_PASS_REQUIRED
+    ):
+        boundary_repair_lane_status = boundary_repair_lane_status or STATUS_PASS_REQUIRED
+        boundary_post_execution_obligation_status = (
+            boundary_post_execution_obligation_status or STATUS_PASS_REQUIRED
+        )
+        boundary_writeback_continuity_status = (
+            boundary_writeback_continuity_status or STATUS_PASS_REQUIRED
+        )
+    elif (
+        str(boundary_projection.get("terminal_truth_boundary_projection_status", "")).strip().upper()
+        == STATUS_SKIPPED_NOT_REQUIRED
+    ):
+        boundary_repair_lane_status = boundary_repair_lane_status or STATUS_SKIPPED_NOT_REQUIRED
+        boundary_post_execution_obligation_status = (
+            boundary_post_execution_obligation_status or STATUS_SKIPPED_NOT_REQUIRED
+        )
+        boundary_writeback_continuity_status = (
+            boundary_writeback_continuity_status or STATUS_SKIPPED_NOT_REQUIRED
+        )
+
+    return build_health_report_experience_writeback_boundary_companions(
+        validation_status=validation_status,
+        report_selected_path=report_selected_path,
+        execution_report_ref=str(report_path),
+        boundary_repair_lane_status=boundary_repair_lane_status,
+        boundary_post_execution_obligation_status=boundary_post_execution_obligation_status,
+        boundary_writeback_continuity_status=boundary_writeback_continuity_status,
+    )
+
+
 def main() -> int:
     script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(description="Collect identity health report with actionable recommendations.")
@@ -787,7 +909,22 @@ def main() -> int:
     experience_writeback_payload = by_name.get("experience_writeback", {}).get("payload")
     if not isinstance(experience_writeback_payload, dict):
         experience_writeback_payload = {}
+    else:
+        experience_writeback_payload = dict(experience_writeback_payload)
     experience_writeback_row = by_name.get("experience_writeback") or {}
+    experience_writeback_boundary_companions = _resolve_experience_writeback_boundary_companions(
+        identity_id=args.identity_id,
+        execution_report=execution_report,
+        report_selected_path=str(experience_writeback_payload.get("report_selected_path", "")).strip(),
+        validation_status=str(
+            experience_writeback_payload.get("experience_writeback_validation_status", "")
+        ).strip().upper(),
+        catalog_path=catalog_path,
+        repo_catalog_path=repo_catalog_path,
+        operation=args.operation,
+    )
+    experience_writeback_payload.update(experience_writeback_boundary_companions)
+    experience_writeback_row["payload"] = experience_writeback_payload
     experience_writeback_closure = {
         "status": str(experience_writeback_row.get("status", "")),
         "error_code": str(experience_writeback_row.get("error_code", "")).strip(),
@@ -813,6 +950,18 @@ def main() -> int:
         "task_history_contains_run_id": bool(
             experience_writeback_payload.get("task_history_contains_run_id", False)
         ),
+        "boundary_repair_lane_status": str(
+            experience_writeback_payload.get("boundary_repair_lane_status", "")
+        ).strip().upper(),
+        "boundary_post_execution_obligation_status": str(
+            experience_writeback_payload.get("boundary_post_execution_obligation_status", "")
+        ).strip().upper(),
+        "boundary_writeback_continuity_status": str(
+            experience_writeback_payload.get("boundary_writeback_continuity_status", "")
+        ).strip().upper(),
+        "boundary_bridge_status": str(
+            experience_writeback_payload.get("boundary_bridge_status", "")
+        ).strip().upper(),
         "stale_reasons": list(experience_writeback_payload.get("stale_reasons") or []),
     }
 

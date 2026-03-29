@@ -74,5 +74,13 @@ def build_experience_writeback_closure_projection(
         "writeback_rule_id": clean_str(closure.get("writeback_rule_id")),
         "rulebook_match_count": safe_int(closure.get("rulebook_match_count")),
         "task_history_contains_run_id": bool(closure.get("task_history_contains_run_id")),
+        "boundary_repair_lane_status": clean_str(closure.get("boundary_repair_lane_status")).upper(),
+        "boundary_post_execution_obligation_status": clean_str(
+            closure.get("boundary_post_execution_obligation_status")
+        ).upper(),
+        "boundary_writeback_continuity_status": clean_str(
+            closure.get("boundary_writeback_continuity_status")
+        ).upper(),
+        "boundary_bridge_status": clean_str(closure.get("boundary_bridge_status")).upper(),
         "stale_reasons": clean_list(closure.get("stale_reasons")),
     }

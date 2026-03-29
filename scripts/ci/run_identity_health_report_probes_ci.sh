@@ -272,6 +272,14 @@ assert pass_closure.get("writeback_status") == "WRITTEN", pass_closure
 assert pass_closure.get("writeback_rule_id") == "rule-entry-health-pass", pass_closure
 assert int(pass_closure.get("rulebook_match_count", 0)) == 1, pass_closure
 assert bool(pass_closure.get("task_history_contains_run_id")) is True, pass_closure
+assert pass_closure.get("boundary_repair_lane_status") == "PASS_REQUIRED", pass_closure
+assert pass_closure.get("boundary_post_execution_obligation_status") == "PASS_REQUIRED", pass_closure
+assert pass_closure.get("boundary_writeback_continuity_status") == "PASS_REQUIRED", pass_closure
+assert pass_closure.get("boundary_bridge_status") == "PASS_REQUIRED", pass_closure
+assert pass_payload.get("boundary_repair_lane_status") == "PASS_REQUIRED", pass_payload
+assert pass_payload.get("boundary_post_execution_obligation_status") == "PASS_REQUIRED", pass_payload
+assert pass_payload.get("boundary_writeback_continuity_status") == "PASS_REQUIRED", pass_payload
+assert pass_payload.get("boundary_bridge_status") == "PASS_REQUIRED", pass_payload
 assert pass_check.get("status") == "PASS", pass_check
 pass_plan = pass_doc.get("self_upgrade_plan") or {}
 pass_commands = list(pass_plan.get("commands") or [])
@@ -287,6 +295,10 @@ assert skip_closure.get("validation_status") == "SKIPPED_NOT_REQUIRED", skip_clo
 assert skip_closure.get("report_selected_path") == "", skip_closure
 assert skip_closure.get("report_selection_mode") == "no_admissible_report", skip_closure
 assert skip_closure.get("writeback_status") == "", skip_closure
+assert skip_closure.get("boundary_repair_lane_status") == "SKIPPED_NOT_REQUIRED", skip_closure
+assert skip_closure.get("boundary_post_execution_obligation_status") == "SKIPPED_NOT_REQUIRED", skip_closure
+assert skip_closure.get("boundary_writeback_continuity_status") == "SKIPPED_NOT_REQUIRED", skip_closure
+assert skip_closure.get("boundary_bridge_status") == "SKIPPED_NOT_REQUIRED", skip_closure
 assert "required_contract_not_applicable_no_current_round_evidence_source" in list(skip_closure.get("stale_reasons") or []), skip_closure
 assert skip_check.get("status") == "PASS", skip_check
 
@@ -327,6 +339,37 @@ if python3 scripts/validate_identity_health_contract.py --identity-id "${PASS_ID
   exit 1
 fi
 grep -q 'experience_writeback_closure authority projection incomplete for PASS_REQUIRED' /tmp/identity-health-authority-tampered.out
+
+BOUNDARY_TAMPERED_REPORT_PATH="${OUT_DIR}/identity-health-${PASS_ID}-boundary-tampered.json"
+python3 - <<'PY' "${PASS_REPORT_PATH}" "${BOUNDARY_TAMPERED_REPORT_PATH}"
+import json
+import sys
+from pathlib import Path
+
+src = Path(sys.argv[1]).resolve()
+dst = Path(sys.argv[2]).resolve()
+doc = json.loads(src.read_text(encoding="utf-8"))
+closure = doc.get("experience_writeback_closure") or {}
+closure["boundary_repair_lane_status"] = ""
+closure["boundary_bridge_status"] = ""
+doc["experience_writeback_closure"] = closure
+for row in doc.get("checks", []) or []:
+    if str((row or {}).get("name", "")).strip() == "experience_writeback":
+        payload = row.get("payload") or {}
+        payload["boundary_repair_lane_status"] = ""
+        payload["boundary_bridge_status"] = ""
+        row["payload"] = payload
+        break
+dst.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+if python3 scripts/validate_identity_health_contract.py --identity-id "${PASS_ID}" --report "${BOUNDARY_TAMPERED_REPORT_PATH}" >/tmp/identity-health-boundary-tampered.out 2>/tmp/identity-health-boundary-tampered.err; then
+  echo "[FAIL] boundary-tampered health report unexpectedly passed contract validation"
+  cat /tmp/identity-health-boundary-tampered.out
+  cat /tmp/identity-health-boundary-tampered.err
+  exit 1
+fi
+grep -q 'experience_writeback_closure boundary bridge incomplete for PASS_REQUIRED' /tmp/identity-health-boundary-tampered.out
 
 LOGICAL_TAMPERED_REPORT_PATH="${OUT_DIR}/identity-health-${PASS_ID}-logical-tampered.json"
 python3 - <<'PY' "${PASS_REPORT_PATH}" "${LOGICAL_TAMPERED_REPORT_PATH}"

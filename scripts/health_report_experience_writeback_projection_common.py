@@ -25,6 +25,12 @@ HEALTH_REPORT_EXPERIENCE_WRITEBACK_CLOSURE_EXCLUDED_AREA = "health_report_experi
 RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_SURFACE_NAME = (
     "health_report_experience_writeback_closure"
 )
+HEALTH_REPORT_EXPERIENCE_WRITEBACK_BOUNDARY_COMPANION_FIELDS: tuple[str, ...] = (
+    "boundary_repair_lane_status",
+    "boundary_post_execution_obligation_status",
+    "boundary_writeback_continuity_status",
+    "boundary_bridge_status",
+)
 RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_ONE_LOOK_FIELDS: tuple[str, ...] = (
     "health_report_experience_writeback_projection_status",
     "health_report_contract_status",
@@ -70,6 +76,15 @@ RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_VALIDATOR = (
 )
 RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_PROBE = (
     "scripts/ci/run_release_readiness_health_projection_bridge_probes_ci.sh"
+)
+RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_VALIDATOR_COMMAND: tuple[str, ...] = (
+    "python3",
+    RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_VALIDATOR,
+    "--json-only",
+)
+RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_PROBE_COMMAND: tuple[str, ...] = (
+    "bash",
+    RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_PROBE,
 )
 RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_PROOF_LANES: tuple[str, ...] = (
     "scripts/ci/run_release_readiness_health_projection_probes_ci.sh",
@@ -249,6 +264,59 @@ def _derive_boundary_bridge_status(projection: dict[str, Any]) -> str:
     return STATUS_PASS_REQUIRED
 
 
+def build_health_report_experience_writeback_boundary_companions(
+    *,
+    validation_status: str,
+    report_selected_path: str,
+    execution_report_ref: str,
+    boundary_repair_lane_status: str,
+    boundary_post_execution_obligation_status: str,
+    boundary_writeback_continuity_status: str,
+) -> dict[str, Any]:
+    normalized_validation_status = _clean_str(validation_status).upper()
+    normalized_report_selected_path = _clean_str(report_selected_path)
+    normalized_execution_report_ref = _clean_str(execution_report_ref)
+    projection = _base_projection(
+        boundary_experience_writeback_validation_status=normalized_validation_status or STATUS_UNKNOWN,
+    )
+    projection["projection_status"] = STATUS_PASS_REQUIRED
+    projection["validation_status"] = normalized_validation_status
+    projection["report_selected_path"] = normalized_report_selected_path
+    projection["report_selected_path_matches_execution_report"] = bool(
+        normalized_execution_report_ref
+        and normalized_report_selected_path
+        and normalized_report_selected_path == normalized_execution_report_ref
+    )
+    projection["boundary_repair_lane_status"] = _clean_str(boundary_repair_lane_status).upper() or STATUS_UNKNOWN
+    projection["boundary_post_execution_obligation_status"] = (
+        _clean_str(boundary_post_execution_obligation_status).upper() or STATUS_UNKNOWN
+    )
+    projection["boundary_writeback_continuity_status"] = (
+        _clean_str(boundary_writeback_continuity_status).upper() or STATUS_UNKNOWN
+    )
+    if not normalized_validation_status:
+        projection["projection_status"] = STATUS_FAIL_REQUIRED
+    if (
+        normalized_validation_status != STATUS_SKIPPED_NOT_REQUIRED
+        and not normalized_report_selected_path
+    ):
+        projection["projection_status"] = STATUS_FAIL_REQUIRED
+    if normalized_validation_status == STATUS_PASS_REQUIRED and not normalized_execution_report_ref:
+        projection["projection_status"] = STATUS_FAIL_REQUIRED
+
+    companions = {
+        "boundary_repair_lane_status": projection["boundary_repair_lane_status"],
+        "boundary_post_execution_obligation_status": projection[
+            "boundary_post_execution_obligation_status"
+        ],
+        "boundary_writeback_continuity_status": projection[
+            "boundary_writeback_continuity_status"
+        ],
+    }
+    companions["boundary_bridge_status"] = _derive_boundary_bridge_status(projection)
+    return companions
+
+
 def build_health_report_experience_writeback_closure_projection(
     *,
     identity_id: str,
@@ -425,6 +493,24 @@ def build_health_report_experience_writeback_closure_projection(
     projection["task_history_contains_run_id"] = bool(
         closure_projection.get("task_history_contains_run_id")
     )
+    if projection["boundary_repair_lane_status"] == STATUS_UNKNOWN:
+        projection["boundary_repair_lane_status"] = (
+            _clean_str(closure_projection.get("boundary_repair_lane_status")).upper() or STATUS_UNKNOWN
+        )
+    if projection["boundary_post_execution_obligation_status"] == STATUS_UNKNOWN:
+        projection["boundary_post_execution_obligation_status"] = (
+            _clean_str(closure_projection.get("boundary_post_execution_obligation_status")).upper()
+            or STATUS_UNKNOWN
+        )
+    if projection["boundary_writeback_continuity_status"] == STATUS_UNKNOWN:
+        projection["boundary_writeback_continuity_status"] = (
+            _clean_str(closure_projection.get("boundary_writeback_continuity_status")).upper()
+            or STATUS_UNKNOWN
+        )
+    if projection["boundary_experience_writeback_validation_status"] == STATUS_UNKNOWN:
+        projection["boundary_experience_writeback_validation_status"] = (
+            _clean_str(closure_projection.get("validation_status")).upper() or STATUS_UNKNOWN
+        )
     projection["stale_reasons"].extend(_clean_list(closure_projection.get("stale_reasons")))
 
     if not projection["status"]:

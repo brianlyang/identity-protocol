@@ -57,6 +57,10 @@ base_closure = {
     "report_run_id": "probe-heal-replay-run-pass",
     "writeback_status": "WRITTEN",
     "writeback_rule_id": "rule-entry-heal-replay-pass",
+    "boundary_repair_lane_status": "PASS_REQUIRED",
+    "boundary_post_execution_obligation_status": "PASS_REQUIRED",
+    "boundary_writeback_continuity_status": "PASS_REQUIRED",
+    "boundary_bridge_status": "PASS_REQUIRED",
     "stale_reasons": [],
 }
 
@@ -117,6 +121,10 @@ write_json(
             "report_run_id": "probe-heal-replay-run-fail",
             "writeback_status": "MISSING",
             "writeback_rule_id": "",
+            "boundary_repair_lane_status": "FAIL_REQUIRED",
+            "boundary_post_execution_obligation_status": "FAIL_REQUIRED",
+            "boundary_writeback_continuity_status": "FAIL_REQUIRED",
+            "boundary_bridge_status": "FAIL_REQUIRED",
             "stale_reasons": ["post_validate_experience_writeback_still_fail"],
         },
         "actor_binding_integrity": {"status": "PASS"},
@@ -181,6 +189,10 @@ assert payload["health_report_experience_writeback_report_selected_authority_cla
 assert payload["health_report_experience_writeback_report_pointer_resolution_mode"] == "explicit_report", payload
 assert payload["health_report_experience_writeback_writeback_status"] == "WRITTEN", payload
 assert payload["health_report_experience_writeback_writeback_rule_id"] == "rule-entry-heal-replay-pass", payload
+assert payload["health_report_experience_writeback_boundary_repair_lane_status"] == "PASS_REQUIRED", payload
+assert payload["health_report_experience_writeback_boundary_post_execution_obligation_status"] == "PASS_REQUIRED", payload
+assert payload["health_report_experience_writeback_boundary_writeback_continuity_status"] == "PASS_REQUIRED", payload
+assert payload["health_report_experience_writeback_boundary_bridge_status"] == "PASS_REQUIRED", payload
 assert payload["post_validate_experience_writeback_closure_status"] == "PASS", payload
 assert payload["post_validate_experience_writeback_validation_status"] == "PASS_REQUIRED", payload
 assert payload["post_validate_experience_writeback_report_selected_path"] == payload["health_report_execution_report_ref"], payload
@@ -190,6 +202,10 @@ assert payload["post_validate_experience_writeback_report_selected_authority_cla
 assert payload["post_validate_experience_writeback_report_pointer_resolution_mode"] == "explicit_report", payload
 assert payload["post_validate_experience_writeback_writeback_status"] == "WRITTEN", payload
 assert payload["post_validate_experience_writeback_writeback_rule_id"] == "rule-entry-heal-replay-pass", payload
+assert payload["post_validate_experience_writeback_boundary_repair_lane_status"] == "PASS_REQUIRED", payload
+assert payload["post_validate_experience_writeback_boundary_post_execution_obligation_status"] == "PASS_REQUIRED", payload
+assert payload["post_validate_experience_writeback_boundary_writeback_continuity_status"] == "PASS_REQUIRED", payload
+assert payload["post_validate_experience_writeback_boundary_bridge_status"] == "PASS_REQUIRED", payload
 assert payload["stale_reasons"] == [], payload
 PY
 
@@ -301,6 +317,76 @@ assert "health_report_experience_writeback_authority_projection_missing" in payl
 assert payload["health_report_experience_writeback_report_selection_mode"] == "", payload
 assert payload["health_report_experience_writeback_report_selected_authority_class"] == "", payload
 assert payload["health_report_experience_writeback_report_pointer_resolution_mode"] == "", payload
+PY
+
+BOUNDARY_MISSING_HEALTH_REPORT="${TMP_DIR}/health-boundary-missing.json"
+BOUNDARY_MISSING_HEAL_REPORT="${TMP_DIR}/identity-heal-probe-health-boundary-missing.json"
+
+python3 - <<'PY' "${BOUNDARY_MISSING_HEALTH_REPORT}" "${BOUNDARY_MISSING_HEAL_REPORT}" "${PASS_POST_REPORT}"
+import json
+import sys
+from pathlib import Path
+
+boundary_missing_health_report = Path(sys.argv[1]).resolve()
+boundary_missing_heal_report = Path(sys.argv[2]).resolve()
+pass_post_report = Path(sys.argv[3]).resolve()
+
+def write_json(path: Path, doc: dict) -> None:
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+write_json(
+    boundary_missing_health_report,
+    {
+        "identity_id": "probe-heal-replay",
+        "execution_report_ref": str(pass_post_report),
+        "experience_writeback_closure": {
+            "status": "PASS",
+            "validation_status": "PASS_REQUIRED",
+            "report_selected_path": str(pass_post_report),
+            "report_logical_identity_key": "",
+            "report_selection_mode": "explicit_report",
+            "report_selected_authority_class": "explicit_report_argument",
+            "report_pointer_resolution_mode": "explicit_report",
+            "report_run_id": "probe-heal-replay-run-pass",
+            "writeback_status": "WRITTEN",
+            "writeback_rule_id": "rule-entry-heal-replay-pass",
+            "boundary_post_execution_obligation_status": "PASS_REQUIRED",
+            "boundary_writeback_continuity_status": "PASS_REQUIRED",
+            "boundary_bridge_status": "FAIL_REQUIRED",
+            "stale_reasons": [],
+        },
+    },
+)
+write_json(
+    boundary_missing_heal_report,
+    {
+        "identity_id": "probe-heal-replay",
+        "health_report_ref": str(boundary_missing_health_report),
+        "heal_report_ref": str(boundary_missing_heal_report),
+        "post_validate_ref": str(pass_post_report),
+    },
+)
+PY
+
+if python3 scripts/validate_identity_heal_replay_closure.py \
+  --identity-id probe-heal-replay \
+  --heal-report "${BOUNDARY_MISSING_HEAL_REPORT}" \
+  --json-only >"${TMP_DIR}/health-boundary-missing.out"; then
+  echo "[FAIL] health boundary projection missing case unexpectedly passed"
+  cat "${TMP_DIR}/health-boundary-missing.out"
+  exit 1
+fi
+python3 - <<'PY' "${TMP_DIR}/health-boundary-missing.out"
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["heal_replay_closure_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-HEAL-002", payload
+assert "health_report_experience_writeback_boundary_projection_missing" in payload["stale_reasons"], payload
+assert "health_report_experience_writeback_boundary_bridge_not_green" in payload["stale_reasons"], payload
+assert payload["health_report_experience_writeback_boundary_bridge_status"] == "FAIL_REQUIRED", payload
 PY
 
 echo "[PASS] identity heal replay closure probes passed"

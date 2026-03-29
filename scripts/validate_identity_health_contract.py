@@ -10,6 +10,9 @@ from experience_writeback_closure_projection_common import (
     clean_list as common_clean_list,
     clean_str as common_clean_str,
 )
+from health_report_experience_writeback_projection_common import (
+    HEALTH_REPORT_EXPERIENCE_WRITEBACK_BOUNDARY_COMPANION_FIELDS,
+)
 from runtime_temp_path_common import runtime_temp_root
 
 
@@ -136,6 +139,10 @@ def main() -> int:
         ("report_run_id", "report_run_id"),
         ("writeback_status", "writeback_status"),
         ("writeback_rule_id", "writeback_rule_id"),
+        *(
+            (field_name, field_name)
+            for field_name in HEALTH_REPORT_EXPERIENCE_WRITEBACK_BOUNDARY_COMPANION_FIELDS
+        ),
     )
     for closure_field, payload_field in projection_field_pairs:
         if _clean_str(closure_projection.get(closure_field)) != _clean_str(
@@ -190,6 +197,22 @@ def main() -> int:
         )
     ):
         print("[FAIL] experience_writeback_closure authority projection incomplete for PASS_REQUIRED")
+        return 1
+    boundary_companion_statuses = {
+        field_name: _clean_str(closure_projection.get(field_name)).upper()
+        for field_name in HEALTH_REPORT_EXPERIENCE_WRITEBACK_BOUNDARY_COMPANION_FIELDS
+    }
+    if (
+        validation_status == "PASS_REQUIRED"
+        and any(status != "PASS_REQUIRED" for status in boundary_companion_statuses.values())
+    ):
+        print("[FAIL] experience_writeback_closure boundary bridge incomplete for PASS_REQUIRED")
+        return 1
+    if (
+        validation_status == "SKIPPED_NOT_REQUIRED"
+        and any(status != "SKIPPED_NOT_REQUIRED" for status in boundary_companion_statuses.values())
+    ):
+        print("[FAIL] experience_writeback_closure boundary bridge must stay skipped when validation is skipped")
         return 1
     if closure_status in {"WARN", "FAIL"}:
         if not str(experience_writeback_closure.get("error_code", "")).strip():
