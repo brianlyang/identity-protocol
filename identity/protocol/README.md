@@ -618,6 +618,7 @@ These entry-surface-legitimacy-completeness rules must remain bound to canonical
 ## Root identity-discovery completeness discipline
 
 Identity-discovery law is not a soft prose bundle.
+These identity-discovery-completeness rules must remain bound to canonical identity-discovery-completeness rows rather than drifting into soft summary prose.
 
 1. required section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;

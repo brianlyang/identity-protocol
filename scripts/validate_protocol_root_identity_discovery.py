@@ -37,9 +37,11 @@ from root_identity_discovery_common import (
     discovery_limit_rows_from_doc,
     discovery_proof_rows_from_doc,
     error_field_rows_from_doc,
+    identity_discovery_completeness_rows_from_doc,
     implementation_rows_from_doc,
     load_root_identity_discovery,
     precedence_rows_from_doc,
+    readme_identity_discovery_completeness_surface,
     request_field_rows_from_doc,
     response_field_rows_from_doc,
     section_rows_from_doc,
@@ -197,6 +199,28 @@ EXPECTED_COLLAPSE_ROWS = {
         "contract_phrase": "an operator-facing note or summary is treated as if it were the governed resolver output.",
     },
 }
+EXPECTED_IDENTITY_DISCOVERY_COMPLETENESS_ROWS = {
+    "explicit_identity_discovery_row_families": {
+        "order": 1,
+        "contract_phrase": "required section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;",
+    },
+    "congruent_identity_discovery_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_identity_discovery_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_identity_discovery_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize identity-discovery truth while missing or unexpected row identities remain known only internally;",
+    },
+    "fail_close_preserves_identity_discovery_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_REGISTRY_MARKERS = (
     "This file remains the authoritative root-domain contract for deterministic identity discovery law.",
     "## Deterministic identity discovery law",
@@ -218,22 +242,26 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "### Identity-discovery row-family completeness must stay explicit",
         "Required section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse families must remain explicit as separate machine-readable row families.",
+        "README root identity-discovery completeness discipline must therefore stay congruent with admitted identity-discovery-completeness rows rather than becoming a freehand completeness summary.",
         "The machine world must not finalize identity-discovery legality while required row identity drift remains known only internally.",
     ),
     "identity/protocol/README.md": (
         "## Root identity-discovery completeness discipline",
         "Identity-discovery law is not a soft prose bundle.",
+        "These identity-discovery-completeness rules must remain bound to canonical identity-discovery-completeness rows rather than drifting into soft summary prose.",
         "1. required section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root identity-discovery completeness boundary",
         "1. Identity-discovery law must remain machine-readable as separate section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse row families.",
         "4. Protocol legality must not finalize identity-discovery truth while missing or unexpected row identities remain known only inside validator logic.",
+        "6. README root identity-discovery completeness discipline rendered at protocol root must remain congruent with admitted identity-discovery-completeness rows rather than silently authoring an alternate completeness summary.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime identity-discovery consumption boundary",
         "1. Runtime consumes identity-discovery law as separate section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse row families rather than as undifferentiated discovery prose.",
         "4. Runtime must not finalize identity-discovery legality while missing or unexpected row identities remain known only inside validator machinery.",
+        "6. Runtime consumes README root identity-discovery completeness discipline as a governed completeness projection bound to admitted identity-discovery-completeness rows rather than as a freehand completeness summary.",
     ),
 }
 
@@ -296,6 +324,10 @@ def main() -> int:
     discovery_proof_rows = discovery_proof_rows_from_doc(discovery_doc) if discovery_doc else ()
     discovery_limit_rows = discovery_limit_rows_from_doc(discovery_doc) if discovery_doc else ()
     collapse_rows = collapse_rows_from_doc(discovery_doc) if discovery_doc else ()
+    identity_discovery_completeness_rows = (
+        identity_discovery_completeness_rows_from_doc(discovery_doc) if discovery_doc else ()
+    )
+    identity_discovery_completeness_surface = readme_identity_discovery_completeness_surface(repo_root)
     root_doc_anchor_checks = root_doc_anchor_checks_from_doc(discovery_doc) if discovery_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -339,6 +371,9 @@ def main() -> int:
             if not rows:
                 stale_reasons.append(f"root_identity_discovery_{field}_missing")
                 error_code = ERR_REGISTRY
+        if not identity_discovery_completeness_rows:
+            stale_reasons.append("root_identity_discovery_completeness_rows_missing")
+            error_code = ERR_REGISTRY
         if not discovery_doc.get("contract_required_markers"):
             stale_reasons.append("root_identity_discovery_contract_required_markers_missing")
             error_code = ERR_REGISTRY
@@ -432,10 +467,37 @@ def main() -> int:
                     "expected_rows": EXPECTED_COLLAPSE_ROWS,
                     "id_attr": "row_id",
                 },
+                {
+                    "family_id": "identity_discovery_completeness_rows",
+                    "member_id_key": "completeness_id",
+                    "actual_rows": identity_discovery_completeness_rows,
+                    "expected_rows": {
+                        completeness_id: {}
+                        for completeness_id in EXPECTED_IDENTITY_DISCOVERY_COMPLETENESS_ROWS
+                    },
+                    "id_attr": "completeness_id",
+                },
+                {
+                    "family_id": "identity_discovery_completeness_surface",
+                    "member_id_key": "contract_phrase",
+                    "actual_rows": identity_discovery_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {}
+                        for row in EXPECTED_IDENTITY_DISCOVERY_COMPLETENESS_ROWS.values()
+                    },
+                    "id_attr": "contract_phrase",
+                },
             ),
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         )
+        for reason in identity_discovery_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "identity_discovery_completeness_surface",
+                    "reason": f"identity_discovery_completeness_surface_{reason}",
+                }
+            )
         validate_contract_row_batches(
             batches=(
                 {
@@ -507,6 +569,34 @@ def main() -> int:
                     "field_name": "required_collapse_rows",
                     "id_attr": "row_id",
                     "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": identity_discovery_completeness_rows,
+                    "expected_rows": EXPECTED_IDENTITY_DISCOVERY_COMPLETENESS_ROWS,
+                    "field_name": "identity_discovery_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                },
+                {
+                    "actual_rows": identity_discovery_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_IDENTITY_DISCOVERY_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "identity_discovery_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_identity_discovery_completeness_surface_phrase",
+                    "non_contiguous_reason": "identity_discovery_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_identity_discovery_completeness_surface_rows",
+                    "extra_reason": "extra_identity_discovery_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "identity_discovery_completeness_surface_order_mismatch",
                 },
             ),
             structure_violations=structure_violations,
@@ -620,6 +710,7 @@ def main() -> int:
         "discovery_proof_count": len(discovery_proof_rows),
         "discovery_limit_count": len(discovery_limit_rows),
         "collapse_count": len(collapse_rows),
+        "identity_discovery_completeness_row_count": len(identity_discovery_completeness_rows),
         **project_root_contract_support_projection(
             prefix="identity_discovery",
             row_family_projection_rows=row_family_projection_rows,
@@ -639,6 +730,26 @@ def main() -> int:
         "discovery_proof_ids": [row.proof_id for row in sorted(discovery_proof_rows, key=lambda item: item.order)],
         "discovery_limit_ids": [row.row_id for row in sorted(discovery_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
+        "identity_discovery_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted(identity_discovery_completeness_rows, key=lambda item: item.order)
+        ],
+        "identity_discovery_completeness_surface": {
+            "rel_path": identity_discovery_completeness_surface.rel_path,
+            "entry_count": len(identity_discovery_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in identity_discovery_completeness_surface.rows
+            ],
+            "extraction_violations": list(identity_discovery_completeness_surface.extraction_violations),
+        },
         "stale_reasons": stale_reasons,
         "structure_violations": structure_violations,
         "discovery_violations": discovery_violations,

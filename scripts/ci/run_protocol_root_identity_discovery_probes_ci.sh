@@ -32,11 +32,129 @@ assert payload["discovery_limit_count"] == 6, payload
 assert payload["collapse_count"] == 5, payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["identity_discovery_row_family_count"] == 10, payload
+assert payload["identity_discovery_completeness_row_count"] == 5, payload
+assert payload["identity_discovery_row_family_count"] == 12, payload
 assert payload["identity_discovery_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["identity_discovery_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_completeness_surface"]["entry_count"] == 5, payload
+assert payload["identity_discovery_completeness_surface"]["extraction_violations"] == [], payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert any(
+    row["family_id"] == "identity_discovery_completeness_rows"
+    for row in payload["row_family_projection_rows"]
+), payload
+assert any(
+    row["family_id"] == "identity_discovery_completeness_surface"
+    for row in payload["row_family_projection_rows"]
+), payload
+PY
+
+COMPLETENESS_ROW_REPO="${TMP_ROOT}/completeness-row-drift-repo"
+mirror_repo "${COMPLETENESS_ROW_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_REPO}/identity/protocol/mappings/root-identity-discovery.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["identity_discovery_completeness_rows"] = [
+    row
+    for row in doc["identity_discovery_completeness_rows"]
+    if row.get("completeness_id") != "explicit_identity_discovery_row_families"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_JSON="${TMP_ROOT}/completeness-row-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_identity_discovery.py" \
+  --repo-root "${COMPLETENESS_ROW_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_JSON}"; then
+  echo "[FAIL] root identity-discovery validator unexpectedly passed missing completeness row"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_identity_discovery_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RID-002", payload
+assert any(
+    row["field"] == "identity_discovery_completeness_rows"
+    and row["reason"] == "missing_expected_rows"
+    and "explicit_identity_discovery_row_families" in row.get("completeness_ids", [])
+    for row in payload["structure_violations"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "identity_discovery_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 4, payload
+assert completeness_row["missing_ids"] == ["explicit_identity_discovery_row_families"], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["identity_discovery_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["identity_discovery_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/completeness-surface-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "1. required section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;"
+new = "1. required section, request-field, response-field, precedence, activation, error-field, implementation, proof, and collapse rows must remain explicit as separate machine-readable families;"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_JSON="${TMP_ROOT}/completeness-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_identity_discovery.py" \
+  --repo-root "${COMPLETENESS_SURFACE_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_JSON}"; then
+  echo "[FAIL] root identity-discovery validator unexpectedly passed completeness surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_identity_discovery_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RID-002", payload
+assert any(
+    row["field"] == "identity_discovery_completeness_surface"
+    and row["reason"] == "missing_identity_discovery_completeness_surface_rows"
+    and "required section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;" in row.get("contract_phrases", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "identity_discovery_completeness_surface"
+    and row["reason"] == "extra_identity_discovery_completeness_surface_rows"
+    and "required section, request-field, response-field, precedence, activation, error-field, implementation, proof, and collapse rows must remain explicit as separate machine-readable families;" in row.get("contract_phrases", [])
+    for row in payload["structure_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "identity_discovery_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == ["required section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;"], payload
+assert surface_row["unexpected_ids"] == ["required section, request-field, response-field, precedence, activation, error-field, implementation, proof, and collapse rows must remain explicit as separate machine-readable families;"], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -298,6 +416,44 @@ assert any(
     row["rel_path"] == "identity/protocol/IDENTITY_RUNTIME.md"
     and row["reason"] == "required_marker_missing"
     and row["marker"] == "## Runtime identity-discovery consumption boundary"
+    for row in payload["root_doc_anchor_violations"]
+), payload
+PY
+
+README_BINDING_REPO="${TMP_ROOT}/readme-binding-drift-repo"
+mirror_repo "${README_BINDING_REPO}"
+python3 - <<'PY' "${README_BINDING_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "These identity-discovery-completeness rules must remain bound to canonical identity-discovery-completeness rows rather than drifting into soft summary prose."
+new = "These identity-discovery rules may be summarized directly in README prose."
+assert old in text, text[:2500]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+README_BINDING_JSON="${TMP_ROOT}/readme-binding-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_identity_discovery.py" \
+  --repo-root "${README_BINDING_REPO}" \
+  --json-only >"${README_BINDING_JSON}"; then
+  echo "[FAIL] root identity-discovery validator unexpectedly passed README binding drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${README_BINDING_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_identity_discovery_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RID-003", payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md"
+    and row["reason"] == "required_marker_missing"
+    and row["marker"] == "These identity-discovery-completeness rules must remain bound to canonical identity-discovery-completeness rows rather than drifting into soft summary prose."
     for row in payload["root_doc_anchor_violations"]
 ), payload
 PY
