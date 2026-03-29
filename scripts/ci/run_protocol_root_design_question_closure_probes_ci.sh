@@ -414,4 +414,55 @@ assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
+SURFACE_ORDER_REPO="${TMP_ROOT}/design-question-closure-completeness-surface-order-drift-repo"
+mirror_repo "${SURFACE_ORDER_REPO}"
+protocol_root_probe_swap_numbered_surface_order_rows \
+  "${SURFACE_ORDER_REPO}/identity/protocol/README.md" \
+  "## Root design-question closure completeness discipline" \
+  "## Root machine-law primacy completeness discipline" \
+  "1. required question-closure rows and emitted question-status rows must remain explicit as separate machine-readable row families;" \
+  "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+
+SURFACE_ORDER_JSON="${TMP_ROOT}/design-question-closure-completeness-surface-order-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_design_question_closure.py" \
+  --repo-root "${SURFACE_ORDER_REPO}" \
+  --json-only >"${SURFACE_ORDER_JSON}"; then
+  echo "[FAIL] root design-question closure validator unexpectedly passed completeness surface order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SURFACE_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_design_question_closure_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RDQC-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert payload["design_question_closure_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["design_question_closure_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "design_question_closure_completeness_surface"
+    and row["reason"] == "design_question_closure_completeness_surface_order_mismatch"
+    for row in payload["closure_violations"]
+), payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md"
+    and row["reason"] == "required_marker_missing"
+    and row["marker"] == "1. required question-closure rows and emitted question-status rows must remain explicit as separate machine-readable row families;"
+    for row in payload["root_doc_anchor_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "design_question_closure_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
 echo "[PASS] protocol root design-question closure probes passed"

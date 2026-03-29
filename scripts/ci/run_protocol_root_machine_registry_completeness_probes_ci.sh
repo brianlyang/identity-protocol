@@ -260,8 +260,14 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-old = "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
-new = "2. expected row-family totals may be summarized informally once registry output still looks green;"
+old = (
+    "1. required registered-complete-root-mapping-family, family-status-row, family-validator-surface-contract-row, and family-probe-surface-contract-row rows must remain explicit as separate machine-readable row families;\n"
+    "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+)
+new = (
+    "1. required registered-complete-root-mapping-family, family-status-row, family-validator-surface-contract-row, and family-probe-surface-contract-row rows must remain explicit as separate machine-readable row families;\n"
+    "2. expected row-family totals may be summarized informally once registry output still looks green;"
+)
 assert old in text, text
 path.write_text(text.replace(old, new, 1), encoding="utf-8")
 PY
@@ -1285,6 +1291,57 @@ assert payload["error_code"] == "IP-RMRC-003", payload
 assert payload["violation_projection_status"] == "FAIL_REQUIRED", payload
 assert payload["projected_violation_reason_count"] + 1 == payload["expected_projected_violation_reason_count"], payload
 assert "root_machine_registry_completeness_violation_projection_incomplete" in payload["stale_reasons"], payload
+PY
+
+SURFACE_ORDER_REPO="${TMP_ROOT}/machine-registry-completeness-surface-order-drift-repo"
+mirror_repo "${SURFACE_ORDER_REPO}"
+protocol_root_probe_swap_numbered_surface_order_rows \
+  "${SURFACE_ORDER_REPO}/identity/protocol/README.md" \
+  "## Root machine-registry completeness discipline" \
+  "## Root governance completeness discipline" \
+  "1. required registered-complete-root-mapping-family, family-status-row, family-validator-surface-contract-row, and family-probe-surface-contract-row rows must remain explicit as separate machine-readable row families;" \
+  "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+
+SURFACE_ORDER_JSON="${TMP_ROOT}/machine-registry-completeness-surface-order-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${SURFACE_ORDER_REPO}" \
+  --json-only >"${SURFACE_ORDER_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed completeness surface order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SURFACE_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_registry_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_registry_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "machine_registry_completeness_surface"
+    and row["reason"] == "machine_registry_completeness_surface_order_mismatch"
+    for row in payload["completeness_violations"]
+), payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md"
+    and row["reason"] == "required_marker_missing"
+    and row["marker"] == "1. required registered-complete-root-mapping-family, family-status-row, family-validator-surface-contract-row, and family-probe-surface-contract-row rows must remain explicit as separate machine-readable row families;"
+    for row in payload["anchor_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "machine_registry_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 echo "[PASS] protocol root machine-registry completeness probes passed"
