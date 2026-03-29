@@ -465,6 +465,7 @@ Gateway-admissibility law is not a soft prose bundle.
 ## Root derivation completeness discipline
 
 Derivation law is not a soft prose bundle.
+These derivation-completeness rules must remain bound to canonical derivation-completeness rows rather than drifting into soft summary prose.
 
 1. required derivation-class-profile rows must remain explicit as a separate machine-readable row family;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;

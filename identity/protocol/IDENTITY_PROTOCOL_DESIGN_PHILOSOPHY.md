@@ -1139,6 +1139,10 @@ Expected row identity set and emitted row identity set for that family must
 also remain machine-readable rather than being collapsed into aggregate counts
 or generic structure failure.
 
+README root derivation completeness discipline must therefore stay congruent
+with admitted derivation-completeness rows rather than becoming a freehand
+completeness summary.
+
 The machine world must not finalize derivation legality while required
 corpus-class identity drift remains known only internally.
 

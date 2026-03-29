@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
@@ -13,6 +14,11 @@ from root_contract_anchor_checks_common import RootDocAnchorCheck, root_doc_anch
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_CORPUS_DERIVATION_CURRENT = "identity/protocol/mappings/root-corpus-derivation.current.yaml"
+ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
+DERIVATION_COMPLETENESS_SECTION_MARKER = "## Root derivation completeness discipline"
+ORDERED_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+(.*\S)\s*$")
+HEADING_RE = re.compile(r"^##\s+")
+HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
 
 
 DerivationAnchorCheck = RootDocAnchorCheck
@@ -24,6 +30,26 @@ class DerivationClassProfile:
     derivation_mode: str
     allowed_upstream_classes: tuple[str, ...] = field(default_factory=tuple)
     law_bearing_required: bool = False
+
+
+@dataclass(frozen=True)
+class DerivationCompletenessRow:
+    order: int
+    completeness_id: str
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class DerivationCompletenessSurfaceRow:
+    order: int
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class DerivationCompletenessSurface:
+    rel_path: str
+    rows: tuple[DerivationCompletenessSurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
 
 
 def _norm_str(value: Any) -> str:
@@ -83,3 +109,76 @@ def derivation_class_profiles_from_doc(derivation_doc: Mapping[str, Any]) -> tup
             )
         )
     return tuple(out)
+
+
+def derivation_completeness_rows_from_doc(
+    derivation_doc: Mapping[str, Any],
+) -> tuple[DerivationCompletenessRow, ...]:
+    rows = derivation_doc.get("derivation_completeness_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[DerivationCompletenessRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        completeness_id = _norm_str(row.get("completeness_id"))
+        contract_phrase = str(row.get("contract_phrase") or "").strip()
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not completeness_id or not contract_phrase:
+            continue
+        out.append(
+            DerivationCompletenessRow(
+                order=order,
+                completeness_id=completeness_id,
+                contract_phrase=contract_phrase,
+            )
+        )
+    return tuple(out)
+
+
+def readme_derivation_completeness_surface(repo_root: Path) -> DerivationCompletenessSurface:
+    path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
+    if not path.exists() or not path.is_file():
+        return DerivationCompletenessSurface(
+            rel_path=ROOT_PROTOCOL_README_REL_PATH,
+            rows=(),
+            extraction_violations=("target_missing",),
+        )
+
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    section_found = False
+    rows: list[DerivationCompletenessSurfaceRow] = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == DERIVATION_COMPLETENESS_SECTION_MARKER:
+            section_found = True
+            continue
+        if not section_found:
+            continue
+        if HEADING_RE.match(stripped) or HORIZONTAL_RULE_RE.match(stripped):
+            break
+        match = ORDERED_ITEM_RE.match(stripped)
+        if not match:
+            continue
+        rows.append(
+            DerivationCompletenessSurfaceRow(
+                order=int(match.group(1)),
+                contract_phrase=match.group(2).strip(),
+            )
+        )
+
+    extraction_violations: list[str] = []
+    if not section_found:
+        extraction_violations.append("section_missing")
+    if section_found and not rows:
+        extraction_violations.append("ordered_items_missing")
+
+    return DerivationCompletenessSurface(
+        rel_path=ROOT_PROTOCOL_README_REL_PATH,
+        rows=tuple(rows),
+        extraction_violations=tuple(extraction_violations),
+    )

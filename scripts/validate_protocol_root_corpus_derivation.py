@@ -12,6 +12,7 @@ from root_contract_anchor_checks_common import (
     validate_expected_root_doc_anchor_checks,
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
+from root_contract_row_validation_common import validate_contract_row_batches
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_authority_common import authority_class_profiles_from_doc, load_root_corpus_authority
 from root_corpus_derivation_common import (
@@ -19,7 +20,9 @@ from root_corpus_derivation_common import (
     STATUS_PASS_REQUIRED,
     derivation_anchor_checks_from_doc,
     derivation_class_profiles_from_doc,
+    derivation_completeness_rows_from_doc,
     load_root_corpus_derivation,
+    readme_derivation_completeness_surface,
 )
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, source_order_rows_from_doc
@@ -102,26 +105,62 @@ EXPECTED_CLASS_RULES = {
     },
 }
 EXPECTED_CURRENT_TURN_ALLOWED_CLASS = "machine_registry_directory"
+EXPECTED_DERIVATION_COMPLETENESS_ROWS = {
+    "explicit_derivation_row_family": {
+        "order": 1,
+        "contract_phrase": "required derivation-class-profile rows must remain explicit as a separate machine-readable row family;",
+    },
+    "congruent_derivation_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_derivation_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for that family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_derivation_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize derivation legality while missing or unexpected corpus-class identities remain known only internally;",
+    },
+    "fail_close_preserves_derivation_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/README.md": (
         "## One-way derivation discipline",
         "a later enforcement verdict may expose incompleteness, but it must not become the semantic parent of the earlier layer it tests.",
         "Explanatory or evidence surfaces may motivate strengthening, but they must re-enter root law only through governed refreezing at the proper layer.",
+        "## Root derivation completeness discipline",
+        "These derivation-completeness rules must remain bound to canonical derivation-completeness rows rather than drifting into soft summary prose.",
+        "1. required derivation-class-profile rows must remain explicit as a separate machine-readable row family;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "### Derivation direction must stay one-way",
         "Later enforcement may reveal incompleteness; it never becomes the semantic author of the earlier law it tests.",
         "A motivating surface is not yet a law-bearing parent surface.",
+        "### Derivation row-family completeness must stay explicit",
+        "README root derivation completeness discipline must therefore stay congruent with admitted derivation-completeness rows rather than becoming a freehand completeness summary.",
+        "The machine world must not finalize derivation legality while required corpus-class identity drift remains known only internally.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Constitutional derivation discipline",
         "Current stream, checker, or verdict state must not be reverse-projected into constitutional source law.",
         "Operational evidence may justify constitutional strengthening, but it becomes law only after governed refreezing at constitutional or contract layers.",
+        "## Root derivation completeness boundary",
+        "1. Derivation law must remain machine-readable as a separate derivation-class-profile row family.",
+        "4. Protocol legality must not finalize derivation legality while missing or unexpected corpus-class identities remain known only inside validator logic.",
+        "6. README root derivation completeness discipline rendered at protocol root must remain congruent with admitted derivation-completeness rows rather than silently authoring an alternate completeness summary.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime derivation boundary",
         "Runtime execution may expose shared-law gaps, but it must not self-author protocol law by reverse projection from a current-turn verdict.",
         "Runtime evidence can trigger strengthening; it becomes shared law only after governed refreezing through the proper root-law surfaces.",
+        "## Runtime derivation consumption boundary",
+        "1. Runtime consumes derivation law as a separate derivation-class-profile row family rather than as undifferentiated derivation prose.",
+        "4. Runtime must not finalize derivation legality while missing or unexpected corpus-class identities remain known only inside validator machinery.",
+        "6. Runtime consumes README root derivation completeness discipline as a governed completeness projection bound to admitted derivation-completeness rows rather than as a freehand completeness summary.",
     ),
 }
 
@@ -189,6 +228,8 @@ def main() -> int:
 
     anchor_checks = derivation_anchor_checks_from_doc(derivation_doc) if derivation_doc else ()
     class_profiles = derivation_class_profiles_from_doc(derivation_doc) if derivation_doc else ()
+    derivation_completeness_rows = derivation_completeness_rows_from_doc(derivation_doc) if derivation_doc else ()
+    derivation_completeness_surface = readme_derivation_completeness_surface(repo_root)
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     source_rows = source_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_profiles = authority_class_profiles_from_doc(authority_doc) if authority_doc else ()
@@ -236,6 +277,9 @@ def main() -> int:
         if not class_profiles:
             stale_reasons.append("root_corpus_derivation_class_profiles_missing")
             error_code = ERR_REGISTRY
+        if not derivation_completeness_rows:
+            stale_reasons.append("root_corpus_derivation_completeness_rows_missing")
+            error_code = ERR_REGISTRY
         anchor_reason_count_before = len(stale_reasons)
         stale_reasons.extend(
             validate_expected_root_doc_anchor_checks(
@@ -255,6 +299,41 @@ def main() -> int:
     class_profile_map = {row.corpus_class: row for row in class_profiles}
     authority_profile_map = {row.corpus_class: row for row in authority_profiles}
     source_rank_by_class = {row.corpus_class: row.order for row in source_rows}
+
+    row_family_projection_rows = project_row_families(
+        families=(
+            {
+                "family_id": "derivation_class_profiles",
+                "member_id_key": "corpus_class",
+                "actual_rows": class_profiles,
+                "expected_rows": {corpus_class: {} for corpus_class in registry_classes},
+                "id_attr": "corpus_class",
+            },
+            {
+                "family_id": "derivation_completeness_rows",
+                "member_id_key": "completeness_id",
+                "actual_rows": derivation_completeness_rows,
+                "expected_rows": {
+                    completeness_id: {}
+                    for completeness_id in EXPECTED_DERIVATION_COMPLETENESS_ROWS
+                },
+                "id_attr": "completeness_id",
+            },
+            {
+                "family_id": "derivation_completeness_surface",
+                "member_id_key": "contract_phrase",
+                "actual_rows": derivation_completeness_surface.rows,
+                "expected_rows": {
+                    row["contract_phrase"]: {}
+                    for row in EXPECTED_DERIVATION_COMPLETENESS_ROWS.values()
+                },
+                "id_attr": "contract_phrase",
+            },
+        ),
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    row_family_projection_by_id = {row["family_id"]: row for row in row_family_projection_rows}
     if not stale_reasons:
         append_root_doc_anchor_registry_structure_violations(
             structure_violations,
@@ -277,6 +356,47 @@ def main() -> int:
             extra_reason="extra_unregistered_classes",
             duplicate_reason="duplicate_corpus_class",
             actual_total_count=len(class_profiles),
+        )
+        for reason in derivation_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "derivation_completeness_surface",
+                    "reason": f"derivation_completeness_surface_{reason}",
+                }
+            )
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": derivation_completeness_rows,
+                    "expected_rows": EXPECTED_DERIVATION_COMPLETENESS_ROWS,
+                    "field_name": "derivation_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                },
+                {
+                    "actual_rows": derivation_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_DERIVATION_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "derivation_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_derivation_completeness_surface_phrase",
+                    "non_contiguous_reason": "derivation_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_derivation_completeness_surface_rows",
+                    "extra_reason": "extra_derivation_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "derivation_completeness_surface_order_mismatch",
+                },
+            ),
+            structure_violations=structure_violations,
+            support_violations=derivation_violations,
         )
 
         expected_forbidden_root_classes = sorted(set(registry_classes) - {EXPECTED_CURRENT_TURN_ALLOWED_CLASS})
@@ -473,22 +593,8 @@ def main() -> int:
     stale_reasons.extend(f"anchor_violation:{row['rel_path']}:{row['reason']}" for row in anchor_violations)
 
     sorted_profiles = sorted(class_profiles, key=lambda item: item.corpus_class)
+    sorted_derivation_completeness_rows = sorted(derivation_completeness_rows, key=lambda item: item.order)
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
-    row_family_projection_rows = project_row_families(
-        families=(
-            {
-                "family_id": "derivation_class_profiles",
-                "member_id_key": "corpus_class",
-                "actual_rows": class_profiles,
-                "expected_rows": {
-                    corpus_class: {} for corpus_class in registry_classes
-                },
-                "id_attr": "corpus_class",
-            },
-        ),
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_DERIVATION),
@@ -503,6 +609,7 @@ def main() -> int:
         "question_routing_entry_path": str(question_routing_entry_path),
         "question_routing_active_path": str(question_routing_active_path),
         "root_dir": str(derivation_doc.get("root_dir") or ""),
+        "derivation_completeness_row_count": len(derivation_completeness_rows),
         **project_root_contract_support_projection(
             prefix="derivation",
             row_family_projection_rows=row_family_projection_rows,
@@ -511,6 +618,12 @@ def main() -> int:
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         ),
+        "derivation_class_profile_row_coverage_status": row_family_projection_by_id["derivation_class_profiles"]["coverage_status"],
+        "derivation_class_profile_row_identity_projection_status": row_family_projection_by_id["derivation_class_profiles"]["identity_projection_status"],
+        "derivation_completeness_row_coverage_status": row_family_projection_by_id["derivation_completeness_rows"]["coverage_status"],
+        "derivation_completeness_row_identity_projection_status": row_family_projection_by_id["derivation_completeness_rows"]["identity_projection_status"],
+        "derivation_completeness_surface_coverage_status": row_family_projection_by_id["derivation_completeness_surface"]["coverage_status"],
+        "derivation_completeness_surface_identity_projection_status": row_family_projection_by_id["derivation_completeness_surface"]["identity_projection_status"],
         "row_family_projection_rows": row_family_projection_rows,
         "permitted_current_turn_root_corpus_class": EXPECTED_CURRENT_TURN_ALLOWED_CLASS,
         "current_turn_forbidden_root_classes": sorted(set(adjudication_redirect.forbidden_root_corpus_classes)),
@@ -523,6 +636,26 @@ def main() -> int:
             }
             for row in sorted_profiles
         ],
+        "derivation_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted_derivation_completeness_rows
+        ],
+        "derivation_completeness_surface": {
+            "rel_path": derivation_completeness_surface.rel_path,
+            "entry_count": len(derivation_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in derivation_completeness_surface.rows
+            ],
+            "extraction_violations": list(derivation_completeness_surface.extraction_violations),
+        },
         "structure_violations": structure_violations,
         "derivation_violations": derivation_violations,
         "anchor_violations": anchor_violations,
