@@ -96,10 +96,15 @@ terminal_truth_bridge_surface_marker="$(
     "release_readiness_terminal_truth_bridge_common" \
     "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER"
 )"
-terminal_truth_bridge_case_marker="$(
+terminal_truth_bridge_review_required_case_marker="$(
   resolve_python_module_expression \
     "release_readiness_terminal_truth_bridge_common" \
     "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_MARKER"
+)"
+terminal_truth_bridge_explicit_dirty_retry_case_marker="$(
+  resolve_python_module_expression \
+    "release_readiness_terminal_truth_bridge_common" \
+    "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_EXPLICIT_DIRTY_RETRY_CASE_MARKER"
 )"
 active_runtime_terminal_truth_veto_marker="$(
   resolve_python_module_expression \
@@ -123,7 +128,7 @@ python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
   --copy-file docs/release/identity-v1.6x-release-closure-summary.md \
   --json-only > /dev/null
 
-python3 - <<'PY' "${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${one_look_topology_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${active_runtime_terminal_truth_veto_marker}" "${post_closure_adjudication_order_marker}" "${governance_probe_projection_marker}" "${release_closure_root_grounding_order_marker}" "${release_closure_root_grounding_lane_marker}" "${release_closure_root_grounding_validator_path}" "${release_closure_root_grounding_probe_path}"
+python3 - <<'PY' "${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${one_look_topology_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_review_required_case_marker}" "${terminal_truth_bridge_explicit_dirty_retry_case_marker}" "${active_runtime_terminal_truth_veto_marker}" "${post_closure_adjudication_order_marker}" "${governance_probe_projection_marker}" "${release_closure_root_grounding_order_marker}" "${release_closure_root_grounding_lane_marker}" "${release_closure_root_grounding_validator_path}" "${release_closure_root_grounding_probe_path}"
 from pathlib import Path
 import sys
 
@@ -139,14 +144,15 @@ support_preflight_projection_marker = sys.argv[9]
 selected_check_scope_projection_marker = sys.argv[10]
 one_look_topology_marker = sys.argv[11]
 terminal_truth_bridge_surface_marker = sys.argv[12]
-terminal_truth_bridge_case_marker = sys.argv[13]
-active_runtime_terminal_truth_veto_marker = sys.argv[14]
-post_closure_adjudication_order_marker = sys.argv[15]
-governance_probe_projection_marker = sys.argv[16]
-release_closure_root_grounding_order_marker = sys.argv[17]
-release_closure_root_grounding_lane_marker = sys.argv[18]
-release_closure_root_grounding_validator_path = sys.argv[19]
-release_closure_root_grounding_probe_path = sys.argv[20]
+terminal_truth_bridge_review_required_case_marker = sys.argv[13]
+terminal_truth_bridge_explicit_dirty_retry_case_marker = sys.argv[14]
+active_runtime_terminal_truth_veto_marker = sys.argv[15]
+post_closure_adjudication_order_marker = sys.argv[16]
+governance_probe_projection_marker = sys.argv[17]
+release_closure_root_grounding_order_marker = sys.argv[18]
+release_closure_root_grounding_lane_marker = sys.argv[19]
+release_closure_root_grounding_validator_path = sys.argv[20]
+release_closure_root_grounding_probe_path = sys.argv[21]
 text = path.read_text(encoding="utf-8")
 text = text.replace("`v1.6.21`", "`v1.6.20`")
 text = text.replace("fleet-scope closure matrix", "fleet matrix")
@@ -217,7 +223,14 @@ text = text.replace(
     terminal_truth_bridge_surface_marker,
     "terminal_truth_bridge_surface=one_look.identity_terminal_truth_cleanliness_status",
 )
-text = text.replace(terminal_truth_bridge_case_marker, "terminal_truth_bridge_case=review_required_execution")
+text = text.replace(
+    terminal_truth_bridge_review_required_case_marker,
+    "terminal_truth_bridge_case=review_required_execution",
+)
+text = text.replace(
+    terminal_truth_bridge_explicit_dirty_retry_case_marker,
+    "terminal_truth_bridge_case=explicit_dirty_retry_execution",
+)
 text = text.replace(
     active_runtime_projection_marker,
     "active_runtime_closure_projection=one_look.identity_codex_launcher_status",
@@ -235,7 +248,7 @@ if python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_summary.py" --rep
   exit 1
 fi
 
-python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${one_look_topology_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${active_runtime_terminal_truth_veto_marker}" "${post_closure_adjudication_order_marker}" "${governance_probe_projection_marker}" "${release_closure_root_grounding_order_marker}" "${release_closure_root_grounding_lane_marker}" "${release_closure_root_grounding_validator_path}" "${release_closure_root_grounding_probe_path}"
+python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${one_look_topology_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_review_required_case_marker}" "${terminal_truth_bridge_explicit_dirty_retry_case_marker}" "${active_runtime_terminal_truth_veto_marker}" "${post_closure_adjudication_order_marker}" "${governance_probe_projection_marker}" "${release_closure_root_grounding_order_marker}" "${release_closure_root_grounding_lane_marker}" "${release_closure_root_grounding_validator_path}" "${release_closure_root_grounding_probe_path}"
 import json
 import sys
 from pathlib import Path
@@ -311,14 +324,17 @@ if expected_one_look_topology_reason not in reasons:
 expected_terminal_truth_bridge_surface_reason = f"summary_doc_missing_release_readiness_terminal_truth_bridge_marker:{sys.argv[13]}"
 if expected_terminal_truth_bridge_surface_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect terminal-truth bridge surface drift")
-expected_terminal_truth_bridge_case_reason = f"summary_doc_missing_release_readiness_terminal_truth_bridge_marker:{sys.argv[14]}"
-if expected_terminal_truth_bridge_case_reason not in reasons:
-    raise SystemExit("negative release-closure summary must detect terminal-truth bridge case drift")
-expected_active_runtime_detail_reason = f"summary_doc_missing_active_runtime_closure_projection_marker:{sys.argv[15]}"
+expected_review_required_case_reason = f"summary_doc_missing_release_readiness_terminal_truth_bridge_marker:{sys.argv[14]}"
+if expected_review_required_case_reason not in reasons:
+    raise SystemExit("negative release-closure summary must detect review-required terminal-truth bridge case drift")
+expected_explicit_dirty_retry_case_reason = f"summary_doc_missing_release_readiness_terminal_truth_bridge_marker:{sys.argv[15]}"
+if expected_explicit_dirty_retry_case_reason not in reasons:
+    raise SystemExit("negative release-closure summary must detect explicit-dirty-retry terminal-truth bridge case drift")
+expected_active_runtime_detail_reason = f"summary_doc_missing_active_runtime_closure_projection_marker:{sys.argv[16]}"
 if expected_active_runtime_detail_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect active-runtime companion detail drift")
 expected_post_closure_adjudication_reason = (
-    f"summary_doc_missing_release_readiness_post_closure_adjudication_marker:{sys.argv[16]}"
+    f"summary_doc_missing_release_readiness_post_closure_adjudication_marker:{sys.argv[17]}"
 )
 if expected_post_closure_adjudication_reason not in reasons:
     raise SystemExit(
@@ -329,28 +345,28 @@ if "summary_doc_governance_probe_projection_line_not_canonical" not in reasons:
         "negative release-closure summary must detect governance-probe projection line drift"
     )
 expected_root_grounding_reason = (
-    f"summary_doc_missing_release_closure_root_grounding_marker:{sys.argv[18]}"
+    f"summary_doc_missing_release_closure_root_grounding_marker:{sys.argv[19]}"
 )
 if expected_root_grounding_reason not in reasons:
     raise SystemExit(
         "negative release-closure summary must detect release-closure root grounding drift"
     )
 expected_root_grounding_lane_reason = (
-    f"summary_doc_missing_release_closure_root_grounding_marker:{sys.argv[19]}"
+    f"summary_doc_missing_release_closure_root_grounding_marker:{sys.argv[20]}"
 )
 if expected_root_grounding_lane_reason not in reasons:
     raise SystemExit(
         "negative release-closure summary must detect release-closure root grounding lane drift"
     )
 expected_root_grounding_validator_reason = (
-    f"summary_doc_missing_release_closure_root_grounding_marker:{sys.argv[20]}"
+    f"summary_doc_missing_release_closure_root_grounding_marker:{sys.argv[21]}"
 )
 if expected_root_grounding_validator_reason not in reasons:
     raise SystemExit(
         "negative release-closure summary must detect release-closure root grounding validator drift"
     )
 expected_root_grounding_probe_reason = (
-    f"summary_doc_missing_release_closure_root_grounding_marker:{sys.argv[21]}"
+    f"summary_doc_missing_release_closure_root_grounding_marker:{sys.argv[22]}"
 )
 if expected_root_grounding_probe_reason not in reasons:
     raise SystemExit(
