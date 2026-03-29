@@ -211,6 +211,17 @@ Validator or runtime code must not finalize constitutional-spine truth while
 missing or unexpected entry rel-paths or bridge ids remain known only inside
 local machinery.
 
+## Root constitutional-spine completeness discipline
+
+Constitutional-spine law is not a soft prose bundle.
+These constitutional-spine-completeness rules must remain bound to canonical constitutional-spine-completeness rows rather than drifting into soft summary prose.
+
+1. required constitutional-entry, spine-bridge, philosophy-primacy, and philosophy-primacy-surface rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each constitutional-spine family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize constitutional-spine truth while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
 ---
 
 ## Root adjudication-surface discipline

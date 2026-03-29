@@ -86,6 +86,15 @@ Protocol consumes philosophy-first law as explicit philosophy-primacy rows and s
 5. Protocol legality must also keep expected entry rel-path identities and expected bridge ids explicit rather than collapsing them into generic structure failure.
 6. Protocol legality must not finalize constitutional-spine truth while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.
 
+## Root constitutional-spine completeness boundary
+
+1. Constitutional-spine law must remain machine-readable as separate constitutional-entry, spine-bridge, philosophy-primacy, and philosophy-primacy-surface row families.
+2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
+3. Expected row identity set and emitted row identity set for each constitutional-spine family must also remain explicit; identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize constitutional-spine truth while missing or unexpected row identities remain known only inside validator logic.
+5. Fail-close constitutional-spine output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+6. README root constitutional-spine completeness discipline rendered at protocol root must remain congruent with admitted constitutional-spine-completeness rows rather than silently authoring an alternate completeness summary.
+
 ## Root-law promotion and re-entry boundary
 
 1. Outer governance/review/workbook/reference/evidence/runtime/receipt/implementation surfaces may motivate strengthening, but they do not directly promote themselves into protocol-root law.

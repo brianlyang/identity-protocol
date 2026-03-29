@@ -414,6 +414,10 @@ The machine world must not finalize constitutional-spine truth while
 missing or unexpected entry rel-paths or bridge ids remain known only
 inside validator logic.
 
+README root constitutional-spine completeness discipline must therefore stay
+congruent with admitted constitutional-spine-completeness rows rather than
+becoming a freehand completeness summary.
+
 Descriptor concordance must also preserve descriptor-field mode.
 
 If a bundle row keeps the same descriptor name but silently changes whether a

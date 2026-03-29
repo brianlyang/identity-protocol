@@ -11,21 +11,23 @@ from root_contract_anchor_checks_common import (
     root_doc_anchor_checks_from_doc,
     validate_expected_root_doc_anchor_checks,
 )
-from root_contract_row_validation_common import contiguous_orders
+from root_contract_row_validation_common import contiguous_orders, validate_contract_row_batches
 from root_constitutional_spine_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     bridge_rows_from_doc,
     constitutional_entry_rows_from_doc,
+    constitutional_spine_completeness_rows_from_doc,
     load_root_constitutional_spine,
     philosophy_primacy_rows_from_doc,
+    readme_constitutional_spine_completeness_surface,
     readme_philosophy_primacy_surface,
 )
 from root_corpus_authority_common import entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
 from root_corpus_question_routing_common import entry_question_projections_from_doc, load_root_corpus_question_routing
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
+from root_row_family_projection_common import project_root_contract_support_projection, project_row_families
 
 STATUS_KEY = "protocol_root_constitutional_spine_status"
 ERR_REGISTRY = "IP-RCS-001"
@@ -182,6 +184,28 @@ EXPECTED_PHILOSOPHY_PRIMACY_ROWS = {
         ),
     },
 }
+EXPECTED_CONSTITUTIONAL_SPINE_COMPLETENESS_ROWS = {
+    "explicit_constitutional_spine_row_families": {
+        "order": 1,
+        "contract_phrase": "required constitutional-entry, spine-bridge, philosophy-primacy, and philosophy-primacy-surface rows must remain explicit as separate machine-readable families;",
+    },
+    "congruent_constitutional_spine_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_constitutional_spine_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each constitutional-spine family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_constitutional_spine_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize constitutional-spine truth while missing or unexpected row identities remain known only internally;",
+    },
+    "fail_close_preserves_constitutional_spine_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_BRIDGE_ROWS = {
     "philosophy_to_protocol_constitution": {
         "order": 1,
@@ -248,6 +272,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "README philosophy-first rules about why protocol law exists must therefore stay bound to canonical philosophy-primacy rows rather than remaining motivational prose.",
         "### Constitutional spine row-family completeness must stay explicit",
         "Constitutional-entry rows and spine-bridge rows must remain explicit as separate machine-law families.",
+        "README root constitutional-spine completeness discipline must therefore stay congruent with admitted constitutional-spine-completeness rows rather than becoming a freehand completeness summary.",
         "The machine world must not finalize constitutional-spine truth while missing or unexpected entry rel-paths or bridge ids remain known only inside validator logic.",
     ),
     "identity/protocol/README.md": (
@@ -255,18 +280,24 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "These philosophy-first rules must remain bound to canonical philosophy-primacy rows rather than drifting into motivational prose.",
         "## Root constitutional-spine discipline",
         "Constitutional-entry rows and spine-bridge rows must remain explicit as separate machine-governed families.",
+        "## Root constitutional-spine completeness discipline",
+        "These constitutional-spine-completeness rules must remain bound to canonical constitutional-spine-completeness rows rather than drifting into soft summary prose.",
         "Validator or runtime code must not finalize constitutional-spine truth while missing or unexpected entry rel-paths or bridge ids remain known only inside local machinery.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "Protocol consumes philosophy-first law as explicit philosophy-primacy rows and spine-bridge rows rather than as motivational context alone.",
         "## Root constitutional-spine boundary",
         "1. The root constitutional spine is governed as separate constitutional-entry and spine-bridge row families rather than as one narrative claim.",
+        "## Root constitutional-spine completeness boundary",
+        "6. README root constitutional-spine completeness discipline rendered at protocol root must remain congruent with admitted constitutional-spine-completeness rows rather than silently authoring an alternate completeness summary.",
         "6. Protocol legality must not finalize constitutional-spine truth while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "Runtime consumes philosophy-first law as explicit philosophy-primacy rows and spine-bridge rows rather than as motivational context alone.",
         "## Runtime constitutional-spine consumption boundary",
         "1. Runtime consumes constitutional spine law as separate constitutional-entry and spine-bridge row families rather than as undifferentiated narrative context.",
+        "## Runtime constitutional-spine completeness consumption boundary",
+        "6. Runtime consumes README root constitutional-spine completeness discipline as a governed completeness projection bound to admitted constitutional-spine-completeness rows rather than as a freehand completeness summary.",
         "4. Runtime must not finalize constitutional-spine legality while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.",
     ),
 }
@@ -467,7 +498,11 @@ def main() -> int:
     entry_rows = constitutional_entry_rows_from_doc(spine_doc) if spine_doc else ()
     bridge_rows = bridge_rows_from_doc(spine_doc) if spine_doc else ()
     philosophy_primacy_rows = philosophy_primacy_rows_from_doc(spine_doc) if spine_doc else ()
+    constitutional_spine_completeness_rows = (
+        constitutional_spine_completeness_rows_from_doc(spine_doc) if spine_doc else ()
+    )
     philosophy_primacy_surface = readme_philosophy_primacy_surface(repo_root)
+    constitutional_spine_completeness_surface = readme_constitutional_spine_completeness_surface(repo_root)
     root_doc_anchor_checks = root_doc_anchor_checks_from_doc(spine_doc) if spine_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -502,6 +537,26 @@ def main() -> int:
                 "actual_rows": philosophy_primacy_surface.rows,
                 "expected_rows": EXPECTED_PHILOSOPHY_PRIMACY_ROWS,
                 "id_attr": "primacy_label",
+            },
+            {
+                "family_id": "constitutional_spine_completeness_rows",
+                "member_id_key": "completeness_id",
+                "actual_rows": constitutional_spine_completeness_rows,
+                "expected_rows": {
+                    completeness_id: {}
+                    for completeness_id in EXPECTED_CONSTITUTIONAL_SPINE_COMPLETENESS_ROWS
+                },
+                "id_attr": "completeness_id",
+            },
+            {
+                "family_id": "constitutional_spine_completeness_surface",
+                "member_id_key": "contract_phrase",
+                "actual_rows": constitutional_spine_completeness_surface.rows,
+                "expected_rows": {
+                    row["contract_phrase"]: {}
+                    for row in EXPECTED_CONSTITUTIONAL_SPINE_COMPLETENESS_ROWS.values()
+                },
+                "id_attr": "contract_phrase",
             },
         )
     )
@@ -546,6 +601,9 @@ def main() -> int:
         if not philosophy_primacy_rows:
             stale_reasons.append("root_constitutional_spine_philosophy_primacy_rows_missing")
             error_code = ERR_REGISTRY
+        if not constitutional_spine_completeness_rows:
+            stale_reasons.append("root_constitutional_spine_completeness_rows_missing")
+            error_code = ERR_REGISTRY
         anchor_reason_count_before = len(stale_reasons)
         stale_reasons.extend(
             validate_expected_root_doc_anchor_checks(
@@ -561,6 +619,80 @@ def main() -> int:
         _validate_entry_rows(entry_rows, structure_violations)
         _validate_bridge_rows(bridge_rows, structure_violations)
         _validate_philosophy_primacy_rows(philosophy_primacy_rows, structure_violations)
+        for reason in constitutional_spine_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "constitutional_spine_completeness_surface",
+                    "reason": f"constitutional_spine_completeness_surface_{reason}",
+                }
+            )
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": constitutional_spine_completeness_rows,
+                    "expected_rows": EXPECTED_CONSTITUTIONAL_SPINE_COMPLETENESS_ROWS,
+                    "field_name": "constitutional_spine_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "duplicate_reason": "duplicate_constitutional_spine_completeness_id",
+                    "non_contiguous_reason": "constitutional_spine_completeness_row_order_non_contiguous",
+                    "missing_reason": "missing_constitutional_spine_completeness_rows",
+                    "extra_reason": "extra_constitutional_spine_completeness_rows",
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                    "order_reason": "constitutional_spine_completeness_row_order_mismatch",
+                },
+                {
+                    "actual_rows": constitutional_spine_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_CONSTITUTIONAL_SPINE_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "constitutional_spine_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_constitutional_spine_completeness_surface_phrase",
+                    "non_contiguous_reason": "constitutional_spine_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_constitutional_spine_completeness_surface_rows",
+                    "extra_reason": "extra_constitutional_spine_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "constitutional_spine_completeness_surface_order_mismatch",
+                },
+            ),
+            structure_violations=structure_violations,
+            support_violations=projection_violations,
+        )
+        expected_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_CONSTITUTIONAL_SPINE_COMPLETENESS_ROWS.values()
+        ]
+        actual_completeness_phrases = [
+            row.contract_phrase for row in constitutional_spine_completeness_surface.rows
+        ]
+        if actual_completeness_phrases and tuple(actual_completeness_phrases) != tuple(expected_completeness_phrases):
+            projection_violations.append(
+                {
+                    "field": "constitutional_spine_completeness_surface",
+                    "reason": "constitutional_spine_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_completeness_phrases,
+                    "actual": actual_completeness_phrases,
+                }
+            )
+        expected_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_CONSTITUTIONAL_SPINE_COMPLETENESS_ROWS.values()
+        ]
+        actual_completeness_orders = [row.order for row in constitutional_spine_completeness_surface.rows]
+        if actual_completeness_orders and tuple(actual_completeness_orders) != tuple(expected_completeness_orders):
+            projection_violations.append(
+                {
+                    "field": "constitutional_spine_completeness_surface",
+                    "reason": "constitutional_spine_completeness_surface_order_mismatch",
+                    "expected": expected_completeness_orders,
+                    "actual": actual_completeness_orders,
+                }
+            )
         if structure_violations:
             error_code = ERR_STRUCTURE
 
@@ -876,6 +1008,7 @@ def main() -> int:
         "spine_entry_count": len(entry_rows),
         "spine_bridge_count": len(bridge_rows),
         "philosophy_primacy_count": len(philosophy_primacy_rows),
+        "constitutional_spine_completeness_row_count": len(constitutional_spine_completeness_rows),
         **project_root_contract_support_projection(
             prefix="constitutional_spine",
             row_family_projection_rows=row_family_projection_rows,
@@ -906,6 +1039,18 @@ def main() -> int:
         "philosophy_primacy_surface_identity_projection_status": row_family_projection_by_id[
             "philosophy_primacy_surface"
         ]["identity_projection_status"],
+        "constitutional_spine_completeness_row_coverage_status": row_family_projection_by_id[
+            "constitutional_spine_completeness_rows"
+        ]["coverage_status"],
+        "constitutional_spine_completeness_row_identity_projection_status": row_family_projection_by_id[
+            "constitutional_spine_completeness_rows"
+        ]["identity_projection_status"],
+        "constitutional_spine_completeness_surface_coverage_status": row_family_projection_by_id[
+            "constitutional_spine_completeness_surface"
+        ]["coverage_status"],
+        "constitutional_spine_completeness_surface_identity_projection_status": row_family_projection_by_id[
+            "constitutional_spine_completeness_surface"
+        ]["identity_projection_status"],
         "spine_rel_paths": [row.rel_path for row in sorted(entry_rows, key=lambda item: item.order)],
         "spine_bridge_ids": [row.bridge_id for row in sorted(bridge_rows, key=lambda item: item.order)],
         "philosophy_primacy_labels": [
@@ -934,6 +1079,26 @@ def main() -> int:
                 for row in philosophy_primacy_surface.rows
             ],
             "extraction_violations": list(philosophy_primacy_surface.extraction_violations),
+        },
+        "constitutional_spine_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted(constitutional_spine_completeness_rows, key=lambda item: item.order)
+        ],
+        "constitutional_spine_completeness_surface": {
+            "rel_path": constitutional_spine_completeness_surface.rel_path,
+            "entry_count": len(constitutional_spine_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in constitutional_spine_completeness_surface.rows
+            ],
+            "extraction_violations": list(constitutional_spine_completeness_surface.extraction_violations),
         },
         "row_family_projection_rows": row_family_projection_rows,
         "structure_violations": structure_violations,

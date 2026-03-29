@@ -23,6 +23,9 @@ anchor_checks:
       - '### Constitutional spine row-family completeness must stay explicit'
       - Constitutional-entry rows and spine-bridge rows must remain explicit as
         separate machine-law families.
+      - README root constitutional-spine completeness discipline must therefore
+        stay congruent with admitted constitutional-spine-completeness rows
+        rather than becoming a freehand completeness summary.
       - The machine world must not finalize constitutional-spine truth while
         missing or unexpected entry rel-paths or bridge ids remain known only
         inside validator logic.
@@ -34,6 +37,10 @@ anchor_checks:
       - '## Root constitutional-spine discipline'
       - Constitutional-entry rows and spine-bridge rows must remain explicit as
         separate machine-governed families.
+      - '## Root constitutional-spine completeness discipline'
+      - These constitutional-spine-completeness rules must remain bound to
+        canonical constitutional-spine-completeness rows rather than drifting
+        into soft summary prose.
       - Validator or runtime code must not finalize constitutional-spine truth
         while missing or unexpected entry rel-paths or bridge ids remain known
         only inside local machinery.
@@ -43,6 +50,8 @@ anchor_checks:
         rows and spine-bridge rows rather than as motivational context alone.
       - '## Root constitutional-spine boundary'
       - '1. The root constitutional spine is governed as separate constitutional-entry and spine-bridge row families rather than as one narrative claim.'
+      - '## Root constitutional-spine completeness boundary'
+      - '6. README root constitutional-spine completeness discipline rendered at protocol root must remain congruent with admitted constitutional-spine-completeness rows rather than silently authoring an alternate completeness summary.'
       - '6. Protocol legality must not finalize constitutional-spine truth while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.'
   - rel_path: identity/protocol/IDENTITY_RUNTIME.md
     required_markers:
@@ -50,6 +59,8 @@ anchor_checks:
         rows and spine-bridge rows rather than as motivational context alone.
       - '## Runtime constitutional-spine consumption boundary'
       - '1. Runtime consumes constitutional spine law as separate constitutional-entry and spine-bridge row families rather than as undifferentiated narrative context.'
+      - '## Runtime constitutional-spine completeness consumption boundary'
+      - '6. Runtime consumes README root constitutional-spine completeness discipline as a governed completeness projection bound to admitted constitutional-spine-completeness rows rather than as a freehand completeness summary.'
       - '4. Runtime must not finalize constitutional-spine legality while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.'
 registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
 ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
@@ -233,3 +244,19 @@ philosophy_primacy_rows:
         primacy.
       - philosophy-first law remains philosophically generative but not
         runtime-terminal.
+constitutional_spine_completeness_rows:
+  - order: 1
+    completeness_id: explicit_constitutional_spine_row_families
+    contract_phrase: required constitutional-entry, spine-bridge, philosophy-primacy, and philosophy-primacy-surface rows must remain explicit as separate machine-readable families;
+  - order: 2
+    completeness_id: congruent_constitutional_spine_row_family_totals
+    contract_phrase: expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+  - order: 3
+    completeness_id: explicit_constitutional_spine_row_identity_sets
+    contract_phrase: expected row identity set and emitted row identity set for each constitutional-spine family must also remain machine-readable rather than being collapsed into aggregate counts;
+  - order: 4
+    completeness_id: hidden_constitutional_spine_identity_drift_forbidden
+    contract_phrase: runtime or validator code must not finalize constitutional-spine truth while missing or unexpected row identities remain known only internally;
+  - order: 5
+    completeness_id: fail_close_preserves_constitutional_spine_identity_projection
+    contract_phrase: fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.

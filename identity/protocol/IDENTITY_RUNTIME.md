@@ -52,6 +52,15 @@ Runtime meaning:
 4. Runtime must not finalize constitutional-spine legality while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing or unexpected entry rel-path and bridge-id projection rather than hiding drift behind count-only summaries.
 
+## Runtime constitutional-spine completeness consumption boundary
+
+1. Runtime consumes constitutional-spine law as separate constitutional-entry, spine-bridge, philosophy-primacy, and philosophy-primacy-surface row families rather than as undifferentiated completeness prose.
+2. Runtime must keep expected row-family total and emitted row-family total congruent under machine-readable coverage completeness rather than relying on aggregate green shorthand.
+3. Runtime must also keep expected row identity set and emitted row identity set for each constitutional-spine family explicit rather than collapsing identity drift into summary-only counts.
+4. Runtime must not finalize constitutional-spine legality while missing or unexpected row identities remain known only inside validator machinery.
+5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+6. Runtime consumes README root constitutional-spine completeness discipline as a governed completeness projection bound to admitted constitutional-spine-completeness rows rather than as a freehand completeness summary.
+
 ## Runtime-to-root promotion boundary
 
 1. Runtime state, runtime reports, runtime evidence, and runtime receipts may expose defects or strengthening opportunities, but they do not directly promote themselves into protocol-root law.

@@ -23,9 +23,10 @@ assert payload["protocol_root_constitutional_spine_status"] == "PASS_REQUIRED", 
 assert payload["spine_entry_count"] == 4, payload
 assert payload["spine_bridge_count"] == 5, payload
 assert payload["philosophy_primacy_count"] == 4, payload
+assert payload["constitutional_spine_completeness_row_count"] == 5, payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["constitutional_spine_row_family_count"] == 4, payload
+assert payload["constitutional_spine_row_family_count"] == 6, payload
 assert payload["constitutional_spine_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["constitutional_spine_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["constitutional_entry_row_coverage_status"] == "PASS_REQUIRED", payload
@@ -36,11 +37,19 @@ assert payload["philosophy_primacy_row_coverage_status"] == "PASS_REQUIRED", pay
 assert payload["philosophy_primacy_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["philosophy_primacy_surface_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["philosophy_primacy_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_completeness_surface"]["entry_count"] == 5, payload
+assert payload["constitutional_spine_completeness_surface"]["extraction_violations"] == [], payload
 assert [row["family_id"] for row in payload["row_family_projection_rows"]] == [
     "constitutional_entry_rows",
     "spine_bridge_rows",
     "philosophy_primacy_rows",
     "philosophy_primacy_surface",
+    "constitutional_spine_completeness_rows",
+    "constitutional_spine_completeness_surface",
 ], payload
 entry_row = next(
     row for row in payload["row_family_projection_rows"]
@@ -57,6 +66,14 @@ primacy_row = next(
 primacy_surface_row = next(
     row for row in payload["row_family_projection_rows"]
     if row["family_id"] == "philosophy_primacy_surface"
+)
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "constitutional_spine_completeness_rows"
+)
+completeness_surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "constitutional_spine_completeness_surface"
 )
 assert entry_row["expected_count"] == payload["spine_entry_count"] == 4, payload
 assert entry_row["actual_count"] == payload["spine_entry_count"] == 4, payload
@@ -82,6 +99,250 @@ assert primacy_surface_row["missing_ids"] == [], payload
 assert primacy_surface_row["unexpected_ids"] == [], payload
 assert primacy_surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert primacy_surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert completeness_row["expected_count"] == payload["constitutional_spine_completeness_row_count"] == 5, payload
+assert completeness_row["actual_count"] == payload["constitutional_spine_completeness_row_count"] == 5, payload
+assert completeness_row["missing_ids"] == [], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "PASS_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert completeness_surface_row["expected_count"] == payload["constitutional_spine_completeness_row_count"] == 5, payload
+assert completeness_surface_row["actual_count"] == payload["constitutional_spine_completeness_row_count"] == 5, payload
+assert completeness_surface_row["missing_ids"] == [], payload
+assert completeness_surface_row["unexpected_ids"] == [], payload
+assert completeness_surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert completeness_surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+COMPLETENESS_ROW_REPO="${TMP_ROOT}/missing-constitutional-spine-completeness-row-repo"
+mirror_repo "${COMPLETENESS_ROW_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_REPO}/identity/protocol/mappings/root-constitutional-spine.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["constitutional_spine_completeness_rows"] = [
+    row
+    for row in doc["constitutional_spine_completeness_rows"]
+    if row.get("completeness_id") != "explicit_constitutional_spine_row_families"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_JSON="${TMP_ROOT}/missing-constitutional-spine-completeness-row.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_constitutional_spine.py" \
+  --repo-root "${COMPLETENESS_ROW_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_JSON}"; then
+  echo "[FAIL] root constitutional spine validator unexpectedly passed missing completeness row"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_constitutional_spine_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCS-002", payload
+assert any(
+    row["field"] == "constitutional_spine_completeness_rows"
+    and row["reason"] == "missing_constitutional_spine_completeness_rows"
+    and "explicit_constitutional_spine_row_families" in row.get("completeness_ids", [])
+    for row in payload["structure_violations"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "constitutional_spine_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 4, payload
+assert completeness_row["missing_ids"] == ["explicit_constitutional_spine_row_families"], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["constitutional_spine_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["constitutional_spine_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+COMPLETENESS_IDENTITY_REPO="${TMP_ROOT}/constitutional-spine-completeness-identity-drift-repo"
+mirror_repo "${COMPLETENESS_IDENTITY_REPO}"
+python3 - <<'PY' "${COMPLETENESS_IDENTITY_REPO}/identity/protocol/mappings/root-constitutional-spine.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["constitutional_spine_completeness_rows"]:
+    if row.get("completeness_id") == "hidden_constitutional_spine_identity_drift_forbidden":
+        row["completeness_id"] = "hidden_constitutional_spine_identity_drift_forbidden_alias"
+        break
+else:
+    raise SystemExit("expected constitutional spine completeness row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_IDENTITY_JSON="${TMP_ROOT}/constitutional-spine-completeness-identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_constitutional_spine.py" \
+  --repo-root "${COMPLETENESS_IDENTITY_REPO}" \
+  --json-only >"${COMPLETENESS_IDENTITY_JSON}"; then
+  echo "[FAIL] root constitutional spine validator unexpectedly passed completeness identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_IDENTITY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_constitutional_spine_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCS-002", payload
+assert payload["constitutional_spine_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["constitutional_spine_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "constitutional_spine_completeness_rows"
+    and row["reason"] == "missing_constitutional_spine_completeness_rows"
+    and "hidden_constitutional_spine_identity_drift_forbidden" in row.get("completeness_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "constitutional_spine_completeness_rows"
+    and row["reason"] == "extra_constitutional_spine_completeness_rows"
+    and "hidden_constitutional_spine_identity_drift_forbidden_alias" in row.get("completeness_ids", [])
+    for row in payload["structure_violations"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "constitutional_spine_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 5, payload
+assert completeness_row["missing_ids"] == ["hidden_constitutional_spine_identity_drift_forbidden"], payload
+assert completeness_row["unexpected_ids"] == ["hidden_constitutional_spine_identity_drift_forbidden_alias"], payload
+assert completeness_row["coverage_status"] == "PASS_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/constitutional-spine-completeness-surface-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "1. required constitutional-entry, spine-bridge, philosophy-primacy, and philosophy-primacy-surface rows must remain explicit as separate machine-readable families;"
+new = "1. required constitutional-entry, spine-bridge, and philosophy-primacy rows must remain explicit as separate machine-readable families;"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_JSON="${TMP_ROOT}/constitutional-spine-completeness-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_constitutional_spine.py" \
+  --repo-root "${COMPLETENESS_SURFACE_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_JSON}"; then
+  echo "[FAIL] root constitutional spine validator unexpectedly passed completeness surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_constitutional_spine_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCS-002", payload
+assert any(
+    row["field"] == "constitutional_spine_completeness_surface"
+    and row["reason"] == "missing_constitutional_spine_completeness_surface_rows"
+    and "required constitutional-entry, spine-bridge, philosophy-primacy, and philosophy-primacy-surface rows must remain explicit as separate machine-readable families;" in row.get("contract_phrases", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "constitutional_spine_completeness_surface"
+    and row["reason"] == "extra_constitutional_spine_completeness_surface_rows"
+    and "required constitutional-entry, spine-bridge, and philosophy-primacy rows must remain explicit as separate machine-readable families;" in row.get("contract_phrases", [])
+    for row in payload["structure_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "constitutional_spine_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [
+    "required constitutional-entry, spine-bridge, philosophy-primacy, and philosophy-primacy-surface rows must remain explicit as separate machine-readable families;"
+], payload
+assert surface_row["unexpected_ids"] == [
+    "required constitutional-entry, spine-bridge, and philosophy-primacy rows must remain explicit as separate machine-readable families;"
+], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["constitutional_spine_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/constitutional-spine-completeness-surface-order-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_ORDER_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+first = "1. required constitutional-entry, spine-bridge, philosophy-primacy, and philosophy-primacy-surface rows must remain explicit as separate machine-readable families;"
+second = "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+assert first in text and second in text, text
+text = text.replace(first, "__TEMP__", 1)
+text = text.replace(second, first, 1)
+text = text.replace("__TEMP__", second, 1)
+path.write_text(text, encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_ORDER_JSON="${TMP_ROOT}/constitutional-spine-completeness-surface-order-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_constitutional_spine.py" \
+  --repo-root "${COMPLETENESS_SURFACE_ORDER_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_ORDER_JSON}"; then
+  echo "[FAIL] root constitutional spine validator unexpectedly passed completeness surface order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_constitutional_spine_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCS-003", payload
+assert payload["constitutional_spine_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["constitutional_spine_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "constitutional_spine_completeness_surface"
+    and row["reason"] == "constitutional_spine_completeness_surface_phrase_order_mismatch"
+    for row in payload["projection_violations"]
+), payload
+assert any(
+    row["field"] == "constitutional_spine_completeness_surface"
+    and row["reason"] == "constitutional_spine_completeness_surface_order_mismatch"
+    for row in payload["projection_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "constitutional_spine_completeness_surface"
+)
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 BRIDGE_REPO="${TMP_ROOT}/bridge-drift-repo"
