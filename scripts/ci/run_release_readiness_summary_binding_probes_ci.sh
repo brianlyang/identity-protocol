@@ -329,11 +329,16 @@ summary_release_projection = {
     'release_readiness_terminal_truth_bridge_probe': {
         'status': 'PASS_REQUIRED',
         'positive_validator_output': terminal_truth_bridge_positive_validator_output,
-        'bridge_case_count': 2,
-        'bridge_cases': ['clean_terminal_truth', 'review_required_execution_closure'],
+        'bridge_case_count': 3,
+        'bridge_cases': [
+            'clean_terminal_truth',
+            'review_required_execution_closure',
+            'explicit_dirty_retry_execution_closure',
+        ],
         'seeded_identity_ids': [
             'release-readiness-terminal-truth-bridge-clean-e2e',
             'release-readiness-terminal-truth-bridge-review-e2e',
+            'release-readiness-terminal-truth-bridge-explicit-dirty-retry-e2e',
         ],
     },
     'release_readiness_governance_probe_topology_probe': {

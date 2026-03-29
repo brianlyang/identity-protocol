@@ -25,6 +25,11 @@ terminal_truth_bridge_review_required_case_marker="$(
     "release_readiness_terminal_truth_bridge_common" \
     "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_MARKER"
 )"
+terminal_truth_bridge_explicit_dirty_retry_case_marker="$(
+  resolve_python_module_expression \
+    "release_readiness_terminal_truth_bridge_common" \
+    "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_EXPLICIT_DIRTY_RETRY_CASE_MARKER"
+)"
 terminal_truth_bridge_probe_command_literal="[\"bash\", \"${terminal_truth_bridge_probe}\"],"
 terminal_truth_bridge_probe_summary_key="$(
   resolve_python_module_expression \
@@ -89,6 +94,18 @@ if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-terminal-tr
   exit 1
 fi
 echo "[PASS] terminal-truth bridge common drift fail-closed as expected"
+
+restore_shadow_file "${TMP_ROOT}" "scripts/release_readiness_terminal_truth_bridge_common.py"
+# expected fail-close: terminal_truth_bridge_case_markers_drift, terminal_truth_bridge_explicit_dirty_retry_case_marker_drift
+mutate_probe_literal \
+  "${TMP_ROOT}/scripts/release_readiness_terminal_truth_bridge_common.py" \
+  "${terminal_truth_bridge_explicit_dirty_retry_case_marker}" \
+  'terminal_truth_bridge_case=explicit_dirty_retry_execution'
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-terminal-truth-bridge-negative-explicit-dirty-retry-common.json"; then
+  echo "[FAIL] terminal-truth bridge explicit-dirty-retry case drift unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] terminal-truth bridge explicit-dirty-retry case drift fail-closed as expected"
 
 restore_shadow_file "${TMP_ROOT}" "scripts/release_closure_projection_companion_marker_bundle_common.py"
 # expected fail-close: summary_terminal_truth_bridge_rich_companion_bundle_drift

@@ -31,6 +31,7 @@ from release_readiness_terminal_truth_bridge_common import (
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_ORDER,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_SPECS,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_MARKERS,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_EXPLICIT_DIRTY_RETRY_CASE_MARKER,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_MARKER,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_COMMAND,
@@ -89,6 +90,9 @@ EXPECTED_CASE_ORDER: tuple[str, ...] = (
 )
 EXPECTED_REVIEW_REQUIRED_CASE_MARKER = (
     "terminal_truth_bridge_case=review_required_execution_closure"
+)
+EXPECTED_EXPLICIT_DIRTY_RETRY_CASE_MARKER = (
+    "terminal_truth_bridge_case=explicit_dirty_retry_execution_closure"
 )
 EXPECTED_SURFACE_MARKER = (
     "terminal_truth_bridge_surface="
@@ -250,6 +254,11 @@ def main() -> int:
         != RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_MARKER
     ):
         stale_reasons.append("terminal_truth_bridge_review_required_case_marker_drift")
+    if (
+        EXPECTED_EXPLICIT_DIRTY_RETRY_CASE_MARKER
+        != RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_EXPLICIT_DIRTY_RETRY_CASE_MARKER
+    ):
+        stale_reasons.append("terminal_truth_bridge_explicit_dirty_retry_case_marker_drift")
 
     expected_boundary_source_fields = tuple(
         f"one_look.{field}"
