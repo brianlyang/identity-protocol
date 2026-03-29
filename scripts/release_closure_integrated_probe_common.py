@@ -6,6 +6,12 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from release_closure_integrated_probe_delegation_common import (
+    RELEASE_CLOSURE_BOUNDARY_INTEGRATED_PROBE_DELEGATION_SPEC,
+    RELEASE_CLOSURE_INTEGRATED_PROBE_BOUNDARY_PROFILE_ID,
+    RELEASE_CLOSURE_INTEGRATED_PROBE_SUMMARY_PROFILE_ID,
+    RELEASE_CLOSURE_SUMMARY_INTEGRATED_PROBE_DELEGATION_SPEC,
+)
 from release_cloud_evidence_projection_common import (
     RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_PROJECTION_MARKER,
 )
@@ -61,8 +67,8 @@ from release_readiness_terminal_truth_bridge_common import (
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
-SUMMARY_PROFILE_ID = "summary"
-BOUNDARY_PROFILE_ID = "boundary"
+SUMMARY_PROFILE_ID = RELEASE_CLOSURE_INTEGRATED_PROBE_SUMMARY_PROFILE_ID
+BOUNDARY_PROFILE_ID = RELEASE_CLOSURE_INTEGRATED_PROBE_BOUNDARY_PROFILE_ID
 _ROOT_GROUNDING_LANE_ID = "protocol_root_identity_instance_self_judgement"
 
 RELEASE_CLOSURE_ROOT_GROUNDING_SELF_JUDGEMENT_LANE_MARKER = next(
@@ -347,6 +353,29 @@ RELEASE_CLOSURE_BOUNDARY_MAIN_PROBE_MUTATION_SPECS: tuple[LiteralMutationSpec, .
         "one_look.identity_terminal_truth_veto_state",
     ),
 )
+
+
+def _validate_release_closure_integrated_probe_delegation_bindings() -> None:
+    for delegation_spec, mutation_specs in (
+        (
+            RELEASE_CLOSURE_SUMMARY_INTEGRATED_PROBE_DELEGATION_SPEC,
+            RELEASE_CLOSURE_SUMMARY_MAIN_PROBE_MUTATION_SPECS,
+        ),
+        (
+            RELEASE_CLOSURE_BOUNDARY_INTEGRATED_PROBE_DELEGATION_SPEC,
+            RELEASE_CLOSURE_BOUNDARY_MAIN_PROBE_MUTATION_SPECS,
+        ),
+    ):
+        mutation_needles = {spec.needle for spec in mutation_specs}
+        for resolution in delegation_spec.delegated_resolutions:
+            if resolution.resolved_value not in mutation_needles:
+                raise RuntimeError(
+                    "release_closure_integrated_probe_missing_delegated_resolution:"
+                    + f"{delegation_spec.helper_profile_id}:{resolution.resolution_id}"
+                )
+
+
+_validate_release_closure_integrated_probe_delegation_bindings()
 
 
 def _mutate_text(*, text: str, spec: LiteralMutationSpec) -> tuple[str, int]:

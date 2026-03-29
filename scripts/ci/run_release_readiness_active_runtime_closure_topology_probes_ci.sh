@@ -38,6 +38,7 @@ active_runtime_topology_positive_output_rel="$(
     "release_readiness_active_runtime_closure_projection_common" \
     "RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_POSITIVE_OUTPUT_REL"
 )"
+integrated_probe_delegation_common_rel="scripts/release_closure_integrated_probe_delegation_common.py"
 
 run_shadow_validator() {
   local shadow_root="$1"
@@ -160,24 +161,24 @@ if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-active-runt
 fi
 echo "[PASS] active-runtime topology probe command drift fail-closed as expected"
 
-restore_shadow_file "${TMP_ROOT}" "scripts/ci/run_v16x_release_closure_summary_probes_ci.sh"
+restore_shadow_file "${TMP_ROOT}" "${integrated_probe_delegation_common_rel}"
 # expected fail-close: active_runtime_summary_probe_missing_projection_marker_resolution
 mutate_probe_literal \
-  "${TMP_ROOT}/scripts/ci/run_v16x_release_closure_summary_probes_ci.sh" \
-  '"RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION_MARKER"' \
-  '"RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION"'
+  "${TMP_ROOT}/${integrated_probe_delegation_common_rel}" \
+  'stale_reason="active_runtime_summary_probe_missing_projection_marker_resolution"' \
+  'stale_reason="active_runtime_summary_probe_projection_guard"'
 if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-active-runtime-closure-topology-negative-summary-probe-resolution.json"; then
   echo "[FAIL] active-runtime summary probe resolution drift unexpectedly passed"
   exit 1
 fi
 echo "[PASS] active-runtime summary probe resolution drift fail-closed as expected"
 
-restore_shadow_file "${TMP_ROOT}" "scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh"
+restore_shadow_file "${TMP_ROOT}" "${integrated_probe_delegation_common_rel}"
 # expected fail-close: active_runtime_boundary_probe_missing_detail_field_resolution
 mutate_probe_literal \
-  "${TMP_ROOT}/scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh" \
-  '"RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_NEGATIVE_FEEDBACK_VETO_STATUS_FIELD"' \
-  '"RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_ALIAS_SURFACE_FIELD"'
+  "${TMP_ROOT}/${integrated_probe_delegation_common_rel}" \
+  'stale_reason="active_runtime_boundary_probe_missing_detail_field_resolution"' \
+  'stale_reason="active_runtime_boundary_probe_detail_guard"'
 if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-active-runtime-closure-topology-negative-boundary-probe-detail.json"; then
   echo "[FAIL] active-runtime boundary probe detail resolution drift unexpectedly passed"
   exit 1

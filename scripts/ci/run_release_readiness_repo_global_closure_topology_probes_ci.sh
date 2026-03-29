@@ -38,6 +38,7 @@ repo_global_topology_positive_output_rel="$(
     "release_readiness_repo_global_closure_projection_common" \
     "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_POSITIVE_OUTPUT_REL"
 )"
+integrated_probe_delegation_common_rel="scripts/release_closure_integrated_probe_delegation_common.py"
 
 run_shadow_validator() {
   local shadow_root="$1"
@@ -160,72 +161,72 @@ if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-repo-global
 fi
 echo "[PASS] repo-global topology probe command drift fail-closed as expected"
 
-restore_shadow_file "${TMP_ROOT}" "scripts/ci/run_v16x_release_closure_summary_probes_ci.sh"
+restore_shadow_file "${TMP_ROOT}" "${integrated_probe_delegation_common_rel}"
 # expected fail-close: repo_global_summary_probe_missing_projection_marker_resolution
 mutate_probe_literal \
-  "${TMP_ROOT}/scripts/ci/run_v16x_release_closure_summary_probes_ci.sh" \
-  '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER"' \
-  '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION"'
+  "${TMP_ROOT}/${integrated_probe_delegation_common_rel}" \
+  'stale_reason="repo_global_summary_probe_missing_projection_marker_resolution"' \
+  'stale_reason="repo_global_summary_probe_projection_guard"'
 if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-repo-global-closure-topology-negative-summary-projection.json"; then
   echo "[FAIL] repo-global summary probe projection resolution drift unexpectedly passed"
   exit 1
 fi
 echo "[PASS] repo-global summary probe projection resolution drift fail-closed as expected"
 
-restore_shadow_file "${TMP_ROOT}" "scripts/ci/run_v16x_release_closure_summary_probes_ci.sh"
+restore_shadow_file "${TMP_ROOT}" "${integrated_probe_delegation_common_rel}"
 # expected fail-close: repo_global_summary_probe_missing_checked_count_resolution
 mutate_probe_literal \
-  "${TMP_ROOT}/scripts/ci/run_v16x_release_closure_summary_probes_ci.sh" \
-  '"RELEASE_READINESS_REPO_GLOBAL_CODEX_LAUNCHER_CHECKED_IDENTITY_COUNT_FIELD"' \
-  '"RELEASE_READINESS_REPO_GLOBAL_BROADCAST_CHECKED_IDENTITY_COUNT_FIELD"'
+  "${TMP_ROOT}/${integrated_probe_delegation_common_rel}" \
+  'stale_reason="repo_global_summary_probe_missing_checked_count_resolution"' \
+  'stale_reason="repo_global_summary_probe_checked_count_guard"'
 if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-repo-global-closure-topology-negative-summary-checked-count.json"; then
   echo "[FAIL] repo-global summary probe checked-count resolution drift unexpectedly passed"
   exit 1
 fi
 echo "[PASS] repo-global summary probe checked-count resolution drift fail-closed as expected"
 
-restore_shadow_file "${TMP_ROOT}" "scripts/ci/run_v16x_release_closure_summary_probes_ci.sh"
+restore_shadow_file "${TMP_ROOT}" "${integrated_probe_delegation_common_rel}"
 # expected fail-close: repo_global_summary_probe_missing_topology_lane_resolution
 mutate_probe_literal \
-  "${TMP_ROOT}/scripts/ci/run_v16x_release_closure_summary_probes_ci.sh" \
-  '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT"' \
-  '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_VALIDATOR_SCRIPT"'
+  "${TMP_ROOT}/${integrated_probe_delegation_common_rel}" \
+  'stale_reason="repo_global_summary_probe_missing_topology_lane_resolution"' \
+  'stale_reason="repo_global_summary_probe_topology_lane_guard"'
 if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-repo-global-closure-topology-negative-summary-topology-lane.json"; then
   echo "[FAIL] repo-global summary probe topology-lane resolution drift unexpectedly passed"
   exit 1
 fi
 echo "[PASS] repo-global summary probe topology-lane resolution drift fail-closed as expected"
 
-restore_shadow_file "${TMP_ROOT}" "scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh"
+restore_shadow_file "${TMP_ROOT}" "${integrated_probe_delegation_common_rel}"
 # expected fail-close: repo_global_boundary_probe_missing_projection_marker_resolution
 mutate_probe_literal \
-  "${TMP_ROOT}/scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh" \
-  '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER"' \
-  '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION"'
+  "${TMP_ROOT}/${integrated_probe_delegation_common_rel}" \
+  'stale_reason="repo_global_boundary_probe_missing_projection_marker_resolution"' \
+  'stale_reason="repo_global_boundary_probe_projection_guard"'
 if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-repo-global-closure-topology-negative-boundary-projection.json"; then
   echo "[FAIL] repo-global boundary probe projection resolution drift unexpectedly passed"
   exit 1
 fi
 echo "[PASS] repo-global boundary probe projection resolution drift fail-closed as expected"
 
-restore_shadow_file "${TMP_ROOT}" "scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh"
+restore_shadow_file "${TMP_ROOT}" "${integrated_probe_delegation_common_rel}"
 # expected fail-close: repo_global_boundary_probe_missing_checked_count_resolution
 mutate_probe_literal \
-  "${TMP_ROOT}/scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh" \
-  '"RELEASE_READINESS_REPO_GLOBAL_CODEX_LAUNCHER_CHECKED_IDENTITY_COUNT_FIELD"' \
-  '"RELEASE_READINESS_REPO_GLOBAL_BROADCAST_CHECKED_IDENTITY_COUNT_FIELD"'
+  "${TMP_ROOT}/${integrated_probe_delegation_common_rel}" \
+  'stale_reason="repo_global_boundary_probe_missing_checked_count_resolution"' \
+  'stale_reason="repo_global_boundary_probe_checked_count_guard"'
 if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-repo-global-closure-topology-negative-boundary-checked-count.json"; then
   echo "[FAIL] repo-global boundary probe checked-count resolution drift unexpectedly passed"
   exit 1
 fi
 echo "[PASS] repo-global boundary probe checked-count resolution drift fail-closed as expected"
 
-restore_shadow_file "${TMP_ROOT}" "scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh"
+restore_shadow_file "${TMP_ROOT}" "${integrated_probe_delegation_common_rel}"
 # expected fail-close: repo_global_boundary_probe_missing_topology_lane_resolution
 mutate_probe_literal \
-  "${TMP_ROOT}/scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh" \
-  '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT"' \
-  '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_VALIDATOR_SCRIPT"'
+  "${TMP_ROOT}/${integrated_probe_delegation_common_rel}" \
+  'stale_reason="repo_global_boundary_probe_missing_topology_lane_resolution"' \
+  'stale_reason="repo_global_boundary_probe_topology_lane_guard"'
 if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-repo-global-closure-topology-negative-boundary-topology-lane.json"; then
   echo "[FAIL] repo-global boundary probe topology-lane resolution drift unexpectedly passed"
   exit 1

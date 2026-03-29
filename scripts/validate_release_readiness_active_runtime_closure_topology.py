@@ -11,6 +11,11 @@ from governed_runtime_summary_surface_common import (
     build_governed_runtime_summary_surface_payload,
 )
 from repo_root_resolution_common import resolve_repo_root
+from release_closure_integrated_probe_delegation_common import (
+    RELEASE_CLOSURE_BOUNDARY_INTEGRATED_PROBE_DELEGATION_SPEC,
+    RELEASE_CLOSURE_SUMMARY_INTEGRATED_PROBE_DELEGATION_SPEC,
+    release_closure_integrated_probe_delegated_resolution_by_id,
+)
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_DETAIL_FIELDS,
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_ONE_LOOK_FIELDS,
@@ -145,8 +150,8 @@ ONE_LOOK_TOPOLOGY_COMMON_REL = "scripts/release_readiness_one_look_topology_comm
 GOVERNANCE_PROJECTION_COMMON_REL = "scripts/release_readiness_governance_probe_projection_common.py"
 SUMMARY_VALIDATOR_REL = "scripts/validate_v16x_release_closure_summary.py"
 BOUNDARY_VALIDATOR_REL = "scripts/validate_v16x_release_closure_boundary.py"
-SUMMARY_PROBE_REL = "scripts/ci/run_v16x_release_closure_summary_probes_ci.sh"
-BOUNDARY_PROBE_REL = "scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh"
+SUMMARY_PROBE_REL = RELEASE_CLOSURE_SUMMARY_INTEGRATED_PROBE_DELEGATION_SPEC.probe_script_rel
+BOUNDARY_PROBE_REL = RELEASE_CLOSURE_BOUNDARY_INTEGRATED_PROBE_DELEGATION_SPEC.probe_script_rel
 SUMMARY_BINDING_PROBE_REL = "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh"
 PROBE_REQUIRED_TOKENS: tuple[str, ...] = (
     "release_readiness_active_runtime_closure_projection_common",
@@ -404,33 +409,54 @@ def main() -> int:
         if required_token not in boundary_validator_text:
             stale_reasons.append(f"boundary_validator_missing_token:{required_token}")
 
-    summary_probe_text = _read_text((repo_root / SUMMARY_PROBE_REL).resolve())
-    for required_token in (
-        '"release_readiness_active_runtime_closure_projection_common"',
-        '"RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION_MARKER"',
-        '"RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_NEGATIVE_FEEDBACK_VETO_STATUS_FIELD"',
+    for delegation_spec, expected_resolution_rows in (
+        (
+            RELEASE_CLOSURE_SUMMARY_INTEGRATED_PROBE_DELEGATION_SPEC,
+            (
+                (
+                    "active_runtime_projection_marker",
+                    "RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION_MARKER",
+                    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION_MARKER,
+                    "active_runtime_summary_probe_missing_projection_marker_resolution",
+                ),
+                (
+                    "active_runtime_negative_feedback_veto_field",
+                    "RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_NEGATIVE_FEEDBACK_VETO_STATUS_FIELD",
+                    RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_NEGATIVE_FEEDBACK_VETO_STATUS_FIELD,
+                    "active_runtime_summary_probe_missing_projection_marker_resolution",
+                ),
+            ),
+        ),
+        (
+            RELEASE_CLOSURE_BOUNDARY_INTEGRATED_PROBE_DELEGATION_SPEC,
+            (
+                (
+                    "active_runtime_projection_marker",
+                    "RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION_MARKER",
+                    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION_MARKER,
+                    "active_runtime_boundary_probe_missing_projection_marker_resolution",
+                ),
+                (
+                    "active_runtime_negative_feedback_veto_field",
+                    "RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_NEGATIVE_FEEDBACK_VETO_STATUS_FIELD",
+                    RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_NEGATIVE_FEEDBACK_VETO_STATUS_FIELD,
+                    "active_runtime_boundary_probe_missing_detail_field_resolution",
+                ),
+            ),
+        ),
     ):
-        if required_token not in summary_probe_text:
-            stale_reasons.append("active_runtime_summary_probe_missing_projection_marker_resolution")
-            break
-
-    boundary_probe_text = _read_text((repo_root / BOUNDARY_PROBE_REL).resolve())
-    for required_token, stale_reason in (
-        (
-            '"release_readiness_active_runtime_closure_projection_common"',
-            "active_runtime_boundary_probe_missing_projection_marker_resolution",
-        ),
-        (
-            '"RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION_MARKER"',
-            "active_runtime_boundary_probe_missing_projection_marker_resolution",
-        ),
-        (
-            '"RELEASE_READINESS_ACTIVE_RUNTIME_TERMINAL_TRUTH_NEGATIVE_FEEDBACK_VETO_STATUS_FIELD"',
-            "active_runtime_boundary_probe_missing_detail_field_resolution",
-        ),
-    ):
-        if required_token not in boundary_probe_text:
-            stale_reasons.append(stale_reason)
+        for resolution_id, resolution_token, resolved_value, stale_reason in expected_resolution_rows:
+            resolution = release_closure_integrated_probe_delegated_resolution_by_id(
+                delegation_spec,
+                resolution_id,
+            )
+            if (
+                resolution is None
+                or resolution.resolution_token != resolution_token
+                or resolution.resolved_value != resolved_value
+                or resolution.stale_reason != stale_reason
+            ):
+                stale_reasons.append(stale_reason)
 
     governance_probe_spec = _find_expected_governance_probe_spec()
     if governance_probe_spec is None:

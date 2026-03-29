@@ -12,8 +12,6 @@ PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_decision_evidence_admissibility.py" \
   --repo-root "${ROOT}" \
   --json-only >"${PASS_JSON}"
-ls -l "${PASS_JSON}"
-head -n 1 "${PASS_JSON}"
 
 python3 - <<'PY' "${PASS_JSON}"
 import json

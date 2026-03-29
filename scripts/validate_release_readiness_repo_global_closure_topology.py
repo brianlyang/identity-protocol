@@ -11,6 +11,11 @@ from governed_runtime_summary_surface_common import (
     build_governed_runtime_summary_surface_payload,
 )
 from repo_root_resolution_common import resolve_repo_root
+from release_closure_integrated_probe_delegation_common import (
+    RELEASE_CLOSURE_BOUNDARY_INTEGRATED_PROBE_DELEGATION_SPEC,
+    RELEASE_CLOSURE_SUMMARY_INTEGRATED_PROBE_DELEGATION_SPEC,
+    release_closure_integrated_probe_delegated_resolution_by_id,
+)
 from release_readiness_governance_probe_projection_common import (
     RELEASE_READINESS_GOVERNANCE_PROBE_OWNER_LANES,
     RELEASE_READINESS_GOVERNANCE_PROBE_PROJECTION_MARKER,
@@ -33,10 +38,12 @@ from release_readiness_repo_global_closure_projection_common import (
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_COMMAND,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_KEEP_FIELDS,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_ONE_LOOK_FIELD,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_STATUS_FIELDS,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SUMMARY_KEY,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROOF_LANES,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_VALIDATOR_COMMAND,
+    RELEASE_READINESS_REPO_GLOBAL_CODEX_LAUNCHER_CHECKED_IDENTITY_COUNT_FIELD,
     release_readiness_repo_global_closure_capture_script_map,
     release_readiness_repo_global_closure_structured_capture_specs,
     release_readiness_repo_global_closure_summary_defaults,
@@ -157,8 +164,8 @@ ONE_LOOK_TOPOLOGY_COMMON_REL = "scripts/release_readiness_one_look_topology_comm
 GOVERNANCE_PROJECTION_COMMON_REL = "scripts/release_readiness_governance_probe_projection_common.py"
 SUMMARY_VALIDATOR_REL = "scripts/validate_v16x_release_closure_summary.py"
 BOUNDARY_VALIDATOR_REL = "scripts/validate_v16x_release_closure_boundary.py"
-SUMMARY_PROBE_REL = "scripts/ci/run_v16x_release_closure_summary_probes_ci.sh"
-BOUNDARY_PROBE_REL = "scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh"
+SUMMARY_PROBE_REL = RELEASE_CLOSURE_SUMMARY_INTEGRATED_PROBE_DELEGATION_SPEC.probe_script_rel
+BOUNDARY_PROBE_REL = RELEASE_CLOSURE_BOUNDARY_INTEGRATED_PROBE_DELEGATION_SPEC.probe_script_rel
 SUMMARY_BINDING_PROBE_REL = "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh"
 PROBE_REQUIRED_TOKENS: tuple[str, ...] = (
     "release_readiness_repo_global_closure_projection_common",
@@ -394,49 +401,66 @@ def main() -> int:
         if required_token not in boundary_validator_text:
             stale_reasons.append(f"boundary_validator_missing_token:{required_token}")
 
-    summary_probe_text = _read_text((repo_root / SUMMARY_PROBE_REL).resolve())
-    for required_token, stale_reason in (
+    for delegation_spec, expected_resolution_rows in (
         (
-            '"release_readiness_repo_global_closure_projection_common"',
-            "repo_global_summary_probe_missing_projection_marker_resolution",
+            RELEASE_CLOSURE_SUMMARY_INTEGRATED_PROBE_DELEGATION_SPEC,
+            (
+                (
+                    "repo_global_projection_marker",
+                    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER",
+                    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
+                    "repo_global_summary_probe_missing_projection_marker_resolution",
+                ),
+                (
+                    "repo_global_checked_identity_count",
+                    "RELEASE_READINESS_REPO_GLOBAL_CODEX_LAUNCHER_CHECKED_IDENTITY_COUNT_FIELD",
+                    RELEASE_READINESS_REPO_GLOBAL_CODEX_LAUNCHER_CHECKED_IDENTITY_COUNT_FIELD,
+                    "repo_global_summary_probe_missing_checked_count_resolution",
+                ),
+                (
+                    "repo_global_topology_lane",
+                    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT",
+                    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT,
+                    "repo_global_summary_probe_missing_topology_lane_resolution",
+                ),
+            ),
         ),
         (
-            '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER"',
-            "repo_global_summary_probe_missing_projection_marker_resolution",
-        ),
-        (
-            '"RELEASE_READINESS_REPO_GLOBAL_CODEX_LAUNCHER_CHECKED_IDENTITY_COUNT_FIELD"',
-            "repo_global_summary_probe_missing_checked_count_resolution",
-        ),
-        (
-            '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT"',
-            "repo_global_summary_probe_missing_topology_lane_resolution",
+            RELEASE_CLOSURE_BOUNDARY_INTEGRATED_PROBE_DELEGATION_SPEC,
+            (
+                (
+                    "repo_global_projection_marker",
+                    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER",
+                    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
+                    "repo_global_boundary_probe_missing_projection_marker_resolution",
+                ),
+                (
+                    "repo_global_checked_identity_count",
+                    "RELEASE_READINESS_REPO_GLOBAL_CODEX_LAUNCHER_CHECKED_IDENTITY_COUNT_FIELD",
+                    RELEASE_READINESS_REPO_GLOBAL_CODEX_LAUNCHER_CHECKED_IDENTITY_COUNT_FIELD,
+                    "repo_global_boundary_probe_missing_checked_count_resolution",
+                ),
+                (
+                    "repo_global_topology_lane",
+                    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT",
+                    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT,
+                    "repo_global_boundary_probe_missing_topology_lane_resolution",
+                ),
+            ),
         ),
     ):
-        if required_token not in summary_probe_text:
-            stale_reasons.append(stale_reason)
-
-    boundary_probe_text = _read_text((repo_root / BOUNDARY_PROBE_REL).resolve())
-    for required_token, stale_reason in (
-        (
-            '"release_readiness_repo_global_closure_projection_common"',
-            "repo_global_boundary_probe_missing_projection_marker_resolution",
-        ),
-        (
-            '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER"',
-            "repo_global_boundary_probe_missing_projection_marker_resolution",
-        ),
-        (
-            '"RELEASE_READINESS_REPO_GLOBAL_CODEX_LAUNCHER_CHECKED_IDENTITY_COUNT_FIELD"',
-            "repo_global_boundary_probe_missing_checked_count_resolution",
-        ),
-        (
-            '"RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_SCRIPT"',
-            "repo_global_boundary_probe_missing_topology_lane_resolution",
-        ),
-    ):
-        if required_token not in boundary_probe_text:
-            stale_reasons.append(stale_reason)
+        for resolution_id, resolution_token, resolved_value, stale_reason in expected_resolution_rows:
+            resolution = release_closure_integrated_probe_delegated_resolution_by_id(
+                delegation_spec,
+                resolution_id,
+            )
+            if (
+                resolution is None
+                or resolution.resolution_token != resolution_token
+                or resolution.resolved_value != resolved_value
+                or resolution.stale_reason != stale_reason
+            ):
+                stale_reasons.append(stale_reason)
 
     governance_probe_spec = _find_expected_governance_probe_spec()
     if governance_probe_spec is None:
