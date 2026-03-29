@@ -48,9 +48,19 @@ from release_readiness_repo_global_closure_projection_common import (
     RELEASE_READINESS_REPO_GLOBAL_ACTIVE_RUNTIME_SUMMARY_KEYS,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SUMMARY_BINDINGS,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_POSITIVE_OUTPUT_REL,
 )
 from release_readiness_selected_check_scope_common import (
     RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_active_runtime_closure_projection_common import (
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_POSITIVE_OUTPUT_REL,
+)
+from release_readiness_post_closure_adjudication_common import (
+    RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_PROBE_POSITIVE_OUTPUT_REL,
+)
+from release_readiness_terminal_truth_bridge_common import (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_POSITIVE_OUTPUT_REL,
 )
 from runtime_summary_surface_governance_common import (
     RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_SUMMARY_KEY,
@@ -60,6 +70,18 @@ from runtime_temp_path_common import runtime_temp_file
 
 repo_root = Path.cwd().resolve()
 tmp_root = Path(sys.argv[1]).resolve()
+repo_global_positive_validator_output = str(
+    (repo_root / RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROBE_POSITIVE_OUTPUT_REL).resolve()
+)
+active_runtime_positive_validator_output = str(
+    (repo_root / RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_TOPOLOGY_PROBE_POSITIVE_OUTPUT_REL).resolve()
+)
+terminal_truth_bridge_positive_validator_output = str(
+    (repo_root / RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_POSITIVE_OUTPUT_REL).resolve()
+)
+post_closure_positive_validator_output = str(
+    (repo_root / RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_PROBE_POSITIVE_OUTPUT_REL).resolve()
+)
 
 receipt_path = (tmp_root / 'required-gate-bundle.json').resolve()
 probe_path = (tmp_root / 'required-gate-bundle-scan-probe.json').resolve()
@@ -298,15 +320,15 @@ summary_release_projection = {
     },
     'release_readiness_repo_global_closure_topology_probe': {
         'status': 'PASS_REQUIRED',
-        'positive_validator_output': '/tmp/release-readiness-repo-global-closure-topology-positive.json',
+        'positive_validator_output': repo_global_positive_validator_output,
     },
     'release_readiness_active_runtime_closure_topology_probe': {
         'status': 'PASS_REQUIRED',
-        'positive_validator_output': '/tmp/release-readiness-active-runtime-closure-topology-positive.json',
+        'positive_validator_output': active_runtime_positive_validator_output,
     },
     'release_readiness_terminal_truth_bridge_probe': {
         'status': 'PASS_REQUIRED',
-        'positive_validator_output': '/tmp/release-readiness-terminal-truth-bridge-positive.json',
+        'positive_validator_output': terminal_truth_bridge_positive_validator_output,
         'bridge_case_count': 2,
         'bridge_cases': ['clean_terminal_truth', 'review_required_execution_closure'],
         'seeded_identity_ids': [
@@ -319,7 +341,7 @@ summary_release_projection = {
     },
     'release_readiness_post_closure_adjudication_topology_probe': {
         'status': 'PASS_REQUIRED',
-        'positive_validator_output': '/tmp/release-readiness-post-closure-adjudication-topology-positive.json',
+        'positive_validator_output': post_closure_positive_validator_output,
     },
     'required_gate_surface_drift_probe': {
         'status': 'PASS_REQUIRED',

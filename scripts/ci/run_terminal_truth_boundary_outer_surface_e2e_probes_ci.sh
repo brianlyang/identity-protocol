@@ -3,7 +3,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-PROJECT_IDENTITY_HOME="$(cd "${REPO_ROOT}/.." && pwd)/.identity"
+source "${REPO_ROOT}/scripts/probe_fixture_shell_common.sh"
+
+PROJECT_IDENTITY_HOME="$(resolve_probe_project_identity_home "${REPO_ROOT}")"
 PROBE_ROOT_BASE="${PROJECT_IDENTITY_HOME}/_probe"
 mkdir -p "${PROBE_ROOT_BASE}"
 TMP_ROOT="$(mktemp -d "${PROBE_ROOT_BASE}/terminal-truth-boundary-outer-surface.XXXXXX")"

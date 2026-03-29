@@ -7,6 +7,8 @@ cd "${ROOT}"
 
 source "${ROOT}/scripts/probe_fixture_shell_common.sh"
 source "${ROOT}/scripts/ci/probe_repo_mirror_common.sh"
+# shellcheck source=./probe_runtime_tmp_common.sh
+source "${ROOT}/scripts/ci/probe_runtime_tmp_common.sh"
 
 terminal_truth_bridge_validator="$(
   resolve_python_module_expression \
@@ -34,6 +36,11 @@ terminal_truth_bridge_probe_one_look_field="$(
     "release_readiness_governance_probe_projection_common" \
     "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_ONE_LOOK_FIELD"
 )"
+terminal_truth_bridge_positive_output_rel="$(
+  resolve_python_module_expression \
+    "release_readiness_terminal_truth_bridge_common" \
+    "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_POSITIVE_OUTPUT_REL"
+)"
 
 run_shadow_validator() {
   local shadow_root="$1"
@@ -51,7 +58,8 @@ restore_shadow_file() {
   cp "${ROOT}/${rel_path}" "${shadow_root}/${rel_path}"
 }
 
-POSITIVE_JSON="/tmp/release-readiness-terminal-truth-bridge-positive.json"
+POSITIVE_JSON="${ROOT}/${terminal_truth_bridge_positive_output_rel}"
+mkdir -p "$(dirname "${POSITIVE_JSON}")"
 echo "[INFO] positive: release-readiness terminal-truth bridge validator"
 python3 "${terminal_truth_bridge_validator}" --json-only >"${POSITIVE_JSON}"
 
@@ -67,8 +75,7 @@ assert payload["release_readiness_terminal_truth_bridge_status"] == "PASS_REQUIR
 assert payload["stale_reasons"] == [], payload
 PY
 
-TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/release-readiness-terminal-truth-bridge-ci.XXXXXX")"
-trap 'rm -rf "${TMP_ROOT}"' EXIT
+probe_runtime_tmp_bootstrap "${ROOT}" "release-readiness-terminal-truth-bridge-probes" "run"
 probe_mirror_repo "${ROOT}" "${TMP_ROOT}"
 
 restore_shadow_file "${TMP_ROOT}" "scripts/release_readiness_terminal_truth_bridge_common.py"
@@ -77,7 +84,7 @@ mutate_probe_literal \
   "${TMP_ROOT}/scripts/release_readiness_terminal_truth_bridge_common.py" \
   "${terminal_truth_bridge_review_required_case_marker}" \
   'terminal_truth_bridge_case=review_required_execution'
-if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-terminal-truth-bridge-negative-common.json; then
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-terminal-truth-bridge-negative-common.json"; then
   echo "[FAIL] terminal-truth bridge common drift unexpectedly passed"
   exit 1
 fi
@@ -89,7 +96,7 @@ mutate_probe_literal \
   "${TMP_ROOT}/scripts/release_readiness_check.py" \
   "${terminal_truth_bridge_probe_command_literal}" \
   ''
-if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-terminal-truth-bridge-negative-post-closure.json; then
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-terminal-truth-bridge-negative-post-closure.json"; then
   echo "[FAIL] missing terminal-truth bridge probe command unexpectedly passed"
   exit 1
 fi
@@ -101,7 +108,7 @@ mutate_probe_literal \
   "${TMP_ROOT}/scripts/ci/run_release_readiness_summary_binding_probes_ci.sh" \
   "${terminal_truth_bridge_probe_summary_key}" \
   'release_readiness_terminal_truth_bridge'
-if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-terminal-truth-bridge-negative-summary-binding.json; then
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-terminal-truth-bridge-negative-summary-binding.json"; then
   echo "[FAIL] summary binding terminal-truth bridge absorption drift unexpectedly passed"
   exit 1
 fi
@@ -113,13 +120,13 @@ mutate_probe_literal \
   "${TMP_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" \
   'terminal_truth_bridge_surface=' \
   'terminal_truth_bridge_surface_missing='
-if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-terminal-truth-bridge-negative-doc.json; then
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-terminal-truth-bridge-negative-doc.json"; then
   echo "[FAIL] release summary terminal-truth bridge marker drift unexpectedly passed"
   exit 1
 fi
 echo "[PASS] release summary terminal-truth bridge marker drift fail-closed as expected"
 
-PROJECT_IDENTITY_HOME="$(cd "${ROOT}/.." && pwd)/.identity"
+PROJECT_IDENTITY_HOME="$(resolve_probe_project_identity_home "${ROOT}")"
 PROBE_ROOT_BASE="${PROJECT_IDENTITY_HOME}/_probe"
 mkdir -p "${PROBE_ROOT_BASE}"
 E2E_ROOT="$(mktemp -d "${PROBE_ROOT_BASE}/release-readiness-terminal-truth-bridge.XXXXXX")"

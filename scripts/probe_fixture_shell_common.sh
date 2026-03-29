@@ -11,6 +11,30 @@ probe_fixture_repo_root() {
   pwd
 }
 
+resolve_probe_project_identity_home() {
+  local repo_root="${1:-}"
+  local repo_catalog_path="${2:-}"
+  if [ -z "${repo_root}" ]; then
+    repo_root="$(probe_fixture_repo_root)"
+  fi
+  if [ -z "${repo_catalog_path}" ]; then
+    repo_catalog_path="${repo_root}/identity/catalog/identities.yaml"
+  fi
+  python3 - "$repo_root" "$repo_catalog_path" <<'PY'
+import sys
+from pathlib import Path
+
+repo_root = Path(sys.argv[1]).resolve()
+repo_catalog_path = Path(sys.argv[2]).expanduser().resolve()
+scripts_dir = repo_root / "scripts"
+sys.path.insert(0, str(scripts_dir))
+
+from resolve_identity_context import _project_identity_home_from_repo_catalog
+
+print(str(_project_identity_home_from_repo_catalog(repo_root, repo_catalog_path)))
+PY
+}
+
 resolve_python_module_constant() {
   local module_name="$1"
   local attr_name="$2"

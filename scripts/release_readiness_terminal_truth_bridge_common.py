@@ -89,6 +89,10 @@ RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR = (
 RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE = (
     "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh"
 )
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_POSITIVE_OUTPUT_REL = (
+    ".tmp/release-readiness-probe-outputs/"
+    "release-readiness-terminal-truth-bridge-positive.json"
+)
 RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR_COMMAND: tuple[str, ...] = (
     "python3",
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR,

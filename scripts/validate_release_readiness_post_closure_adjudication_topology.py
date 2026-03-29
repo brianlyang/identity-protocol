@@ -22,6 +22,10 @@ from release_readiness_governance_probe_projection_common import (
 from runtime_summary_surface_governance_common import (
     RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_COMMAND,
 )
+from health_report_experience_writeback_projection_common import (
+    RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_PROBE_COMMAND,
+    RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_VALIDATOR_COMMAND,
+)
 from release_readiness_post_closure_adjudication_common import (
     RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_COMMAND_SEQUENCE,
     RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_ORDER,
@@ -53,6 +57,7 @@ EXPECTED_STAGE_ORDER: tuple[str, ...] = (
     "one_look_topology",
     "repo_global_closure_topology",
     "active_runtime_closure_topology",
+    "health_projection_bridge",
     "terminal_truth_bridge",
     "governance_probe_topology",
 )
@@ -78,6 +83,8 @@ EXPECTED_COMMAND_SEQUENCE: tuple[tuple[str, ...], ...] = (
         "bash",
         "scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh",
     ),
+    RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_VALIDATOR_COMMAND,
+    RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_PROBE_COMMAND,
     ("python3", "scripts/validate_release_readiness_terminal_truth_bridge.py", "--json-only"),
     ("bash", "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh"),
     (

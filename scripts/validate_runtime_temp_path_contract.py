@@ -93,6 +93,61 @@ TARGET_RULES = {
         ),
         "forbidden": ('mktemp -d "${TMPDIR:-/tmp}/',),
     },
+    "scripts/ci/run_release_readiness_active_runtime_closure_topology_probes_ci.sh": {
+        "required": (
+            'source "${ROOT}/scripts/ci/probe_runtime_tmp_common.sh"',
+            'probe_runtime_tmp_bootstrap "${ROOT}" "release-readiness-active-runtime-closure-topology-probes" "run"',
+            'POSITIVE_JSON="${ROOT}/${active_runtime_topology_positive_output_rel}"',
+        ),
+        "forbidden": (
+            'mktemp -d "${TMPDIR:-/tmp}/',
+            '/tmp/release-readiness-active-runtime-closure-topology',
+        ),
+    },
+    "scripts/ci/run_release_readiness_repo_global_closure_topology_probes_ci.sh": {
+        "required": (
+            'source "${ROOT}/scripts/ci/probe_runtime_tmp_common.sh"',
+            'probe_runtime_tmp_bootstrap "${ROOT}" "release-readiness-repo-global-closure-topology-probes" "run"',
+            'POSITIVE_JSON="${ROOT}/${repo_global_topology_positive_output_rel}"',
+        ),
+        "forbidden": (
+            'mktemp -d "${TMPDIR:-/tmp}/',
+            '/tmp/release-readiness-repo-global-closure-topology',
+        ),
+    },
+    "scripts/ci/run_release_readiness_governance_probe_topology_probes_ci.sh": {
+        "required": (
+            'source "${ROOT}/scripts/ci/probe_runtime_tmp_common.sh"',
+            'probe_runtime_tmp_bootstrap "${ROOT}" "release-readiness-governance-probe-topology-probes" "run"',
+            'POSITIVE_JSON="${ROOT}/${governance_probe_topology_positive_output_rel}"',
+        ),
+        "forbidden": (
+            'mktemp -d "${TMPDIR:-/tmp}/',
+            '/tmp/release-readiness-governance-probe-topology',
+        ),
+    },
+    "scripts/ci/run_release_readiness_post_closure_adjudication_topology_probes_ci.sh": {
+        "required": (
+            'source "${ROOT}/scripts/ci/probe_runtime_tmp_common.sh"',
+            'probe_runtime_tmp_bootstrap "${ROOT}" "release-readiness-post-closure-adjudication-topology-probes" "run"',
+            'POSITIVE_JSON="${ROOT}/${post_closure_adjudication_positive_output_rel}"',
+        ),
+        "forbidden": (
+            'mktemp -d "${TMPDIR:-/tmp}/',
+            '/tmp/release-readiness-post-closure-adjudication-topology',
+        ),
+    },
+    "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh": {
+        "required": (
+            'source "${ROOT}/scripts/ci/probe_runtime_tmp_common.sh"',
+            'probe_runtime_tmp_bootstrap "${ROOT}" "release-readiness-terminal-truth-bridge-probes" "run"',
+            'POSITIVE_JSON="${ROOT}/${terminal_truth_bridge_positive_output_rel}"',
+        ),
+        "forbidden": (
+            'mktemp -d "${TMPDIR:-/tmp}/',
+            '/tmp/release-readiness-terminal-truth-bridge',
+        ),
+    },
 }
 
 

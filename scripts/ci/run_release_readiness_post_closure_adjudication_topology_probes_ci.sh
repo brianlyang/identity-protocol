@@ -8,6 +8,8 @@ cd "${ROOT}"
 export PROBE_FIXTURE_REPO_ROOT="${ROOT}"
 source "${ROOT}/scripts/probe_fixture_shell_common.sh"
 source "${ROOT}/scripts/ci/probe_repo_mirror_common.sh"
+# shellcheck source=./probe_runtime_tmp_common.sh
+source "${ROOT}/scripts/ci/probe_runtime_tmp_common.sh"
 
 post_closure_adjudication_validator="$(
   resolve_python_module_expression \
@@ -31,6 +33,11 @@ post_closure_adjudication_probe_one_look_field="$(
     "release_readiness_post_closure_adjudication_common" \
     "RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_PROBE_ONE_LOOK_FIELD"
 )"
+post_closure_adjudication_positive_output_rel="$(
+  resolve_python_module_expression \
+    "release_readiness_post_closure_adjudication_common" \
+    "RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_PROBE_POSITIVE_OUTPUT_REL"
+)"
 post_closure_adjudication_probe_self_check_reason="summary_binding_probe_missing_token:${post_closure_adjudication_probe_summary_key}"
 
 run_shadow_validator() {
@@ -49,7 +56,8 @@ restore_shadow_file() {
   cp "${ROOT}/${rel_path}" "${shadow_root}/${rel_path}"
 }
 
-POSITIVE_JSON="/tmp/release-readiness-post-closure-adjudication-topology-positive.json"
+POSITIVE_JSON="${ROOT}/${post_closure_adjudication_positive_output_rel}"
+mkdir -p "$(dirname "${POSITIVE_JSON}")"
 echo "[INFO] positive: release-readiness post-closure adjudication topology validator"
 python3 "${post_closure_adjudication_validator}" --json-only >"${POSITIVE_JSON}"
 
@@ -62,12 +70,11 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["release_readiness_post_closure_adjudication_topology_status"] == "PASS_REQUIRED", payload
-assert payload["stage_count"] == 6, payload
+assert payload["stage_count"] == 7, payload
 assert payload["stale_reasons"] == [], payload
 PY
 
-TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/release-readiness-post-closure-adjudication-topology-ci.XXXXXX")"
-trap 'rm -rf "${TMP_ROOT}"' EXIT
+probe_runtime_tmp_bootstrap "${ROOT}" "release-readiness-post-closure-adjudication-topology-probes" "run"
 probe_mirror_repo "${ROOT}" "${TMP_ROOT}"
 
 restore_shadow_file "${TMP_ROOT}" "scripts/release_readiness_post_closure_adjudication_common.py"
@@ -76,7 +83,7 @@ mutate_probe_literal \
   "${TMP_ROOT}/scripts/release_readiness_post_closure_adjudication_common.py" \
   'stage_id="governance_probe_topology"' \
   'stage_id="governance_probe_surface"'
-if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-post-closure-adjudication-topology-negative-common.json; then
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-post-closure-adjudication-topology-negative-common.json"; then
   echo "[FAIL] post-closure adjudication common drift unexpectedly passed"
   exit 1
 fi
@@ -97,7 +104,7 @@ if needle not in text:
 text = text.replace(needle, insertion, 1)
 path.write_text(text, encoding="utf-8")
 PY
-if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-post-closure-adjudication-topology-negative-slice.json; then
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-post-closure-adjudication-topology-negative-slice.json"; then
   echo "[FAIL] post-closure adjudication command slice drift unexpectedly passed"
   exit 1
 fi
@@ -109,7 +116,7 @@ mutate_probe_literal \
   "${TMP_ROOT}/scripts/release_readiness_check.py" \
   "${post_closure_adjudication_validator_command_literal}" \
   ''
-if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-post-closure-adjudication-topology-negative-validator.json; then
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-post-closure-adjudication-topology-negative-validator.json"; then
   echo "[FAIL] missing post-closure adjudication validator command unexpectedly passed"
   exit 1
 fi
@@ -121,7 +128,7 @@ mutate_probe_literal \
   "${TMP_ROOT}/scripts/release_readiness_check.py" \
   "${post_closure_adjudication_probe_command_literal}" \
   ''
-if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-post-closure-adjudication-topology-negative-probe.json; then
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-post-closure-adjudication-topology-negative-probe.json"; then
   echo "[FAIL] missing post-closure adjudication probe command unexpectedly passed"
   exit 1
 fi
@@ -136,7 +143,7 @@ mutate_probe_literal \
   '["python3", "scripts/validate_release_readiness_post_closure_adjudication_topology.py", "--json-only"],
     ["bash", "scripts/ci/run_three_plane_health_projection_probes_ci.sh"],
     ["bash", "scripts/ci/run_release_readiness_post_closure_adjudication_topology_probes_ci.sh"],'
-if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-post-closure-adjudication-topology-negative-sequencing.json; then
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-post-closure-adjudication-topology-negative-sequencing.json"; then
   echo "[FAIL] post-closure adjudication command slice drift unexpectedly passed"
   exit 1
 fi
@@ -148,7 +155,7 @@ mutate_probe_literal \
   "${TMP_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" \
   'release_readiness_post_closure_adjudication_order=' \
   'release_readiness_post_closure_adjudication_order_missing='
-if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-post-closure-adjudication-topology-negative-doc.json; then
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-post-closure-adjudication-topology-negative-doc.json"; then
   echo "[FAIL] post-closure adjudication doc marker drift unexpectedly passed"
   exit 1
 fi
@@ -160,7 +167,7 @@ mutate_probe_literal \
   "${TMP_ROOT}/scripts/release_readiness_governance_probe_projection_common.py" \
   "\"${post_closure_adjudication_probe_summary_key}\"" \
   '"release_readiness_post_closure_adjudication"'
-if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-post-closure-adjudication-topology-negative-governance-projection.json; then
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-post-closure-adjudication-topology-negative-governance-projection.json"; then
   echo "[FAIL] governance probe post-closure adjudication absorption drift unexpectedly passed"
   exit 1
 fi
@@ -172,7 +179,7 @@ mutate_probe_literal \
   "${TMP_ROOT}/scripts/ci/run_release_readiness_summary_binding_probes_ci.sh" \
   "${post_closure_adjudication_probe_summary_key}" \
   'release_readiness_post_closure_adjudication'
-if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-post-closure-adjudication-topology-negative-summary-binding.json; then
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-post-closure-adjudication-topology-negative-summary-binding.json"; then
   echo "[FAIL] summary binding post-closure adjudication absorption drift unexpectedly passed"
   exit 1
 fi
@@ -183,7 +190,7 @@ mutate_probe_literal \
   "${TMP_ROOT}/${post_closure_adjudication_probe}" \
   'post_closure_adjudication_probe_self_check_reason=' \
   'post_closure_adjudication_probe_self_guard='
-if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-post-closure-adjudication-topology-negative-self-check.json; then
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-post-closure-adjudication-topology-negative-self-check.json"; then
   echo "[FAIL] post-closure adjudication topology probe self-check unexpectedly passed"
   exit 1
 fi
