@@ -17,17 +17,17 @@ REVIEW_SHADOW_PATH="${SHADOW_ROOT}/docs/review/protocol-remediation-audit-ledger
 philosophy_anchor_marker="$(
   resolve_python_module_expression \
     "release_closure_doc_reference_bundle_common" \
-    "RELEASE_CLOSURE_BOUNDARY_PHILOSOPHY_ANCHOR_MARKERS[0]"
+    "RELEASE_CLOSURE_BOUNDARY_PHILOSOPHY_ANCHOR_MARKER"
 )"
 protocol_anchor_marker="$(
   resolve_python_module_expression \
     "release_closure_doc_reference_bundle_common" \
-    "RELEASE_CLOSURE_BOUNDARY_PROTOCOL_ANCHOR_MARKERS[0]"
+    "RELEASE_CLOSURE_BOUNDARY_PROTOCOL_ANCHOR_MARKER"
 )"
 runtime_anchor_marker="$(
   resolve_python_module_expression \
     "release_closure_doc_reference_bundle_common" \
-    "RELEASE_CLOSURE_BOUNDARY_RUNTIME_ANCHOR_MARKERS[0]"
+    "RELEASE_CLOSURE_BOUNDARY_RUNTIME_ANCHOR_MARKER"
 )"
 
 printf '[RUN] positive release-closure boundary doc-reference bundle validation\n'
