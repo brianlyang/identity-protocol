@@ -7,6 +7,87 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"
 protocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-machine-law-primacy-ci"
 protocol_root_probe_define_full_mirror
+export PROBE_FIXTURE_REPO_ROOT="${ROOT}"
+# shellcheck source=../probe_fixture_shell_common.sh
+source "${ROOT}/scripts/probe_fixture_shell_common.sh"
+
+bump_yaml_row_order_by_id() {
+  local path="$1"
+  local collection_key="$2"
+  local id_field="$3"
+  local row_id="$4"
+  python3 - "$path" "$collection_key" "$id_field" "$row_id" <<'PY'
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+collection_key = sys.argv[2]
+id_field = sys.argv[3]
+row_id = sys.argv[4]
+
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+rows = doc[collection_key]
+for row in rows:
+    if str(row.get(id_field) or "") == row_id:
+        row["order"] = int(row["order"]) + 1
+        break
+else:
+    raise SystemExit(f"{row_id} not found in {collection_key}")
+
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+}
+
+bump_numbered_surface_row_order_in_section() {
+  local path="$1"
+  local section_marker="$2"
+  local order="$3"
+  local phrase="$4"
+  python3 - "$path" "$section_marker" "$order" "$phrase" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+section_marker = sys.argv[2]
+order = int(sys.argv[3])
+phrase = sys.argv[4]
+
+text = path.read_text(encoding="utf-8")
+assert section_marker in text, section_marker
+before, rest = text.split(section_marker, 1)
+section_body, next_heading, after = rest.partition("\n## ")
+old = f"{order}. {phrase}"
+new = f"{order + 1}. {phrase}"
+assert old in section_body, old
+section_body = section_body.replace(old, new, 1)
+rebuilt = before + section_marker + section_body
+if next_heading:
+    rebuilt += next_heading + after
+path.write_text(rebuilt, encoding="utf-8")
+PY
+}
+
+MACHINE_LAW_COMPLETENESS_NONCONTIG_ID="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_machine_law_primacy" \
+    "tuple(EXPECTED_MACHINE_LAW_PRIMACY_COMPLETENESS_ROWS.keys())[1]"
+)"
+MACHINE_LAW_COMPLETENESS_SURFACE_NONCONTIG_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_machine_law_primacy" \
+    "list(EXPECTED_MACHINE_LAW_PRIMACY_COMPLETENESS_ROWS.values())[1]['order']"
+)"
+MACHINE_LAW_COMPLETENESS_SURFACE_SECTION_MARKER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_machine_law_primacy" \
+    "EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'][0]"
+)"
+MACHINE_LAW_COMPLETENESS_SURFACE_NONCONTIG_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_machine_law_primacy" \
+    "list(EXPECTED_MACHINE_LAW_PRIMACY_COMPLETENESS_ROWS.values())[1]['contract_phrase']"
+)"
 
 PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_machine_law_primacy.py" \
@@ -97,6 +178,55 @@ assert payload["machine_law_primacy_completeness_row_coverage_status"] == "FAIL_
 assert payload["machine_law_primacy_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert payload["machine_law_primacy_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["machine_law_primacy_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+COMPLETENESS_ROW_NONCONTIG_REPO="${TMP_ROOT}/completeness-row-non-contiguous-repo"
+mirror_repo "${COMPLETENESS_ROW_NONCONTIG_REPO}"
+bump_yaml_row_order_by_id \
+  "${COMPLETENESS_ROW_NONCONTIG_REPO}/identity/protocol/mappings/root-machine-law-primacy.v1.yaml" \
+  "machine_law_primacy_completeness_rows" \
+  "completeness_id" \
+  "${MACHINE_LAW_COMPLETENESS_NONCONTIG_ID}"
+
+COMPLETENESS_ROW_NONCONTIG_JSON="${TMP_ROOT}/completeness-row-non-contiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_law_primacy.py" \
+  --repo-root "${COMPLETENESS_ROW_NONCONTIG_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_NONCONTIG_JSON}"; then
+  echo "[FAIL] root machine-law primacy validator unexpectedly passed non-contiguous completeness-row ordering"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_law_primacy_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMLP-002", payload
+assert payload["machine_law_primacy_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    reason == "structure_violation:machine_law_primacy_completeness_rows:machine_law_primacy_completeness_row_order_non_contiguous"
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
+    row["field"] == "machine_law_primacy_completeness_rows"
+    and row["reason"] == "machine_law_primacy_completeness_row_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "machine_law_primacy_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 5, payload
+assert completeness_row["missing_ids"] == [], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "PASS_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -459,6 +589,56 @@ assert any(
 ), payload
 assert any(
     reason == "machine_law_primacy_violation:machine_law_primacy_completeness_surface:machine_law_primacy_completeness_surface_order_mismatch"
+    for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "machine_law_primacy_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_NONCONTIG_REPO="${TMP_ROOT}/completeness-surface-non-contiguous-repo"
+mirror_repo "${COMPLETENESS_SURFACE_NONCONTIG_REPO}"
+bump_numbered_surface_row_order_in_section \
+  "${COMPLETENESS_SURFACE_NONCONTIG_REPO}/identity/protocol/README.md" \
+  "${MACHINE_LAW_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${MACHINE_LAW_COMPLETENESS_SURFACE_NONCONTIG_ORDER}" \
+  "${MACHINE_LAW_COMPLETENESS_SURFACE_NONCONTIG_PHRASE}"
+
+COMPLETENESS_SURFACE_NONCONTIG_JSON="${TMP_ROOT}/completeness-surface-non-contiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_law_primacy.py" \
+  --repo-root "${COMPLETENESS_SURFACE_NONCONTIG_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_NONCONTIG_JSON}"; then
+  echo "[FAIL] root machine-law primacy validator unexpectedly passed non-contiguous completeness-surface ordering"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_law_primacy_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMLP-002", payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "machine_law_primacy_completeness_surface"
+    and row["reason"] == "machine_law_primacy_completeness_surface_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    reason == "structure_violation:machine_law_primacy_completeness_surface:machine_law_primacy_completeness_surface_order_non_contiguous"
     for reason in payload["stale_reasons"]
 ), payload
 surface_row = next(

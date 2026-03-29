@@ -8,6 +8,20 @@ source "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"
 protocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-entry-surface-legitimacy-ci"
 protocol_root_probe_define_full_mirror
 
+assert_stale_reason_present() {
+  local json_file="$1"
+  local expected_reason="$2"
+  python3 - <<'PY' "${json_file}" "${expected_reason}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+reason = sys.argv[2]
+assert reason in payload.get("stale_reasons", []), payload
+PY
+}
+
 PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_entry_surface_legitimacy.py" \
   --repo-root "${ROOT}" \
@@ -105,6 +119,72 @@ assert payload["entry_surface_legitimacy_completeness_surface_coverage_status"] 
 assert payload["entry_surface_legitimacy_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
+COMPLETENESS_ROW_ORDER_REPO="${TMP_ROOT}/completeness-row-order-drift-repo"
+mirror_repo "${COMPLETENESS_ROW_ORDER_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_REPO}/identity/protocol/mappings/root-entry-surface-legitimacy.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["entry_surface_legitimacy_completeness_rows"][1]["order"] = doc["entry_surface_legitimacy_completeness_rows"][0]["order"]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_ORDER_JSON="${TMP_ROOT}/completeness-row-order-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_entry_surface_legitimacy.py" \
+  --repo-root "${COMPLETENESS_ROW_ORDER_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_ORDER_JSON}"; then
+  echo "[FAIL] root entry-surface legitimacy validator unexpectedly passed completeness row non-contiguous order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_entry_surface_legitimacy_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-ESL-002", payload
+assert any(
+    row["field"] == "entry_surface_legitimacy_completeness_rows"
+    and row["reason"] == "entry_surface_legitimacy_completeness_row_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "entry_surface_legitimacy_completeness_rows"
+    and row["reason"] == "entry_surface_legitimacy_completeness_row_order_mismatch"
+    for row in payload["legitimacy_violations"]
+), payload
+assert any(
+    reason == "structure_violation:entry_surface_legitimacy_completeness_rows:entry_surface_legitimacy_completeness_row_order_non_contiguous"
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
+    reason == "entry_surface_legitimacy_violation:entry_surface_legitimacy_completeness_rows:entry_surface_legitimacy_completeness_row_order_mismatch"
+    for reason in payload["stale_reasons"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "entry_surface_legitimacy_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 5, payload
+assert completeness_row["missing_ids"] == [], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "PASS_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_legitimacy_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_legitimacy_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_legitimacy_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_legitimacy_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+assert_stale_reason_present "${COMPLETENESS_ROW_ORDER_JSON}" "structure_violation:entry_surface_legitimacy_completeness_rows:entry_surface_legitimacy_completeness_row_order_non_contiguous"
+assert_stale_reason_present "${COMPLETENESS_ROW_ORDER_JSON}" "entry_surface_legitimacy_violation:entry_surface_legitimacy_completeness_rows:entry_surface_legitimacy_completeness_row_order_mismatch"
+
 COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/completeness-surface-drift-repo"
 mirror_repo "${COMPLETENESS_SURFACE_REPO}"
 python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
@@ -163,6 +243,62 @@ assert payload["entry_surface_legitimacy_completeness_surface_coverage_status"] 
 assert payload["entry_surface_legitimacy_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
+COMPLETENESS_SURFACE_PHRASE_REPO="${TMP_ROOT}/completeness-surface-phrase-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_PHRASE_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_PHRASE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "4. runtime or validator code must not finalize entry-surface legitimacy truth while missing or unexpected row identities remain known only internally;"
+new = "4. runtime or validator code must not finalize entry-surface legitimacy truth while missing row identities remain known only internally;"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_PHRASE_JSON="${TMP_ROOT}/completeness-surface-phrase-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_entry_surface_legitimacy.py" \
+  --repo-root "${COMPLETENESS_SURFACE_PHRASE_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_PHRASE_JSON}"; then
+  echo "[FAIL] root entry-surface legitimacy validator unexpectedly passed completeness surface phrase drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_PHRASE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+expected_phrase = "runtime or validator code must not finalize entry-surface legitimacy truth while missing or unexpected row identities remain known only internally;"
+assert payload["protocol_root_entry_surface_legitimacy_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-ESL-002", payload
+assert any(
+    row["field"] == "entry_surface_legitimacy_completeness_surface"
+    and row["reason"] == "entry_surface_legitimacy_completeness_surface_phrase_order_mismatch"
+    for row in payload["legitimacy_violations"]
+), payload
+assert any(
+    reason == "entry_surface_legitimacy_violation:entry_surface_legitimacy_completeness_surface:entry_surface_legitimacy_completeness_surface_phrase_order_mismatch"
+    for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "entry_surface_legitimacy_completeness_surface"
+)
+assert expected_phrase in surface_row["missing_ids"], payload
+assert "runtime or validator code must not finalize entry-surface legitimacy truth while missing row identities remain known only internally;" in surface_row["unexpected_ids"], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["entry_surface_legitimacy_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_legitimacy_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_legitimacy_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_legitimacy_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+assert_stale_reason_present "${COMPLETENESS_SURFACE_PHRASE_JSON}" "entry_surface_legitimacy_violation:entry_surface_legitimacy_completeness_surface:entry_surface_legitimacy_completeness_surface_phrase_order_mismatch"
+
 COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/completeness-surface-order-drift-repo"
 mirror_repo "${COMPLETENESS_SURFACE_ORDER_REPO}"
 protocol_root_probe_swap_numbered_surface_order_rows \
@@ -211,6 +347,94 @@ assert surface_row["unexpected_ids"] == [], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
+
+COMPLETENESS_SURFACE_ORDER_NON_CONTIGUOUS_REPO="${TMP_ROOT}/completeness-surface-order-non-contiguous-repo"
+mirror_repo "${COMPLETENESS_SURFACE_ORDER_NON_CONTIGUOUS_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_NON_CONTIGUOUS_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+section_marker = "## Root entry-surface legitimacy completeness discipline"
+target = "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+replacement = "1. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+text = path.read_text(encoding="utf-8")
+lines = text.splitlines()
+replaced = False
+in_section = False
+for idx, line in enumerate(lines):
+    stripped = line.strip()
+    if stripped == section_marker:
+        in_section = True
+        continue
+    if not in_section:
+        continue
+    if stripped.startswith("## ") or stripped == "---":
+        break
+    if stripped == target:
+        indent = line[: len(line) - len(line.lstrip())]
+        lines[idx] = f"{indent}{replacement}"
+        replaced = True
+        break
+assert replaced, section_marker
+path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_ORDER_NON_CONTIGUOUS_JSON="${TMP_ROOT}/completeness-surface-order-non-contiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_entry_surface_legitimacy.py" \
+  --repo-root "${COMPLETENESS_SURFACE_ORDER_NON_CONTIGUOUS_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_ORDER_NON_CONTIGUOUS_JSON}"; then
+  echo "[FAIL] root entry-surface legitimacy validator unexpectedly passed completeness surface non-contiguous order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_NON_CONTIGUOUS_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_entry_surface_legitimacy_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-ESL-002", payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "entry_surface_legitimacy_completeness_surface"
+    and row["reason"] == "entry_surface_legitimacy_completeness_surface_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "entry_surface_legitimacy_completeness_surface"
+    and row["reason"] == "entry_surface_legitimacy_completeness_surface_order_mismatch"
+    for row in payload["legitimacy_violations"]
+), payload
+assert any(
+    reason == "structure_violation:entry_surface_legitimacy_completeness_surface:entry_surface_legitimacy_completeness_surface_order_non_contiguous"
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
+    reason == "entry_surface_legitimacy_violation:entry_surface_legitimacy_completeness_surface:entry_surface_legitimacy_completeness_surface_order_mismatch"
+    for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "entry_surface_legitimacy_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_legitimacy_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_legitimacy_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_legitimacy_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_legitimacy_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+assert_stale_reason_present "${COMPLETENESS_SURFACE_ORDER_NON_CONTIGUOUS_JSON}" "structure_violation:entry_surface_legitimacy_completeness_surface:entry_surface_legitimacy_completeness_surface_order_non_contiguous"
+assert_stale_reason_present "${COMPLETENESS_SURFACE_ORDER_NON_CONTIGUOUS_JSON}" "entry_surface_legitimacy_violation:entry_surface_legitimacy_completeness_surface:entry_surface_legitimacy_completeness_surface_order_mismatch"
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
 mirror_repo "${PROOF_REPO}"

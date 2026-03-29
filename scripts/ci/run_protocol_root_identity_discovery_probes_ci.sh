@@ -217,6 +217,83 @@ assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
+IDENTITY_DISCOVERY_SURFACE_ORDER_NON_CONTIGUOUS_REPO="${TMP_ROOT}/identity-discovery-completeness-surface-order-non-contiguous-repo"
+mirror_repo "${IDENTITY_DISCOVERY_SURFACE_ORDER_NON_CONTIGUOUS_REPO}"
+python3 - <<'PY' "${IDENTITY_DISCOVERY_SURFACE_ORDER_NON_CONTIGUOUS_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+section_marker = "## Root identity-discovery completeness discipline"
+target = "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+replacement = "1. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+text = path.read_text(encoding="utf-8")
+lines = text.splitlines()
+replaced = False
+in_section = False
+for idx, line in enumerate(lines):
+    stripped = line.strip()
+    if stripped == section_marker:
+        in_section = True
+        continue
+    if not in_section:
+        continue
+    if stripped.startswith("## ") or stripped == "---":
+        break
+    if stripped == target:
+        indent = line[: len(line) - len(line.lstrip())]
+        lines[idx] = f"{indent}{replacement}"
+        replaced = True
+        break
+assert replaced, section_marker
+path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+
+IDENTITY_DISCOVERY_SURFACE_ORDER_NON_CONTIGUOUS_JSON="${TMP_ROOT}/identity-discovery-completeness-surface-order-non-contiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_identity_discovery.py" \
+  --repo-root "${IDENTITY_DISCOVERY_SURFACE_ORDER_NON_CONTIGUOUS_REPO}" \
+  --json-only >"${IDENTITY_DISCOVERY_SURFACE_ORDER_NON_CONTIGUOUS_JSON}"; then
+  echo "[FAIL] root identity-discovery validator unexpectedly passed completeness surface non-contiguous order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${IDENTITY_DISCOVERY_SURFACE_ORDER_NON_CONTIGUOUS_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_identity_discovery_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RID-002", payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "identity_discovery_completeness_surface"
+    and row["reason"] == "identity_discovery_completeness_surface_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "identity_discovery_completeness_surface"
+    and row["reason"] == "identity_discovery_completeness_surface_order_mismatch"
+    for row in payload["discovery_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "identity_discovery_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
 mirror_repo "${PROOF_REPO}"
 python3 - <<'PY' "${PROOF_REPO}/identity/protocol/mappings/root-identity-discovery.v1.yaml"
