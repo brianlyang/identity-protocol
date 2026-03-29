@@ -161,8 +161,13 @@ SUMMARY_PROBE_REL = "scripts/ci/run_v16x_release_closure_summary_probes_ci.sh"
 BOUNDARY_PROBE_REL = "scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh"
 SUMMARY_BINDING_PROBE_REL = "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh"
 PROBE_REQUIRED_TOKENS: tuple[str, ...] = (
-    "scripts/validate_release_readiness_repo_global_closure_topology.py --json-only",
-    "scripts/ci/run_release_readiness_repo_global_closure_topology_probes_ci.sh",
+    "release_readiness_repo_global_closure_projection_common",
+    "repo_global_topology_validator",
+    "repo_global_topology_probe",
+    "repo_global_topology_validator_command_literal",
+    "repo_global_topology_probe_command_literal",
+    "repo_global_topology_probe_summary_key",
+    "repo_global_topology_probe_one_look_field",
     "repo_global_closure_summary_keys_not_unique",
     "repo_global_closure_one_look_field_order_changed",
     "release_readiness_check_missing_repo_global_capture_map_injection",
@@ -174,9 +179,6 @@ PROBE_REQUIRED_TOKENS: tuple[str, ...] = (
     "repo_global_boundary_probe_missing_projection_marker_resolution",
     "repo_global_boundary_probe_missing_checked_count_resolution",
     "repo_global_boundary_probe_missing_topology_lane_resolution",
-    "summary_binding_probe_missing_token:release_readiness_repo_global_closure_topology_probe",
-    "post_closure_bundle_missing_validator:scripts/validate_release_readiness_repo_global_closure_topology.py --json-only",
-    "post_closure_bundle_missing_probe:scripts/ci/run_release_readiness_repo_global_closure_topology_probes_ci.sh",
 )
 
 
