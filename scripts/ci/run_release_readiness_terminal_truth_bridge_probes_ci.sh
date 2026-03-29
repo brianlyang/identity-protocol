@@ -90,6 +90,19 @@ if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-terminal-tr
 fi
 echo "[PASS] terminal-truth bridge common drift fail-closed as expected"
 
+restore_shadow_file "${TMP_ROOT}" "scripts/release_closure_projection_companion_marker_bundle_common.py"
+# expected fail-close: summary_terminal_truth_bridge_rich_companion_bundle_drift
+python3 "${ROOT}/scripts/probe_fixture_literal_mutation.py" \
+  --path "${TMP_ROOT}/scripts/release_closure_projection_companion_marker_bundle_common.py" \
+  --needle $'RELEASE_CLOSURE_SUMMARY_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_MARKERS = (\n    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_FIELDS\n)' \
+  --replacement $'RELEASE_CLOSURE_SUMMARY_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_MARKERS = (\n    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS\n)' \
+  --require-absent-after
+if run_shadow_validator "${TMP_ROOT}" "${TMP_ROOT}/release-readiness-terminal-truth-bridge-negative-rich-common.json"; then
+  echo "[FAIL] terminal-truth bridge rich companion shared bundle drift unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] terminal-truth bridge rich companion shared bundle drift fail-closed as expected"
+
 restore_shadow_file "${TMP_ROOT}" "scripts/release_readiness_check.py"
 # expected fail-close: post_closure_bundle_missing_probe:${terminal_truth_bridge_probe}
 mutate_probe_literal \

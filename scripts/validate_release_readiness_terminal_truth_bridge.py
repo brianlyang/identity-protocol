@@ -20,6 +20,10 @@ from release_readiness_governance_probe_projection_common import (
     release_readiness_governance_probe_structured_capture_specs,
     release_readiness_governance_probe_summary_defaults,
 )
+from release_closure_projection_companion_marker_bundle_common import (
+    RELEASE_CLOSURE_BOUNDARY_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_MARKERS,
+    RELEASE_CLOSURE_SUMMARY_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_MARKERS,
+)
 from release_readiness_terminal_truth_bridge_common import (
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ACTIVE_RUNTIME_FIELDS,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ALIGNMENT_FIELDS,
@@ -76,10 +80,12 @@ EXPECTED_ACTIVE_RUNTIME_FIELDS: tuple[str, ...] = (
 EXPECTED_CASE_MARKERS: tuple[str, ...] = (
     "terminal_truth_bridge_case=clean_terminal_truth",
     "terminal_truth_bridge_case=review_required_execution_closure",
+    "terminal_truth_bridge_case=explicit_dirty_retry_execution_closure",
 )
 EXPECTED_CASE_ORDER: tuple[str, ...] = (
     "clean_terminal_truth",
     "review_required_execution_closure",
+    "explicit_dirty_retry_execution_closure",
 )
 EXPECTED_REVIEW_REQUIRED_CASE_MARKER = (
     "terminal_truth_bridge_case=review_required_execution_closure"
@@ -108,6 +114,12 @@ EXPECTED_PROBE_KEEP_FIELDS: tuple[str, ...] = (
 EXPECTED_PROBE_SHARED_IMPORT_TOKENS: tuple[str, ...] = (
     "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_BOUNDARY_COMPANION_FIELDS",
     "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ALIGNMENT_FIELDS",
+)
+EXPECTED_SUMMARY_VALIDATOR_SHARED_BUNDLE_TOKEN = (
+    "collect_release_closure_summary_projection_companion_bundle_stale_reasons"
+)
+EXPECTED_BOUNDARY_VALIDATOR_SHARED_BUNDLE_TOKEN = (
+    "collect_release_closure_boundary_projection_companion_bundle_stale_reasons"
 )
 EXPECTED_VALIDATOR_COMMAND = RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR_COMMAND
 EXPECTED_PROBE_COMMAND = RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_COMMAND
@@ -178,6 +190,12 @@ def main() -> int:
         "alignment_fields": list(
             RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ALIGNMENT_FIELDS
         ),
+        "summary_rich_companion_markers": list(
+            RELEASE_CLOSURE_SUMMARY_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_MARKERS
+        ),
+        "boundary_rich_companion_markers": list(
+            RELEASE_CLOSURE_BOUNDARY_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_MARKERS
+        ),
         "surface_constraints": list(RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS),
         "bridge_case_order": list(RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_ORDER),
         "stale_reasons": [],
@@ -213,6 +231,16 @@ def main() -> int:
         )
     ):
         stale_reasons.append("terminal_truth_bridge_rich_companion_fields_drift")
+    if (
+        RELEASE_CLOSURE_SUMMARY_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_MARKERS
+        != RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_FIELDS
+    ):
+        stale_reasons.append("summary_terminal_truth_bridge_rich_companion_bundle_drift")
+    if (
+        RELEASE_CLOSURE_BOUNDARY_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_MARKERS
+        != RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_FIELDS
+    ):
+        stale_reasons.append("boundary_terminal_truth_bridge_rich_companion_bundle_drift")
     if RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR != EXPECTED_VALIDATOR_COMMAND[1]:
         stale_reasons.append("terminal_truth_bridge_validator_path_drift")
     if RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE != EXPECTED_PROBE_COMMAND[1]:
@@ -282,14 +310,22 @@ def main() -> int:
     boundary_validator_text = _read_text((repo_root / BOUNDARY_VALIDATOR_REL).resolve())
     summary_binding_probe_text = _read_text((repo_root / SUMMARY_BINDING_PROBE_REL).resolve())
     probe_text = _read_text((repo_root / EXPECTED_PROBE_COMMAND[1]).resolve())
-    for label, text in (
-        ("summary_validator", summary_validator_text),
-        ("boundary_validator", boundary_validator_text),
+    for label, text, shared_token in (
+        (
+            "summary_validator",
+            summary_validator_text,
+            EXPECTED_SUMMARY_VALIDATOR_SHARED_BUNDLE_TOKEN,
+        ),
+        (
+            "boundary_validator",
+            boundary_validator_text,
+            EXPECTED_BOUNDARY_VALIDATOR_SHARED_BUNDLE_TOKEN,
+        ),
     ):
         if "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS" not in text:
             stale_reasons.append(f"{label}_missing_terminal_truth_bridge_surface_constraints")
-        if "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_FIELDS" not in text:
-            stale_reasons.append(f"{label}_missing_terminal_truth_bridge_rich_companion_fields")
+        if shared_token not in text:
+            stale_reasons.append(f"{label}_missing_terminal_truth_bridge_shared_bundle_token")
 
     if EXPECTED_PROBE_SUMMARY_KEY not in summary_binding_probe_text:
         stale_reasons.append(
