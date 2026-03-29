@@ -24,6 +24,7 @@ from identity_codex_launcher_common import (
     launcher_readme_text,
     launcher_command_discovery_doc,
     load_launcher_continuity_support_bundle,
+    load_launcher_reentry_answer_bundle,
     render_generic_launcher_sh,
     render_shortcut_launcher_sh,
     resolve_catalog_path,
@@ -33,6 +34,7 @@ from identity_codex_launcher_common import (
     resolve_required_protocol_actor_id,
     shortcut_launcher_name,
 )
+from identity_context_continuity_common import REENTRY_ANSWER_INTENTS
 from launcher_runtime_admissibility_projection_common import (
     build_launcher_runtime_admissibility_projection,
 )
@@ -58,10 +60,13 @@ def _build_launcher_runtime_guard_fail_payload(
     identity_id: str,
     catalog_path: Path,
     admissibility_projection: dict[str, Any],
+    continuity_intent: str = "",
 ) -> dict[str, Any]:
     binding_class = str(admissibility_projection.get("runtime_mode_guard_binding_class", "")).strip()
     error_code = str(admissibility_projection.get("runtime_mode_guard_error_code", "")).strip()
     admissibility_reason = binding_class or error_code or "runtime_mode_guard_blocked"
+    requested_continuity_intent = str(continuity_intent or "").strip()
+    continuity_requested = bool(requested_continuity_intent)
     return {
         "status": STATUS_FAIL_REQUIRED,
         "command_bundle_contract_id": IDENTITY_LAUNCHER_COMMAND_DISCOVERY_CONTRACT_ID,
@@ -103,8 +108,53 @@ def _build_launcher_runtime_guard_fail_payload(
         "recommended_resume_command": "",
         "recommended_user_command": "",
         "resume_status": STATUS_FAIL_REQUIRED,
+        "continuity_intent": requested_continuity_intent,
+        "continuity_intent_requested": continuity_requested,
+        "continuity_intent_bridge_status": (
+            STATUS_FAIL_REQUIRED if continuity_requested else STATUS_SKIPPED_NOT_REQUIRED
+        ),
+        "continuity_intent_bridge_reason": (
+            "launcher_runtime_admissibility_blocked_before_continuity_intent_evaluation"
+            if continuity_requested
+            else "continuity_intent_not_requested"
+        ),
+        "continuity_intent_status": (
+            STATUS_FAIL_REQUIRED if continuity_requested else STATUS_SKIPPED_NOT_REQUIRED
+        ),
+        "continuity_intent_reason": (
+            "launcher_runtime_admissibility_blocked_before_continuity_intent_evaluation"
+            if continuity_requested
+            else "continuity_intent_not_requested"
+        ),
+        "continuity_intent_owner_stream": "v1.6.16",
+        "continuity_intent_question_family": "identity_context_reentry_recovery",
+        "continuity_reentry_answer_bundle_status": (
+            STATUS_FAIL_REQUIRED if continuity_requested else STATUS_SKIPPED_NOT_REQUIRED
+        ),
+        "continuity_reentry_answer_bundle": {},
+        "continuity_reentry_answer": {},
+        "continuity_safe_to_trigger_now": False,
+        "recommended_followup_reentry_task_block": "",
+        "recommended_followup_reentry_task_block_status": (
+            STATUS_FAIL_REQUIRED if continuity_requested else STATUS_SKIPPED_NOT_REQUIRED
+        ),
+        "recommended_followup_reentry_required_receipt_kind": "",
+        "recommended_user_command_kind": "blocked",
+        "recommended_user_command_reason": "launcher_runtime_admissibility_blocked",
         "runtime_mode_guard_stale_reasons": list(admissibility_projection.get("runtime_mode_guard_stale_reasons") or []),
         "projection_stale_reasons": list(admissibility_projection.get("stale_reasons") or []),
+        "operator_surface_contract": {
+            "outer_operator_command_surface_only": True,
+            "new_terminal_command_family_created": False,
+            "launcher_command_lookup_owner_stream": "v1.6.14",
+            "continuity_intent_bridge_projection_only": True,
+            "continuity_intent_answer_owner_stream": "v1.6.16",
+            "continuity_intent_bridge_requires_governed_answer_bundle": True,
+            "fresh_start_recommendation_not_equal_continuity_closure": True,
+            "thread_recovery_target_replacement_forbidden": True,
+            "actor_session_tuple_truth_replacement_forbidden": True,
+            "manual_command_assembly_forbidden": True,
+        },
         "stale_reasons": list(
             admissibility_projection.get("runtime_mode_guard_stale_reasons")
             or admissibility_projection.get("stale_reasons")
@@ -172,6 +222,132 @@ def _load_continuity_support_bundle(
         task_path=task_path,
     )
 
+
+def _resolve_continuity_intent_projection(
+    *,
+    identity_id: str,
+    catalog_path: Path,
+    task_path: Path,
+    continuity_intent: str,
+) -> dict[str, Any]:
+    requested_intent = str(continuity_intent or "").strip()
+    base_projection = {
+        "continuity_intent": requested_intent,
+        "continuity_intent_requested": bool(requested_intent),
+        "continuity_intent_bridge_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "continuity_intent_bridge_reason": "continuity_intent_not_requested",
+        "continuity_intent_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "continuity_intent_reason": "continuity_intent_not_requested",
+        "continuity_intent_owner_stream": "v1.6.16",
+        "continuity_intent_question_family": "identity_context_reentry_recovery",
+        "continuity_reentry_answer_bundle_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "continuity_reentry_answer_bundle": {},
+        "continuity_reentry_answer": {},
+        "continuity_safe_to_trigger_now": False,
+        "recommended_followup_reentry_task_block": "",
+        "recommended_followup_reentry_task_block_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "recommended_followup_reentry_required_receipt_kind": "",
+    }
+    if not requested_intent:
+        return base_projection
+    bundle = load_launcher_reentry_answer_bundle(
+        identity_id=identity_id,
+        catalog_path=catalog_path,
+        task_path=task_path,
+        intent=requested_intent,
+    )
+    bundle_status = str(
+        bundle.get("identity_context_reentry_answer_bundle_status") or bundle.get("status") or ""
+    ).strip() or STATUS_FAIL_REQUIRED
+    answer_rows = bundle.get("intent_answers")
+    if not isinstance(answer_rows, dict):
+        return {
+            **base_projection,
+            "continuity_intent_bridge_status": STATUS_FAIL_REQUIRED,
+            "continuity_intent_bridge_reason": "requested_continuity_intent_answer_row_missing",
+            "continuity_intent_status": STATUS_FAIL_REQUIRED,
+            "continuity_intent_reason": "requested_continuity_intent_answer_row_missing",
+            "continuity_reentry_answer_bundle_status": bundle_status,
+            "continuity_reentry_answer_bundle": bundle,
+            "recommended_followup_reentry_task_block_status": STATUS_FAIL_REQUIRED,
+        }
+    answer = answer_rows.get(requested_intent)
+    if not isinstance(answer, dict):
+        return {
+            **base_projection,
+            "continuity_intent_bridge_status": STATUS_FAIL_REQUIRED,
+            "continuity_intent_bridge_reason": "requested_continuity_intent_answer_row_missing",
+            "continuity_intent_status": STATUS_FAIL_REQUIRED,
+            "continuity_intent_reason": "requested_continuity_intent_answer_row_missing",
+            "continuity_reentry_answer_bundle_status": bundle_status,
+            "continuity_reentry_answer_bundle": bundle,
+            "recommended_followup_reentry_task_block_status": STATUS_FAIL_REQUIRED,
+        }
+    answer_status = str(answer.get("status", "")).strip() or STATUS_FAIL_REQUIRED
+    return {
+        **base_projection,
+        "continuity_intent_bridge_status": STATUS_PASS_REQUIRED,
+        "continuity_intent_bridge_reason": "bridged_governed_reentry_answer_row_resolved",
+        "continuity_intent_status": answer_status,
+        "continuity_intent_reason": str(answer.get("reason", "")).strip()
+        or "requested_continuity_intent_status_unavailable",
+        "continuity_intent_owner_stream": str(bundle.get("continuity_owner_stream", "")).strip() or "v1.6.16",
+        "continuity_intent_question_family": str(bundle.get("question_family", "")).strip()
+        or "identity_context_reentry_recovery",
+        "continuity_reentry_answer_bundle_status": bundle_status,
+        "continuity_reentry_answer_bundle": bundle,
+        "continuity_reentry_answer": answer,
+        "continuity_safe_to_trigger_now": bool(answer.get("safe_to_trigger_now")),
+        "recommended_followup_reentry_task_block": str(
+            answer.get("copyable_reentry_task_block", "")
+        ).strip(),
+        "recommended_followup_reentry_task_block_status": answer_status,
+        "recommended_followup_reentry_required_receipt_kind": str(
+            answer.get("required_receipt_kind", "")
+        ).strip(),
+    }
+
+
+def _finalize_recommended_user_command(payload: dict[str, Any]) -> None:
+    recommended_start_command = str(payload.get("recommended_start_command", "")).strip()
+    recommended_resume_command = str(payload.get("recommended_resume_command", "")).strip()
+    continuity_requested = bool(payload.get("continuity_intent_requested"))
+    continuity_status = str(payload.get("continuity_intent_status", "")).strip()
+    if continuity_requested:
+        if continuity_status == STATUS_PASS_REQUIRED:
+            payload["recommended_user_command"] = recommended_start_command
+            payload["recommended_user_command_kind"] = "start"
+            payload["recommended_user_command_reason"] = (
+                "explicit_continuity_intent_promotes_fresh_start_surface"
+            )
+            return
+        if continuity_status == STATUS_SKIPPED_NOT_REQUIRED:
+            payload["recommended_user_command"] = recommended_start_command
+            payload["recommended_user_command_kind"] = "start"
+            payload["recommended_user_command_reason"] = (
+                "explicit_continuity_intent_without_governed_reentry_contract_promotes_fresh_start_surface"
+            )
+            return
+        payload["recommended_user_command"] = ""
+        payload["recommended_user_command_kind"] = "blocked"
+        payload["recommended_user_command_reason"] = (
+            "explicit_continuity_intent_blocked_until_governed_reentry_ready"
+        )
+        return
+    if recommended_resume_command:
+        payload["recommended_user_command"] = recommended_resume_command
+        payload["recommended_user_command_kind"] = "resume"
+        payload["recommended_user_command_reason"] = "fresh_shell_resume_available"
+        return
+    payload["recommended_user_command"] = recommended_start_command
+    payload["recommended_user_command_kind"] = "start"
+    payload["recommended_user_command_reason"] = (
+        "resume_unavailable_falls_back_to_start"
+        if bool(payload.get("host_thread_id_present"))
+        else "resume_thread_missing_falls_back_to_start"
+    )
+
+
 def _emit_commands(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
         _emit(payload, json_only=True)
@@ -196,6 +372,15 @@ def _emit_commands(payload: dict[str, Any], *, json_only: bool) -> None:
         return
     print(f"identity_id={payload['identity_id']}")
     print(f"recommended_command={payload['recommended_user_command']}")
+    print(f"recommended_command_kind={payload.get('recommended_user_command_kind', '')}")
+    print(f"recommended_command_reason={payload.get('recommended_user_command_reason', '')}")
+    continuity_intent = str(payload.get("continuity_intent", "")).strip()
+    if continuity_intent:
+        print(f"continuity_intent_bridge_status={payload.get('continuity_intent_bridge_status', STATUS_FAIL_REQUIRED)}")
+        print(f"continuity_intent_bridge_reason={payload.get('continuity_intent_bridge_reason', '')}")
+        print(f"continuity_intent={continuity_intent}")
+        print(f"continuity_intent_status={payload.get('continuity_intent_status', STATUS_FAIL_REQUIRED)}")
+        print(f"continuity_intent_reason={payload.get('continuity_intent_reason', '')}")
     print(f"preferred_start={payload['preferred_start_command']}")
     shortcut_start_command = str(payload.get("shortcut_start_command", "")).strip()
     if shortcut_start_command and shortcut_start_command != payload["preferred_start_command"]:
@@ -212,6 +397,11 @@ def _emit_commands(payload: dict[str, Any], *, json_only: bool) -> None:
     else:
         print(f"resume_status={payload.get('resume_status', STATUS_SKIPPED_NOT_REQUIRED)}")
         print(f"resume_reason={payload.get('resume_reason', 'host_thread_id_required')}")
+    reentry_task_block = str(payload.get("recommended_followup_reentry_task_block", "")).strip()
+    if reentry_task_block:
+        print("recommended_followup_reentry_task_block<<EOF")
+        print(reentry_task_block)
+        print("EOF")
 
 
 def _cmd_render(args: argparse.Namespace) -> int:
@@ -381,6 +571,7 @@ def _cmd_commands(args: argparse.Namespace) -> int:
                 identity_id=args.identity_id,
                 catalog_path=catalog_path,
                 admissibility_projection=admissibility_projection,
+                continuity_intent=str(args.continuity_intent or ""),
             ),
             json_only=args.json_only,
         )
@@ -488,6 +679,12 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         catalog_path=catalog_path,
         task_path=task_path,
     )
+    continuity_intent_projection = _resolve_continuity_intent_projection(
+        identity_id=args.identity_id,
+        catalog_path=catalog_path,
+        task_path=task_path,
+        continuity_intent=str(args.continuity_intent or ""),
+    )
     payload = {
         "status": STATUS_PASS_REQUIRED,
         "command_bundle_contract_id": IDENTITY_LAUNCHER_COMMAND_DISCOVERY_CONTRACT_ID,
@@ -536,6 +733,8 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         "absolute_fresh_shell_start_command": absolute_fresh_shell_start_command,
         "recommended_start_command": recommended_start_command,
         "recommended_user_command": recommended_start_command,
+        "recommended_user_command_kind": "start",
+        "recommended_user_command_reason": "resume_thread_missing_falls_back_to_start",
         "resume_status": resume_status,
         "host_thread_id_status": host_thread_id_status,
         "host_thread_id_present": bool(thread_id),
@@ -548,6 +747,31 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         "resume_command_fresh_shell_executable_status": resume_command_fresh_shell_executable_status,
         "command_discovery": command_discovery,
         "continuity_support": continuity_support,
+        "continuity_intent": continuity_intent_projection["continuity_intent"],
+        "continuity_intent_requested": continuity_intent_projection["continuity_intent_requested"],
+        "continuity_intent_bridge_status": continuity_intent_projection["continuity_intent_bridge_status"],
+        "continuity_intent_bridge_reason": continuity_intent_projection["continuity_intent_bridge_reason"],
+        "continuity_intent_status": continuity_intent_projection["continuity_intent_status"],
+        "continuity_intent_reason": continuity_intent_projection["continuity_intent_reason"],
+        "continuity_intent_owner_stream": continuity_intent_projection["continuity_intent_owner_stream"],
+        "continuity_intent_question_family": continuity_intent_projection["continuity_intent_question_family"],
+        "continuity_reentry_answer_bundle_status": continuity_intent_projection[
+            "continuity_reentry_answer_bundle_status"
+        ],
+        "continuity_reentry_answer_bundle": continuity_intent_projection[
+            "continuity_reentry_answer_bundle"
+        ],
+        "continuity_reentry_answer": continuity_intent_projection["continuity_reentry_answer"],
+        "continuity_safe_to_trigger_now": continuity_intent_projection["continuity_safe_to_trigger_now"],
+        "recommended_followup_reentry_task_block": continuity_intent_projection[
+            "recommended_followup_reentry_task_block"
+        ],
+        "recommended_followup_reentry_task_block_status": continuity_intent_projection[
+            "recommended_followup_reentry_task_block_status"
+        ],
+        "recommended_followup_reentry_required_receipt_kind": continuity_intent_projection[
+            "recommended_followup_reentry_required_receipt_kind"
+        ],
         "launcher_runtime_admissibility_projection": admissibility_projection,
         "launcher_runtime_admissibility_projection_status": projection_status or STATUS_FAIL_REQUIRED,
         "launcher_runtime_admissibility_status": admissibility_status or STATUS_FAIL_REQUIRED,
@@ -568,6 +792,20 @@ def _cmd_commands(args: argparse.Namespace) -> int:
             admissibility_projection.get("runtime_mode_guard_stale_reasons") or []
         ),
         "projection_stale_reasons": list(admissibility_projection.get("stale_reasons") or []),
+        "operator_surface_contract": {
+            "outer_operator_command_surface_only": True,
+            "new_terminal_command_family_created": False,
+            "launcher_command_lookup_owner_stream": "v1.6.14",
+            "continuity_intent_bridge_projection_only": True,
+            "continuity_intent_answer_owner_stream": continuity_intent_projection[
+                "continuity_intent_owner_stream"
+            ],
+            "continuity_intent_bridge_requires_governed_answer_bundle": True,
+            "fresh_start_recommendation_not_equal_continuity_closure": True,
+            "thread_recovery_target_replacement_forbidden": True,
+            "actor_session_tuple_truth_replacement_forbidden": True,
+            "manual_command_assembly_forbidden": True,
+        },
         "instance_answer_guidance": {
             "instance_returns_concrete_commands": True,
             "manual_command_assembly_forbidden": True,
@@ -674,7 +912,6 @@ def _cmd_commands(args: argparse.Namespace) -> int:
                 "fresh_shell_resume_command": fresh_shell_resume_command,
                 "absolute_fresh_shell_resume_command": absolute_fresh_shell_resume_command,
                 "recommended_resume_command": recommended_resume_command,
-                "recommended_user_command": recommended_resume_command or recommended_start_command,
             }
         )
         payload["copyable_commands"]["resume"] = {
@@ -703,6 +940,7 @@ def _cmd_commands(args: argparse.Namespace) -> int:
             payload["resume_reason"] = identity_session_tuple_reason
     else:
         payload["resume_reason"] = thread_source
+    _finalize_recommended_user_command(payload)
     _emit_commands(payload, json_only=args.json_only)
     return 0
 
@@ -754,6 +992,12 @@ def main() -> int:
     p_commands.add_argument("--current-task", default="")
     p_commands.add_argument("--bin-dir", default="")
     p_commands.add_argument("--thread-id", default="")
+    p_commands.add_argument(
+        "--continuity-intent",
+        default="",
+        choices=REENTRY_ANSWER_INTENTS,
+        help="align command discovery to the governed operator goal for fresh-window or clear-reload continuity",
+    )
     p_commands.add_argument("--actor-id", default="assistant:codex")
     p_commands.add_argument("--session-id", default="")
     p_commands.add_argument("--json-only", action="store_true")

@@ -355,6 +355,44 @@ def load_launcher_continuity_support_bundle(
     return payload
 
 
+def load_launcher_reentry_answer_bundle(
+    *,
+    identity_id: str,
+    catalog_path: Path,
+    task_path: Path,
+    intent: str = "",
+) -> dict[str, Any]:
+    try:
+        from render_identity_context_reentry_answers import render_reentry_answers_payload  # type: ignore
+
+        payload = render_reentry_answers_payload(
+            identity_id=identity_id,
+            catalog=str(catalog_path),
+            current_task=str(task_path),
+            intent=str(intent or "").strip(),
+        )
+    except Exception as exc:
+        return {
+            "status": STATUS_FAIL_REQUIRED,
+            "identity_context_reentry_answer_bundle_status": STATUS_FAIL_REQUIRED,
+            "answer_bundle_contract_id": "identity_context_reentry_answer_contract_v1",
+            "question_family": "identity_context_reentry_recovery",
+            "identity_id": identity_id,
+            "render_error": f"launcher_reentry_answer_render_failed:{type(exc).__name__}",
+            "error": str(exc),
+        }
+    if not isinstance(payload, dict):
+        return {
+            "status": STATUS_FAIL_REQUIRED,
+            "identity_context_reentry_answer_bundle_status": STATUS_FAIL_REQUIRED,
+            "answer_bundle_contract_id": "identity_context_reentry_answer_contract_v1",
+            "question_family": "identity_context_reentry_recovery",
+            "identity_id": identity_id,
+            "render_error": "launcher_reentry_answer_render_root_not_object",
+        }
+    return payload
+
+
 def _continuity_token(payload: dict[str, Any], key: str, *, default: str = "") -> str:
     value = payload.get(key)
     return str(value).strip() if value is not None else default
@@ -596,6 +634,10 @@ def launcher_command_discovery_doc(identity_id: str) -> dict[str, Any]:
         "generic_discovery_command": f"{GENERIC_LAUNCHER_NAME} commands --identity-id {identity_token}",
         "shortcut_discovery_command": f"{shortcut} commands",
         "resume_thread_argument": "--thread-id <host-thread-uuid>",
+        "continuity_intent_argument": "--continuity-intent <migrate_new_window|reload_after_clear>",
+        "explicit_continuity_intent_promotes_fresh_start_surface": True,
+        "continuity_intent_owner_stream": "v1.6.16",
+        "resume_target_remains_codex_thread": True,
         "instance_answer_mode": "instance_returns_concrete_commands",
         "manual_command_assembly_forbidden": True,
         "python_helper_surface_forbidden": True,
@@ -732,6 +774,11 @@ Boundary:
   unless the current shell can actually resolve that command; otherwise the
   preferred lane must downgrade to a discoverability-safe generic or absolute
   launcher surface.
+- When command discovery is invoked with explicit continuity intent
+  (`migrate_new_window` / `reload_after_clear`), `recommended_user_command`
+  must promote the fresh-start launcher surface instead of auto-promoting
+  transcript resume; the governed follow-up reentry task block remains owned by
+  `v1.6.16`.
 """
 
 

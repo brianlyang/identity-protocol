@@ -85,6 +85,22 @@ seed the run tuple explicitly so the bundle can still produce a fresh-shell-exec
 identity-codex commands --identity-id <identity-id> --thread-id <host-thread-uuid> --session-id <run:session-id>
 ```
 
+If the operator goal is not “resume this transcript in-place” but rather “open a fresh window / clear and then
+rejoin with governed continuity”, make that goal explicit on the launcher command-discovery surface:
+
+```bash
+identity-codex commands --identity-id <identity-id> --continuity-intent migrate_new_window --thread-id <host-thread-uuid> --session-id <run:session-id>
+```
+
+Under explicit `--continuity-intent migrate_new_window|reload_after_clear`, the launcher bundle must keep two
+operator goals separate instead of collapsing them:
+
+- `resume <host-thread-uuid>` remains the Codex transcript recovery target
+- `recommended_user_command` must promote the fresh-start launcher surface, not transcript resume
+- the governed follow-up reentry task block remains owned by `v1.6.16`
+- if the bridged governed reentry answer is blocked, the launcher bundle must not misreport a bare fresh start as
+  equivalent to continuity closure
+
 Critical semantic boundary:
 
 - `resume <host-thread-uuid>` is still the **Codex transcript recovery target**.
@@ -123,6 +139,8 @@ identity-codex commands --identity-id <identity-id> --json-only
 That JSON is the protocol-owned guidance bundle. It now carries:
 
 - `recommended_user_command`
+- `recommended_user_command_kind`
+- `recommended_user_command_reason`
 - `catalog_context_status`
 - `host_thread_id_status`
 - `identity_session_tuple_status`
@@ -131,6 +149,10 @@ That JSON is the protocol-owned guidance bundle. It now carries:
 - `shortcut_shell_discoverability_status`
 - `generic_launcher_install_status`
 - `generic_launcher_shell_discoverability_status`
+- `continuity_intent`
+- `continuity_intent_status`
+- `continuity_reentry_answer_bundle_status`
+- `recommended_followup_reentry_task_block`
 - `shortcut_start_command`
 - `shortcut_resume_command`
 - `copyable_commands.start`

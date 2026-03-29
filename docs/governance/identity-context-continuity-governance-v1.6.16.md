@@ -313,7 +313,13 @@ Minimum additional requirements:
    - `live_reentry_consumption_proof_status`
 17. When startup readiness is `PASS_REQUIRED` but live proof is not yet observed, the answer bundle may still return a governed reentry task block, but it must explicitly mark that live proof is pending and that successful recovery may only be claimed after `instance_reentry_consumption_receipt` is emitted.
 18. Once live proof is `PASS_REQUIRED`, the answer bundle may report governed recovery as live-proven, but it still must not assemble launcher commands itself.
-19. The continuity answer surface must never inject or hardcode thread UUIDs; launcher-command lookup stays delegated to `v1.6.14`, while `v1.6.16` governs only the reentry task and evidence side.
+19. Launcher command discovery may consume this answer bundle only as a bounded bridge when the operator explicitly declares a continuity intent such as `migrate_new_window` or `reload_after_clear`; that bridge is projection-only and must not transfer launcher ownership into `v1.6.16`.
+20. Under that bridge, shared machine surfaces must keep three facts separate instead of collapsing them:
+   - continuity-intent bridge integrity (the governed answer row resolved or not),
+   - continuity-intent semantic answer status (PASS / SKIPPED / FAIL under `v1.6.16`),
+   - launcher primary recommendation (`start` / `resume` / `blocked`) on the inherited `v1.6.14` surface.
+21. If the bridged continuity-intent answer is `FAIL_REQUIRED`, launcher command discovery must fail-close that operator goal rather than relabeling a bare fresh start as continuity closure.
+22. The continuity answer surface must never inject or hardcode thread UUIDs; launcher-command lookup stays delegated to `v1.6.14`, while `v1.6.16` governs only the reentry task and evidence side.
 
 ### 2.11A Governed outer support surface boundary (frozen)
 

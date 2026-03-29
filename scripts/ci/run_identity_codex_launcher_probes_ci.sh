@@ -405,9 +405,13 @@ cp -R "${PROBE_RUNTIME_ROOT}" "${PROBE_REPAIR_RUNTIME_ROOT}"
 
 DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run.json"
 COMMANDS_JSON="${TMP_ROOT}/launcher-commands.json"
+CONTINUITY_INTENT_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-continuity-intent.json"
+CONTINUITY_INTENT_BLOCKED_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-continuity-intent-blocked.json"
 HEALTHY_PATH_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-healthy-path.json"
 NO_SESSION_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-no-session.json"
 INVALID_SESSION_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-invalid-session.json"
+INVALID_CONTINUITY_INTENT_STDOUT="${TMP_ROOT}/launcher-commands-invalid-continuity-intent.stdout"
+INVALID_CONTINUITY_INTENT_STDERR="${TMP_ROOT}/launcher-commands-invalid-continuity-intent.stderr"
 MISMATCH_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-catalog-mismatch.json"
 UNADMITTED_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-runtime-unadmitted.json"
 SHORTCUT_COMMANDS_JSON="${TMP_ROOT}/shortcut-launcher-commands.json"
@@ -515,6 +519,139 @@ assert payload["copyable_commands"]["resume"]["session_source"] == "explicit_ses
 assert payload["copyable_commands"]["resume"]["recommended"] == payload["recommended_resume_command"], payload
 assert payload["instance_answer_guidance"]["manual_command_assembly_forbidden"] is True, payload
 print("launcher_command_bundle_stripped_path_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --continuity-intent migrate_new_window --thread-id <thread-uuid> --session-id <session-id> --json-only (fresh-window continuity intent promotes fresh start)"
+"${BIN_DIR}/identity-codex" \
+  commands \
+  --identity-id "${IDENTITY_ID}" \
+  --continuity-intent migrate_new_window \
+  --thread-id "${HOST_THREAD_UUID}" \
+  --session-id "${SESSION_ID}" \
+  --json-only > "${CONTINUITY_INTENT_COMMANDS_JSON}"
+
+python3 - "${CONTINUITY_INTENT_COMMANDS_JSON}" "${HOST_THREAD_UUID}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+host_thread_uuid = sys.argv[2]
+assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["continuity_intent"] == "migrate_new_window", payload
+assert payload["continuity_intent_requested"] is True, payload
+assert payload["continuity_intent_bridge_status"] == "PASS_REQUIRED", payload
+assert payload["continuity_intent_bridge_reason"] == "bridged_governed_reentry_answer_row_resolved", payload
+assert payload["continuity_intent_owner_stream"] == "v1.6.16", payload
+assert payload["continuity_intent_question_family"] == "identity_context_reentry_recovery", payload
+assert payload["continuity_reentry_answer_bundle_status"] == "PASS_REQUIRED", payload
+assert payload["continuity_reentry_answer_bundle"]["requested_intent"] == "migrate_new_window", payload
+assert payload["continuity_reentry_answer_bundle"]["operator_surface_contract"]["launcher_command_lookup_delegated_to_v1_6_14"] is True, payload
+assert payload["operator_surface_contract"]["new_terminal_command_family_created"] is False, payload
+assert payload["operator_surface_contract"]["continuity_intent_bridge_projection_only"] is True, payload
+assert payload["operator_surface_contract"]["continuity_intent_answer_owner_stream"] == "v1.6.16", payload
+assert payload["operator_surface_contract"]["fresh_start_recommendation_not_equal_continuity_closure"] is True, payload
+assert payload["operator_surface_contract"]["thread_recovery_target_replacement_forbidden"] is True, payload
+assert payload["recommended_user_command"] == payload["recommended_start_command"], payload
+assert payload["recommended_user_command_kind"] == "start", payload
+assert payload["recommended_user_command_reason"] in {
+    "explicit_continuity_intent_promotes_fresh_start_surface",
+    "explicit_continuity_intent_without_governed_reentry_contract_promotes_fresh_start_surface",
+}, payload
+assert payload["recommended_resume_command"].endswith(f"resume {host_thread_uuid}"), payload
+assert payload["continuity_intent_status"] in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}, payload
+if payload["continuity_intent_status"] == "PASS_REQUIRED":
+    assert payload["recommended_followup_reentry_task_block"], payload
+    assert payload["continuity_reentry_answer"]["copyable_reentry_task_block"] == payload["recommended_followup_reentry_task_block"], payload
+    assert "governed_identity_context_reentry" in payload["recommended_followup_reentry_task_block"], payload
+else:
+    assert payload["recommended_followup_reentry_task_block"] == "", payload
+print("launcher_continuity_intent_alignment_status=PASS_REQUIRED")
+PY
+
+CONTINUITY_INTENT_BLOCKED_TASK="$(
+python3 - "${REPO_ROOT}" "${CATALOG_PATH}" "${IDENTITY_ID}" "${TMP_ROOT}/continuity-intent-blocked-pack" <<'PY'
+import shutil
+import sys
+from pathlib import Path
+
+repo_root = Path(sys.argv[1]).resolve()
+catalog_path = Path(sys.argv[2]).resolve()
+identity_id = sys.argv[3]
+dst_root = Path(sys.argv[4]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+from resolve_identity_context import resolve_identity  # type: ignore
+
+resolved = resolve_identity(
+    identity_id,
+    repo_catalog_path=(repo_root / "identity" / "catalog" / "identities.yaml").resolve(),
+    local_catalog_path=catalog_path,
+)
+src_root = Path(resolved["pack_path"]).resolve()
+if dst_root.exists():
+    shutil.rmtree(dst_root)
+shutil.copytree(src_root, dst_root)
+active_brief = dst_root / "runtime" / "state" / "context-continuity" / "active-reentry-brief.json"
+if active_brief.exists():
+    active_brief.unlink()
+print((dst_root / "CURRENT_TASK.json").resolve())
+PY
+)"
+
+echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --current-task ${CONTINUITY_INTENT_BLOCKED_TASK} --continuity-intent reload_after_clear --thread-id <thread-uuid> --session-id <session-id> --json-only (negative: bridge remains green while continuity intent lane blocks)"
+"${BIN_DIR}/identity-codex" \
+  commands \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${CONTINUITY_INTENT_BLOCKED_TASK}" \
+  --continuity-intent reload_after_clear \
+  --thread-id "${HOST_THREAD_UUID}" \
+  --session-id "${SESSION_ID}" \
+  --json-only > "${CONTINUITY_INTENT_BLOCKED_COMMANDS_JSON}"
+
+python3 - "${CONTINUITY_INTENT_BLOCKED_COMMANDS_JSON}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["continuity_intent"] == "reload_after_clear", payload
+assert payload["continuity_intent_requested"] is True, payload
+assert payload["continuity_intent_bridge_status"] == "PASS_REQUIRED", payload
+assert payload["continuity_intent_bridge_reason"] == "bridged_governed_reentry_answer_row_resolved", payload
+assert payload["continuity_intent_status"] == "FAIL_REQUIRED", payload
+assert payload["continuity_reentry_answer_bundle_status"] == "PASS_REQUIRED", payload
+assert payload["continuity_reentry_answer"]["status"] == "FAIL_REQUIRED", payload
+assert payload["recommended_user_command"] == "", payload
+assert payload["recommended_user_command_kind"] == "blocked", payload
+assert payload["recommended_user_command_reason"] == "explicit_continuity_intent_blocked_until_governed_reentry_ready", payload
+assert payload["recommended_followup_reentry_task_block"] == "", payload
+assert payload["operator_surface_contract"]["continuity_intent_bridge_projection_only"] is True, payload
+assert payload["operator_surface_contract"]["fresh_start_recommendation_not_equal_continuity_closure"] is True, payload
+assert payload["recommended_resume_command"], payload
+print("launcher_continuity_intent_failclose_split_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --continuity-intent invalid_intent --json-only (negative: invalid continuity intent must argparse-fail-close)"
+if "${BIN_DIR}/identity-codex" \
+  commands \
+  --identity-id "${IDENTITY_ID}" \
+  --continuity-intent invalid_intent \
+  --json-only > "${INVALID_CONTINUITY_INTENT_STDOUT}" 2> "${INVALID_CONTINUITY_INTENT_STDERR}"; then
+  echo "[FAIL] invalid continuity intent unexpectedly passed"
+  exit 1
+fi
+
+python3 - "${INVALID_CONTINUITY_INTENT_STDERR}" "${INVALID_CONTINUITY_INTENT_STDOUT}" <<'PY'
+import sys
+from pathlib import Path
+
+stderr = Path(sys.argv[1]).read_text(encoding="utf-8")
+stdout = Path(sys.argv[2]).read_text(encoding="utf-8")
+combined = stderr + "\n" + stdout
+assert "--continuity-intent" in combined, combined
+assert "invalid choice" in combined, combined
+print("launcher_invalid_continuity_intent_status=PASS_REQUIRED")
 PY
 
 echo "[RUN] PATH=${BIN_DIR}:<base> ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --thread-id <thread-uuid> --session-id <session-id> --json-only (healthy PATH: short launcher preferred)"
