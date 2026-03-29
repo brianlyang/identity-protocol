@@ -467,6 +467,68 @@ assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
+GATEWAY_SURFACE_ORDER_REPO="${TMP_ROOT}/gateway-surface-order-drift-repo"
+mirror_repo "${GATEWAY_SURFACE_ORDER_REPO}"
+python3 - <<'PY' "${GATEWAY_SURFACE_ORDER_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+section_marker = "## Root gateway-admissibility completeness discipline"
+next_heading = "## Root derivation completeness discipline"
+first = "1. required gateway-order, gateway-effect-target, and gateway-profile rows must remain explicit as separate machine-readable row families;"
+second = "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+swapped_first = "1. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+swapped_second = "2. required gateway-order, gateway-effect-target, and gateway-profile rows must remain explicit as separate machine-readable row families;"
+assert section_marker in text, text
+assert next_heading in text, text
+before, rest = text.split(section_marker, 1)
+section_body, sep, after = rest.partition(next_heading)
+assert sep, rest[:4000]
+assert first in section_body and second in section_body, section_body
+section_body = section_body.replace(first, "__TEMP__", 1)
+section_body = section_body.replace(second, swapped_second, 1)
+section_body = section_body.replace("__TEMP__", swapped_first, 1)
+path.write_text(before + section_marker + section_body + sep + after, encoding="utf-8")
+PY
+
+GATEWAY_SURFACE_ORDER_JSON="${TMP_ROOT}/gateway-surface-order-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_gateway_admissibility.py" \
+  --repo-root "${GATEWAY_SURFACE_ORDER_REPO}" \
+  --json-only >"${GATEWAY_SURFACE_ORDER_JSON}"; then
+  echo "[FAIL] gateway admissibility validator unexpectedly passed README gateway completeness surface order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${GATEWAY_SURFACE_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_gateway_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RGA-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert payload["gateway_admissibility_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["gateway_admissibility_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "gateway_admissibility_completeness_surface"
+    and row["reason"] == "gateway_admissibility_completeness_surface_order_mismatch"
+    for row in payload["admissibility_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "gateway_admissibility_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
 GATEWAY_BINDING_REPO="${TMP_ROOT}/gateway-binding-drift-repo"
 mirror_repo "${GATEWAY_BINDING_REPO}"
 python3 - <<'PY' "${GATEWAY_BINDING_REPO}/identity/protocol/README.md"
