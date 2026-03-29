@@ -61,6 +61,9 @@ from release_readiness_runtime_closure_convergence_common import (
 from terminal_truth_boundary_projection_common import (
     RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_SURFACE_CONSTRAINTS,
 )
+from runtime_summary_surface_governance_common import (
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -263,7 +266,7 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             *FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
             "stable prewrite snapshot",
             "scripts/run_release_readiness_continuation.py",
-            "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
+            RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE,
             "scripts/ci/run_three_plane_health_projection_probes_ci.sh",
             "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh",
             "scripts/ci/run_release_readiness_continuation_probes_ci.sh",
@@ -304,7 +307,7 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             *FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
             "stable prewrite snapshot",
             "scripts/run_release_readiness_continuation.py",
-            "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
+            RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE,
             "scripts/ci/run_three_plane_health_projection_probes_ci.sh",
             "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh",
             "scripts/ci/run_release_readiness_continuation_probes_ci.sh",
@@ -346,7 +349,7 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "resume_capture_mode=stable_prewrite_snapshot",
             "same_path_as_summary_out",
             "scripts/run_release_readiness_continuation.py",
-            "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
+            RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE,
             "scripts/ci/run_three_plane_health_projection_probes_ci.sh",
             "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh",
             "scripts/ci/run_release_readiness_continuation_probes_ci.sh",

@@ -10,6 +10,9 @@ from release_readiness_repo_global_closure_projection_common import (
 from release_readiness_required_gate_bundle_projection_common import (
     RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
 )
+from runtime_summary_surface_governance_common import (
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE,
+)
 
 
 RELEASE_CLOSURE_CONTINUATION_IN_PROGRESS_MARKER = "summary_lifecycle_status=IN_PROGRESS"
@@ -41,7 +44,7 @@ RELEASE_CLOSURE_CONTINUATION_BASE_MARKERS: tuple[str, ...] = (
     RELEASE_CLOSURE_CONTINUATION_CHECKPOINT_KIND_MARKER,
     RELEASE_CLOSURE_CONTINUATION_STABLE_PREWRITE_SNAPSHOT_MARKER,
     RELEASE_CLOSURE_CONTINUATION_RUNNER_MARKER,
-    "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE,
     "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh",
     "scripts/ci/run_release_readiness_continuation_probes_ci.sh",
     "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",

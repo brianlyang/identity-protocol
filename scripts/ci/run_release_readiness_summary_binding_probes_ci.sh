@@ -52,6 +52,9 @@ from release_readiness_repo_global_closure_projection_common import (
 from release_readiness_selected_check_scope_common import (
     RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
 )
+from runtime_summary_surface_governance_common import (
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_SUMMARY_KEY,
+)
 import release_readiness_check as readiness
 from runtime_temp_path_common import runtime_temp_file
 
@@ -140,7 +143,7 @@ assert summary_targeted_subset_excluded['identity_codex_launcher']['status'] == 
 assert summary_targeted_subset_excluded['identity_experience_writeback']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['runtime_file_boundary_governance']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['required_gate_surface_drift']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
-assert summary_targeted_subset_excluded['runtime_summary_surface_governance_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded[RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_SUMMARY_KEY]['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['release_readiness_one_look_topology_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['release_readiness_repo_global_closure_topology_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['release_readiness_active_runtime_closure_topology_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
@@ -287,7 +290,7 @@ summary_release_projection = {
     'terminal_truth_boundary_outer_surface_e2e_probe': {
         'status': 'PASS_REQUIRED',
     },
-    'runtime_summary_surface_governance_probe': {
+    RUNTIME_SUMMARY_SURFACE_GOVERNANCE_PROBE_SUMMARY_KEY: {
         'status': 'PASS_REQUIRED',
     },
     'release_readiness_one_look_topology_probe': {
