@@ -10,6 +10,9 @@ from release_closure_doc_common import (
     parse_release_closure_issue_register,
     resolve_release_closure_doc_paths,
 )
+from release_closure_required_doc_bundle_common import (
+    collect_release_closure_boundary_required_doc_bundle_stale_reasons,
+)
 from release_closure_foundational_marker_common import (
     collect_release_closure_boundary_foundational_bundle_stale_reasons,
     collect_release_closure_foundational_philosophy_bundle_stale_reasons,
@@ -73,18 +76,16 @@ def main() -> int:
         "stale_reasons": [],
     }
 
-    try:
-        for path in (
-            docs.philosophy_path,
-            docs.protocol_path,
-            docs.runtime_path,
-            docs.issue_register_path,
-            docs.governance_path,
-            docs.review_path,
-        ):
-            if not path.exists():
-                raise FileNotFoundError(f"missing_required_doc:{path}")
+    stale_reasons = collect_release_closure_boundary_required_doc_bundle_stale_reasons(
+        repo_root
+    )
+    if stale_reasons:
+        payload["error_code"] = ERR_RELEASE_CLOSURE
+        payload["stale_reasons"] = stale_reasons
+        _emit(payload, json_only=args.json_only)
+        return 1
 
+    try:
         philosophy_text = _read(docs.philosophy_path)
         _read(docs.protocol_path)
         _read(docs.runtime_path)
@@ -102,7 +103,7 @@ def main() -> int:
     payload["current_issue_horizon"] = highest_issue
     payload["highest_closed_v16_stream_version"] = highest_version
 
-    stale_reasons: list[str] = []
+    stale_reasons = []
 
     stale_reasons.extend(
         collect_release_closure_foundational_philosophy_bundle_stale_reasons(
