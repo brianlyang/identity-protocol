@@ -26,9 +26,18 @@ RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CHECKER_MARKERS: tuple[str, ...] =
 RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_TARGET_MARKERS: tuple[str, ...] = (
     *workspace_runtime_closure_target_scripts(),
 )
+RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_PROBE_MARKER = (
+    "scripts/ci/run_identity_transport_fleet_closure_convergence_probes_ci.sh"
+)
+RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_PROBE_MARKER = (
+    "scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh"
+)
+RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_RUNNER_MARKER = (
+    "scripts/run_workspace_runtime_closure_checks.py"
+)
 
 RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS: tuple[str, ...] = (
-    "scripts/ci/run_identity_transport_fleet_closure_convergence_probes_ci.sh",
+    RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_PROBE_MARKER,
     "runtime_fleet_closure_common.py",
     FLEET_PROJECTION_POLICY_ID,
     *RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CHECKER_MARKERS,
@@ -37,7 +46,7 @@ RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS: tuple[str, ...] =
 )
 
 RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS: tuple[str, ...] = (
-    "scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh",
+    RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_PROBE_MARKER,
     "runtime_pack_closure_common.py",
     PACK_SCAN_POLICY_ID,
     *RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CHECKER_MARKERS,
@@ -47,7 +56,7 @@ RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS: tuple[str, ..
 
 RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_CONVERGENCE_MARKERS: tuple[str, ...] = (
     "workspace_runtime_closure_command_common.py",
-    "scripts/run_workspace_runtime_closure_checks.py",
+    RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_RUNNER_MARKER,
     "scripts/ci/run_required_runtime_gates_ci.sh",
     WORKSPACE_RUNTIME_CLOSURE_RUNNER_GOVERNANCE_PROBE_SCRIPT,
     "release_readiness_check.py",
