@@ -17,27 +17,27 @@ REVIEW_SHADOW_PATH="${SHADOW_ROOT}/docs/review/protocol-remediation-audit-ledger
 stable_prewrite_snapshot_marker="$(
   resolve_python_module_expression \
     "release_closure_continuation_marker_common" \
-    "'stable prewrite snapshot'"
+    "RELEASE_CLOSURE_CONTINUATION_STABLE_PREWRITE_SNAPSHOT_MARKER"
 )"
 caller_cwd_marker="$(
   resolve_python_module_expression \
     "release_closure_continuation_marker_common" \
-    "'caller cwd'"
+    "RELEASE_CLOSURE_CONTINUATION_CALLER_CWD_MARKER"
 )"
 transport_fleet_probe_marker="$(
   resolve_python_module_expression \
     "release_readiness_runtime_closure_convergence_common" \
-    "RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS[0]"
+    "RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_PROBE_MARKER"
 )"
 active_runtime_pack_probe_marker="$(
   resolve_python_module_expression \
     "release_readiness_runtime_closure_convergence_common" \
-    "RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS[0]"
+    "RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_PROBE_MARKER"
 )"
 workspace_runtime_runner_marker="$(
   resolve_python_module_expression \
     "release_readiness_runtime_closure_convergence_common" \
-    "'scripts/run_workspace_runtime_closure_checks.py'"
+    "RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_RUNNER_MARKER"
 )"
 
 printf '[RUN] positive release-closure boundary operational-marker bundle validation\n'
