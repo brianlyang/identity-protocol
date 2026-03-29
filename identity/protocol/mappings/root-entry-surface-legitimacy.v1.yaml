@@ -33,25 +33,28 @@ anchor_checks:
   - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
     required_markers:
       - '### Entry-surface legitimacy row-family completeness must stay explicit'
-      - Required entry-class, differentiation, proof, limit, and collapse families
-        must remain explicit as separate machine-readable row families.
+      - "Required entry-class, differentiation, proof, limit, and collapse\nfamilies must remain explicit as separate machine-readable row families."
+      - "README root entry-surface legitimacy completeness discipline must\ntherefore stay congruent with admitted\nentry-surface-legitimacy-completeness rows rather than becoming a freehand\ncompleteness summary."
       - The machine world must not finalize entry-surface legitimacy while required
         row identity drift remains known only internally.
   - rel_path: identity/protocol/README.md
     required_markers:
       - '## Root entry-surface legitimacy completeness discipline'
       - Entry-surface legitimacy law is not a soft prose bundle.
+      - 'These entry-surface-legitimacy-completeness rules must remain bound to canonical entry-surface-legitimacy-completeness rows rather than drifting into soft summary prose.'
       - '1. required entry-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;'
   - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
     required_markers:
       - '## Root entry-surface legitimacy completeness boundary'
       - '1. Entry-surface legitimacy law must remain machine-readable as separate entry-class, differentiation, proof, limit, and collapse row families.'
       - '4. Protocol legality must not finalize entry-surface legitimacy truth while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root entry-surface legitimacy completeness discipline rendered at protocol root must remain congruent with admitted entry-surface-legitimacy-completeness rows rather than silently authoring an alternate completeness summary.'
   - rel_path: identity/protocol/IDENTITY_RUNTIME.md
     required_markers:
       - '## Runtime entry-surface legitimacy consumption boundary'
       - '1. Runtime consumes entry-surface legitimacy law as separate entry-class, differentiation, proof, limit, and collapse row families rather than as undifferentiated legitimacy prose.'
       - '4. Runtime must not finalize entry-surface legitimacy while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root entry-surface legitimacy completeness discipline as a governed completeness projection bound to admitted entry-surface-legitimacy-completeness rows rather than as a freehand completeness summary.'
 required_entry_class_rows:
   - order: 1
     entry_class_id: frozen_entry_definition
@@ -152,3 +155,19 @@ required_collapse_rows:
   - order: 6
     collapse_id: installation_visibility_as_entry_legality
     contract_phrase: 'visibility, installation presence, or easy discovery is treated as if it proved lawful entry admission.'
+entry_surface_legitimacy_completeness_rows:
+  - order: 1
+    completeness_id: explicit_entry_surface_legitimacy_row_families
+    contract_phrase: 'required entry-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - order: 2
+    completeness_id: congruent_entry_surface_legitimacy_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_entry_surface_legitimacy_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_entry_surface_legitimacy_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize entry-surface legitimacy truth while missing or unexpected row identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_entry_surface_legitimacy_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'

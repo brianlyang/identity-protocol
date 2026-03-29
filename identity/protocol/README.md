@@ -605,6 +605,7 @@ These prompt-bootstrap-completeness rules must remain bound to canonical prompt-
 ## Root entry-surface legitimacy completeness discipline
 
 Entry-surface legitimacy law is not a soft prose bundle.
+These entry-surface-legitimacy-completeness rules must remain bound to canonical entry-surface-legitimacy-completeness rows rather than drifting into soft summary prose.
 
 1. required entry-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
