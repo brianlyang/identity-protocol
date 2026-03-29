@@ -17,32 +17,32 @@ REVIEW_SHADOW_PATH="${SHADOW_ROOT}/docs/review/protocol-remediation-audit-ledger
 outer_surface_marker="$(
   resolve_python_module_expression \
     "release_closure_projection_companion_marker_bundle_common" \
-    "RELEASE_CLOSURE_BOUNDARY_OUTER_SURFACE_E2E_COMPANION_MARKERS[0]"
+    "RELEASE_CLOSURE_BOUNDARY_OUTER_SURFACE_E2E_COMPANION_MARKER"
 )"
 active_runtime_marker="$(
   resolve_python_module_expression \
     "release_closure_projection_companion_marker_bundle_common" \
-    "RELEASE_CLOSURE_BOUNDARY_ACTIVE_RUNTIME_COMPANION_MARKERS[0]"
+    "RELEASE_CLOSURE_BOUNDARY_ACTIVE_RUNTIME_COMPANION_MARKER"
 )"
 terminal_truth_bridge_marker="$(
   resolve_python_module_expression \
     "release_closure_projection_companion_marker_bundle_common" \
-    "RELEASE_CLOSURE_BOUNDARY_TERMINAL_TRUTH_BRIDGE_COMPANION_MARKERS[0]"
+    "RELEASE_CLOSURE_BOUNDARY_TERMINAL_TRUTH_BRIDGE_COMPANION_MARKER"
 )"
 post_closure_adjudication_marker="$(
   resolve_python_module_expression \
     "release_closure_projection_companion_marker_bundle_common" \
-    "RELEASE_CLOSURE_BOUNDARY_POST_CLOSURE_ADJUDICATION_COMPANION_MARKERS[0]"
+    "RELEASE_CLOSURE_BOUNDARY_POST_CLOSURE_ADJUDICATION_COMPANION_MARKER"
 )"
 root_grounding_marker="$(
   resolve_python_module_expression \
     "release_closure_projection_companion_marker_bundle_common" \
-    "RELEASE_CLOSURE_BOUNDARY_ROOT_GROUNDING_COMPANION_MARKERS[0]"
+    "RELEASE_CLOSURE_BOUNDARY_ROOT_GROUNDING_COMPANION_MARKER"
 )"
 repo_global_boundary_marker="$(
   resolve_python_module_expression \
     "release_closure_projection_companion_marker_bundle_common" \
-    "RELEASE_CLOSURE_BOUNDARY_REPO_GLOBAL_COMPANION_MARKERS[0]"
+    "RELEASE_CLOSURE_BOUNDARY_REPO_GLOBAL_COMPANION_MARKER"
 )"
 
 printf '[RUN] positive release-closure boundary projection-companion bundle validation\n'
