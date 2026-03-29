@@ -14,6 +14,7 @@ from release_readiness_active_runtime_closure_projection_common import (
 )
 from release_readiness_governance_probe_projection_common import (
     RELEASE_READINESS_GOVERNANCE_PROBE_SPECS,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_SUMMARY_KEY,
     RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_ONE_LOOK_FIELD,
     release_readiness_governance_probe_capture_script_map,
     release_readiness_governance_probe_structured_capture_specs,
@@ -90,7 +91,7 @@ EXPECTED_SURFACE_CONSTRAINTS: tuple[str, ...] = (
     "scripts/validate_release_readiness_terminal_truth_bridge.py",
     "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh",
 )
-EXPECTED_PROBE_SUMMARY_KEY = "release_readiness_terminal_truth_bridge_probe"
+EXPECTED_PROBE_SUMMARY_KEY = RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_SUMMARY_KEY
 EXPECTED_PROBE_ONE_LOOK_FIELD = RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_ONE_LOOK_FIELD
 EXPECTED_PROBE_STATUS_FIELDS: tuple[str, ...] = (
     "release_readiness_terminal_truth_bridge_probe_status",

@@ -27,7 +27,7 @@ terminal_truth_bridge_probe_command_literal="[\"bash\", \"${terminal_truth_bridg
 terminal_truth_bridge_probe_summary_key="$(
   resolve_python_module_expression \
     "release_readiness_governance_probe_projection_common" \
-    "next(spec.summary_key for spec in RELEASE_READINESS_GOVERNANCE_PROBE_SPECS if spec.one_look_field == RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_ONE_LOOK_FIELD)"
+    "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_SUMMARY_KEY"
 )"
 terminal_truth_bridge_probe_one_look_field="$(
   resolve_python_module_expression \
