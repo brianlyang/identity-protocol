@@ -470,4 +470,64 @@ assert any(
 ), payload
 PY
 
+SURFACE_ORDER_REPO="${TMP_ROOT}/protocol-instance-responsibility-completeness-surface-order-drift-repo"
+mirror_repo "${SURFACE_ORDER_REPO}"
+python3 - <<'PY' "${SURFACE_ORDER_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace(
+    "1. required layer, responsibility, escalation-trigger, escalation-proof, escalation-limit, and boundary-collapse rows must remain explicit as separate machine-readable families;\n"
+    "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    "2. required layer, responsibility, escalation-trigger, escalation-proof, escalation-limit, and boundary-collapse rows must remain explicit as separate machine-readable families;\n"
+    "1. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    1,
+)
+path.write_text(text, encoding="utf-8")
+PY
+
+SURFACE_ORDER_JSON="${TMP_ROOT}/protocol-instance-responsibility-completeness-surface-order-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_protocol_instance_responsibility.py" \
+  --repo-root "${SURFACE_ORDER_REPO}" \
+  --json-only >"${SURFACE_ORDER_JSON}"; then
+  echo "[FAIL] root protocol-instance responsibility validator unexpectedly passed completeness surface order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SURFACE_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_protocol_instance_responsibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RPIR-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert payload["protocol_instance_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["protocol_instance_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "protocol_instance_responsibility_completeness_surface"
+    and row["reason"] == "protocol_instance_responsibility_completeness_surface_order_mismatch"
+    for row in payload["responsibility_violations"]
+), payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md"
+    and row["reason"] == "required_marker_missing"
+    and row["marker"] == "1. required layer, responsibility, escalation-trigger, escalation-proof, escalation-limit, and boundary-collapse rows must remain explicit as separate machine-readable families;"
+    for row in payload["root_doc_anchor_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "protocol_instance_responsibility_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
 echo "[PASS] protocol root protocol-instance responsibility probes passed"
