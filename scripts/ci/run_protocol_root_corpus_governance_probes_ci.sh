@@ -19,6 +19,48 @@ PROBE_REL_PATHS=(
 
 protocol_root_probe_define_relpath_mirror "${PROBE_REL_PATHS[@]}"
 
+assert_stale_reason_present() {
+  local json_file="$1"
+  local expected_reason="$2"
+  python3 - <<'PY' "${json_file}" "${expected_reason}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+reason = sys.argv[2]
+assert reason in payload.get("stale_reasons", []), payload
+PY
+}
+
+bump_yaml_row_order_by_id() {
+  local path="$1"
+  local collection_key="$2"
+  local id_field="$3"
+  local row_id="$4"
+  python3 - <<'PY' "${path}" "${collection_key}" "${id_field}" "${row_id}"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+collection_key = sys.argv[2]
+id_field = sys.argv[3]
+row_id = sys.argv[4]
+
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+rows = doc[collection_key]
+for row in rows:
+    if str(row.get(id_field) or "") == row_id:
+        row["order"] = int(row["order"]) + 1
+        break
+else:
+    raise SystemExit(f"{row_id} not found in {collection_key}")
+
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+}
+
 export PROBE_FIXTURE_REPO_ROOT="${ROOT}"
 # shellcheck source=../probe_fixture_shell_common.sh
 source "${ROOT}/scripts/probe_fixture_shell_common.sh"
@@ -47,6 +89,11 @@ GOVERNANCE_COMPLETENESS_SURFACE_SECOND_PHRASE="$(
   resolve_python_module_expression \
     "validate_protocol_root_corpus_governance" \
     "list(EXPECTED_GOVERNANCE_COMPLETENESS_ROWS.values())[1]['contract_phrase']"
+)"
+GOVERNANCE_COMPLETENESS_ROW_NONCONTIG_ID="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_governance" \
+    "tuple(EXPECTED_GOVERNANCE_COMPLETENESS_ROWS.keys())[1]"
 )"
 
 
@@ -464,6 +511,55 @@ assert surface_row["unexpected_ids"] == [], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
+
+GOVERNANCE_COMPLETENESS_ROW_NONCONTIG_REPO="${TMP_ROOT}/governance-completeness-row-order-non-contiguous-repo"
+mirror_repo "${GOVERNANCE_COMPLETENESS_ROW_NONCONTIG_REPO}"
+bump_yaml_row_order_by_id \
+  "${GOVERNANCE_COMPLETENESS_ROW_NONCONTIG_REPO}/identity/protocol/mappings/root-corpus-registry.v1.yaml" \
+  "governance_completeness_rows" \
+  "completeness_id" \
+  "${GOVERNANCE_COMPLETENESS_ROW_NONCONTIG_ID}"
+
+GOVERNANCE_COMPLETENESS_ROW_NONCONTIG_JSON="${TMP_ROOT}/governance-completeness-row-order-non-contiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
+  --repo-root "${GOVERNANCE_COMPLETENESS_ROW_NONCONTIG_REPO}" \
+  --json-only >"${GOVERNANCE_COMPLETENESS_ROW_NONCONTIG_JSON}"; then
+  echo "[FAIL] root corpus governance validator unexpectedly passed governance completeness row order non-contiguous drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${GOVERNANCE_COMPLETENESS_ROW_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCG-002", payload
+assert payload["governance_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["governance_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["governance_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["governance_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "governance_completeness_rows"
+    and row["reason"] == "governance_completeness_rows_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "governance_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 5, payload
+assert completeness_row["missing_ids"] == [], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "PASS_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+assert_stale_reason_present \
+  "${GOVERNANCE_COMPLETENESS_ROW_NONCONTIG_JSON}" \
+  "structure_violation:governance_completeness_rows:governance_completeness_rows_order_non_contiguous"
 
 GOVERNANCE_BINDING_REPO="${TMP_ROOT}/governance-binding-drift-repo"
 mirror_repo "${GOVERNANCE_BINDING_REPO}"
