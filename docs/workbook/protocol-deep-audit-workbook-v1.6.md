@@ -1163,6 +1163,77 @@ Root cause:
   - `scripts/execute_identity_upgrade.py` now emits the same projection family on fresh runs;
   - direct runtime replay on the current workspace-local `base-repo-audit-expert-v3` execution report now fail-closes as non-clean terminal truth because the active report is still pre-mutation-gate blocked (`all_ok=false`, `writeback_status=MISSING`, `next_action=satisfy_pre_mutation_gate_and_rerun_update`), which is the intended new machine judgment.
 
+
+### ISSUE-040 - Chat history is being misused as handoff state and lane closure lacks a durable skeleton
+
+- `status`: CLOSED
+- `problem_statement`: accepted ISSUE-040 closure moved handoff, continuation, and reopen away from chat-native recap into machine-admitted lane-card, execution-receipt, and reopen-gate contracts. Workbook truth is synced to that accepted closure chain without reopening family semantics.
+- `primary_owner_doc`: `docs/governance/identity-lane-card-handoff-governance-v1.6.x.md`; `docs/governance/identity-lane-execution-receipt-governance-v1.6.x.md`; `docs/governance/identity-lane-reopen-gate-governance-v1.6.x.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-card-handoff.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-execution-receipt.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-reopen-gate.md`
+  - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
+- `machine_gate`:
+  - `c09a3a6` formalized `lane_card_handoff_contract_v1` with `no card, no handoff / no takeover`;
+  - `7dc829e32a4fc7a2a01757ed02aa15512aa790cb` formalized `lane_execution_receipt_contract_v1` with `no durable execution receipt, no continuation claim`;
+  - `908b8348d22c0583408cc6dfc4acd97217a03579` formalized `lane_reopen_gate_contract_v1` with machine-triggered reopen only.
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - no card, no handoff; no card, no takeover;
+  - no durable execution receipt, no continuation claim;
+  - reopen is machine-triggered only.
+- `current_evidence`:
+  - accepted closure chain: `c09a3a6` -> `7dc829e32a4fc7a2a01757ed02aa15512aa790cb` -> `908b8348d22c0583408cc6dfc4acd97217a03579`;
+  - workbook truth for ISSUE-040 is synchronized to the accepted lane-card handoff family and does not retain pending or OPEN state.
+
+### ISSUE-041 - Subagent/probe residue teardown is not part of closure and lifecycle governance is incomplete
+
+- `status`: CLOSED
+- `problem_statement`: accepted ISSUE-041 closure made residue teardown receipt, child runtime owner binding, and governed-root replay exclusion part of closure law. Workbook truth is synced to that accepted closure chain without reopening family semantics.
+- `primary_owner_doc`: `docs/governance/identity-residue-teardown-closure-governance-v1.6.x.md`; `docs/governance/identity-child-runtime-owner-binding-governance-v1.6.x.md`; `docs/governance/identity-governed-root-replay-exclusion-governance-v1.6.x.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-residue-teardown-closure.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-child-runtime-owner-binding.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-governed-root-replay-exclusion.md`
+  - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
+- `machine_gate`:
+  - `9fdb1114ed63a467846141a9049cc949f2b5e131` formalized `residue_teardown_closure_contract_v1` with required teardown receipt fields and `closure_incomplete_if_residue_teardown_missing`;
+  - `a929b0267f3c50a827b1385123f081f487806efd` formalized `child_runtime_owner_binding_admission_contract_v1` so unowned child tmp/probe/runtime roots are not admitted;
+  - `3aed210` formalized `governed_root_replay_exclusion_contract_v1` so nested governed-root replay is not admitted and guard cleanup may delete only machine-admitted stale residue.
+- `root_cause`: RC-01 and RC-06
+- `stop_condition`:
+  - closure is incomplete when teardown receipts are missing;
+  - child tmp/probe/runtime residue without owner binding is not admitted;
+  - nested governed-root replay is not admitted;
+  - guard cleanup deletes only machine-admitted stale residue and must not overreach live runtime.
+- `current_evidence`:
+  - accepted closure chain: `9fdb1114ed63a467846141a9049cc949f2b5e131` -> `a929b0267f3c50a827b1385123f081f487806efd` -> `3aed210`;
+  - workbook truth for ISSUE-041 is synchronized to the accepted lifecycle closure family and does not retain pending or OPEN state.
+
+### ISSUE-042 - Result-only execution accounting and fail-close closure gating are missing
+
+- `status`: CLOSED
+- `problem_statement`: accepted ISSUE-042 closure froze result-only progress, validation, and bounded closure gates so narrative effort cannot be mistaken for delivery. Workbook truth is synced to that accepted closure chain without reopening family semantics.
+- `primary_owner_doc`: `docs/governance/identity-result-only-progress-accounting-governance-v1.6.x.md`; `docs/governance/identity-validation-receipt-required-for-completion-governance-v1.6.x.md`; `docs/governance/identity-bounded-commit-required-for-closure-governance-v1.6.x.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-result-only-progress-accounting.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-validation-receipt-required-for-completion.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-bounded-commit-required-for-closure.md`
+  - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
+- `machine_gate`:
+  - `63fa59804fc2a2b49d44a1a96245e40ff02cf8e0` formalized `result_only_progress_accounting_contract_v1` with `not written = not progressed`;
+  - `e20fe7f7ce028463bcfa0dafbee3d857bfb1d62f` formalized `validation_receipt_required_for_completion_contract_v1` with `not validated = not complete`;
+  - `0dfbdcf6b52ad9c1f3df762dca4a3af4814471af` formalized `bounded_commit_required_for_closure_contract_v1` with `not committed = not closed`.
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - `not written = not progressed`;
+  - `not validated = not complete`;
+  - `not committed = not closed`.
+- `current_evidence`:
+  - accepted closure chain: `63fa59804fc2a2b49d44a1a96245e40ff02cf8e0` -> `e20fe7f7ce028463bcfa0dafbee3d857bfb1d62f` -> `0dfbdcf6b52ad9c1f3df762dca4a3af4814471af`;
+  - workbook truth for ISSUE-042 is synchronized to the accepted result-only closure family and does not retain pending or OPEN state.
+
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
 1. The rows below capture desensitized follow-on reinforcement for active streams; they are routed through this workbook so the protocol architect can land them on canonical governance/review surfaces without reopening the closed `ISSUE-001..024` correctness family.
