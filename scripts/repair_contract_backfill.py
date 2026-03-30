@@ -171,6 +171,7 @@ from identity_codex_launcher_common import (
     IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID,
     ensure_launcher_assets,
     ensure_launcher_contract,
+    launcher_command_discovery_doc,
     launcher_manifest_doc,
     launcher_readme_text,
 )
@@ -414,7 +415,7 @@ def _normalize_identity_codex_launcher_contract(task_doc: dict[str, Any], identi
     return []
 
 
-def _launcher_contract_invalid_keys(task_doc: dict[str, Any]) -> list[str]:
+def _launcher_contract_invalid_keys(task_doc: dict[str, Any], identity_id: str) -> list[str]:
     node = task_doc.get(IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY)
     if not isinstance(node, dict):
         return []
@@ -426,6 +427,7 @@ def _launcher_contract_invalid_keys(task_doc: dict[str, Any]) -> list[str]:
         or str(node.get("installer", "")).strip() != IDENTITY_CODEX_LAUNCHER_INSTALLER_ID
         or str(node.get("pack_manifest_relpath", "")).strip() != IDENTITY_CODEX_LAUNCHER_MANIFEST_REL.as_posix()
         or str(node.get("pack_readme_relpath", "")).strip() != IDENTITY_CODEX_LAUNCHER_README_REL.as_posix()
+        or node.get("command_discovery") != launcher_command_discovery_doc(identity_id)
     )
     return [IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY] if invalid else []
 
@@ -2791,7 +2793,7 @@ def main() -> int:
             or str((updated.get(k) or {}).get("fail_mode", "")).strip().lower() != "fail_required"
         )
     ]
-    launcher_invalid_after = _launcher_contract_invalid_keys(updated)
+    launcher_invalid_after = _launcher_contract_invalid_keys(updated, args.identity_id)
     continuity_invalid_after = _continuity_contract_invalid_keys(updated)
     dialogue_retention_invalid_after = _dialogue_retention_contract_invalid_keys(updated)
     artifact_family_routing_invalid_after = _artifact_family_routing_contract_invalid_keys(updated)

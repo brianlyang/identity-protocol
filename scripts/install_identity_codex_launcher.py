@@ -14,6 +14,8 @@ from identity_codex_launcher_common import (
     ensure_launcher_assets,
     ensure_launcher_contract,
     install_launcher_shims,
+    launcher_command_discovery_doc,
+    launcher_manifest_path,
     observe_launcher_surface,
     resolve_launcher_config_home,
     runtime_identity_home_for_catalog,
@@ -55,6 +57,9 @@ def main() -> int:
         task_path.write_text(json.dumps(task_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     asset_result = ensure_launcher_assets(pack_root, args.identity_id)
+    expected_command_discovery = launcher_command_discovery_doc(args.identity_id)
+    launcher_contract_doc = task_doc.get(IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY)
+    manifest_doc = json.loads(launcher_manifest_path(pack_root).read_text(encoding="utf-8"))
     bin_dir = Path(args.bin_dir).expanduser().resolve() if str(args.bin_dir or "").strip() else default_bin_dir()
     protocol_home = (
         Path(args.protocol_home).expanduser().resolve()
@@ -97,6 +102,9 @@ def main() -> int:
         "runtime_identity_home": str(runtime_identity_home),
         "contract_key": IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY,
         "contract_changed": contract_changed,
+        "contract_command_discovery_matches_expected": isinstance(launcher_contract_doc, dict)
+        and launcher_contract_doc.get("command_discovery") == expected_command_discovery,
+        "manifest_command_discovery_matches_expected": manifest_doc.get("command_discovery") == expected_command_discovery,
         "runtime_paths_env": str(runtime_paths_env),
         "operator_shell_path_hint": str(bin_dir),
         "absolute_generic_launcher_path": shim_result["generic_launcher_path"],

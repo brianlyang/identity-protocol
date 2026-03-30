@@ -716,6 +716,7 @@ def ensure_launcher_contract(task_doc: dict[str, Any], identity_id: str) -> bool
     base = launcher_contract_skeleton(identity_id)
     current = task_doc.get(IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY)
     merged = _deep_merge_defaults(base, current if isinstance(current, dict) else {})
+    merged["command_discovery"] = launcher_command_discovery_doc(identity_id)
     changed = merged != current
     task_doc[IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY] = merged
     return changed
