@@ -1259,15 +1259,16 @@ Root cause:
 
 ### ISSUE-045 - Lane segmented infrastructure admission is not frozen and handoff still depends on chat reconstruction
 
-- `status`: OPEN
-- `problem_statement`: active execution-loop closures eliminated chat-only continuation claims and unbounded residue replay, but continuation across a multi-layer lane still risks falling back to chat-native reconstruction because root/middle/tail admission, durable baton fields, and tail truth-sync non-reinterpretation are not yet frozen as one machine-admitted infrastructure law family.
-- `primary_owner_doc`: pending canonical governance landing (`TBD`)
+- `status`: CLOSED
+- `problem_statement`: active execution-loop closures eliminated chat-only continuation claims and unbounded residue replay, but continuation across a multi-layer lane still required one canonical law that freezes root/middle/tail admission, durable baton fields, and tail truth-sync non-reinterpretation on repo-visible owner surfaces instead of chat-native reconstruction.
+- `primary_owner_doc`: `docs/governance/identity-lane-segmented-infrastructure-admission-governance-v1.6.x.md`
 - `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-segmented-infrastructure-admission.md`
   - `docs/governance/identity-lane-card-handoff-governance-v1.6.x.md`
   - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-card-handoff.md`
   - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
   - `docs/governance/identity-issue-register-truth-sync-governance-v1.6.x.md`
-- `machine_gate`: pending formalization
+- `machine_gate`: canonical governance/review law freeze landed; segmented continuation must now consume repo-visible baton state and may not reopen semantics through chat recap or tail truth-sync
 - `root_cause`: RC-03 and RC-06
 - `stop_condition`:
   - root, middle, and tail lane segments must each have an admissible entry rule that does not require reopening full chat context;
@@ -1275,9 +1276,9 @@ Root cause:
   - tail truth-sync may synchronize accepted closure, but it must not reinterpret or replace accepted root law;
   - continuation and takeover must remain legal through machine-admitted baton surfaces rather than chat-native recap.
 - `current_evidence`:
-  - this workbook and the issue register now record ISSUE-045 as a distinct OPEN root-infra tracking lane;
-  - canonical governance/review ownership plus dedicated validator/probe coverage for segmented lane admission are not yet landed on authoritative owner surfaces;
-  - accepted ISSUE-040 / ISSUE-041 / ISSUE-042 closures remove major execution-loop failure modes, but they do not yet freeze segmented root/middle/tail lane infrastructure admission as its own machine-admitted law family.
+  - `docs/governance/identity-lane-segmented-infrastructure-admission-governance-v1.6.x.md` now freezes segmented entry rules for `root`, `middle`, and `tail`, the required baton field family, and the prohibition on chat-native takeover;
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-segmented-infrastructure-admission.md` now records the audit judgment that continuation must consume repo-visible baton surfaces, that execution-loop state fields (`planning_budget_status`, `scope_lock_status`, `mutation_phase_entry_status`, `repeated_plan_restatement_status`, `repeated_reanchor_status`, `repeated_compaction_without_progress_status`, `execution_loop_status`, `stale_reasons`) are machine-visible, and that `execution_loop_not_entering_mutation_phase` fail-closes repeated pre-mutation looping;
+  - accepted ISSUE-040 / ISSUE-041 / ISSUE-042 closures remain complementary upstream protections, while ISSUE-045 now closes the lane-segmentation law gap without reopening those earlier streams.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
