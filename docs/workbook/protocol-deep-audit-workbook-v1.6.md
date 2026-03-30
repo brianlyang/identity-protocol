@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 102`, `command snippets checked: 1230`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 102`, `command snippets checked: 1379`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -1233,6 +1233,29 @@ Root cause:
 - `current_evidence`:
   - accepted closure chain: `63fa59804fc2a2b49d44a1a96245e40ff02cf8e0` -> `e20fe7f7ce028463bcfa0dafbee3d857bfb1d62f` -> `0dfbdcf6b52ad9c1f3df762dca4a3af4814471af`;
   - workbook truth for ISSUE-042 is synchronized to the accepted result-only closure family and does not retain pending or OPEN state.
+
+### ISSUE-044 - Identity instance protocol delta adoption state is not machine-visible and relevant protocol drift is not fail-closed
+
+- `status`: CLOSED
+- `problem_statement`: accepted ISSUE-044 closure formalized a machine-visible protocol delta adoption bridge so the authoritative protocol head, last seen head, adopted head, relevant unadopted delta count, capability families, and fail-close stale reasons are recorded on one governed surface instead of being inferred from chat memory or ad hoc rerun judgment. Workbook truth is synced to that accepted closure without reopening ISSUE-040/041/042 execution-lifecycle semantics.
+- `primary_owner_doc`: `docs/governance/identity-instance-protocol-delta-adoption-governance-v1.6.x.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-instance-protocol-delta-adoption.md`
+  - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
+  - `docs/governance/identity-issue-register-truth-sync-governance-v1.6.x.md`
+- `machine_gate`:
+  - `ebfe53bfb5c124a0dd8bf50d13bbe8f1133a3acc` formalized `instance_protocol_delta_adoption_contract_v1` through `scripts/instance_protocol_delta_adoption_contract_common.py`, `scripts/validate_instance_protocol_delta_adoption.py`, and `scripts/ci/run_instance_protocol_delta_adoption_probes_ci.sh`, freezing `protocol_current_head`, `last_seen_protocol_commit`, `last_adopted_protocol_commit`, `capability_families`, `relevant_unadopted_commit_count`, `protocol_delta_adoption_status`, `protocol_delta_adoption_mode`, `state_path`, and `stale_reasons` as the canonical adoption-state family.
+- `root_cause`: RC-02 and RC-06
+- `stop_condition`:
+  - authoritative protocol truth must resolve from one authoritative root before adoption state is admitted;
+  - relevant protocol delta adoption remains pending until protocol owner surfaces and instance-local adoption markers are both ready;
+  - adopted head may advance only after current/seen/adopted separation and machine-written stale reasons are preserved on the governed state surface;
+  - `protocol_delta_adoption` remains semantically distinct from `instance_script_protocol_adoption`.
+- `current_evidence`:
+  - accepted closure commit: `ebfe53bfb5c124a0dd8bf50d13bbe8f1133a3acc`;
+  - direct validator replay `python3 scripts/validate_instance_protocol_delta_adoption.py --json-only` returns `PASS_REQUIRED`;
+  - direct probe replay `bash scripts/ci/run_instance_protocol_delta_adoption_probes_ci.sh` returns `PASS`;
+  - workbook and issue-register truth for ISSUE-044 now route this bridge as a distinct closed lane rather than reopening the ISSUE-040/041/042 execution-loop family.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
