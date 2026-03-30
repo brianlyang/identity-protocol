@@ -1234,7 +1234,33 @@ Root cause:
   - accepted closure chain: `63fa59804fc2a2b49d44a1a96245e40ff02cf8e0` -> `e20fe7f7ce028463bcfa0dafbee3d857bfb1d62f` -> `0dfbdcf6b52ad9c1f3df762dca4a3af4814471af`;
   - workbook truth for ISSUE-042 is synchronized to the accepted result-only closure family and does not retain pending or OPEN state.
 
-### ISSUE-044 - Identity instance protocol delta adoption state is not machine-visible and relevant protocol drift is not fail-closed
+## ISSUE-043 — non_owner_machine_law_reinforcement_admission_contract_v1
+
+- status: `CLOSED`
+- governing_law: `machine_law_reinforcement_may_be_admitted_from_root_middle_or_consumer_surfaces_without_redefining_accepted_root_law`
+- unique_delta_vs_issue_045: cross-layer whole-lane reinforcement completion may start from root, middle, or consumer layers and still complete the lane, but only through admitted reinforcement scope, preserved owner truth, and without redefining accepted root law.
+- reinforcement_entry_surface: `root|middle|consumer`
+- reinforcement_authority_source: `accepted_root_law_ref`
+- accepted_root_law_ref: `explicit_required`
+- reinforcement_scope_status: `bounded`
+- whole_lane_completion_target: `complete_whole_lane`
+- whole_lane_completion_status: `admitted`
+- non_owner_reinforcement_status: `admitted`
+- cross_layer_completion_admission_status: `admitted`
+- canonical_owner_truth_preservation_status: `preserved`
+- root_semantic_redefinition_status: `not_redefined`
+- stale_reasons: `[]`
+
+### Hard boundaries
+- preserve canonical owner truth
+- preserve accepted root law semantics
+- fail-close on silent whole-lane reopen
+- do not overwrite ISSUE-044 / ISSUE-045 truth
+- do not restate ISSUE-045 continuation / anti-loop law
+- do not restate ISSUE-046 runtime actuator law
+- do not restate ISSUE-044 adoption law
+
+## ISSUE-044
 
 - `status`: CLOSED
 - `problem_statement`: accepted ISSUE-044 closure formalized a machine-visible protocol delta adoption bridge so the authoritative protocol head, last seen head, adopted head, relevant unadopted delta count, capability families, and fail-close stale reasons are recorded on one governed surface instead of being inferred from chat memory or ad hoc rerun judgment. Workbook truth is synced to that accepted closure without reopening ISSUE-040/041/042 execution-lifecycle semantics.
