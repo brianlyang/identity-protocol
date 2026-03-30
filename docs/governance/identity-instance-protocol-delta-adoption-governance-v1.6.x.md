@@ -1,65 +1,66 @@
 # Identity Instance Protocol Delta Adoption Governance v1.6.x
 
-Minimal governance skeleton for instance_protocol_delta_adoption_contract_v1.
+## ISSUE-044 narrow absorb lane
 
-Instance protocol delta adoption must be machine-visible, writable, and reviewable.
-Protocol authority must resolve to a single authoritative protocol root before adoption can pass.
-Current protocol head, last seen protocol commit, and last adopted protocol commit must remain distinct.
-Only relevant capability families are scanned for delta adoption.
-Relevant protocol deltas must fail-close when authoritative protocol owner surfaces are not ready.
-Relevant protocol deltas must fail-close when instance-local adoption markers are missing.
-protocol_delta_adoption and instance_script_protocol_adoption must remain distinct.
+This governance surface materializes the narrow ISSUE-044 absorb lane for
+`instance_protocol_delta_adoption_contract_v1`.
 
-Required machine-visible instance protocol delta adoption fields:
-- protocol_current_head
-- last_seen_protocol_commit
-- last_adopted_protocol_commit
-- relevant_unadopted_commit_count
-- relevant_unadopted_commits
-- protocol_delta_adoption_status
-- protocol_delta_adoption_mode
-- capability_families
-- protocol_root
-- state_path
-- stale_reasons
+### absorbed protocol delta
 
-Required status values:
-- PASS_REQUIRED
-- FAIL_REQUIRED
+- absorbed_law_id: `scope_locked_mutation_phase_runtime_enforcement_contract_v1`
+- absorbed_protocol_delta_commit: `f616889`
+- absorb_only_boundary: `runtime-enforcement semantics remain defined by the root infra law; this lane only requires consumer-facing adoption surfaces to recognize and adopt that law as a relevant protocol delta`
 
-Required mode values:
-- continuous_protocol_delta_adoption_ready
-- relevant_protocol_delta_pending_adoption
-- protocol_owner_surface_not_ready
-- instance_local_adoption_markers_missing
-- protocol_authority_resolution_failed
+### governing requirement
 
-```json
-{
-  "lane_id": "instance_protocol_delta_adoption_contract_v1",
-  "governing_law": "relevant_protocol_delta_adoption_requires_protocol_and_local_readiness",
-  "fixed_write_set": [
-    "docs/governance/identity-instance-protocol-delta-adoption-governance-v1.6.x.md",
-    "docs/review/protocol-remediation-audit-ledger-v1.6.x-instance-protocol-delta-adoption.md",
-    "scripts/instance_protocol_delta_adoption_contract_common.py",
-    "scripts/validate_instance_protocol_delta_adoption.py",
-    "scripts/ci/run_instance_protocol_delta_adoption_probes_ci.sh"
-  ],
-  "layer_state": "protocol-instance-bridge",
-  "next_exact_action": [
-    "formalize instance protocol delta adoption only",
-    "freeze authoritative protocol head, last seen head, and last adopted head as separate machine-visible states",
-    "fail-close relevant protocol deltas when protocol owner surfaces or instance-local adoption markers are not ready"
-  ],
-  "validation_bundle": [
-    "TMPDIR=$PWD/.tmp python3 scripts/validate_instance_protocol_delta_adoption.py --json-only",
-    "TMPDIR=$PWD/.tmp bash scripts/ci/run_instance_protocol_delta_adoption_probes_ci.sh"
-  ],
-  "reopen_triggers": [
-    "validator/probe fail",
-    "same-file same-line conflict",
-    "fixed_write_set insufficiency only"
-  ],
-  "commit_gate": "one isolated commit for instance_protocol_delta_adoption_contract_v1 only"
-}
-```
+Consumer-facing identity instances must treat
+`scope_locked_mutation_phase_runtime_enforcement_contract_v1` as a relevant
+protocol delta and must surface it as adopted when the consumer-facing
+instance adoption surface claims current adoption.
+
+### machine-visible adoption requirement
+
+The consumer-facing adoption surface must keep the following machine-visible
+truth aligned:
+
+- `protocol_current_head`
+- `protocol_current_head_short`
+- `protocol_current_head_subject`
+- `last_seen_protocol_commit`
+- `last_adopted_protocol_commit`
+- `capability_family_count`
+- `capability_families`
+- `relevant_protocol_delta_laws`
+- `adopted_protocol_delta_laws`
+- `scanned_commit_count`
+- `relevant_unadopted_commit_count`
+- `relevant_unadopted_commits`
+- `protocol_delta_adoption_status`
+- `protocol_delta_adoption_mode`
+- `protocol_delta_state_written`
+- `protocol_root`
+- `policy_path`
+- `fallback_path`
+- `state_path`
+- `stale_reasons`
+
+### fail-close requirement
+
+Validation must fail-close when the consumer-facing adoption surface does not
+recognize `scope_locked_mutation_phase_runtime_enforcement_contract_v1` as a
+relevant adopted protocol delta.
+
+Required stale reason families include:
+
+- `relevant_protocol_delta_pending_adoption`
+- `protocol_authority_resolution_failed`
+- `protocol_owner_surface_not_ready`
+- `instance_local_adoption_markers_missing`
+- `relevant_unadopted_protocol_commits:scope_locked_mutation_phase_runtime_enforcement_contract_v1`
+- `runtime_guard_law_not_adopted:scope_locked_mutation_phase_runtime_enforcement_contract_v1`
+
+### adoption / enforcement boundary
+
+- `protocol_delta_adoption != runtime_enforcement_semantics`
+- this lane absorbs the runtime guard law into consumer-facing adoption logic
+- this lane does not redefine the runtime guard law itself
