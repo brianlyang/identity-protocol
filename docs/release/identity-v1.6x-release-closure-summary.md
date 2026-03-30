@@ -22,7 +22,7 @@ Execution mode: canonical static summary surface derived from the release-bounda
    - docs/workbook/protocol-issue-register-v1.6.md
    - docs/workbook/protocol-deep-audit-workbook-v1.6.md
 3. This document must not declare a release tag, replace runtime verdict surfaces, or replace a fleet-scope closure matrix.
-4. The authoritative current workbook horizon for this summary is `ISSUE-001` through `ISSUE-044`.
+4. The authoritative current workbook horizon for this summary is `ISSUE-001` through `ISSUE-045`.
 5. The highest currently closed `v1.6.x` stream version reflected by the workbook is `v1.6.21`.
 
 ## 1) Question class and authoritative answer surfaces

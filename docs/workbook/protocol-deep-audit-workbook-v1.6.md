@@ -1257,6 +1257,28 @@ Root cause:
   - direct probe replay `bash scripts/ci/run_instance_protocol_delta_adoption_probes_ci.sh` returns `PASS`;
   - workbook and issue-register truth for ISSUE-044 now route this bridge as a distinct closed lane rather than reopening the ISSUE-040/041/042 execution-loop family.
 
+### ISSUE-045 - Lane segmented infrastructure admission is not frozen and handoff still depends on chat reconstruction
+
+- `status`: OPEN
+- `problem_statement`: active execution-loop closures eliminated chat-only continuation claims and unbounded residue replay, but continuation across a multi-layer lane still risks falling back to chat-native reconstruction because root/middle/tail admission, durable baton fields, and tail truth-sync non-reinterpretation are not yet frozen as one machine-admitted infrastructure law family.
+- `primary_owner_doc`: pending canonical governance landing (`TBD`)
+- `secondary_refs`:
+  - `docs/governance/identity-lane-card-handoff-governance-v1.6.x.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-card-handoff.md`
+  - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
+  - `docs/governance/identity-issue-register-truth-sync-governance-v1.6.x.md`
+- `machine_gate`: pending formalization
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - root, middle, and tail lane segments must each have an admissible entry rule that does not require reopening full chat context;
+  - durable baton state must become machine-visible and bounded on repo surfaces, including fixed write set, layer state, next exact action, validation bundle, reopen triggers, and commit gate;
+  - tail truth-sync may synchronize accepted closure, but it must not reinterpret or replace accepted root law;
+  - continuation and takeover must remain legal through machine-admitted baton surfaces rather than chat-native recap.
+- `current_evidence`:
+  - this workbook and the issue register now record ISSUE-045 as a distinct OPEN root-infra tracking lane;
+  - canonical governance/review ownership plus dedicated validator/probe coverage for segmented lane admission are not yet landed on authoritative owner surfaces;
+  - accepted ISSUE-040 / ISSUE-041 / ISSUE-042 closures remove major execution-loop failure modes, but they do not yet freeze segmented root/middle/tail lane infrastructure admission as its own machine-admitted law family.
+
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
 1. The rows below capture desensitized follow-on reinforcement for active streams; they are routed through this workbook so the protocol architect can land them on canonical governance/review surfaces without reopening the closed `ISSUE-001..024` correctness family.
