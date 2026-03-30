@@ -12,6 +12,26 @@ export PROBE_FIXTURE_REPO_ROOT="${ROOT}"
 # shellcheck source=../probe_fixture_shell_common.sh
 source "${ROOT}/scripts/probe_fixture_shell_common.sh"
 
+AGENT_HANDOFF_STATUS_KEY="$(
+  resolve_python_module_constant "validate_protocol_root_agent_handoff" "STATUS_KEY"
+)"
+AGENT_HANDOFF_PASS_STATUS="$(
+  resolve_python_module_constant "validate_protocol_root_agent_handoff" "STATUS_PASS_REQUIRED"
+)"
+AGENT_HANDOFF_FAIL_STATUS="$(
+  resolve_python_module_constant "validate_protocol_root_agent_handoff" "STATUS_FAIL_REQUIRED"
+)"
+AGENT_HANDOFF_ERR_STRUCTURE="$(
+  resolve_python_module_constant "validate_protocol_root_agent_handoff" "ERR_STRUCTURE"
+)"
+AGENT_HANDOFF_ERR_HANDOFF="$(
+  resolve_python_module_constant "validate_protocol_root_agent_handoff" "ERR_HANDOFF"
+)"
+AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_ID="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_agent_handoff" \
+    "tuple(EXPECTED_AGENT_HANDOFF_COMPLETENESS_ROWS.keys())[0]"
+)"
 AGENT_HANDOFF_COMPLETENESS_NONCONTIG_ID="$(
   resolve_python_module_expression \
     "validate_protocol_root_agent_handoff" \
@@ -20,28 +40,66 @@ AGENT_HANDOFF_COMPLETENESS_NONCONTIG_ID="$(
 AGENT_HANDOFF_COMPLETENESS_SURFACE_SECTION_MARKER="$(
   resolve_python_module_expression \
     "validate_protocol_root_agent_handoff" \
-    "next(marker for marker in EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'] if marker == '## Root agent-handoff completeness discipline')"
+    "EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'][0]"
 )"
 AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_ORDER="$(
   resolve_python_module_expression \
     "validate_protocol_root_agent_handoff" \
-    "list(EXPECTED_AGENT_HANDOFF_COMPLETENESS_ROWS.values())[0]['order']"
+    "EXPECTED_AGENT_HANDOFF_COMPLETENESS_ROWS['${AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_ID}']['order']"
 )"
 AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_PHRASE="$(
   resolve_python_module_expression \
     "validate_protocol_root_agent_handoff" \
-    "list(EXPECTED_AGENT_HANDOFF_COMPLETENESS_ROWS.values())[0]['contract_phrase']"
+    "EXPECTED_AGENT_HANDOFF_COMPLETENESS_ROWS['${AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_ID}']['contract_phrase']"
 )"
+AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_DRIFT_PHRASE="${AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_PHRASE/handoff-limit, /}"
 AGENT_HANDOFF_COMPLETENESS_SURFACE_SECOND_ORDER="$(
   resolve_python_module_expression \
     "validate_protocol_root_agent_handoff" \
-    "list(EXPECTED_AGENT_HANDOFF_COMPLETENESS_ROWS.values())[1]['order']"
+    "EXPECTED_AGENT_HANDOFF_COMPLETENESS_ROWS['${AGENT_HANDOFF_COMPLETENESS_NONCONTIG_ID}']['order']"
 )"
 AGENT_HANDOFF_COMPLETENESS_SURFACE_SECOND_PHRASE="$(
   resolve_python_module_expression \
     "validate_protocol_root_agent_handoff" \
-    "list(EXPECTED_AGENT_HANDOFF_COMPLETENESS_ROWS.values())[1]['contract_phrase']"
+    "EXPECTED_AGENT_HANDOFF_COMPLETENESS_ROWS['${AGENT_HANDOFF_COMPLETENESS_NONCONTIG_ID}']['contract_phrase']"
 )"
+AGENT_HANDOFF_ROLE_DELEGATED_HEADING="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_agent_handoff" \
+    "EXPECTED_ROLE_ROWS['delegated_sub_agent_execution']['contract_heading']"
+)"
+AGENT_HANDOFF_IDENTITY_PROTOCOL_BOUNDARY_MARKER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_agent_handoff" \
+    "EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/IDENTITY_PROTOCOL.md'][0]"
+)"
+AGENT_HANDOFF_README_BINDING_MARKER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_agent_handoff" \
+    "EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'][2]"
+)"
+
+export AGENT_HANDOFF_STATUS_KEY
+export AGENT_HANDOFF_PASS_STATUS
+export AGENT_HANDOFF_FAIL_STATUS
+export AGENT_HANDOFF_ERR_STRUCTURE
+export AGENT_HANDOFF_ERR_HANDOFF
+export AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_ID
+export AGENT_HANDOFF_COMPLETENESS_NONCONTIG_ID
+export AGENT_HANDOFF_COMPLETENESS_SURFACE_SECTION_MARKER
+export AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_ORDER
+export AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_PHRASE
+export AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_DRIFT_PHRASE
+export AGENT_HANDOFF_COMPLETENESS_SURFACE_SECOND_ORDER
+export AGENT_HANDOFF_COMPLETENESS_SURFACE_SECOND_PHRASE
+export AGENT_HANDOFF_ROLE_DELEGATED_HEADING
+export AGENT_HANDOFF_IDENTITY_PROTOCOL_BOUNDARY_MARKER
+export AGENT_HANDOFF_README_BINDING_MARKER
+
+if [[ "${AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_DRIFT_PHRASE}" == "${AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_PHRASE}" ]]; then
+  echo "[FAIL] unable to derive agent-handoff completeness surface drift phrase"
+  exit 1
+fi
 
 PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_agent_handoff.py" \
@@ -50,11 +108,14 @@ python3 "${ROOT}/scripts/validate_protocol_root_agent_handoff.py" \
 
 python3 - <<'PY' "${PASS_JSON}"
 import json
+import os
 import pathlib
 import sys
 
+status_key = os.environ["AGENT_HANDOFF_STATUS_KEY"]
+pass_status = os.environ["AGENT_HANDOFF_PASS_STATUS"]
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_agent_handoff_status"] == "PASS_REQUIRED", payload
+assert payload[status_key] == pass_status, payload
 assert payload["role_count"] == 2, payload
 assert payload["payload_field_count"] == 10, payload
 assert payload["anchor_count"] == 5, payload
@@ -63,20 +124,20 @@ assert payload["handoff_limit_count"] == 5, payload
 assert payload["collapse_count"] == 5, payload
 assert payload["agent_handoff_completeness_row_count"] == 5, payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
-assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
+assert payload["root_doc_anchor_status"] == pass_status, payload
 assert payload["agent_handoff_row_family_count"] == 8, payload
-assert payload["agent_handoff_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["role_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["payload_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["anchor_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["handoff_proof_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["handoff_limit_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["collapse_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["agent_handoff_row_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_row_identity_projection_status"] == pass_status, payload
+assert payload["role_row_coverage_status"] == pass_status, payload
+assert payload["payload_row_coverage_status"] == pass_status, payload
+assert payload["anchor_row_coverage_status"] == pass_status, payload
+assert payload["handoff_proof_row_coverage_status"] == pass_status, payload
+assert payload["handoff_limit_row_coverage_status"] == pass_status, payload
+assert payload["collapse_row_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_row_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_row_identity_projection_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_surface_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_surface_identity_projection_status"] == pass_status, payload
 assert payload["agent_handoff_completeness_surface"]["entry_count"] == 5, payload
 assert payload["agent_handoff_completeness_surface"]["extraction_violations"] == [], payload
 assert [row["family_id"] for row in payload["row_family_projection_rows"]] == [
@@ -94,16 +155,18 @@ PY
 COMPLETENESS_ROW_REPO="${TMP_ROOT}/completeness-row-drift-repo"
 mirror_repo "${COMPLETENESS_ROW_REPO}"
 python3 - <<'PY' "${COMPLETENESS_ROW_REPO}/identity/protocol/mappings/root-agent-handoff.v1.yaml"
+import os
 import pathlib
 import sys
 import yaml
 
 path = pathlib.Path(sys.argv[1])
+expected_missing_id = os.environ["AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_ID"]
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
 doc["agent_handoff_completeness_rows"] = [
     row
     for row in doc["agent_handoff_completeness_rows"]
-    if row.get("completeness_id") != "explicit_agent_handoff_row_families"
+    if row.get("completeness_id") != expected_missing_id
 ]
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
@@ -118,16 +181,22 @@ fi
 
 python3 - <<'PY' "${COMPLETENESS_ROW_JSON}"
 import json
+import os
 import pathlib
 import sys
 
+status_key = os.environ["AGENT_HANDOFF_STATUS_KEY"]
+pass_status = os.environ["AGENT_HANDOFF_PASS_STATUS"]
+fail_status = os.environ["AGENT_HANDOFF_FAIL_STATUS"]
+structure_error = os.environ["AGENT_HANDOFF_ERR_STRUCTURE"]
+expected_missing_id = os.environ["AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_ID"]
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RAH-002", payload
+assert payload[status_key] == fail_status, payload
+assert payload["error_code"] == structure_error, payload
 assert any(
     row["field"] == "agent_handoff_completeness_rows"
     and row["reason"] == "missing_expected_rows"
-    and "explicit_agent_handoff_row_families" in row.get("completeness_ids", [])
+    and expected_missing_id in row.get("completeness_ids", [])
     for row in payload["structure_violations"]
 ), payload
 completeness_row = next(
@@ -136,16 +205,16 @@ completeness_row = next(
 )
 assert completeness_row["expected_count"] == 5, payload
 assert completeness_row["actual_count"] == 4, payload
-assert completeness_row["missing_ids"] == ["explicit_agent_handoff_row_families"], payload
+assert completeness_row["missing_ids"] == [expected_missing_id], payload
 assert completeness_row["unexpected_ids"] == [], payload
-assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
-assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
-assert payload["agent_handoff_row_coverage_status"] == "FAIL_REQUIRED", payload
-assert payload["agent_handoff_row_identity_projection_status"] == "FAIL_REQUIRED", payload
-assert payload["agent_handoff_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
-assert payload["agent_handoff_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
-assert payload["agent_handoff_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert completeness_row["coverage_status"] == fail_status, payload
+assert completeness_row["identity_projection_status"] == fail_status, payload
+assert payload["agent_handoff_row_coverage_status"] == fail_status, payload
+assert payload["agent_handoff_row_identity_projection_status"] == fail_status, payload
+assert payload["agent_handoff_completeness_row_coverage_status"] == fail_status, payload
+assert payload["agent_handoff_completeness_row_identity_projection_status"] == fail_status, payload
+assert payload["agent_handoff_completeness_surface_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_surface_identity_projection_status"] == pass_status, payload
 PY
 
 COMPLETENESS_ROW_ORDER_REPO="${TMP_ROOT}/completeness-row-order-noncontiguous-repo"
@@ -177,18 +246,23 @@ fi
 
 python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_JSON}"
 import json
+import os
 import pathlib
 import sys
 
+status_key = os.environ["AGENT_HANDOFF_STATUS_KEY"]
+pass_status = os.environ["AGENT_HANDOFF_PASS_STATUS"]
+fail_status = os.environ["AGENT_HANDOFF_FAIL_STATUS"]
+structure_error = os.environ["AGENT_HANDOFF_ERR_STRUCTURE"]
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RAH-002", payload
-assert payload["agent_handoff_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload[status_key] == fail_status, payload
+assert payload["error_code"] == structure_error, payload
+assert payload["agent_handoff_row_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_row_identity_projection_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_row_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_row_identity_projection_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_surface_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_surface_identity_projection_status"] == pass_status, payload
 assert any(
     row["field"] == "agent_handoff_completeness_rows"
     and row["reason"] == "agent_handoff_completeness_row_order_non_contiguous"
@@ -207,8 +281,8 @@ assert completeness_row["expected_count"] == 5, payload
 assert completeness_row["actual_count"] == 5, payload
 assert completeness_row["missing_ids"] == [], payload
 assert completeness_row["unexpected_ids"] == [], payload
-assert completeness_row["coverage_status"] == "PASS_REQUIRED", payload
-assert completeness_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert completeness_row["coverage_status"] == pass_status, payload
+assert completeness_row["identity_projection_status"] == pass_status, payload
 PY
 
 python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_JSON}"
@@ -226,13 +300,15 @@ PY
 COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/completeness-surface-drift-repo"
 mirror_repo "${COMPLETENESS_SURFACE_REPO}"
 python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
+import os
 import pathlib
 import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-old = "1. required role, payload, anchor, handoff-proof, handoff-limit, and collapse rows must remain explicit as separate machine-readable families;"
-new = "1. required role, payload, anchor, handoff-proof, and collapse rows must remain explicit as separate machine-readable families;"
+old = os.environ["AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_PHRASE"]
+new = os.environ["AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_DRIFT_PHRASE"]
+assert old != new, (old, new)
 assert old in text, text
 path.write_text(text.replace(old, new, 1), encoding="utf-8")
 PY
@@ -247,22 +323,29 @@ fi
 
 python3 - <<'PY' "${COMPLETENESS_SURFACE_JSON}"
 import json
+import os
 import pathlib
 import sys
 
+status_key = os.environ["AGENT_HANDOFF_STATUS_KEY"]
+pass_status = os.environ["AGENT_HANDOFF_PASS_STATUS"]
+fail_status = os.environ["AGENT_HANDOFF_FAIL_STATUS"]
+structure_error = os.environ["AGENT_HANDOFF_ERR_STRUCTURE"]
+surface_expected_phrase = os.environ["AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_PHRASE"]
+surface_drift_phrase = os.environ["AGENT_HANDOFF_COMPLETENESS_SURFACE_FIRST_DRIFT_PHRASE"]
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RAH-002", payload
+assert payload[status_key] == fail_status, payload
+assert payload["error_code"] == structure_error, payload
 assert any(
     row["field"] == "agent_handoff_completeness_surface"
     and row["reason"] == "missing_agent_handoff_completeness_surface_rows"
-    and "required role, payload, anchor, handoff-proof, handoff-limit, and collapse rows must remain explicit as separate machine-readable families;" in row.get("contract_phrases", [])
+    and surface_expected_phrase in row.get("contract_phrases", [])
     for row in payload["structure_violations"]
 ), payload
 assert any(
     row["field"] == "agent_handoff_completeness_surface"
     and row["reason"] == "extra_agent_handoff_completeness_surface_rows"
-    and "required role, payload, anchor, handoff-proof, and collapse rows must remain explicit as separate machine-readable families;" in row.get("contract_phrases", [])
+    and surface_drift_phrase in row.get("contract_phrases", [])
     for row in payload["structure_violations"]
 ), payload
 surface_row = next(
@@ -271,14 +354,14 @@ surface_row = next(
 )
 assert surface_row["expected_count"] == 5, payload
 assert surface_row["actual_count"] == 5, payload
-assert surface_row["missing_ids"] == ["required role, payload, anchor, handoff-proof, handoff-limit, and collapse rows must remain explicit as separate machine-readable families;"], payload
-assert surface_row["unexpected_ids"] == ["required role, payload, anchor, handoff-proof, and collapse rows must remain explicit as separate machine-readable families;"], payload
-assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
-assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
-assert payload["agent_handoff_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert surface_row["missing_ids"] == [surface_expected_phrase], payload
+assert surface_row["unexpected_ids"] == [surface_drift_phrase], payload
+assert surface_row["coverage_status"] == pass_status, payload
+assert surface_row["identity_projection_status"] == fail_status, payload
+assert payload["agent_handoff_completeness_row_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_row_identity_projection_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_surface_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_surface_identity_projection_status"] == fail_status, payload
 PY
 
 COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/completeness-surface-order-drift-repo"
@@ -299,13 +382,17 @@ fi
 
 python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_JSON}"
 import json
+import os
 import pathlib
 import sys
 
+status_key = os.environ["AGENT_HANDOFF_STATUS_KEY"]
+pass_status = os.environ["AGENT_HANDOFF_PASS_STATUS"]
+fail_status = os.environ["AGENT_HANDOFF_FAIL_STATUS"]
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
-assert payload["agent_handoff_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload[status_key] == fail_status, payload
+assert payload["agent_handoff_row_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_row_identity_projection_status"] == pass_status, payload
 assert any(
     row["field"] == "agent_handoff_completeness_surface"
     and row["reason"] == "agent_handoff_completeness_surface_order_mismatch"
@@ -317,10 +404,10 @@ surface_row = next(
 )
 assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
-assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
-assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert surface_row["coverage_status"] == pass_status, payload
+assert surface_row["identity_projection_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_surface_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_surface_identity_projection_status"] == pass_status, payload
 PY
 
 COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO="${TMP_ROOT}/completeness-surface-order-noncontiguous-repo"
@@ -342,18 +429,23 @@ fi
 
 python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"
 import json
+import os
 import pathlib
 import sys
 
+status_key = os.environ["AGENT_HANDOFF_STATUS_KEY"]
+pass_status = os.environ["AGENT_HANDOFF_PASS_STATUS"]
+fail_status = os.environ["AGENT_HANDOFF_FAIL_STATUS"]
+structure_error = os.environ["AGENT_HANDOFF_ERR_STRUCTURE"]
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RAH-002", payload
-assert payload["agent_handoff_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["agent_handoff_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload[status_key] == fail_status, payload
+assert payload["error_code"] == structure_error, payload
+assert payload["agent_handoff_row_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_row_identity_projection_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_row_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_row_identity_projection_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_surface_coverage_status"] == pass_status, payload
+assert payload["agent_handoff_completeness_surface_identity_projection_status"] == pass_status, payload
 assert any(
     row["field"] == "agent_handoff_completeness_surface"
     and row["reason"] == "agent_handoff_completeness_surface_order_non_contiguous"
@@ -372,8 +464,8 @@ assert surface_row["expected_count"] == 5, payload
 assert surface_row["actual_count"] == 5, payload
 assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
-assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
-assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert surface_row["coverage_status"] == pass_status, payload
+assert surface_row["identity_projection_status"] == pass_status, payload
 PY
 
 python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"
@@ -415,16 +507,20 @@ fi
 
 python3 - <<'PY' "${PROOF_JSON}"
 import json
+import os
 import pathlib
 import sys
 
+status_key = os.environ["AGENT_HANDOFF_STATUS_KEY"]
+fail_status = os.environ["AGENT_HANDOFF_FAIL_STATUS"]
+structure_error = os.environ["AGENT_HANDOFF_ERR_STRUCTURE"]
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RAH-002", payload
-assert payload["agent_handoff_row_coverage_status"] == "FAIL_REQUIRED", payload
-assert payload["agent_handoff_row_identity_projection_status"] == "FAIL_REQUIRED", payload
-assert payload["handoff_proof_row_coverage_status"] == "FAIL_REQUIRED", payload
-assert payload["handoff_proof_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload[status_key] == fail_status, payload
+assert payload["error_code"] == structure_error, payload
+assert payload["agent_handoff_row_coverage_status"] == fail_status, payload
+assert payload["agent_handoff_row_identity_projection_status"] == fail_status, payload
+assert payload["handoff_proof_row_coverage_status"] == fail_status, payload
+assert payload["handoff_proof_row_identity_projection_status"] == fail_status, payload
 assert any(
     row["reason"] == "missing_expected_rows" and "validation_track_separation_proof" in row.get("row_ids", [])
     for row in payload["structure_violations"]
@@ -461,16 +557,20 @@ fi
 
 python3 - <<'PY' "${ROLE_JSON}"
 import json
+import os
 import pathlib
 import sys
 
+status_key = os.environ["AGENT_HANDOFF_STATUS_KEY"]
+fail_status = os.environ["AGENT_HANDOFF_FAIL_STATUS"]
+structure_error = os.environ["AGENT_HANDOFF_ERR_STRUCTURE"]
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RAH-002", payload
-assert payload["agent_handoff_row_coverage_status"] == "FAIL_REQUIRED", payload
-assert payload["agent_handoff_row_identity_projection_status"] == "FAIL_REQUIRED", payload
-assert payload["role_row_coverage_status"] == "FAIL_REQUIRED", payload
-assert payload["role_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload[status_key] == fail_status, payload
+assert payload["error_code"] == structure_error, payload
+assert payload["agent_handoff_row_coverage_status"] == fail_status, payload
+assert payload["agent_handoff_row_identity_projection_status"] == fail_status, payload
+assert payload["role_row_coverage_status"] == fail_status, payload
+assert payload["role_row_identity_projection_status"] == fail_status, payload
 assert any(
     row["reason"] == "missing_expected_rows" and "delegated_sub_agent_execution" in row.get("row_ids", [])
     for row in payload["structure_violations"]
@@ -485,15 +585,16 @@ PY
 HEADING_REPO="${TMP_ROOT}/heading-drift-repo"
 mirror_repo "${HEADING_REPO}"
 python3 - <<'PY' "${HEADING_REPO}/identity/protocol/AGENT_HANDOFF_CONTRACT.md"
+import os
 import pathlib
 import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-old = "### 2. Delegated sub-agent execution role"
+heading = os.environ["AGENT_HANDOFF_ROLE_DELEGATED_HEADING"]
 new = "### 2. Delegated execution role"
-assert old in text, text
-path.write_text(text.replace(old, new, 1), encoding="utf-8")
+assert heading in text, text
+path.write_text(text.replace(heading, new, 1), encoding="utf-8")
 PY
 
 HEADING_JSON="${TMP_ROOT}/heading-drift.json"
@@ -506,14 +607,18 @@ fi
 
 python3 - <<'PY' "${HEADING_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RAH-003", payload
+fail_status = os.environ["AGENT_HANDOFF_FAIL_STATUS"]
+err_handoff = os.environ["AGENT_HANDOFF_ERR_HANDOFF"]
+heading = os.environ["AGENT_HANDOFF_ROLE_DELEGATED_HEADING"]
+assert payload["protocol_root_agent_handoff_status"] == fail_status, payload
+assert payload["error_code"] == err_handoff, payload
 assert any(
-    row["reason"] == "role_heading_missing" and row["marker"] == "### 2. Delegated sub-agent execution role"
+    row["reason"] == "role_heading_missing" and row["marker"] == heading
     for row in payload["contract_marker_violations"]
 ), payload
 PY
@@ -544,12 +649,13 @@ fi
 
 python3 - <<'PY' "${REGISTRY_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RAH-003", payload
+assert payload["protocol_root_agent_handoff_status"] == os.environ["AGENT_HANDOFF_FAIL_STATUS"], payload
+assert payload["error_code"] == os.environ["AGENT_HANDOFF_ERR_HANDOFF"], payload
 assert any(
     row["field"] == "root_corpus_registry" and row["reason"] == "contract_not_registered"
     for row in payload["integration_violations"]
@@ -582,12 +688,13 @@ fi
 
 python3 - <<'PY' "${ROUTING_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RAH-003", payload
+assert payload["protocol_root_agent_handoff_status"] == os.environ["AGENT_HANDOFF_FAIL_STATUS"], payload
+assert payload["error_code"] == os.environ["AGENT_HANDOFF_ERR_HANDOFF"], payload
 assert any(
     row["field"] == "root_corpus_question_routing" and row["reason"] == "routing_projection_question_classes_mismatch"
     for row in payload["integration_violations"]
@@ -597,12 +704,13 @@ PY
 DOC_ANCHOR_REPO="${TMP_ROOT}/doc-anchor-drift-repo"
 mirror_repo "${DOC_ANCHOR_REPO}"
 python3 - <<'PY' "${DOC_ANCHOR_REPO}/identity/protocol/IDENTITY_PROTOCOL.md"
+import os
 import pathlib
 import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-old = "## Root agent-handoff completeness boundary"
+old = os.environ["AGENT_HANDOFF_IDENTITY_PROTOCOL_BOUNDARY_MARKER"]
 new = "## Root agent-handoff boundary"
 assert old in text, text
 path.write_text(text.replace(old, new, 1), encoding="utf-8")
@@ -618,13 +726,14 @@ fi
 
 python3 - <<'PY' "${DOC_ANCHOR_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RAH-003", payload
-assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert payload["protocol_root_agent_handoff_status"] == os.environ["AGENT_HANDOFF_FAIL_STATUS"], payload
+assert payload["error_code"] == os.environ["AGENT_HANDOFF_ERR_HANDOFF"], payload
+assert payload["root_doc_anchor_status"] == os.environ["AGENT_HANDOFF_FAIL_STATUS"], payload
 assert any(
     reason.startswith("root_doc_anchor_violation:")
     for reason in payload["stale_reasons"]
@@ -632,7 +741,7 @@ assert any(
 assert any(
     row["rel_path"] == "identity/protocol/IDENTITY_PROTOCOL.md"
     and row["reason"] == "required_marker_missing"
-    and row["marker"] == "## Root agent-handoff completeness boundary"
+    and row["marker"] == os.environ["AGENT_HANDOFF_IDENTITY_PROTOCOL_BOUNDARY_MARKER"]
     for row in payload["root_doc_anchor_violations"]
 ), payload
 PY
@@ -640,12 +749,13 @@ PY
 README_BINDING_REPO="${TMP_ROOT}/readme-binding-drift-repo"
 mirror_repo "${README_BINDING_REPO}"
 python3 - <<'PY' "${README_BINDING_REPO}/identity/protocol/README.md"
+import os
 import pathlib
 import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-old = "These agent-handoff-completeness rules must remain bound to canonical agent-handoff-completeness rows rather than drifting into soft summary prose."
+old = os.environ["AGENT_HANDOFF_README_BINDING_MARKER"]
 new = "These agent-handoff rules may be summarized directly in README prose."
 assert old in text, text[:2500]
 path.write_text(text.replace(old, new, 1), encoding="utf-8")
@@ -661,16 +771,17 @@ fi
 
 python3 - <<'PY' "${README_BINDING_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RAH-003", payload
+assert payload["protocol_root_agent_handoff_status"] == os.environ["AGENT_HANDOFF_FAIL_STATUS"], payload
+assert payload["error_code"] == os.environ["AGENT_HANDOFF_ERR_HANDOFF"], payload
 assert any(
     row["rel_path"] == "identity/protocol/README.md"
     and row["reason"] == "required_marker_missing"
-    and row["marker"] == "These agent-handoff-completeness rules must remain bound to canonical agent-handoff-completeness rows rather than drifting into soft summary prose."
+    and row["marker"] == os.environ["AGENT_HANDOFF_README_BINDING_MARKER"]
     for row in payload["root_doc_anchor_violations"]
 ), payload
 PY

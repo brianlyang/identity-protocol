@@ -13,6 +13,7 @@ PROBE_REL_PATHS=(
   "scripts/root_corpus_authority_common.py"
   "scripts/root_corpus_question_routing_common.py"
   "scripts/root_corpus_derivation_common.py"
+  "scripts/root_corpus_transition_common.py"
   "scripts/validate_protocol_root_corpus_derivation.py"
   "scripts/registry_alias_control_plane_common.py"
   "scripts/repo_root_resolution_common.py"
@@ -27,29 +28,122 @@ source "${ROOT}/scripts/probe_fixture_shell_common.sh"
 
 DERIVATION_COMPLETENESS_SURFACE_SECTION_MARKER="$(
   resolve_python_module_expression \
+    "root_corpus_derivation_common" \
+    "DERIVATION_COMPLETENESS_SECTION_MARKER"
+)"
+TRANSITION_COMPLETENESS_SURFACE_SECTION_MARKER="$(
+  resolve_python_module_expression \
+    "root_corpus_transition_common" \
+    "TRANSITION_COMPLETENESS_SECTION_MARKER"
+)"
+DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY="$(
+  resolve_python_module_expression \
     "validate_protocol_root_corpus_derivation" \
-    "next(marker for marker in EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'] if marker.startswith('## Root ') and marker.endswith('completeness discipline'))"
+    "next(class_id for class_id, row in EXPECTED_CLASS_RULES.items() if not row['law_bearing_required'])"
+)"
+DERIVATION_CLASS_ROOT_CONTRACT="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_derivation" \
+    "next(class_id for class_id, row in EXPECTED_CLASS_RULES.items() if class_id in EXPECTED_CLASS_RULES[EXPECTED_CURRENT_TURN_ALLOWED_CLASS]['allowed_upstream_classes'] and row['law_bearing_required'] and len(tuple(row['allowed_upstream_classes'])) == 3)"
+)"
+DERIVATION_CLASS_BOTTOM_THEORY="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_derivation" \
+    "next(class_id for class_id, row in EXPECTED_CLASS_RULES.items() if not tuple(row['allowed_upstream_classes']))"
+)"
+DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY_ALIAS="${DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY}_alias"
+DERIVATION_COMPLETENESS_SURFACE_FIRST_ID="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_derivation" \
+    "tuple(EXPECTED_DERIVATION_COMPLETENESS_ROWS.keys())[0]"
+)"
+DERIVATION_COMPLETENESS_SURFACE_SECOND_ID="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_derivation" \
+    "tuple(EXPECTED_DERIVATION_COMPLETENESS_ROWS.keys())[1]"
 )"
 DERIVATION_COMPLETENESS_SURFACE_FIRST_ORDER="$(
   resolve_python_module_expression \
     "validate_protocol_root_corpus_derivation" \
-    "list(EXPECTED_DERIVATION_COMPLETENESS_ROWS.values())[0]['order']"
+    "EXPECTED_DERIVATION_COMPLETENESS_ROWS['${DERIVATION_COMPLETENESS_SURFACE_FIRST_ID}']['order']"
 )"
 DERIVATION_COMPLETENESS_SURFACE_FIRST_PHRASE="$(
   resolve_python_module_expression \
     "validate_protocol_root_corpus_derivation" \
-    "list(EXPECTED_DERIVATION_COMPLETENESS_ROWS.values())[0]['contract_phrase']"
+    "EXPECTED_DERIVATION_COMPLETENESS_ROWS['${DERIVATION_COMPLETENESS_SURFACE_FIRST_ID}']['contract_phrase']"
 )"
 DERIVATION_COMPLETENESS_SURFACE_SECOND_ORDER="$(
   resolve_python_module_expression \
     "validate_protocol_root_corpus_derivation" \
-    "list(EXPECTED_DERIVATION_COMPLETENESS_ROWS.values())[1]['order']"
+    "EXPECTED_DERIVATION_COMPLETENESS_ROWS['${DERIVATION_COMPLETENESS_SURFACE_SECOND_ID}']['order']"
 )"
 DERIVATION_COMPLETENESS_SURFACE_SECOND_PHRASE="$(
   resolve_python_module_expression \
     "validate_protocol_root_corpus_derivation" \
-    "list(EXPECTED_DERIVATION_COMPLETENESS_ROWS.values())[1]['contract_phrase']"
+    "EXPECTED_DERIVATION_COMPLETENESS_ROWS['${DERIVATION_COMPLETENESS_SURFACE_SECOND_ID}']['contract_phrase']"
 )"
+STATUS_PASS_REQUIRED="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_derivation" \
+    "STATUS_PASS_REQUIRED"
+)"
+STATUS_FAIL_REQUIRED="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_derivation" \
+    "STATUS_FAIL_REQUIRED"
+)"
+ERR_STRUCTURE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_derivation" \
+    "ERR_STRUCTURE"
+)"
+ERR_DERIVATION="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_derivation" \
+    "ERR_DERIVATION"
+)"
+EXPECTED_CURRENT_TURN_ALLOWED_CLASS="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_derivation" \
+    "EXPECTED_CURRENT_TURN_ALLOWED_CLASS"
+)"
+DERIVATION_COMPLETENESS_FAIL_CLOSE_ID="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_derivation" \
+    "max(EXPECTED_DERIVATION_COMPLETENESS_ROWS.items(), key=lambda item: int(item[1]['order']))[0]"
+)"
+README_DERIVATION_BINDING_MARKER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_derivation" \
+    "EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'][4]"
+)"
+README_ONE_WAY_DERIVATION_MARKER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_derivation" \
+    "EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'][0]"
+)"
+
+export \
+  DERIVATION_COMPLETENESS_SURFACE_SECTION_MARKER \
+  TRANSITION_COMPLETENESS_SURFACE_SECTION_MARKER \
+  DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY \
+  DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY_ALIAS \
+  DERIVATION_CLASS_ROOT_CONTRACT \
+  DERIVATION_CLASS_BOTTOM_THEORY \
+  DERIVATION_COMPLETENESS_SURFACE_FIRST_ID \
+  DERIVATION_COMPLETENESS_SURFACE_SECOND_ID \
+  DERIVATION_COMPLETENESS_SURFACE_FIRST_ORDER \
+  DERIVATION_COMPLETENESS_SURFACE_FIRST_PHRASE \
+  DERIVATION_COMPLETENESS_SURFACE_SECOND_ORDER \
+  DERIVATION_COMPLETENESS_SURFACE_SECOND_PHRASE \
+  STATUS_PASS_REQUIRED \
+  STATUS_FAIL_REQUIRED \
+  ERR_STRUCTURE \
+  ERR_DERIVATION \
+  EXPECTED_CURRENT_TURN_ALLOWED_CLASS \
+  DERIVATION_COMPLETENESS_FAIL_CLOSE_ID \
+  README_DERIVATION_BINDING_MARKER \
+  README_ONE_WAY_DERIVATION_MARKER
 
 
 PASS_JSON="${TMP_ROOT}/pass.json"
@@ -59,40 +153,46 @@ python3 "${ROOT}/scripts/validate_protocol_root_corpus_derivation.py" \
 
 python3 - <<'PY' "${PASS_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_corpus_derivation_status"] == "PASS_REQUIRED", payload
+assert payload["protocol_root_corpus_derivation_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
-assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
+assert payload["root_doc_anchor_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
 assert payload["derivation_row_family_count"] == 3, payload
-assert payload["derivation_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_class_profile_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_class_profile_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_class_profile_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_class_profile_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
 assert payload["derivation_completeness_row_count"] == 5, payload
 assert payload["derivation_completeness_surface"]["entry_count"] == 5, payload
 assert payload["derivation_completeness_surface"]["extraction_violations"] == [], payload
-assert payload["derivation_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
-assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
-assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
-assert payload["permitted_current_turn_root_corpus_class"] == "machine_registry_directory", payload
+assert payload["derivation_completeness_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_surface_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_surface_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert all(row["coverage_status"] == os.environ["STATUS_PASS_REQUIRED"] for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"] for row in payload["row_family_projection_rows"]), payload
+assert payload["permitted_current_turn_root_corpus_class"] == os.environ["EXPECTED_CURRENT_TURN_ALLOWED_CLASS"], payload
 PY
 
 MISSING_COMPLETENESS_REPO="${TMP_ROOT}/missing-completeness-repo"
 mirror_repo "${MISSING_COMPLETENESS_REPO}"
-python3 - <<'PY' "${MISSING_COMPLETENESS_REPO}/identity/protocol/mappings/root-corpus-derivation.v1.yaml"
+python3 - <<'PY' "${MISSING_COMPLETENESS_REPO}/identity/protocol/mappings/root-corpus-derivation.v1.yaml" "${DERIVATION_COMPLETENESS_FAIL_CLOSE_ID}"
 import pathlib
 import sys
 import yaml
 
 path = pathlib.Path(sys.argv[1])
+target_completeness_id = sys.argv[2]
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
-doc["derivation_completeness_rows"] = doc["derivation_completeness_rows"][:-1]
+doc["derivation_completeness_rows"] = [
+    row
+    for row in doc["derivation_completeness_rows"]
+    if row.get("completeness_id") != target_completeness_id
+]
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -106,22 +206,23 @@ fi
 
 python3 - <<'PY' "${MISSING_COMPLETENESS_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCD-002", payload
+assert payload["protocol_root_corpus_derivation_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["error_code"] == os.environ["ERR_STRUCTURE"], payload
 assert payload["derivation_row_family_count"] == 3, payload
 assert payload["derivation_completeness_row_count"] == 4, payload
-assert payload["derivation_row_coverage_status"] == "FAIL_REQUIRED", payload
-assert payload["derivation_row_identity_projection_status"] == "FAIL_REQUIRED", payload
-assert payload["derivation_class_profile_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_class_profile_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_row_coverage_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["derivation_row_identity_projection_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["derivation_class_profile_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_class_profile_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
 assert any(
     row["field"] == "derivation_completeness_rows"
     and row["reason"] == "missing_expected_rows"
-    and "fail_close_preserves_derivation_identity_projection" in row.get("completeness_ids", [])
+    and os.environ["DERIVATION_COMPLETENESS_FAIL_CLOSE_ID"] in row.get("completeness_ids", [])
     for row in payload["structure_violations"]
 ), payload
 completeness_row = next(
@@ -130,19 +231,20 @@ completeness_row = next(
 )
 assert completeness_row["expected_count"] == 5, payload
 assert completeness_row["actual_count"] == 4, payload
-assert completeness_row["missing_ids"] == ["fail_close_preserves_derivation_identity_projection"], payload
+assert completeness_row["missing_ids"] == [os.environ["DERIVATION_COMPLETENESS_FAIL_CLOSE_ID"]], payload
 assert completeness_row["unexpected_ids"] == [], payload
-assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
-assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
-assert payload["derivation_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
-assert payload["derivation_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
-assert payload["derivation_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert completeness_row["coverage_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert completeness_row["identity_projection_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["derivation_completeness_row_coverage_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["derivation_completeness_row_identity_projection_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["derivation_completeness_surface_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_surface_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
 PY
 
 MISSING_CLASS_REPO="${TMP_ROOT}/missing-class-repo"
 mirror_repo "${MISSING_CLASS_REPO}"
 python3 - <<'PY' "${MISSING_CLASS_REPO}/identity/protocol/mappings/root-corpus-derivation.v1.yaml"
+import os
 import pathlib
 import sys
 import yaml
@@ -151,7 +253,7 @@ path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
 doc["derivation_class_profiles"] = [
     row for row in doc["derivation_class_profiles"]
-    if row.get("corpus_class") != "demoted_support_directory"
+    if row.get("corpus_class") != os.environ["DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY"]
 ]
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
@@ -166,18 +268,21 @@ fi
 
 python3 - <<'PY' "${MISSING_CLASS_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCD-002", payload
-assert payload["derivation_row_coverage_status"] == "FAIL_REQUIRED", payload
-assert payload["derivation_row_identity_projection_status"] == "FAIL_REQUIRED", payload
-assert payload["derivation_class_profile_row_coverage_status"] == "FAIL_REQUIRED", payload
-assert payload["derivation_class_profile_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["protocol_root_corpus_derivation_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["error_code"] == os.environ["ERR_STRUCTURE"], payload
+assert payload["derivation_row_coverage_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["derivation_row_identity_projection_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["derivation_class_profile_row_coverage_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["derivation_class_profile_row_identity_projection_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
 assert any(
-    row["field"] == "derivation_class_profiles" and row["reason"] == "missing_registry_classes" and "demoted_support_directory" in row.get("corpus_classes", [])
+    row["field"] == "derivation_class_profiles"
+    and row["reason"] == "missing_registry_classes"
+    and os.environ["DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY"] in row.get("corpus_classes", [])
     for row in payload["structure_violations"]
 ), payload
 class_row = next(
@@ -186,19 +291,20 @@ class_row = next(
 )
 assert class_row["expected_count"] == 8, payload
 assert class_row["actual_count"] == 7, payload
-assert class_row["missing_ids"] == ["demoted_support_directory"], payload
+assert class_row["missing_ids"] == [os.environ["DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY"]], payload
 assert class_row["unexpected_ids"] == [], payload
-assert class_row["coverage_status"] == "FAIL_REQUIRED", payload
-assert class_row["identity_projection_status"] == "FAIL_REQUIRED", payload
-assert payload["derivation_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert class_row["coverage_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert class_row["identity_projection_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["derivation_completeness_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_surface_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_surface_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
 PY
 
 IDENTITY_REPO="${TMP_ROOT}/identity-drift-repo"
 mirror_repo "${IDENTITY_REPO}"
 python3 - <<'PY' "${IDENTITY_REPO}/identity/protocol/mappings/root-corpus-derivation.v1.yaml"
+import os
 import pathlib
 import sys
 import yaml
@@ -206,11 +312,13 @@ import yaml
 path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
 for row in doc["derivation_class_profiles"]:
-    if row.get("corpus_class") == "demoted_support_directory":
-        row["corpus_class"] = "demoted_support_directory_alias"
+    if row.get("corpus_class") == os.environ["DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY"]:
+        row["corpus_class"] = os.environ["DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY_ALIAS"]
         break
 else:
-    raise SystemExit("expected demoted_support_directory row not found")
+    raise SystemExit(
+        f"expected {os.environ['DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY']} row not found"
+    )
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -224,22 +332,27 @@ fi
 
 python3 - <<'PY' "${IDENTITY_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCD-002", payload
-assert payload["derivation_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_row_identity_projection_status"] == "FAIL_REQUIRED", payload
-assert payload["derivation_class_profile_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_class_profile_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["protocol_root_corpus_derivation_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["error_code"] == os.environ["ERR_STRUCTURE"], payload
+assert payload["derivation_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_row_identity_projection_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["derivation_class_profile_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_class_profile_row_identity_projection_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
 assert any(
-    row["field"] == "derivation_class_profiles" and row["reason"] == "missing_registry_classes" and "demoted_support_directory" in row.get("corpus_classes", [])
+    row["field"] == "derivation_class_profiles"
+    and row["reason"] == "missing_registry_classes"
+    and os.environ["DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY"] in row.get("corpus_classes", [])
     for row in payload["structure_violations"]
 ), payload
 assert any(
-    row["field"] == "derivation_class_profiles" and row["reason"] == "extra_unregistered_classes" and "demoted_support_directory_alias" in row.get("corpus_classes", [])
+    row["field"] == "derivation_class_profiles"
+    and row["reason"] == "extra_unregistered_classes"
+    and os.environ["DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY_ALIAS"] in row.get("corpus_classes", [])
     for row in payload["structure_violations"]
 ), payload
 class_row = next(
@@ -248,19 +361,19 @@ class_row = next(
 )
 assert class_row["expected_count"] == 8, payload
 assert class_row["actual_count"] == 8, payload
-assert class_row["missing_ids"] == ["demoted_support_directory"], payload
-assert class_row["unexpected_ids"] == ["demoted_support_directory_alias"], payload
-assert class_row["coverage_status"] == "PASS_REQUIRED", payload
-assert class_row["identity_projection_status"] == "FAIL_REQUIRED", payload
-assert payload["derivation_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert class_row["missing_ids"] == [os.environ["DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY"]], payload
+assert class_row["unexpected_ids"] == [os.environ["DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY_ALIAS"]], payload
+assert class_row["coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert class_row["identity_projection_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["derivation_completeness_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_surface_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_surface_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
 PY
 
 COMPLETENESS_ROW_ORDER_REPO="${TMP_ROOT}/derivation-completeness-row-order-noncontiguous-repo"
 mirror_repo "${COMPLETENESS_ROW_ORDER_REPO}"
-python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_REPO}/identity/protocol/mappings/root-corpus-derivation.v1.yaml" "congruent_derivation_row_family_totals"
+python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_REPO}/identity/protocol/mappings/root-corpus-derivation.v1.yaml" "${DERIVATION_COMPLETENESS_SURFACE_SECOND_ID}"
 import pathlib
 import sys
 import yaml
@@ -287,16 +400,17 @@ fi
 
 python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCD-002", payload
-assert payload["derivation_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["protocol_root_corpus_derivation_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["error_code"] == os.environ["ERR_STRUCTURE"], payload
+assert payload["derivation_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
 assert any(
     reason
     == "structure_violation:derivation_completeness_rows:derivation_completeness_row_order_non_contiguous"
@@ -312,14 +426,18 @@ PY
 SURFACE_REPO="${TMP_ROOT}/surface-drift-repo"
 mirror_repo "${SURFACE_REPO}"
 python3 - <<'PY' "${SURFACE_REPO}/identity/protocol/README.md"
+import os
 import pathlib
 import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-section_marker = "## Root derivation completeness discipline"
-next_marker = "\n---\n\n## Root transition completeness discipline"
-old = "2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;"
+section_marker = os.environ["DERIVATION_COMPLETENESS_SURFACE_SECTION_MARKER"]
+next_marker = "\n---\n\n" + os.environ["TRANSITION_COMPLETENESS_SURFACE_SECTION_MARKER"]
+old = (
+    f"{os.environ['DERIVATION_COMPLETENESS_SURFACE_SECOND_ORDER']}. "
+    f"{os.environ['DERIVATION_COMPLETENESS_SURFACE_SECOND_PHRASE']}"
+)
 new = "2. expected row-family total and emitted row-family total may be summarized informally once counts look green;"
 assert section_marker in text, text
 assert next_marker in text, text
@@ -340,13 +458,14 @@ fi
 
 python3 - <<'PY' "${SURFACE_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCD-002", payload
-assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
+assert payload["protocol_root_corpus_derivation_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["error_code"] == os.environ["ERR_STRUCTURE"], payload
+assert payload["root_doc_anchor_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
 assert any(
     row["field"] == "derivation_completeness_surface"
     and row["reason"] == "missing_derivation_completeness_surface_rows"
@@ -363,14 +482,14 @@ surface_row = next(
 )
 assert surface_row["expected_count"] == 5, payload
 assert surface_row["actual_count"] == 5, payload
-assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
-assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
-assert payload["derivation_class_profile_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_class_profile_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert surface_row["coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert surface_row["identity_projection_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["derivation_class_profile_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_class_profile_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_surface_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_surface_identity_projection_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
 PY
 
 COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/derivation-completeness-surface-order-drift-repo"
@@ -391,15 +510,16 @@ fi
 
 python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCD-003", payload
-assert payload["derivation_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert payload["protocol_root_corpus_derivation_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["error_code"] == os.environ["ERR_DERIVATION"], payload
+assert payload["derivation_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["root_doc_anchor_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
 assert any(
     row["field"] == "derivation_completeness_surface"
     and row["reason"] == "derivation_completeness_surface_order_mismatch"
@@ -417,14 +537,14 @@ assert surface_row["expected_count"] == 5, payload
 assert surface_row["actual_count"] == 5, payload
 assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
-assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
-assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_class_profile_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_class_profile_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert surface_row["coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert surface_row["identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_class_profile_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_class_profile_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_surface_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_surface_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
 PY
 
 COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO="${TMP_ROOT}/derivation-completeness-surface-order-non-contiguous-repo"
@@ -446,21 +566,22 @@ fi
 
 python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCD-002", payload
-assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_class_profile_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_class_profile_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
-assert payload["derivation_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["protocol_root_corpus_derivation_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["error_code"] == os.environ["ERR_STRUCTURE"], payload
+assert payload["root_doc_anchor_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_class_profile_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_class_profile_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_row_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_row_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_surface_coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert payload["derivation_completeness_surface_identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
 assert any(
     row["field"] == "derivation_completeness_surface"
     and row["reason"] == "derivation_completeness_surface_order_non_contiguous"
@@ -487,19 +608,20 @@ assert surface_row["expected_count"] == 5, payload
 assert surface_row["actual_count"] == 5, payload
 assert surface_row["missing_ids"] == [], payload
 assert surface_row["unexpected_ids"] == [], payload
-assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
-assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert surface_row["coverage_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
+assert surface_row["identity_projection_status"] == os.environ["STATUS_PASS_REQUIRED"], payload
 PY
 
 BINDING_REPO="${TMP_ROOT}/binding-drift-repo"
 mirror_repo "${BINDING_REPO}"
 python3 - <<'PY' "${BINDING_REPO}/identity/protocol/README.md"
+import os
 import pathlib
 import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-old = "These derivation-completeness rules must remain bound to canonical derivation-completeness rows rather than drifting into soft summary prose."
+old = os.environ["README_DERIVATION_BINDING_MARKER"]
 new = "These derivation completeness rules may be summarized freely once the main idea is understood."
 assert old in text, text
 path.write_text(text.replace(old, new, 1), encoding="utf-8")
@@ -515,17 +637,18 @@ fi
 
 python3 - <<'PY' "${BINDING_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCD-003", payload
-assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert payload["protocol_root_corpus_derivation_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["error_code"] == os.environ["ERR_DERIVATION"], payload
+assert payload["root_doc_anchor_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
 assert any(
     row["rel_path"] == "identity/protocol/README.md"
     and row["reason"] == "required_marker_missing"
-    and "These derivation-completeness rules must remain bound to canonical derivation-completeness rows rather than drifting into soft summary prose." in row.get("marker", "")
+    and os.environ["README_DERIVATION_BINDING_MARKER"] in row.get("marker", "")
     for row in payload["anchor_violations"]
 ), payload
 PY
@@ -533,6 +656,7 @@ PY
 SUPPORT_REPO="${TMP_ROOT}/support-parent-drift-repo"
 mirror_repo "${SUPPORT_REPO}"
 python3 - <<'PY' "${SUPPORT_REPO}/identity/protocol/mappings/root-corpus-derivation.v1.yaml"
+import os
 import pathlib
 import sys
 import yaml
@@ -540,8 +664,8 @@ import yaml
 path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
 for row in doc["derivation_class_profiles"]:
-    if row["corpus_class"] == "root_contract":
-        row["allowed_upstream_classes"].append("demoted_support_directory")
+    if row["corpus_class"] == os.environ["DERIVATION_CLASS_ROOT_CONTRACT"]:
+        row["allowed_upstream_classes"].append(os.environ["DERIVATION_CLASS_DEMOTED_SUPPORT_DIRECTORY"])
         break
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
@@ -556,15 +680,16 @@ fi
 
 python3 - <<'PY' "${SUPPORT_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCD-003", payload
+assert payload["protocol_root_corpus_derivation_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["error_code"] == os.environ["ERR_DERIVATION"], payload
 assert any(
     row["reason"] in {"law_bearing_class_must_not_derive_from_demoted_support", "allowed_upstream_classes_mismatch"}
-    and row.get("corpus_class") == "root_contract"
+    and row.get("corpus_class") == os.environ["DERIVATION_CLASS_ROOT_CONTRACT"]
     for row in payload["derivation_violations"]
 ), payload
 PY
@@ -572,6 +697,7 @@ PY
 QUESTION_REPO="${TMP_ROOT}/question-routing-drift-repo"
 mirror_repo "${QUESTION_REPO}"
 python3 - <<'PY' "${QUESTION_REPO}/identity/protocol/mappings/root-corpus-question-routing.v1.yaml"
+import os
 import pathlib
 import sys
 import yaml
@@ -580,7 +706,7 @@ path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
 doc["adjudication_redirect"]["forbidden_root_corpus_classes"] = [
     item for item in doc["adjudication_redirect"]["forbidden_root_corpus_classes"]
-    if item != "bottom_theory"
+    if item != os.environ["DERIVATION_CLASS_BOTTOM_THEORY"]
 ]
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
@@ -595,12 +721,13 @@ fi
 
 python3 - <<'PY' "${QUESTION_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCD-003", payload
+assert payload["protocol_root_corpus_derivation_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["error_code"] == os.environ["ERR_DERIVATION"], payload
 assert any(
     row["reason"] == "current_turn_forbidden_root_classes_mismatch"
     for row in payload["derivation_violations"]
@@ -610,13 +737,14 @@ PY
 ANCHOR_REPO="${TMP_ROOT}/anchor-drift-repo"
 mirror_repo "${ANCHOR_REPO}"
 python3 - <<'PY' "${ANCHOR_REPO}/identity/protocol/README.md"
+import os
 import pathlib
 import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-old = "## One-way derivation discipline"
-new = "## One way derivation discipline"
+old = os.environ["README_ONE_WAY_DERIVATION_MARKER"]
+new = old.replace("One-way", "One way", 1)
 assert old in text, text[:800]
 path.write_text(text.replace(old, new, 1), encoding="utf-8")
 PY
@@ -631,13 +759,14 @@ fi
 
 python3 - <<'PY' "${ANCHOR_JSON}"
 import json
+import os
 import pathlib
 import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCD-003", payload
-assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert payload["protocol_root_corpus_derivation_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
+assert payload["error_code"] == os.environ["ERR_DERIVATION"], payload
+assert payload["root_doc_anchor_status"] == os.environ["STATUS_FAIL_REQUIRED"], payload
 assert any(
     row["rel_path"] == "identity/protocol/README.md" and row["reason"] == "required_marker_missing"
     for row in payload["anchor_violations"]
