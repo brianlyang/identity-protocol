@@ -391,6 +391,11 @@ def main() -> int:
         stale_reasons.append("prompt_activation_mismatch")
     if report_exists and not binding_ok:
         stale_reasons.append("binding_tuple_mismatch")
+    if "report_older_than_key_inputs" in stale_reasons:
+        stale_reasons = [
+            reason for reason in stale_reasons
+            if reason != "prompt_activation_mismatch"
+        ]
     if not scaffold_baseline_ok:
         stale_reasons.extend(version_stale_reasons)
         if version_mismatches:
