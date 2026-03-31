@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 102`, `command snippets checked: 1379`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 102`, `command snippets checked: 1382`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -1234,9 +1234,9 @@ Root cause:
   - accepted closure chain: `63fa59804fc2a2b49d44a1a96245e40ff02cf8e0` -> `e20fe7f7ce028463bcfa0dafbee3d857bfb1d62f` -> `0dfbdcf6b52ad9c1f3df762dca4a3af4814471af`;
   - workbook truth for ISSUE-042 is synchronized to the accepted result-only closure family and does not retain pending or OPEN state.
 
-## ISSUE-043 — non_owner_machine_law_reinforcement_admission_contract_v1
+### ISSUE-043 - non_owner_machine_law_reinforcement_admission_contract_v1
 
-- status: `CLOSED`
+- `status`: CLOSED
 - governing_law: `machine_law_reinforcement_may_be_admitted_from_root_middle_or_consumer_surfaces_without_redefining_accepted_root_law`
 - unique_delta_vs_issue_045: cross-layer whole-lane reinforcement completion may start from root, middle, or consumer layers and still complete the lane, but only through admitted reinforcement scope, preserved owner truth, and without redefining accepted root law.
 - reinforcement_entry_surface: `root|middle|consumer`
@@ -1260,8 +1260,7 @@ Root cause:
 - do not restate ISSUE-046 runtime actuator law
 - do not restate ISSUE-044 adoption law
 
-## ISSUE-044
-status: CLOSED
+### ISSUE-044 - Identity instance protocol delta adoption state is not machine-visible and relevant protocol drift is not fail-closed
 
 - `status`: CLOSED
 - `problem_statement`: accepted ISSUE-044 closure formalized a machine-visible protocol delta adoption bridge so the authoritative protocol head, last seen head, adopted head, relevant unadopted delta count, capability families, and fail-close stale reasons are recorded on one governed surface instead of being inferred from chat memory or ad hoc rerun judgment. Workbook truth is synced to that accepted closure without reopening ISSUE-040/041/042 execution-lifecycle semantics.
@@ -1329,6 +1328,30 @@ status: CLOSED
   - direct probe replay `TMPDIR=$PWD/.tmp bash scripts/ci/run_execution_loop_after_mutation_not_closing_probes_ci.sh` returns `PASS`;
   - targeted regression replay `TMPDIR=$PWD/.tmp python3 scripts/validate_execution_loop_after_mutation_not_closing.py --targeted-regression mutation_entered_closeout_only --json-only` returns `PASS_REQUIRED`;
   - workbook and issue-register truth now land ISSUE-047 as the sole formal issue for the accepted phase-1 closure without rewriting the owner-surface invariant.
+
+### ISSUE-048 - Formal issue truth-sync and release-closure probe companion horizon are canonically synchronized
+
+- `status`: CLOSED
+- `problem_statement`: accepted phase-1 root-infra closure already froze `execution_loop_after_mutation_not_closing` on canonical owner surfaces, but release-closure workbook/register and the real probe companion horizon still needed one independent formal issue so long-term audit, release truth-sync, and probe expectations could converge on the same accepted anchor without reopening the phase-1 law.
+- `primary_owner_doc`: `docs/governance/identity-v1.6x-release-closure-governance.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md`
+  - `docs/release/identity-v1.6x-release-closure-summary.md`
+  - `scripts/release_closure_integrated_probe_common.py`
+- `machine_gate`: accepted phase-1 closure `1e0ce227daf87d2f7853c4d7ff8c964bdfe499b0` remains the sole owner-surface truth anchor; ISSUE-048 only lands formal workbook/register truth-sync plus release-closure probe companion sync and must not reopen or reinterpret the accepted phase-1 invariant.
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - ISSUE-048 must become the sole formal workbook/register issue for this release-closure truth-sync lane while preserving `1e0ce227daf87d2f7853c4d7ff8c964bdfe499b0` as the accepted truth anchor;
+  - release-closure governance/review/summary surfaces and the real probe companion helper must truth-sync the canonical workbook horizon to `ISSUE-048` without changing governing law, fail-close semantics, or probe class;
+  - once mutation-phase entry, staged paths, or validator/probe/targeted-regression evidence exists, allowed next actions remain collapsed to validator/probe/stage-and-commit or fail-close receipts, and any later reread/recap/re-anchor/reinspection must stay fail-closed as `execution_loop_after_mutation_not_closing`;
+  - ISSUE-043 / ISSUE-044 / ISSUE-045 / ISSUE-046, `protocol_lane_headstamp_continuity`, and other blockers remain out of scope for this formal issue truth-sync lane.
+- `current_evidence`:
+  - accepted phase-1 truth anchor: `1e0ce227daf87d2f7853c4d7ff8c964bdfe499b0`;
+  - accepted prior closed anchor remains `ISSUE-043` commit `fb7b5301626cb5d83504e9e94fe0e2cb9f787b7c`;
+  - release-closure governance/review/summary horizons now truth-sync to `ISSUE-048`;
+  - release-closure integrated probe companion now expects the canonical `ISSUE-048` horizon rather than a stale `ISSUE-047`;
+  - workbook and issue-register now land ISSUE-048 as the formal issue for release-closure truth-sync / probe companion sync without rewriting the accepted phase-1 owner-surface invariant.
+
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 

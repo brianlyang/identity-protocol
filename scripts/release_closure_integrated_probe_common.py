@@ -273,7 +273,7 @@ RELEASE_CLOSURE_SUMMARY_MAIN_PROBE_MUTATION_SPECS: tuple[LiteralMutationSpec, ..
 )
 
 RELEASE_CLOSURE_BOUNDARY_MAIN_PROBE_MUTATION_SPECS: tuple[LiteralMutationSpec, ...] = (
-    LiteralMutationSpec("`ISSUE-001` through `ISSUE-039`", "`ISSUE-001` through `ISSUE-038`"),
+    LiteralMutationSpec("`ISSUE-001` through `ISSUE-048`", "`ISSUE-001` through `ISSUE-047`"),
     LiteralMutationSpec("`v1.6.21`", "`v1.6.20`"),
     LiteralMutationSpec("creator/update admission lane", "update lane"),
     LiteralMutationSpec("summary_terminal_truth_boundary", "summary boundary aggregate"),
@@ -462,8 +462,8 @@ def _assert_release_closure_summary_probe_results(
 ) -> None:
     if positive.get("v16x_release_closure_summary_status") != STATUS_PASS_REQUIRED:
         raise SystemExit("positive release-closure summary status must PASS_REQUIRED")
-    if positive.get("current_issue_horizon") != "ISSUE-039":
-        raise SystemExit("positive release-closure summary must track ISSUE-039 horizon")
+    if positive.get("current_issue_horizon") != "ISSUE-048":
+        raise SystemExit("positive release-closure summary must track ISSUE-048 horizon")
     if positive.get("highest_closed_v16_stream_version") != "`v1.6.21`".strip("`"):
         raise SystemExit("positive release-closure summary must track highest closed v1.6 stream")
     if negative.get("v16x_release_closure_summary_status") != STATUS_FAIL_REQUIRED:
@@ -664,8 +664,8 @@ def _assert_release_closure_boundary_probe_results(
 ) -> None:
     if positive.get("v16x_release_closure_boundary_status") != STATUS_PASS_REQUIRED:
         raise SystemExit("positive release-closure boundary status must PASS_REQUIRED")
-    if positive.get("current_issue_horizon") != "ISSUE-039":
-        raise SystemExit("positive release-closure boundary must track ISSUE-039 horizon")
+    if positive.get("current_issue_horizon") != "ISSUE-048":
+        raise SystemExit("positive release-closure boundary must track ISSUE-048 horizon")
     if positive.get("highest_closed_v16_stream_version") != "`v1.6.21`".strip("`"):
         raise SystemExit("positive release-closure boundary must track highest closed v1.6 stream")
     if negative.get("v16x_release_closure_boundary_status") != STATUS_FAIL_REQUIRED:
@@ -733,7 +733,7 @@ def _assert_release_closure_boundary_probe_results(
     )
     _require_reason(
         reasons,
-        "governance_doc_stale_issue_horizon:ISSUE-038",
+        "governance_doc_stale_issue_horizon:ISSUE-047",
         "negative release-closure boundary must detect stale issue-horizon drift",
     )
     _require_reason(
