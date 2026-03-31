@@ -1241,9 +1241,9 @@ Root cause:
 - `status`: CLEAR
 - canonical_scope: no pending intake items are open in the current v1.6 workbook snapshot; the marker is retained so workbook family validation can resolve the pending-intake cluster surface without reinterpreting accepted issue truth.
 
-### ISSUE-043 — non_owner_machine_law_reinforcement_admission_contract_v1
+## ISSUE-043 — non_owner_machine_law_reinforcement_admission_contract_v1
 
-- `status`: CLOSED
+- status: `CLOSED`
 - governing_law: `machine_law_reinforcement_may_be_admitted_from_root_middle_or_consumer_surfaces_without_redefining_accepted_root_law`
 - unique_delta_vs_issue_045: cross-layer whole-lane reinforcement completion may start from root, middle, or consumer layers and still complete the lane, but only through admitted reinforcement scope, preserved owner truth, and without redefining accepted root law.
 - reinforcement_entry_surface: `root|middle|consumer`
@@ -1267,7 +1267,7 @@ Root cause:
 - do not restate ISSUE-046 runtime actuator law
 - do not restate ISSUE-044 adoption law
 
-### ISSUE-044 - Identity instance protocol delta adoption state is not machine-visible and relevant protocol drift is not fail-closed
+## ISSUE-044 - Identity instance protocol delta adoption state is not machine-visible and relevant protocol drift is not fail-closed
 
 - `status`: CLOSED
 - `problem_statement`: accepted ISSUE-044 closure formalized a machine-visible protocol delta adoption bridge so the authoritative protocol head, last seen head, adopted head, relevant unadopted delta count, capability families, and fail-close stale reasons are recorded on one governed surface instead of being inferred from chat memory or ad hoc rerun judgment. Workbook truth is synced to that accepted closure without reopening ISSUE-040/041/042 execution-lifecycle semantics.
