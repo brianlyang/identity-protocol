@@ -1261,6 +1261,7 @@ Root cause:
 - do not restate ISSUE-044 adoption law
 
 ## ISSUE-044
+status: CLOSED
 
 - `status`: CLOSED
 - `problem_statement`: accepted ISSUE-044 closure formalized a machine-visible protocol delta adoption bridge so the authoritative protocol head, last seen head, adopted head, relevant unadopted delta count, capability families, and fail-close stale reasons are recorded on one governed surface instead of being inferred from chat memory or ad hoc rerun judgment. Workbook truth is synced to that accepted closure without reopening ISSUE-040/041/042 execution-lifecycle semantics.
@@ -1305,6 +1306,29 @@ Root cause:
   - `docs/governance/identity-lane-segmented-infrastructure-admission-governance-v1.6.x.md` now freezes segmented entry rules for `root`, `middle`, and `tail`, the required baton field family, and the prohibition on chat-native takeover;
   - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-segmented-infrastructure-admission.md` now records the audit judgment that continuation must consume repo-visible baton surfaces, that execution-loop state fields (`planning_budget_status`, `scope_lock_status`, `mutation_phase_entry_status`, `repeated_plan_restatement_status`, `repeated_reanchor_status`, `repeated_compaction_without_progress_status`, `execution_loop_status`, `stale_reasons`) are machine-visible, and that `execution_loop_not_entering_mutation_phase` fail-closes repeated pre-mutation looping;
   - accepted ISSUE-040 / ISSUE-041 / ISSUE-042 closures remain complementary upstream protections, while ISSUE-045 now closes the lane-segmentation law gap without reopening those earlier streams.
+
+### ISSUE-047 - Execution-loop post-mutation closeout law is accepted but not canonically landed as a formal workbook/register issue
+
+- `status`: CLOSED
+- `problem_statement`: accepted phase-1 root-infra closure already formalized `execution_loop_after_mutation_not_closing` on canonical governance/review/common/validator/probe surfaces, but workbook/register had not yet landed that accepted closeout as one sole formal issue, leaving long-term audit and review without a canonical issue-routed truth anchor even though the owner-surface law was already accepted.
+- `primary_owner_doc`: `docs/governance/identity-execution-loop-after-mutation-not-closing-governance-v1.6.x.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-execution-loop-after-mutation-not-closing.md`
+  - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
+  - `docs/governance/identity-issue-register-truth-sync-governance-v1.6.x.md`
+- `machine_gate`: accepted phase-1 closure `1e0ce227daf87d2f7853c4d7ff8c964bdfe499b0` already freezes `execution_loop_after_mutation_not_closing`; workbook/register phase-2 only truth-syncs that accepted owner-surface law as the sole formal issue and must not reopen or reinterpret the phase-1 invariant.
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - ISSUE-047 must become the sole formal workbook/register issue for this lane while preserving `1e0ce227daf87d2f7853c4d7ff8c964bdfe499b0` as the accepted truth anchor;
+  - workbook/register may synchronize accepted closure only and must not reinterpret, replace, or originate the already accepted governance/review/common/validator/probe law;
+  - once mutation-phase entry, staged paths, or validator/probe/targeted-regression evidence exists, allowed next actions remain collapsed to validator/probe/stage-and-commit or fail-close receipts, and any later reread/recap/re-anchor/reinspection must stay fail-closed as `execution_loop_after_mutation_not_closing`;
+  - ISSUE-043 / ISSUE-044 / ISSUE-045 / ISSUE-046, `protocol_lane_headstamp_continuity`, and other blockers remain out of scope for this formal issue landing.
+- `current_evidence`:
+  - accepted closure commit: `1e0ce227daf87d2f7853c4d7ff8c964bdfe499b0`;
+  - direct validator replay `python3 scripts/validate_execution_loop_after_mutation_not_closing.py --json-only` returns `PASS_REQUIRED`;
+  - direct probe replay `TMPDIR=$PWD/.tmp bash scripts/ci/run_execution_loop_after_mutation_not_closing_probes_ci.sh` returns `PASS`;
+  - targeted regression replay `TMPDIR=$PWD/.tmp python3 scripts/validate_execution_loop_after_mutation_not_closing.py --targeted-regression mutation_entered_closeout_only --json-only` returns `PASS_REQUIRED`;
+  - workbook and issue-register truth now land ISSUE-047 as the sole formal issue for the accepted phase-1 closure without rewriting the owner-surface invariant.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
