@@ -163,9 +163,9 @@ def build_workbook_block() -> str:
             "- stale_reasons: `[]`",
         ]
     )
-    return f"""## ISSUE-043 — {CONTRACT_ID}
+    return f"""### ISSUE-043 — {CONTRACT_ID}
 
-- status: `CLOSED`
+- `status`: CLOSED
 - governing_law: `{GOVERNING_LAW}`
 - unique_delta_vs_issue_045: {UNIQUE_DELTA}
 {field_lines}
@@ -214,10 +214,10 @@ def _replace_section(text: str, start_pattern: str, end_pattern: str, replacemen
 def rewrite_workbook(path: Path = WORKBOOK_PATH) -> None:
     text = path.read_text(encoding="utf-8")
     block = build_workbook_block()
-    if re.search(r"^## ISSUE-043\b", text, re.M):
-        new_text = _replace_section(text, r"^## ISSUE-043\b", r"^## ISSUE-044\b", block)
-    elif re.search(r"^## ISSUE-044\b", text, re.M):
-        new_text = re.sub(r"^## ISSUE-044\b", block + "## ISSUE-044", text, count=1, flags=re.M)
+    if re.search(r"^### ISSUE-043\b", text, re.M):
+        new_text = _replace_section(text, r"^### ISSUE-043\b", r"^### ISSUE-044\b", block)
+    elif re.search(r"^### ISSUE-044\b", text, re.M):
+        new_text = re.sub(r"^### ISSUE-044\b", block + "### ISSUE-044", text, count=1, flags=re.M)
     else:
         raise ValueError("issue_044_section_anchor_not_found")
     path.write_text(new_text, encoding="utf-8")
@@ -289,7 +289,7 @@ def validate_payload(payload: Dict[str, Any]) -> List[str]:
 
 
 def extract_workbook_issue_043_block(text: str) -> str:
-    match = re.search(r"(^## ISSUE-043\b.*?)(?=^## ISSUE-044\b)", text, re.S | re.M)
+    match = re.search(r"(^### ISSUE-043\b.*?)(?=^### ISSUE-044\b)", text, re.S | re.M)
     if not match:
         raise ValueError("workbook_issue_043_block_missing")
     return match.group(1)
@@ -418,7 +418,7 @@ def validate_doc_tokens(label: str, text: str) -> List[str]:
 
 def validate_workbook_text(text: str) -> List[str]:
     errors: List[str] = []
-    if "## ISSUE-044" not in text:
+    if "### ISSUE-044" not in text:
         errors.append("workbook_issue_044_missing")
     if "## ISSUE-045" not in text:
         errors.append("workbook_issue_045_missing")
@@ -449,7 +449,7 @@ def validate_workbook_text(text: str) -> List[str]:
     for forbidden in FORBIDDEN_LEGACY_TOKENS + FORBIDDEN_SCOPE_TOKENS:
         if forbidden in block:
             errors.append(f"workbook_forbidden_token:{forbidden}")
-    if text.find("## ISSUE-043") > text.find("## ISSUE-044"):
+    if text.find("### ISSUE-043") > text.find("### ISSUE-044"):
         errors.append("workbook_issue_043_not_before_issue_044")
     return errors
 
