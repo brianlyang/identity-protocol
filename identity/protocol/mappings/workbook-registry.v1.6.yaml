@@ -17,7 +17,7 @@ template_contract:
   scaffold_projection_root: activity/evidence/workbook-projections
   projection_policy: optional_workspace_projection_exports
   projection_presence_policy: optional_projection
-  projection_freshness_mode: activation_required_before_freshness
+  projection_freshness_mode: boundary_markers_only
   current_pointer_activation_mode: explicit_current_pointer_switch_only
   current_pointer_activation_consent_token: workbook_current_pointer_switch_v1
   governance_doc: docs/governance/identity-workbook-governance-v1.6.md
@@ -37,12 +37,12 @@ active_workbook_family:
   projection_policy: optional_workspace_projection_exports
   projection_exports:
     - projection_role: issue_register_projection
-      path: activity/evidence/2026-03-20/identity-protocol-v160-v1612-issue-remediation-plan.md
+      path: activity/evidence/workbook-projections/v1.6/protocol-issue-register-v1.6.projection.md
       authority_doc: docs/workbook/protocol-issue-register-v1.6.md
       presence_policy: optional_projection
       freshness_mode: boundary_markers_only
     - projection_role: deep_audit_projection
-      path: activity/evidence/2026-03-20/identity-protocol-v160-v1612-five-round-deep-audit.md
+      path: activity/evidence/workbook-projections/v1.6/protocol-deep-audit-workbook-v1.6.projection.md
       authority_doc: docs/workbook/protocol-deep-audit-workbook-v1.6.md
       presence_policy: optional_projection
       freshness_mode: boundary_markers_only

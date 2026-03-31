@@ -1234,9 +1234,16 @@ Root cause:
   - accepted closure chain: `63fa59804fc2a2b49d44a1a96245e40ff02cf8e0` -> `e20fe7f7ce028463bcfa0dafbee3d857bfb1d62f` -> `0dfbdcf6b52ad9c1f3df762dca4a3af4814471af`;
   - workbook truth for ISSUE-042 is synchronized to the accepted result-only closure family and does not retain pending or OPEN state.
 
-## ISSUE-043 — non_owner_machine_law_reinforcement_admission_contract_v1
 
-- status: `CLOSED`
+
+### RC-01 Pending intake cluster
+
+- `status`: CLEAR
+- canonical_scope: no pending intake items are open in the current v1.6 workbook snapshot; the marker is retained so workbook family validation can resolve the pending-intake cluster surface without reinterpreting accepted issue truth.
+
+### ISSUE-043 — non_owner_machine_law_reinforcement_admission_contract_v1
+
+- `status`: CLOSED
 - governing_law: `machine_law_reinforcement_may_be_admitted_from_root_middle_or_consumer_surfaces_without_redefining_accepted_root_law`
 - unique_delta_vs_issue_045: cross-layer whole-lane reinforcement completion may start from root, middle, or consumer layers and still complete the lane, but only through admitted reinforcement scope, preserved owner truth, and without redefining accepted root law.
 - reinforcement_entry_surface: `root|middle|consumer`
@@ -1260,7 +1267,7 @@ Root cause:
 - do not restate ISSUE-046 runtime actuator law
 - do not restate ISSUE-044 adoption law
 
-## ISSUE-044 - Identity instance protocol delta adoption state is not machine-visible and relevant protocol drift is not fail-closed
+### ISSUE-044 - Identity instance protocol delta adoption state is not machine-visible and relevant protocol drift is not fail-closed
 
 - `status`: CLOSED
 - `problem_statement`: accepted ISSUE-044 closure formalized a machine-visible protocol delta adoption bridge so the authoritative protocol head, last seen head, adopted head, relevant unadopted delta count, capability families, and fail-close stale reasons are recorded on one governed surface instead of being inferred from chat memory or ad hoc rerun judgment. Workbook truth is synced to that accepted closure without reopening ISSUE-040/041/042 execution-lifecycle semantics.
@@ -1305,6 +1312,27 @@ Root cause:
   - `docs/governance/identity-lane-segmented-infrastructure-admission-governance-v1.6.x.md` now freezes segmented entry rules for `root`, `middle`, and `tail`, the required baton field family, and the prohibition on chat-native takeover;
   - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-segmented-infrastructure-admission.md` now records the audit judgment that continuation must consume repo-visible baton surfaces, that execution-loop state fields (`planning_budget_status`, `scope_lock_status`, `mutation_phase_entry_status`, `repeated_plan_restatement_status`, `repeated_reanchor_status`, `repeated_compaction_without_progress_status`, `execution_loop_status`, `stale_reasons`) are machine-visible, and that `execution_loop_not_entering_mutation_phase` fail-closes repeated pre-mutation looping;
   - accepted ISSUE-040 / ISSUE-041 / ISSUE-042 closures remain complementary upstream protections, while ISSUE-045 now closes the lane-segmentation law gap without reopening those earlier streams.
+
+### ISSUE-046 - Scope-locked mutation-phase runtime enforcement is implemented but not canonically landed as a formal workbook/register issue
+
+- `status`: CLOSED
+- problem_statement: accepted owner surfaces already enforce the scope-locked mutation-phase runtime guard, but workbook/register had not yet landed that accepted runtime enforcement as a canonical formal issue, leaving long-term audit and tracking without a stable ISSUE-046 truth surface even though the governing runtime invariant was already implemented and adopted.
+- primary_owner_doc: `docs/governance/identity-scope-locked-mutation-phase-runtime-enforcement-governance-v1.6.x.md`
+- secondary_refs:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-scope-locked-mutation-phase-runtime-enforcement.md`
+  - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
+  - `docs/governance/identity-issue-register-truth-sync-governance-v1.6.x.md`
+- machine_gate: workbook/register formalization may land `scope_locked_mutation_phase_runtime_enforcement` as ISSUE-046 only by truth-syncing the already accepted owner-surface runtime guard; it must not restate, replace, or reinterpret the runtime law body and must preserve the already accepted ISSUE-044 adoption bridge.
+- root_cause: RC-03 and RC-06
+- stop_condition:
+  - ISSUE-046 must become a canonical workbook/register issue for the already implemented runtime guard law without rewriting the owner-surface invariant;
+  - workbook/register may perform formal promotion, truth-sync, ordering, and parseable status normalization only;
+  - ISSUE-043 / ISSUE-044 accepted closure truth must remain preserved while workbook tracking becomes machine-readable;
+  - ISSUE-045 / ISSUE-047 / ISSUE-048 and other blockers remain out of scope for this formal promotion lane.
+- current_evidence:
+  - `docs/governance/identity-scope-locked-mutation-phase-runtime-enforcement-governance-v1.6.x.md` remains the owner-surface law source for the runtime guard;
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-scope-locked-mutation-phase-runtime-enforcement.md` remains the accepted audit ledger for the runtime enforcement lane;
+  - workbook and issue-register truth now land ISSUE-046 as the canonical formal tracking issue for that already accepted runtime guard without rewriting the runtime law body or ISSUE-044 adoption truth.
 
 ### ISSUE-047 - Execution-loop post-mutation closeout law is accepted but not canonically landed as a formal workbook/register issue
 
