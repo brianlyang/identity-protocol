@@ -8,11 +8,71 @@ from typing import Any
 
 import yaml
 
-from actor_session_common import actor_session_path, load_actor_binding, load_actor_binding_store, resolve_actor_id
+from actor_session_common import (
+    actor_session_path,
+    load_actor_binding,
+    load_actor_binding_store,
+    resolve_actor_id,
+    select_actor_global_compatibility_projection,
+)
 
 ERR_ACTOR_BINDING = "IP-ASB-201"
 STRICT_OPS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
 INSPECTION_OPS = {"scan", "three-plane", "inspection"}
+
+
+def _inspection_identity_fallback(catalog_path: Path, actor_id: str, session_id: str | None) -> tuple[str, dict[str, object]]:
+    binding = load_actor_binding(catalog_path, actor_id=actor_id, identity_id="", session_id=session_id)
+    if binding:
+        identity_id = str(binding.get("identity_id") or "").strip()
+        effective_session_id = str(binding.get("session_id") or session_id or "").strip()
+        if identity_id:
+            return identity_id, {
+                "identity_id_requested": "",
+                "identity_id_effective": identity_id,
+                "session_id_requested": session_id or "",
+                "session_id_effective": effective_session_id,
+                "identity_resolution_mode": "requested_bound",
+                "session_id_resolution_mode": "requested_bound" if session_id else "binding_default",
+                "session_id_requested_bound": bool(session_id and effective_session_id == session_id),
+            }
+    actor_store = load_actor_binding_store(catalog_path, actor_id)
+    last_mutation = actor_store.get("last_mutation") if isinstance(actor_store, dict) else {}
+    if isinstance(last_mutation, dict):
+        identity_id = str(last_mutation.get("identity_id") or "").strip()
+        effective_session_id = str(last_mutation.get("session_id") or session_id or "").strip()
+        if identity_id:
+            return identity_id, {
+                "identity_id_requested": "",
+                "identity_id_effective": identity_id,
+                "session_id_requested": session_id or "",
+                "session_id_effective": effective_session_id,
+                "identity_resolution_mode": "actor_store_last_mutation",
+                "session_id_resolution_mode": "requested_bound" if session_id and effective_session_id == session_id else "actor_store_last_mutation",
+                "session_id_requested_bound": bool(session_id and effective_session_id == session_id),
+            }
+    compatibility = select_actor_global_compatibility_projection(catalog_path, actor_id=actor_id)
+    if compatibility:
+        identity_id = str(compatibility.get("identity_id") or "").strip()
+        if identity_id:
+            return identity_id, {
+                "identity_id_requested": "",
+                "identity_id_effective": identity_id,
+                "session_id_requested": session_id or "",
+                "session_id_effective": session_id or "",
+                "identity_resolution_mode": "global_compatibility_projection",
+                "session_id_resolution_mode": "requested_preserved" if session_id else "unbound",
+                "session_id_requested_bound": False,
+            }
+    return "", {
+        "identity_id_requested": "",
+        "identity_id_effective": "",
+        "session_id_requested": session_id or "",
+        "session_id_effective": session_id or "",
+        "identity_resolution_mode": "unresolved",
+        "session_id_resolution_mode": "unresolved",
+        "session_id_requested_bound": False,
+    }
 
 
 def _load_catalog(path: Path) -> dict[str, Any]:
@@ -54,38 +114,59 @@ def main() -> int:
         print(f"[FAIL] catalog not found: {catalog_path}")
         return 2
 
-    row = _identity_row(catalog_path, args.identity_id)
+    actor_id = resolve_actor_id(args.actor_id)
+    operation = str(args.operation or "validate").strip().lower()
+    inspection_mode = operation in INSPECTION_OPS
+    requested_identity_id = str(args.identity_id or "").strip()
+    requested_session_id = str(args.session_id or "").strip()
+    effective_identity_id = requested_identity_id
+    resolution_payload = {
+        "identity_id_requested": requested_identity_id,
+        "identity_id_effective": requested_identity_id,
+        "session_id_requested": requested_session_id,
+        "session_id_effective": requested_session_id,
+        "identity_resolution_mode": "requested",
+        "session_id_resolution_mode": "requested" if requested_session_id else "unbound",
+        "session_id_requested_bound": False,
+    }
+    if inspection_mode and not effective_identity_id:
+        effective_identity_id, resolution_payload = _inspection_identity_fallback(
+            catalog_path,
+            actor_id,
+            requested_session_id or None,
+        )
+    effective_session_id = str(resolution_payload.get("session_id_effective") or requested_session_id).strip()
+
+    row = _identity_row(catalog_path, effective_identity_id)
     if row is None:
         payload = {
-            "identity_id": args.identity_id,
+            "identity_id": effective_identity_id,
             "catalog_path": str(catalog_path),
-            "actor_id": resolve_actor_id(args.actor_id),
+            "actor_id": actor_id,
             "actor_session_path": "",
             "bound_identity_id": "",
             "catalog_identity_status": "",
             "actor_binding_status": "FAIL_REQUIRED",
             "error_code": ERR_ACTOR_BINDING,
             "stale_reasons": ["identity_not_found_in_catalog"],
+            **resolution_payload,
         }
         if args.json_only:
             print(json.dumps(payload, ensure_ascii=False))
         else:
-            print(f"[FAIL] {ERR_ACTOR_BINDING} identity not found in catalog: {args.identity_id}")
+            print(f"[FAIL] {ERR_ACTOR_BINDING} identity not found in catalog: {effective_identity_id}")
             print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 1
 
-    actor_id = resolve_actor_id(args.actor_id)
     actor_path = actor_session_path(catalog_path, actor_id)
     actor_store = load_actor_binding_store(catalog_path, actor_id)
     actor_binding = load_actor_binding(
         catalog_path,
         actor_id,
-        identity_id=args.identity_id,
-        session_id=args.session_id,
+        identity_id=effective_identity_id,
+        session_id=effective_session_id,
     )
     status = str(row.get("status", "")).strip().lower() or "inactive"
-    operation = str(args.operation or "validate").strip().lower()
-    inspection_mode = operation in INSPECTION_OPS
     fixture_mode = _is_fixture_identity(row)
     stale_reasons: list[str] = []
     error_code = ""
@@ -125,7 +206,7 @@ def main() -> int:
             stale_reasons.append("catalog_path_mismatch")
             error_code = ERR_ACTOR_BINDING
             actor_binding_status = "FAIL_REQUIRED"
-        if not error_code and bound_identity != args.identity_id:
+        if not error_code and bound_identity != effective_identity_id:
             if status == "active":
                 stale_reasons.append("active_identity_not_bound_to_actor")
                 error_code = ERR_ACTOR_BINDING
@@ -135,7 +216,7 @@ def main() -> int:
                 actor_binding_status = "SKIPPED_NOT_REQUIRED"
 
     payload = {
-        "identity_id": args.identity_id,
+        "identity_id": effective_identity_id,
         "catalog_path": str(catalog_path),
         "actor_id": actor_id,
         "operation": operation,
@@ -148,6 +229,7 @@ def main() -> int:
         "actor_binding_status": actor_binding_status,
         "error_code": error_code,
         "stale_reasons": sorted(set([*stale_reasons, *store_stale])),
+        **resolution_payload,
     }
 
     if args.json_only:
@@ -161,12 +243,12 @@ def main() -> int:
         elif actor_binding_status == "SKIPPED_NOT_REQUIRED":
             print(
                 f"[OK] actor session binding skipped: actor={actor_id} bound_identity={bound_identity} "
-                f"target={args.identity_id}"
+                f"target={effective_identity_id}"
             )
         else:
             print(
                 f"[FAIL] {error_code or ERR_ACTOR_BINDING} actor session binding validation failed: "
-                f"actor={actor_id} target={args.identity_id}"
+                f"actor={actor_id} target={effective_identity_id}"
             )
         print(json.dumps(payload, ensure_ascii=False, indent=2))
 

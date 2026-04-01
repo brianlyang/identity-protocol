@@ -164,4 +164,55 @@ assert "repo_metadata_identity_not_adopted_into_runtime_catalog" in (payload.get
 print(json.dumps({"negative_runtime_mode_guard_probe_status": "PASS_REQUIRED", "identity_id": identity_id}, ensure_ascii=False))
 PY
 
+echo "[RUN] inspection-mode actor-session binding replay with empty requested identity"
+REQUESTED_IDENTITY_ID="${CONTROL_PLANE_EXECUTOR_IDENTITY_ID:-}"
+REQUESTED_ACTOR_ID="${CONTROL_PLANE_ACTOR_ID:-}"
+REQUESTED_SESSION_ID="${CONTROL_PLANE_SESSION_ID:-}"
+IDENTITY_CATALOG="${PROJECT_CATALOG}" python3 - <<'PY' "${PROJECT_CATALOG}" "${REQUESTED_IDENTITY_ID}" "${REQUESTED_ACTOR_ID}" "${REQUESTED_SESSION_ID}"
+from __future__ import annotations
+import json
+import subprocess
+import sys
+
+catalog, identity_id, actor_id, session_id = sys.argv[1:5]
+proc = subprocess.run(
+    [
+        "python3",
+        "scripts/validate_actor_session_binding.py",
+        "--catalog",
+        catalog,
+        "--identity-id",
+        identity_id,
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        session_id,
+        "--operation",
+        "scan",
+        "--json-only",
+    ],
+    capture_output=True,
+    text=True,
+    check=False,
+)
+if proc.returncode != 0:
+    raise SystemExit(proc.stdout + proc.stderr)
+payload = json.loads(proc.stdout)
+assert payload["actor_binding_status"] in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}, payload
+assert payload["identity_id_effective"], payload
+assert payload["identity_resolution_mode"] != "unresolved", payload
+assert payload["catalog_identity_status"] in {"active", "inactive", "closed", "accepted", "deferred"}, payload
+print(
+    json.dumps(
+        {
+            "inspection_actor_session_binding_probe_status": payload["actor_binding_status"],
+            "identity_id_requested": payload["identity_id_requested"],
+            "identity_id_effective": payload["identity_id_effective"],
+            "identity_resolution_mode": payload["identity_resolution_mode"],
+        },
+        ensure_ascii=False,
+    )
+)
+PY
+
 echo "[PASS] identity runtime mode guard probes passed"
