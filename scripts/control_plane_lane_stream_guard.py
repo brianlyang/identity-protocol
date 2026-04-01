@@ -4,56 +4,47 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 
-from control_plane_lane_registry_common import emit, get_lane, load_json_file, load_registry_bundle, normalize_receipt, normalize_registry_doc, stream_guard_result
-
-
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Enforce lane-card-bound stream guard rules.")
-    parser.add_argument("--repo-root", default="")
-    parser.add_argument("--registry-current", default="")
-    parser.add_argument("--lane-id", default="")
-    parser.add_argument("--receipt-file", default="")
-    parser.add_argument("--receipt-json", default="")
-    parser.add_argument("--phase", default="closeout")
-    parser.add_argument("--require-exact", action="store_true")
-    parser.add_argument("--json-only", action="store_true")
-    return parser
-
-
-def _load_receipt(args: argparse.Namespace) -> dict:
-    if args.receipt_file:
-        return load_json_file(args.receipt_file)
-    if args.receipt_json:
-        return json.loads(args.receipt_json)
-    raise ValueError("receipt_required")
+from control_plane_lane_registry_common import ACTIVE_LANE_ID, emit, get_lane, resolve_registry_bundle, validate_receipt
 
 
 def main() -> int:
-    args = build_parser().parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--registry-current")
+    parser.add_argument("--lane-id", default=ACTIVE_LANE_ID)
+    parser.add_argument("--receipt-file", required=True)
+    parser.add_argument("--phase", default="closeout")
+    parser.add_argument("--require-exact", action="store_true")
+    parser.add_argument("--json-only", action="store_true")
+    args = parser.parse_args()
+
     try:
-        bundle = load_registry_bundle(repo_root=args.repo_root, current_registry=args.registry_current)
-        registry_doc = normalize_registry_doc(bundle.registry_doc, repo_root=bundle.repo_root)
-        lane = get_lane(registry_doc, args.lane_id)
-        receipt = normalize_receipt(_load_receipt(args), repo_root=bundle.repo_root)
-        scope_locked = args.phase == "closeout" or lane["status"] not in {"pending_architect", "architect_ready"}
-        guard = stream_guard_result(
-            lane,
-            receipt,
-            require_exact=args.require_exact or args.phase == "closeout",
-            scope_locked=scope_locked,
+        bundle = resolve_registry_bundle(args.registry_current)
+        lane = get_lane(bundle.registry_doc, args.lane_id)
+        receipt = json.loads(Path(args.receipt_file).read_text(encoding="utf-8"))
+        failures = validate_receipt(receipt, require_exact=args.require_exact, repo_root_path=bundle.repo_root)
+        if failures:
+            emit(
+                {
+                    "status": "FAIL_REQUIRED",
+                    "phase": args.phase,
+                    "failure_tokens": failures,
+                    "fail_close_token": lane["fail_close_token"],
+                },
+                json_only=args.json_only,
+            )
+            return 1
+        emit(
+            {
+                "status": "PASS_REQUIRED",
+                "phase": args.phase,
+                "normalized_receipt": receipt,
+            },
+            json_only=args.json_only,
         )
-        payload = {
-            "status": guard["status"],
-            "lane_id": lane["lane_id"],
-            "phase": args.phase,
-            "scope_lock_status": guard["scope_lock_status"],
-            "failure_tokens": guard["failure_tokens"],
-            "normalized_receipt": guard["normalized_receipt"],
-        }
-        emit(payload, json_only=args.json_only)
-        return 1 if guard["status"] == "FAIL_REQUIRED" else 0
-    except Exception as exc:  # pragma: no cover - CLI failure path
+        return 0
+    except Exception as exc:
         emit({"status": "FAIL_REQUIRED", "error": str(exc)}, json_only=args.json_only)
         return 1
 

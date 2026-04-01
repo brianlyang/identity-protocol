@@ -1,1 +1,21 @@
+schema_version: control_plane_lane_registry.current.v1
+contract_id: control_plane_authoritative_checkout_execution_workspace_binding_bootstrap
+classification: existing_surface_alignment
 active_file: identity/protocol/mappings/control-plane-lane-registry.v1.yaml
+active_lane_id: control_plane_authoritative_checkout_execution_workspace_binding_bootstrap
+authoritative_checkout:
+  repo_root_mode: script_anchored
+  binding_mode: cwd_must_equal_repo_root
+  git_top_level_mode: must_equal_repo_root
+execution_workspace:
+  success_requires_commit_resolution_in_authoritative_checkout: true
+  fail_close_on_divergence: true
+runtime_tuple_policy:
+  concrete_tuple_literals_allowed: false
+  allowed_literal_exception_surfaces:
+    - role_bindings
+    - actor_session_store
+    - runtime_reports
+    - ci_probe_fixtures
+    - docs_examples
+read_only_input_surfaces: []

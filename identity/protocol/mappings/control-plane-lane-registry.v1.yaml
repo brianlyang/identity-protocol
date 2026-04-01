@@ -1,22 +1,40 @@
 schema_version: control_plane_lane_registry.v1
-contract_id: identity_control_plane_bootstrap_mvp
-classification: net_new_control_plane_bootstrap
+contract_id: control_plane_authoritative_checkout_execution_workspace_binding_bootstrap
+classification: existing_surface_alignment
 receipt_schema_version: control_plane_receipt.v1
-active_lane_id: identity_control_plane_bootstrap_mvp
+active_lane_id: control_plane_authoritative_checkout_execution_workspace_binding_bootstrap
 role_bindings:
   architect: base-repo-architect
   executor: base-repo-closure-orchestrator
   auditor: base-repo-audit-expert-v3
   office: office-ops-expert
+authoritative_checkout:
+  binding_mode: cwd_must_equal_repo_root
+  git_top_level_mode: must_equal_repo_root
+  active_registry_pointer: identity/protocol/mappings/control-plane-lane-registry.v1.yaml
+  execution_workspace_policy: fail_close_before_success_if_unbound
+canonical_runtime_tuple_policy:
+  concrete_tuple_literals_allowed: false
+  forbidden_literals:
+    - concrete session_id
+    - concrete run:* token
+    - concrete actor_id in reusable execution templates
+    - concrete executor identity in runtime-resolved command templates
+  allowed_literal_exception_surfaces:
+    - role_bindings
+    - actor_session_store
+    - runtime_reports
+    - ci_probe_fixtures
+    - docs_examples
 lanes:
-  - lane_id: identity_control_plane_bootstrap_mvp
-    classification: net_new_control_plane_bootstrap
+  - lane_id: control_plane_authoritative_checkout_execution_workspace_binding_bootstrap
+    classification: existing_surface_alignment
     status: architect_ready
     active: true
-    execution_mode: bootstrap_stream
-    writer_role: architect
+    execution_mode: split_roles
+    writer_role: executor
     read_only_roles:
-      - executor
+      - architect
       - auditor
       - office
     role_bindings:
@@ -36,212 +54,28 @@ lanes:
       - scripts/control_plane_lane_stream_guard.py
       - scripts/validate_identity_control_plane_bootstrap_mvp.py
       - scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh
-    read_only_input_surfaces:
-      - docs/governance/identity-non-owner-machine-law-reinforcement-admission-governance-v1.6.x.md
-      - docs/review/protocol-remediation-audit-ledger-v1.6.x-non-owner-machine-law-reinforcement-admission.md
-      - docs/workbook/protocol-deep-audit-workbook-v1.6.md
-      - docs/workbook/protocol-issue-register-v1.6.md
+    read_only_input_surfaces: []
     validator_command: TMPDIR=$PWD/.tmp python3 scripts/validate_identity_control_plane_bootstrap_mvp.py --json-only
     probe_command: TMPDIR=$PWD/.tmp bash scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh
     validator_expected_status: PASS_REQUIRED
     probe_expected_status: PASS
-    expected_terminal_status: accepted
-    warn_preservation_policy: preserve_non_blocking_warn
-    admitted_delta_only: control_plane_mvp_only
-    fail_close_token: identity_control_plane_bootstrap_mvp_fixed_write_set_insufficient
-    blocker_id: ""
-    next_role: architect
-    accepted_upstream_law_ref:
-      issue_id: ISSUE-043
-      accepted_commit: fb7b5301626cb5d83504e9e94fe0e2cb9f787b7c
-      contract_id: non_owner_machine_law_reinforcement_admission_contract_v1
-      law_ref: machine_law_reinforcement_may_be_admitted_from_root_middle_or_consumer_surfaces_without_redefining_accepted_root_law
-      consumed_fields:
-        - accepted_upstream_law_ref
-        - issue_id
-        - contract_id
-        - law_ref
-        - reinforcement_entry_surface
-        - reinforcement_scope_status
-        - whole_lane_completion_target
-        - whole_lane_completion_status
-        - non_owner_reinforcement_status
-        - cross_layer_completion_admission_status
-        - canonical_owner_truth_preservation_status
-        - root_semantic_redefinition_status
-        - stale_reasons
-      input_surfaces:
-        - docs/governance/identity-non-owner-machine-law-reinforcement-admission-governance-v1.6.x.md
-        - docs/review/protocol-remediation-audit-ledger-v1.6.x-non-owner-machine-law-reinforcement-admission.md
-        - docs/workbook/protocol-deep-audit-workbook-v1.6.md
-        - docs/workbook/protocol-issue-register-v1.6.md
-    allowed_entry_surfaces:
-      - root
-    handoff_required: false
-    post_commit_acceptance_mode: async_read_only_audit
-    forbidden_rewrite_markers:
-      - owner_truth_overwrite
-      - root_semantic_redefinition
-      - whole_lane_reopen
-    receipt_schema_version: control_plane_receipt.v1
-  - lane_id: autonomous_reinforcement_pattern_reference
-    classification: architecture_reinforcement_pattern
-    status: architect_ready
-    active: false
-    execution_mode: autonomous_reinforcement
-    writer_role: executor
-    read_only_roles:
-      - architect
-      - auditor
-      - office
-    role_bindings:
-      architect: base-repo-architect
-      executor: base-repo-closure-orchestrator
-      auditor: base-repo-audit-expert-v3
-      office: office-ops-expert
-    exact_fixed_write_set:
-      - surfaces/examples/autonomous-reinforcement/governance.md
-      - surfaces/examples/autonomous-reinforcement/review.md
-    read_only_input_surfaces:
-      - docs/governance/identity-non-owner-machine-law-reinforcement-admission-governance-v1.6.x.md
-      - docs/review/protocol-remediation-audit-ledger-v1.6.x-non-owner-machine-law-reinforcement-admission.md
-      - docs/workbook/protocol-deep-audit-workbook-v1.6.md
-      - docs/workbook/protocol-issue-register-v1.6.md
-    validator_command: python3 scripts/example_autonomous_reinforcement_validator.py --json-only
-    probe_command: bash scripts/ci/example_autonomous_reinforcement_probe.sh
-    validator_expected_status: PASS_REQUIRED
-    probe_expected_status: PASS
-    expected_terminal_status: accepted
-    warn_preservation_policy: preserve_non_blocking_warn
-    admitted_delta_only: portable_reinforcement_pattern_only
-    fail_close_token: autonomous_reinforcement_pattern_fail_closed
-    blocker_id: ""
+    warn_preservation_policy: none_required
+    expected_terminal_status: closure_done
+    admitted_delta_only:
+      - control_plane_authoritative_checkout_execution_workspace_binding_only
+    fail_close_token: control_plane_authoritative_checkout_execution_workspace_binding_not_machine_authoritative
+    blocker_id: control_plane_authoritative_checkout_execution_workspace_binding
     next_role: executor
-    accepted_upstream_law_ref:
-      issue_id: ISSUE-043
-      accepted_commit: fb7b5301626cb5d83504e9e94fe0e2cb9f787b7c
-      contract_id: non_owner_machine_law_reinforcement_admission_contract_v1
-      law_ref: machine_law_reinforcement_may_be_admitted_from_root_middle_or_consumer_surfaces_without_redefining_accepted_root_law
-      consumed_fields:
-        - accepted_upstream_law_ref
-        - issue_id
-        - contract_id
-        - law_ref
-        - reinforcement_entry_surface
-        - reinforcement_scope_status
-        - whole_lane_completion_target
-        - whole_lane_completion_status
-        - non_owner_reinforcement_status
-        - cross_layer_completion_admission_status
-        - canonical_owner_truth_preservation_status
-        - root_semantic_redefinition_status
-        - stale_reasons
-      input_surfaces:
-        - docs/governance/identity-non-owner-machine-law-reinforcement-admission-governance-v1.6.x.md
-        - docs/review/protocol-remediation-audit-ledger-v1.6.x-non-owner-machine-law-reinforcement-admission.md
-        - docs/workbook/protocol-deep-audit-workbook-v1.6.md
-        - docs/workbook/protocol-issue-register-v1.6.md
-    allowed_entry_surfaces:
-      - root
-      - middle
-      - consumer
-    handoff_required: false
-    post_commit_acceptance_mode: async_read_only_audit
-    forbidden_rewrite_markers:
-      - owner_truth_overwrite
-      - root_semantic_redefinition
-      - whole_lane_reopen
-    receipt_schema_version: control_plane_receipt.v1
-  - lane_id: split_roles_reference
-    classification: governed_family_bootstrap_pattern
-    status: architect_ready
-    active: false
-    execution_mode: split_roles
-    writer_role: executor
-    read_only_roles:
-      - architect
-      - auditor
-      - office
-    role_bindings:
-      architect: base-repo-architect
-      executor: base-repo-closure-orchestrator
-      auditor: base-repo-audit-expert-v3
-      office: office-ops-expert
-    exact_fixed_write_set:
-      - surfaces/examples/split-roles/governance.md
-      - surfaces/examples/split-roles/review.md
-    read_only_input_surfaces: []
-    validator_command: python3 scripts/example_split_roles_validator.py --json-only
-    probe_command: bash scripts/ci/example_split_roles_probe.sh
-    validator_expected_status: PASS_REQUIRED
-    probe_expected_status: PASS
-    expected_terminal_status: accepted
-    warn_preservation_policy: preserve_non_blocking_warn
-    admitted_delta_only: split_roles_pattern_only
-    fail_close_token: split_roles_pattern_fail_closed
-    blocker_id: ""
-    next_role: executor
-    accepted_upstream_law_ref: {}
-    allowed_entry_surfaces:
-      - root
     handoff_required: true
-    post_commit_acceptance_mode: sync_audit_gate
+    post_commit_acceptance_mode: authoritative_checkout_commit_resolution
     forbidden_rewrite_markers:
-      - owner_truth_overwrite
-      - root_semantic_redefinition
-      - whole_lane_reopen
-    receipt_schema_version: control_plane_receipt.v1
-  - lane_id: synthetic_scan_session_binding_residual
-    classification: existing_surface_alignment
-    status: architect_ready
-    active: false
-    execution_mode: split_roles
-    writer_role: executor
-    read_only_roles:
-      - architect
-      - auditor
-      - office
-    role_bindings:
-      architect: base-repo-architect
-      executor: base-repo-closure-orchestrator
-      auditor: base-repo-audit-expert-v3
-      office: office-ops-expert
-    exact_fixed_write_set:
-      - scripts/validate_actor_session_binding.py
-      - scripts/ci/run_identity_runtime_mode_guard_probes_ci.sh
-    read_only_input_surfaces:
-      - scripts/validate_identity_runtime_mode_guard.py
-      - .identity/catalog.local.yaml
-      - identity/catalog/identities.yaml
-      - identity/protocol/mappings/control-plane-status.v1.6.json
-    validator_command: cd /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local && source ../scripts/use_local_identity_env.sh && python3 scripts/validate_actor_session_binding.py --catalog "${IDENTITY_CATALOG}" --identity-id "${CONTROL_PLANE_EXECUTOR_IDENTITY_ID}" --actor-id "${CONTROL_PLANE_ACTOR_ID}" --session-id "${CONTROL_PLANE_SESSION_ID}" --operation scan --json-only
-    probe_command: cd /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local && source ../scripts/use_local_identity_env.sh && bash scripts/ci/run_identity_runtime_mode_guard_probes_ci.sh
-    executor_identity_source:
-      binding: role_bindings.executor
-      env: CONTROL_PLANE_EXECUTOR_IDENTITY_ID
-    actor_id_source:
-      authority_source: actor_session_store
-      env: CONTROL_PLANE_ACTOR_ID
-    session_id_source:
-      authority_source: actor_session_store
-      env: CONTROL_PLANE_SESSION_ID
-    catalog_source:
-      env: IDENTITY_CATALOG
-    validator_expected_status: PASS_REQUIRED
-    probe_expected_status: PASS
-    expected_terminal_status: accepted
-    warn_preservation_policy: preserve_non_blocking_warn
-    admitted_delta_only: synthetic_scan_session_binding_residual_execution_only
-    fail_close_token: synthetic_scan_session_binding_residual_fixed_write_set_insufficient
-    blocker_id: ""
-    next_role: executor
-    accepted_upstream_law_ref: {}
-    allowed_entry_surfaces:
-      - root
-    handoff_required: true
-    post_commit_acceptance_mode: sync_audit_gate
-    forbidden_rewrite_markers:
-      - owner_truth_overwrite
-      - root_semantic_redefinition
-      - whole_lane_reopen
+      - runtime_tuple_literal_pollution
+      - divergent_execution_workspace_success
+      - stage_outside_fixed_write_set
+    scope_lock_allowed_actions:
+      - run_validator
+      - run_probe
+      - stage_and_commit
+      - emit_blocker_receipt
+      - emit_fail_close_token
     receipt_schema_version: control_plane_receipt.v1
