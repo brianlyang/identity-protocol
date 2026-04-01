@@ -214,13 +214,24 @@ lanes:
       - .identity/catalog.local.yaml
       - identity/catalog/identities.yaml
       - identity/protocol/mappings/control-plane-status.v1.6.json
-    validator_command: cd /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local && python3 scripts/validate_actor_session_binding.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id base-repo-closure-orchestrator --actor-id assistant:codex --session-id run:identity-upgrade-exec-base-repo-closure-orchestrator-1774424750 --operation scan --json-only
-    probe_command: cd /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local && bash scripts/ci/run_identity_runtime_mode_guard_probes_ci.sh
+    validator_command: cd /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local && source ../scripts/use_local_identity_env.sh && python3 scripts/validate_actor_session_binding.py --catalog "${IDENTITY_CATALOG}" --identity-id "${CONTROL_PLANE_EXECUTOR_IDENTITY_ID}" --actor-id "${CONTROL_PLANE_ACTOR_ID}" --session-id "${CONTROL_PLANE_SESSION_ID}" --operation scan --json-only
+    probe_command: cd /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local && source ../scripts/use_local_identity_env.sh && bash scripts/ci/run_identity_runtime_mode_guard_probes_ci.sh
+    executor_identity_source:
+      binding: role_bindings.executor
+      env: CONTROL_PLANE_EXECUTOR_IDENTITY_ID
+    actor_id_source:
+      authority_source: actor_session_store
+      env: CONTROL_PLANE_ACTOR_ID
+    session_id_source:
+      authority_source: actor_session_store
+      env: CONTROL_PLANE_SESSION_ID
+    catalog_source:
+      env: IDENTITY_CATALOG
     validator_expected_status: PASS_REQUIRED
     probe_expected_status: PASS
     expected_terminal_status: accepted
     warn_preservation_policy: preserve_non_blocking_warn
-    admitted_delta_only: synthetic_scan_session_binding_residual_registration_only
+    admitted_delta_only: synthetic_scan_session_binding_residual_execution_only
     fail_close_token: synthetic_scan_session_binding_residual_fixed_write_set_insufficient
     blocker_id: ""
     next_role: executor
