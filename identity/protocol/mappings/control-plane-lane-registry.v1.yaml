@@ -191,3 +191,46 @@ lanes:
       - root_semantic_redefinition
       - whole_lane_reopen
     receipt_schema_version: control_plane_receipt.v1
+  - lane_id: synthetic_scan_session_binding_residual
+    classification: existing_surface_alignment
+    status: architect_ready
+    active: false
+    execution_mode: split_roles
+    writer_role: executor
+    read_only_roles:
+      - architect
+      - auditor
+      - office
+    role_bindings:
+      architect: base-repo-architect
+      executor: base-repo-closure-orchestrator
+      auditor: base-repo-audit-expert-v3
+      office: office-ops-expert
+    exact_fixed_write_set:
+      - scripts/validate_actor_session_binding.py
+      - scripts/ci/run_identity_runtime_mode_guard_probes_ci.sh
+    read_only_input_surfaces:
+      - scripts/validate_identity_runtime_mode_guard.py
+      - .identity/catalog.local.yaml
+      - identity/catalog/identities.yaml
+      - identity/protocol/mappings/control-plane-status.v1.6.json
+    validator_command: cd /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local && python3 scripts/validate_actor_session_binding.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id base-repo-closure-orchestrator --actor-id assistant:codex --session-id run:identity-upgrade-exec-base-repo-closure-orchestrator-1774424750 --operation scan --json-only
+    probe_command: cd /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local && bash scripts/ci/run_identity_runtime_mode_guard_probes_ci.sh
+    validator_expected_status: PASS_REQUIRED
+    probe_expected_status: PASS
+    expected_terminal_status: accepted
+    warn_preservation_policy: preserve_non_blocking_warn
+    admitted_delta_only: synthetic_scan_session_binding_residual_registration_only
+    fail_close_token: synthetic_scan_session_binding_residual_fixed_write_set_insufficient
+    blocker_id: ""
+    next_role: executor
+    accepted_upstream_law_ref: {}
+    allowed_entry_surfaces:
+      - root
+    handoff_required: true
+    post_commit_acceptance_mode: sync_audit_gate
+    forbidden_rewrite_markers:
+      - owner_truth_overwrite
+      - root_semantic_redefinition
+      - whole_lane_reopen
+    receipt_schema_version: control_plane_receipt.v1
