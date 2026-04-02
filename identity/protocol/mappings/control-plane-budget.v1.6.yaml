@@ -1,17 +1,17 @@
 schema_version: 1
 budget_version: v1.6
-last_updated_utc: '2026-03-28T11:04:05Z'
+last_updated_utc: '2026-04-02T09:03:10Z'
 policy_mode: dual_threshold_with_family_convergence
 budgets:
   validator_scripts:
-    warn: 250
-    fail: 252
+    warn: 279
+    fail: 281
   error_codes:
-    warn: 718
-    fail: 721
+    warn: 734
+    fail: 737
   error_code_families:
-    warn: 249
-    fail: 255
+    warn: 258
+    fail: 264
   mapping_rows_missing_in_bundle:
     warn: 0
     fail: 1
@@ -20,14 +20,14 @@ budgets:
       warn: 89
       fail: 94
     scripts/release_readiness_check.py:
-      warn: 141
-      fail: 146
+      warn: 149
+      fail: 154
     scripts/report_three_plane_status.py:
       warn: 80
       fail: 85
     scripts/full_identity_protocol_scan.py:
-      warn: 88
-      fail: 93
+      warn: 87
+      fail: 92
     scripts/e2e_smoke_test.sh:
       warn: 116
       fail: 121
@@ -38,17 +38,17 @@ convergence_guard:
   enabled: true
   mode: no_rebound
   enforce_mode: fail_required
-  baseline_snapshot_utc: '2026-03-28T11:04:05Z'
+  baseline_snapshot_utc: '2026-04-02T09:03:10Z'
   ceilings:
-    validator_scripts: 250
-    error_codes: 718
-    error_code_families: 249
+    validator_scripts: 279
+    error_codes: 734
+    error_code_families: 258
     mapping_rows_missing_in_bundle: 0
     direct_validate_calls:
       scripts/identity_creator.py: 89
-      scripts/release_readiness_check.py: 141
+      scripts/release_readiness_check.py: 149
       scripts/report_three_plane_status.py: 80
-      scripts/full_identity_protocol_scan.py: 88
+      scripts/full_identity_protocol_scan.py: 87
       scripts/e2e_smoke_test.sh: 116
       .github/workflows/_identity-required-gates.yml: 14
 error_code_family_strategy:
