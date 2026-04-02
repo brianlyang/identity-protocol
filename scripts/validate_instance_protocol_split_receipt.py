@@ -62,7 +62,20 @@ SENSITIVE_RE = re.compile(
     r"(?i)(tenant[_-]?id|customer[_-]?id|client[_-]?id|merchant[_-]?id|sku[_-]?id|product[_-]?id|shop[_-]?id|order[_-]?id)"
 )
 
-STRICT_OPERATIONS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
+CLI_OPERATION_CHOICES = (
+    "activate",
+    "update",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "scan",
+    "three-plane",
+    "inspection",
+    "mutation",
+)
+
+STRICT_OPERATIONS = frozenset(op for op in CLI_OPERATION_CHOICES if op not in {"scan", "three-plane", "inspection"})
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -182,7 +195,7 @@ def main() -> int:
     ap.add_argument("--activity-window-hours", type=float, default=72.0)
     ap.add_argument(
         "--operation",
-        choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
+        choices=CLI_OPERATION_CHOICES,
         default="validate",
     )
     ap.add_argument("--json-only", action="store_true")
