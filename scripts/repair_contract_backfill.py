@@ -2866,11 +2866,13 @@ def main() -> int:
                     "requested_lane",
                     "previous_lane",
                     "resolved_lane",
-                    "lane_activation_status",
+                    "protocol_lane_activation_status",
                     "lane_activation_error_code",
                     "route_source_ref",
                     "lane_activation_evidence_ref",
                     "headstamp_continuity_status",
+                    "headstamp_live_receipt_binding_status",
+                    "protocol_lane_headstamp_status",
                     "headstamp_error_code",
                 ]
             ).issubset(

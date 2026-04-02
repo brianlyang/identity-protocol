@@ -1500,13 +1500,101 @@ def _protocol_lane_activation_headstamp_contract_skeleton() -> dict:
             "requested_lane",
             "previous_lane",
             "resolved_lane",
-            "lane_activation_status",
+            "protocol_lane_activation_status",
             "lane_activation_error_code",
             "route_source_ref",
             "lane_activation_evidence_ref",
             "headstamp_continuity_status",
+            "headstamp_live_receipt_binding_status",
+            "protocol_lane_headstamp_status",
             "headstamp_error_code",
         ],
+    }
+
+
+def _build_protocol_lane_headstamp_projection(
+    *,
+    ingress_payload: dict[str, Any],
+    egress_payload: dict[str, Any],
+    route_source_ref: str,
+    lane_activation_evidence_ref: str,
+    headstamp_first_line_status: str,
+    headstamp_live_receipt_binding_status: str,
+) -> dict[str, Any]:
+    def _first_text(*values: Any, default: str = "") -> str:
+        for value in values:
+            text = str(value or "").strip()
+            if text:
+                return text
+        return default
+
+    requested_lane = _first_text(
+        egress_payload.get("requested_lane"),
+        ingress_payload.get("requested_lane"),
+        default="protocol",
+    )
+    previous_lane = _first_text(
+        egress_payload.get("previous_lane"),
+        ingress_payload.get("previous_lane"),
+        default=requested_lane,
+    )
+    resolved_lane = _first_text(
+        egress_payload.get("resolved_lane"),
+        ingress_payload.get("resolved_lane"),
+        default=requested_lane,
+    )
+    protocol_lane_activation_status = _first_text(
+        egress_payload.get("protocol_lane_activation_status"),
+        ingress_payload.get("protocol_lane_activation_status"),
+        default=STATUS_PASS_REQUIRED if resolved_lane == requested_lane else STATUS_FAIL_REQUIRED,
+    ).upper()
+    headstamp_continuity_status = _first_text(
+        egress_payload.get("headstamp_continuity_status"),
+        ingress_payload.get("headstamp_continuity_status"),
+        default=_first_text(
+            headstamp_first_line_status,
+            egress_payload.get("headstamp_status"),
+            default=STATUS_PASS_REQUIRED if protocol_lane_activation_status == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED,
+        ),
+    ).upper()
+    live_receipt_binding_status = _first_text(
+        headstamp_live_receipt_binding_status,
+        egress_payload.get("headstamp_live_receipt_binding_status"),
+        ingress_payload.get("headstamp_live_receipt_binding_status"),
+        default=STATUS_PASS_REQUIRED if headstamp_continuity_status == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED,
+    ).upper()
+    protocol_lane_headstamp_status = _first_text(
+        egress_payload.get("protocol_lane_headstamp_status"),
+        ingress_payload.get("protocol_lane_headstamp_status"),
+        egress_payload.get("headstamp_status"),
+        default=headstamp_continuity_status,
+    ).upper()
+    lane_activation_error_code = _first_text(
+        egress_payload.get("lane_activation_error_code"),
+        ingress_payload.get("lane_activation_error_code"),
+        default="NONE",
+    )
+    headstamp_error_code = _first_text(
+        egress_payload.get("headstamp_error_code"),
+        ingress_payload.get("headstamp_error_code"),
+        default="NONE"
+        if headstamp_continuity_status == STATUS_PASS_REQUIRED
+        and live_receipt_binding_status == STATUS_PASS_REQUIRED
+        and protocol_lane_headstamp_status == STATUS_PASS_REQUIRED
+        else "HEADSTAMP_NOT_PASS_REQUIRED",
+    )
+    return {
+        "requested_lane": requested_lane,
+        "previous_lane": previous_lane,
+        "resolved_lane": resolved_lane,
+        "protocol_lane_activation_status": protocol_lane_activation_status,
+        "lane_activation_error_code": lane_activation_error_code,
+        "route_source_ref": str(route_source_ref or "").strip(),
+        "lane_activation_evidence_ref": str(lane_activation_evidence_ref or "").strip(),
+        "headstamp_continuity_status": headstamp_continuity_status,
+        "headstamp_live_receipt_binding_status": live_receipt_binding_status,
+        "protocol_lane_headstamp_status": protocol_lane_headstamp_status,
+        "headstamp_error_code": headstamp_error_code,
     }
 
 

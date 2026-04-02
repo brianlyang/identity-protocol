@@ -361,8 +361,11 @@ def _run(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> CheckR
 
     run_cmd = list(cmd)
     script = str(run_cmd[1]).strip() if len(run_cmd) >= 2 else ""
+    original_script = script
+    if script.startswith("scripts/"):
+        run_cmd[1] = str((DEFAULT_REPO_ROOT / script).resolve())
     if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
-        if script in {REQUIRED_GATE_BUNDLE_SCRIPT, FINAL_EMIT_SCRIPT}:
+        if original_script in {REQUIRED_GATE_BUNDLE_SCRIPT, FINAL_EMIT_SCRIPT}:
             run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
     first_env = dict(env or {})
     rc, out, err = _run_gateway_wrapped_command(
@@ -372,7 +375,7 @@ def _run(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> CheckR
         passthrough_env=first_env or None,
     )
     first = _finalize(rc, out, err)
-    if script.endswith("resolve_identity_context.py") and _contains_timeout_marker(
+    if original_script.endswith("resolve_identity_context.py") and _contains_timeout_marker(
         stdout_text=first.stdout,
         stderr_text=first.stderr,
         tail_text=first.tail,
@@ -1976,7 +1979,7 @@ def main() -> int:
     global SESSION_ID_FALLBACK
     ap = argparse.ArgumentParser(description="Scan all configured identities and emit cross-catalog governance status.")
     ap.add_argument("--repo-root", default=str(DEFAULT_REPO_ROOT))
-    ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--repo-catalog", default="")
     ap.add_argument("--project-catalog", default="")
     ap.add_argument("--global-catalog", default="")
     ap.add_argument("--include-repo-catalog", action="store_true")
@@ -2078,7 +2081,22 @@ def main() -> int:
     args = ap.parse_args()
 
     repo_root = Path(args.repo_root).expanduser().resolve()
-    repo_catalog = (repo_root / args.repo_catalog).resolve() if not Path(args.repo_catalog).is_absolute() else Path(args.repo_catalog)
+    repo_catalog_arg = str(args.repo_catalog or "").strip()
+    if repo_catalog_arg:
+        repo_catalog = (
+            (repo_root / repo_catalog_arg).resolve()
+            if not Path(repo_catalog_arg).is_absolute()
+            else Path(repo_catalog_arg).expanduser().resolve()
+        )
+    else:
+        repo_catalog_fallback = str(
+            args.project_catalog or os.environ.get("IDENTITY_CATALOG") or "identity/catalog/identities.yaml"
+        ).strip()
+        repo_catalog = (
+            (repo_root / repo_catalog_fallback).resolve()
+            if not Path(repo_catalog_fallback).is_absolute()
+            else Path(repo_catalog_fallback).expanduser().resolve()
+        )
     if not repo_catalog.exists():
         print(f"[FAIL] repo catalog not found: {repo_catalog}")
         return 2
@@ -2462,7 +2480,7 @@ def main() -> int:
             resolve = _run(
                 [
                     "python3",
-                    "scripts/resolve_identity_context.py",
+                    str(SCRIPT_PATH.parent / "resolve_identity_context.py"),
                     "resolve",
                     "--identity-id",
                     iid,
@@ -2560,7 +2578,7 @@ def main() -> int:
 
             mode_guard_cmd = [
                 "python3",
-                "scripts/validate_identity_runtime_mode_guard.py",
+                str(SCRIPT_PATH.parent / "validate_identity_runtime_mode_guard.py"),
                 "--identity-id",
                 iid,
                 "--catalog",
@@ -2569,6 +2587,8 @@ def main() -> int:
                 str(repo_catalog),
                 "--expect-mode",
                 "auto",
+                "--admissibility-profile",
+                "launcher_outer_surface",
                 "--operation",
                 "scan",
             ]
