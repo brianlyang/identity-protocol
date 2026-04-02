@@ -1,8 +1,9 @@
 schema_version: control_plane_lane_registry.current.v1
-contract_id: control_plane_protocol_feedback_instance_state_runner_hardening
+contract_id: control_plane_role_binding_overlay_hardening
 classification: existing_surface_alignment
 active_file: identity/protocol/mappings/control-plane-lane-registry.v1.yaml
-active_lane_id: control_plane_protocol_feedback_instance_state_runner_hardening
+active_lane_id: control_plane_role_binding_overlay_hardening
+owner_binding_file: identity/protocol/mappings/control-plane-owner-binding.current.yaml
 authoritative_checkout:
   repo_root_mode: script_anchored
   binding_mode: cwd_must_equal_repo_root
@@ -13,7 +14,7 @@ execution_workspace:
 runtime_tuple_policy:
   concrete_tuple_literals_allowed: false
   allowed_literal_exception_surfaces:
-    - role_bindings
+    - owner_binding_overlay
     - actor_session_store
     - runtime_reports
     - ci_probe_fixtures

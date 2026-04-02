@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -13,34 +12,57 @@ import yaml
 
 SCHEMA_VERSION = "control_plane_lane_registry.v1"
 CURRENT_SCHEMA_VERSION = "control_plane_lane_registry.current.v1"
-CONTRACT_ID = "control_plane_protocol_feedback_instance_state_runner_hardening"
+OWNER_BINDING_SCHEMA_VERSION = "control_plane_owner_binding.v1"
+OWNER_BINDING_CURRENT_SCHEMA_VERSION = "control_plane_owner_binding.current.v1"
+OWNER_BINDING_TRUTH_CLASS = "owner_binding_overlay"
+OWNER_BINDING_SCOPE = "repo_local"
+OWNER_BINDING_POLICY = "role_to_identity_binding_overlay"
+OWNER_BINDING_ACTIVE_PROFILE_ID = "control_plane_default_owner_binding_profile"
+CONTRACT_ID = "control_plane_role_binding_overlay_hardening"
 CLASSIFICATION = "existing_surface_alignment"
 ACTIVE_LANE_ID = CONTRACT_ID
 RECEIPT_SCHEMA_VERSION = "control_plane_receipt.v1"
-FAIL_CLOSE_TOKEN = "control_plane_protocol_feedback_instance_state_runner_hardening_execution_contract_not_machine_authoritative"
+FAIL_CLOSE_TOKEN = "control_plane_role_binding_overlay_hardening_not_machine_authoritative"
 ADMITTED_DELTA_ONLY = [
-    "protocol_feedback_instance_state_runner_contract_only",
-    "protocol_feedback_validator_probe_surface_reuse_only",
-    "protocol_feedback_live_closure_state_admissibility_only",
-    "stage_equality_target_redefined_to_machine_authoritative_necessity_subset_only",
-    "no_absolute_host_path_literals_in_target_executable_surfaces",
-    "no_reopen_of_control_plane_lane_registration_transaction_only",
+    "canonical_role_law_owner_binding_overlay_split_only",
+    "owner_binding_overlay_current_and_versioned_surface_only",
+    "route_next_role_semantics_identity_resolution_split_only",
+    "historical_control_plane_lane_compatibility_probe_only",
+    "canonical_registry_deconcretizes_role_bindings_only",
+    "no_reopen_of_control_plane_protocol_feedback_instance_state_runner_hardening",
 ]
-VALIDATOR_COMMAND = "TMPDIR=$PWD/.tmp python3 scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py --json-only"
-PROBE_COMMAND = "TMPDIR=$PWD/.tmp bash scripts/ci/run_control_plane_protocol_feedback_instance_state_runner_hardening_probes_ci.sh"
+VALIDATOR_COMMAND = "TMPDIR=$PWD/.tmp python3 scripts/validate_control_plane_role_binding_overlay_hardening.py --json-only"
+PROBE_COMMAND = "TMPDIR=$PWD/.tmp bash scripts/ci/run_control_plane_role_binding_overlay_hardening_probes_ci.sh"
 VALIDATOR_EXPECTED_STATUS = "PASS_REQUIRED"
 PROBE_EXPECTED_STATUS = "PASS"
 EXPECTED_TERMINAL_STATUS = "closure_done"
 DEFAULT_CURRENT_REGISTRY_REL = Path("identity/protocol/mappings/control-plane-lane-registry.current.yaml")
 DEFAULT_VERSIONED_REGISTRY_REL = Path("identity/protocol/mappings/control-plane-lane-registry.v1.yaml")
+DEFAULT_OWNER_BINDING_CURRENT_REL = Path("identity/protocol/mappings/control-plane-owner-binding.current.yaml")
+DEFAULT_OWNER_BINDING_VERSIONED_REL = Path("identity/protocol/mappings/control-plane-owner-binding.v1.yaml")
+REGISTRATION_BOOTSTRAP_LANE_ID = "control_plane_lane_registration_transaction_bootstrap"
+REGISTRATION_TRANSACTION_LANE_ID = "control_plane_lane_registration_transaction_only"
+REGISTERED_TARGET_LANE_ID = "control_plane_protocol_feedback_instance_state_runner_hardening"
 EXPECTED_FIXED_WRITE_SET = [
     "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
+    "identity/protocol/mappings/control-plane-lane-registry.current.yaml",
     "identity/protocol/mappings/control-plane-lane-registry.v1.yaml",
+    "identity/protocol/mappings/control-plane-owner-binding.current.yaml",
+    "identity/protocol/mappings/control-plane-owner-binding.v1.yaml",
+    "docs/review/protocol-remediation-audit-ledger-v1.6.x-post-closure-handoff-projection-drift.md",
     "scripts/control_plane_lane_registry_common.py",
+    "scripts/control_plane_lane_render.py",
+    "scripts/control_plane_lane_next.py",
+    "scripts/control_plane_lane_ingest.py",
+    "scripts/control_plane_lane_stream_guard.py",
+    "scripts/validate_identity_control_plane_bootstrap_mvp.py",
+    "scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh",
     "scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py",
     "scripts/ci/run_control_plane_protocol_feedback_instance_state_runner_hardening_probes_ci.sh",
+    "scripts/validate_control_plane_role_binding_overlay_hardening.py",
+    "scripts/ci/run_control_plane_role_binding_overlay_hardening_probes_ci.sh",
 ]
-EXPECTED_ROLE_BINDINGS = {
+EXPECTED_OWNER_BINDINGS = {
     "architect": "base-repo-architect",
     "executor": "base-repo-closure-orchestrator",
     "auditor": "base-repo-audit-expert-v3",
@@ -52,6 +74,13 @@ EXPECTED_ALLOWED_ACTIONS = [
     "stage_and_commit",
     "emit_blocker_receipt",
     "emit_fail_close_token",
+]
+RUNTIME_ALLOWED_LITERAL_EXCEPTION_SURFACES = [
+    "owner_binding_overlay",
+    "actor_session_store",
+    "runtime_reports",
+    "ci_probe_fixtures",
+    "docs_examples",
 ]
 EXPECTED_EXECUTABLE_SURFACES = [
     "scripts/validate_protocol_feedback_bootstrap_ready.py",
@@ -67,7 +96,9 @@ EXPECTED_EXECUTABLE_SURFACES = [
     "scripts/ci/run_protocol_feedback_ssot_archival_probes_ci.sh",
     "scripts/ci/run_sidecar_cwd_parity_probes_ci.sh",
 ]
-FORBIDDEN_HOST_PATH_LITERAL = "/Users/yangxi"
+FORBIDDEN_HOST_PATH_PATTERN = re.compile(
+    "/" + "Users" + r"/[^/\s]+(?:/[^\s\"']*)?"
+)
 PROHIBITED_RUNTIME_LITERAL_PATTERNS = {
     "concrete_run_token": re.compile(r"run:[A-Za-z0-9._:-]+"),
     "concrete_actor_id": re.compile(r"assistant:[A-Za-z0-9._-]+"),
@@ -81,10 +112,22 @@ class RegistryBundle:
     versioned_registry: Path
     current_doc: dict[str, Any]
     registry_doc: dict[str, Any]
+    owner_binding_current: Path
+    owner_binding_versioned: Path
+    owner_binding_current_doc: dict[str, Any]
+    owner_binding_doc: dict[str, Any]
 
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
+
+
+def display_path(path: Path, root: Path | None = None) -> str:
+    base = root or repo_root()
+    try:
+        return path.resolve().relative_to(base.resolve()).as_posix()
+    except ValueError:
+        return str(path.resolve())
 
 
 def emit(payload: dict[str, Any], *, json_only: bool = False) -> None:
@@ -106,28 +149,73 @@ def dump_yaml(path: Path, data: dict[str, Any]) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _resolve_path_reference(base_file: Path, raw_ref: str | None, root: Path) -> Path:
+    raw = str(raw_ref or "").strip()
+    if not raw:
+        raise ValueError(f"missing path reference relative to {base_file}")
+    ref = Path(raw)
+    if ref.is_absolute():
+        return ref.resolve()
+    base_candidate = (base_file.parent / ref).resolve()
+    if base_candidate.exists():
+        return base_candidate
+    return (root / ref).resolve()
+
+
+def _resolve_active_yaml(
+    entry_path: Path,
+    entry_doc: dict[str, Any],
+    default_active_rel: Path,
+    root: Path,
+) -> tuple[Path, str, dict[str, Any]]:
+    active_file = str(entry_doc.get("active_file", default_active_rel.as_posix()))
+    active_path = _resolve_path_reference(entry_path, active_file, root)
+    if not active_path.exists():
+        raise FileNotFoundError(f"active yaml file does not resolve from {entry_path}: {active_file}")
+    return active_path, active_file, load_yaml(active_path)
+
+
 def resolve_registry_bundle(registry_current_override: str | None = None) -> RegistryBundle:
     root = repo_root()
-    current_registry = (Path(registry_current_override).resolve() if registry_current_override else (root / DEFAULT_CURRENT_REGISTRY_REL).resolve())
+    current_registry = (
+        Path(registry_current_override).resolve()
+        if registry_current_override
+        else (root / DEFAULT_CURRENT_REGISTRY_REL).resolve()
+    )
     current_doc = load_yaml(current_registry)
-    active_file = str(current_doc.get("active_file", DEFAULT_VERSIONED_REGISTRY_REL.as_posix()))
-    active_path = Path(active_file)
-    candidates = []
-    if active_path.is_absolute():
-        candidates.append(active_path)
-    else:
-        candidates.append((current_registry.parent / active_path).resolve())
-        candidates.append((root / active_path).resolve())
-    versioned_registry = next((candidate for candidate in candidates if candidate.exists()), None)
-    if versioned_registry is None:
-        raise FileNotFoundError(f"active registry file does not resolve from {current_registry}: {active_file}")
-    registry_doc = load_yaml(versioned_registry)
+    versioned_registry, _active_file, registry_doc = _resolve_active_yaml(
+        current_registry,
+        current_doc,
+        DEFAULT_VERSIONED_REGISTRY_REL,
+        root,
+    )
+    owner_binding_ref = str(
+        current_doc.get("owner_binding_file")
+        or registry_doc.get("owner_binding_file")
+        or DEFAULT_OWNER_BINDING_CURRENT_REL.as_posix()
+    )
+    owner_binding_current = _resolve_path_reference(current_registry, owner_binding_ref, root)
+    if not owner_binding_current.exists():
+        raise FileNotFoundError(
+            f"owner binding current file does not resolve from {current_registry}: {owner_binding_ref}"
+        )
+    owner_binding_current_doc = load_yaml(owner_binding_current)
+    owner_binding_versioned, _owner_active_file, owner_binding_doc = _resolve_active_yaml(
+        owner_binding_current,
+        owner_binding_current_doc,
+        DEFAULT_OWNER_BINDING_VERSIONED_REL,
+        root,
+    )
     return RegistryBundle(
         repo_root=root,
         current_registry=current_registry,
         versioned_registry=versioned_registry,
         current_doc=current_doc,
         registry_doc=registry_doc,
+        owner_binding_current=owner_binding_current,
+        owner_binding_versioned=owner_binding_versioned,
+        owner_binding_current_doc=owner_binding_current_doc,
+        owner_binding_doc=owner_binding_doc,
     )
 
 
@@ -157,22 +245,26 @@ def commit_resolves(commit_id: str, *, cwd: Path) -> bool:
     return result.returncode == 0
 
 
-def ensure_registration_transaction_execution_context(bundle: RegistryBundle) -> tuple[bool, dict[str, Any]]:
+def ensure_control_plane_execution_context(bundle: RegistryBundle) -> tuple[bool, dict[str, Any]]:
     cwd_ok = Path.cwd().resolve() == bundle.repo_root.resolve()
-    git_top_ok = git_top_level(bundle.repo_root) == bundle.repo_root.resolve()
+    git_top = git_top_level(bundle.repo_root)
+    git_top_ok = git_top == bundle.repo_root.resolve()
     detail = {
         "cwd": str(Path.cwd().resolve()),
         "repo_root": str(bundle.repo_root.resolve()),
         "cwd_matches_repo_root": cwd_ok,
-        "git_top_level": str(git_top_level(bundle.repo_root)),
+        "git_top_level": str(git_top),
         "git_top_matches_repo_root": git_top_ok,
     }
     return cwd_ok and git_top_ok, detail
 
 
-def route_next_role(lane: dict[str, Any], *, status_override: str | None = None) -> dict[str, Any]:
+def ensure_registration_transaction_execution_context(bundle: RegistryBundle) -> tuple[bool, dict[str, Any]]:
+    return ensure_control_plane_execution_context(bundle)
+
+
+def route_next_role_semantics(lane: dict[str, Any], *, status_override: str | None = None) -> dict[str, Any]:
     status = status_override or lane.get("status", "architect_ready")
-    role_bindings = lane.get("role_bindings") or EXPECTED_ROLE_BINDINGS
     if status in {"architect_ready", "preflight_passed", "closure_running"}:
         role = "executor"
         suggested = "closure_running"
@@ -183,54 +275,102 @@ def route_next_role(lane: dict[str, Any], *, status_override: str | None = None)
         role = "office"
         suggested = "hold"
     else:
-        role = lane.get("next_role", "executor")
+        role = str(lane.get("next_role", "executor"))
         suggested = status
     return {
         "role": role,
-        "identity_id": role_bindings[role],
         "suggested_next_status": suggested,
+    }
+
+
+def resolve_owner_bindings(bundle: RegistryBundle) -> dict[str, str]:
+    bindings = bundle.owner_binding_doc.get("role_to_identity_bindings") or {}
+    if not isinstance(bindings, dict):
+        raise ValueError("owner binding role_to_identity_bindings must be a mapping")
+    resolved = {str(key): str(value) for key, value in bindings.items()}
+    missing = [role for role in EXPECTED_OWNER_BINDINGS if role not in resolved or not resolved[role]]
+    if missing:
+        raise KeyError("missing owner binding roles: " + ",".join(missing))
+    return resolved
+
+
+def resolve_role_identity(bundle: RegistryBundle, role: str) -> str:
+    bindings = resolve_owner_bindings(bundle)
+    return bindings[str(role)]
+
+
+def route_next_role(
+    lane: dict[str, Any],
+    *,
+    bundle: RegistryBundle | None = None,
+    status_override: str | None = None,
+) -> dict[str, Any]:
+    semantics = route_next_role_semantics(lane, status_override=status_override)
+    resolved_bundle = bundle or resolve_registry_bundle()
+    return {
+        **semantics,
+        "identity_id": resolve_role_identity(resolved_bundle, semantics["role"]),
     }
 
 
 def check_forbidden_runtime_literals(paths: list[Path]) -> list[str]:
     failures: list[str] = []
+    root = repo_root()
     for path in paths:
         text = path.read_text(encoding="utf-8")
         for token, pattern in PROHIBITED_RUNTIME_LITERAL_PATTERNS.items():
             if pattern.search(text):
-                failures.append(f"{token}:{path.relative_to(repo_root()).as_posix()}")
+                failures.append(f"{token}:{display_path(path, root)}")
     return failures
+
+
+def commit_not_materialized_token_for_lane(lane_id: str) -> str:
+    if lane_id in {REGISTRATION_BOOTSTRAP_LANE_ID, REGISTRATION_TRANSACTION_LANE_ID}:
+        return "registration_transaction_commit_not_materialized"
+    if lane_id == REGISTERED_TARGET_LANE_ID:
+        return "protocol_feedback_instance_state_runner_hardening_commit_not_materialized"
+    if lane_id == ACTIVE_LANE_ID:
+        return "role_binding_overlay_hardening_commit_not_materialized"
+    return f"{lane_id}_commit_not_materialized"
 
 
 def validate_receipt(
     receipt: dict[str, Any],
     *,
+    lane: dict[str, Any],
     require_exact: bool,
     repo_root_path: Path,
 ) -> list[str]:
     failures: list[str] = []
     if receipt.get("receipt_schema_version") != RECEIPT_SCHEMA_VERSION:
         failures.append("receipt_schema_version_mismatch")
+    expected_staged_paths = list(lane.get("exact_fixed_write_set") or EXPECTED_FIXED_WRITE_SET)
     staged_paths = receipt.get("staged_paths")
-    if staged_paths != EXPECTED_FIXED_WRITE_SET:
+    if staged_paths != expected_staged_paths:
         failures.append("staged_paths_not_exact_fixed_write_set")
-    if require_exact and staged_paths != EXPECTED_FIXED_WRITE_SET:
+    if require_exact and staged_paths != expected_staged_paths:
         failures.append("staged_paths_escape_fixed_write_set")
     validator_status = ((receipt.get("validator_result") or {}).get("status"))
-    if validator_status != VALIDATOR_EXPECTED_STATUS:
+    if validator_status != str(lane.get("validator_expected_status") or VALIDATOR_EXPECTED_STATUS):
         failures.append("validator_status_not_exact")
     probe_status = ((receipt.get("probe_result") or {}).get("status"))
-    if probe_status != PROBE_EXPECTED_STATUS:
+    if probe_status != str(lane.get("probe_expected_status") or PROBE_EXPECTED_STATUS):
         failures.append("probe_status_not_exact")
     observed_actions = receipt.get("observed_actions") or []
-    if any(action not in EXPECTED_ALLOWED_ACTIONS for action in observed_actions):
+    allowed_actions = list(lane.get("scope_lock_allowed_actions") or EXPECTED_ALLOWED_ACTIONS)
+    if any(action not in allowed_actions for action in observed_actions):
         failures.append("forbidden_actions_after_scope_lock")
     commit_id = receipt.get("commit_id")
     if not commit_id or not commit_resolves(str(commit_id), cwd=repo_root_path):
-        failures.append("protocol_feedback_instance_state_runner_hardening_commit_not_materialized")
+        failures.append(commit_not_materialized_token_for_lane(str(lane.get("lane_id") or ACTIVE_LANE_ID)))
     return failures
 
 
-def canonical_package_paths(root: Path | None = None) -> list[Path]:
+def canonical_package_paths(
+    root: Path | None = None,
+    *,
+    lane: dict[str, Any] | None = None,
+) -> list[Path]:
     base = root or repo_root()
-    return [(base / rel).resolve() for rel in EXPECTED_FIXED_WRITE_SET]
+    rels = list((lane or {}).get("exact_fixed_write_set") or EXPECTED_FIXED_WRITE_SET)
+    return [(base / rel).resolve() for rel in rels]

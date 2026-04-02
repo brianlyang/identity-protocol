@@ -31,7 +31,12 @@ def main() -> int:
         bundle = resolve_registry_bundle(args.registry_current)
         lane = get_lane(bundle.registry_doc, args.lane_id)
         receipt = json.loads(Path(args.receipt_file).read_text(encoding="utf-8"))
-        failures = validate_receipt(receipt, require_exact=True, repo_root_path=bundle.repo_root)
+        failures = validate_receipt(
+            receipt,
+            lane=lane,
+            require_exact=True,
+            repo_root_path=bundle.repo_root,
+        )
         if failures:
             emit(
                 {
@@ -45,14 +50,20 @@ def main() -> int:
         previous_status = lane.get("status", "architect_ready")
         if args.write_back:
             lane["status"] = EXPECTED_TERMINAL_STATUS
+            lane["next_role"] = "auditor"
             dump_yaml(bundle.versioned_registry, bundle.registry_doc)
         payload = {
             "status": "PASS_REQUIRED",
             "lane_id": lane["lane_id"],
+            "active_lane_id": bundle.current_doc.get("active_lane_id"),
             "previous_status": previous_status,
             "new_status": EXPECTED_TERMINAL_STATUS,
             "commit_resolved": True,
-            "next_role": route_next_role(lane, status_override=EXPECTED_TERMINAL_STATUS),
+            "next_role": route_next_role(
+                lane,
+                bundle=bundle,
+                status_override=EXPECTED_TERMINAL_STATUS,
+            ),
             "normalized_receipt": {
                 "validator_result": receipt["validator_result"],
                 "probe_result": receipt["probe_result"],

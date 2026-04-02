@@ -6,7 +6,13 @@ import json
 import sys
 from pathlib import Path
 
-from control_plane_lane_registry_common import ACTIVE_LANE_ID, emit, get_lane, resolve_registry_bundle, validate_receipt
+from control_plane_lane_registry_common import (
+    ACTIVE_LANE_ID,
+    emit,
+    get_lane,
+    resolve_registry_bundle,
+    validate_receipt,
+)
 
 
 def main() -> int:
@@ -23,11 +29,18 @@ def main() -> int:
         bundle = resolve_registry_bundle(args.registry_current)
         lane = get_lane(bundle.registry_doc, args.lane_id)
         receipt = json.loads(Path(args.receipt_file).read_text(encoding="utf-8"))
-        failures = validate_receipt(receipt, require_exact=args.require_exact, repo_root_path=bundle.repo_root)
+        failures = validate_receipt(
+            receipt,
+            lane=lane,
+            require_exact=args.require_exact,
+            repo_root_path=bundle.repo_root,
+        )
         if failures:
             emit(
                 {
                     "status": "FAIL_REQUIRED",
+                    "lane_id": lane["lane_id"],
+                    "active_lane_id": bundle.current_doc.get("active_lane_id"),
                     "phase": args.phase,
                     "failure_tokens": failures,
                     "fail_close_token": lane["fail_close_token"],
@@ -38,6 +51,8 @@ def main() -> int:
         emit(
             {
                 "status": "PASS_REQUIRED",
+                "lane_id": lane["lane_id"],
+                "active_lane_id": bundle.current_doc.get("active_lane_id"),
                 "phase": args.phase,
                 "normalized_receipt": receipt,
             },

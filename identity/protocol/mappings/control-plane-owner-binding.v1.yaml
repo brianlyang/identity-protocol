@@ -1,0 +1,11 @@
+schema_version: control_plane_owner_binding.v1
+truth_class: owner_binding_overlay
+scope: repo_local
+portable: false
+binding_policy: role_to_identity_binding_overlay
+active_binding_id: control_plane_default_owner_binding_profile
+role_to_identity_bindings:
+  architect: base-repo-architect
+  executor: base-repo-closure-orchestrator
+  auditor: base-repo-audit-expert-v3
+  office: office-ops-expert

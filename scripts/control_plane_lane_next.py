@@ -4,7 +4,13 @@ from __future__ import annotations
 import argparse
 import sys
 
-from control_plane_lane_registry_common import ACTIVE_LANE_ID, emit, get_lane, resolve_registry_bundle, route_next_role
+from control_plane_lane_registry_common import (
+    ACTIVE_LANE_ID,
+    emit,
+    get_lane,
+    resolve_registry_bundle,
+    route_next_role,
+)
 
 
 def main() -> int:
@@ -18,10 +24,15 @@ def main() -> int:
     try:
         bundle = resolve_registry_bundle(args.registry_current)
         lane = get_lane(bundle.registry_doc, args.lane_id)
-        next_role = route_next_role(lane, status_override=args.status_override or lane.get("status"))
+        next_role = route_next_role(
+            lane,
+            bundle=bundle,
+            status_override=args.status_override or lane.get("status"),
+        )
         payload = {
             "status": "PASS_REQUIRED",
             "lane_id": lane["lane_id"],
+            "active_lane_id": bundle.current_doc.get("active_lane_id"),
             "execution_mode": lane["execution_mode"],
             "next_role": next_role,
         }

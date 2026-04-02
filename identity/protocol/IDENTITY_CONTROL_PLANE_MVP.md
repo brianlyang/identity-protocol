@@ -3,24 +3,24 @@
 This file is admitted at protocol root only as clearly demoted support material.
 It is not a protocol-root constitution, not a root contract, and not active-runtime truth outside the machine-bound control-plane lane it documents.
 
-contract_id: `control_plane_protocol_feedback_instance_state_runner_hardening`  
+contract_id: `control_plane_role_binding_overlay_hardening`  
 classification: `existing_surface_alignment`
 
 ## Scope
 
-This package hardens the machine-authoritative normal execution contract for
-`control_plane_protocol_feedback_instance_state_runner_hardening` inside the authoritative checkout.
-It upgrades the target lane from registration-only metadata to a full executable control-plane lane
-without reopening `control_plane_lane_registration_transaction_only`.
+This package closes the control-plane hardening that separates canonical role law
+from repo-local concrete owner binding.
+The active machine-authoritative lane is now
+`control_plane_role_binding_overlay_hardening`.
 
 admitted_delta_only:
 
-- protocol_feedback_instance_state_runner_contract_only
-- protocol_feedback_validator_probe_surface_reuse_only
-- protocol_feedback_live_closure_state_admissibility_only
-- stage_equality_target_redefined_to_machine_authoritative_necessity_subset_only
-- no_absolute_host_path_literals_in_target_executable_surfaces
-- no_reopen_of_control_plane_lane_registration_transaction_only
+- canonical_role_law_owner_binding_overlay_split_only
+- owner_binding_overlay_current_and_versioned_surface_only
+- route_next_role_semantics_identity_resolution_split_only
+- historical_control_plane_lane_compatibility_probe_only
+- canonical_registry_deconcretizes_role_bindings_only
+- no_reopen_of_control_plane_protocol_feedback_instance_state_runner_hardening
 
 ## Exact success target
 
@@ -28,40 +28,40 @@ A success receipt is admissible only when all of the following are machine-true:
 
 1. the command is executed from the authoritative checkout root;
 2. the active registry pointer resolves to the versioned registry in the same package;
-3. the active lane is exactly `control_plane_protocol_feedback_instance_state_runner_hardening`;
-4. the target lane row carries a full executable contract, including `execution_mode`, `role_bindings`, `exact_fixed_write_set`, `read_only_input_surfaces`, `validator_command`, `probe_command`, `validator_expected_status`, `probe_expected_status`, `admitted_delta_only`, `fail_close_token`, and `receipt_schema_version`;
-5. the target executable script surfaces remain free of forbidden reusable absolute host-path literals such as `/Users/yangxi/...`;
-6. `bash scripts/ci/run_protocol_feedback_sidecar_contract_probes_ci.sh` exits successfully;
-7. `bash scripts/ci/run_protocol_feedback_ssot_archival_probes_ci.sh` exits successfully;
-8. `bash scripts/ci/run_sidecar_cwd_parity_probes_ci.sh` exits successfully;
-9. `python3 scripts/validate_identity_state_consistency.py --catalog ../.agents/identity/catalog.local.yaml` exits successfully;
-10. the structured receipt stages exactly the machine-authoritative closeout subset for this package;
-11. the validator result is exactly `PASS_REQUIRED`;
-12. the probe result is exactly `PASS`;
-13. the reported commit id resolves in the authoritative checkout before terminal success.
+3. the active lane is exactly `control_plane_role_binding_overlay_hardening`;
+4. canonical role law remains in the lane registry, while repo-local owner binding lives only in:
+   - `identity/protocol/mappings/control-plane-owner-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-owner-binding.v1.yaml`
+5. canonical registry no longer persists `role_bindings` at the top level or inside lane rows;
+6. `route_next_role` semantics and concrete `identity_id` resolution are split, with identity resolution sourced from the owner-binding overlay only;
+7. the historical lanes `control_plane_lane_registration_transaction_only` and `control_plane_protocol_feedback_instance_state_runner_hardening` remain machine-readable and route-compatible after the split;
+8. the structured receipt stages exactly the machine-authoritative closeout subset for this package;
+9. the validator result is exactly `PASS_REQUIRED`;
+10. the probe result is exactly `PASS`;
+11. the reported commit id resolves in the authoritative checkout before terminal success.
 
-## CWD / path-risk adjudication
+## Canonical role law vs repo-local owner binding
 
-Allowed repo-root execution bindings remain in scope for this lane:
+Canonical control-plane truth now carries role semantics only:
 
-- `cwd_must_equal_repo_root`
-- `TMPDIR=$PWD/.tmp`
+- `status -> next_role`
+- `writer_role`
+- `read_only_roles`
+- `execution_mode`
+- `scope_lock_allowed_actions`
 
-These bindings are lane-local execution controls, not reusable-host-path pollution.
+Concrete owner resolution is no longer frozen into canonical lane truth.
+Instead, repo-local owner binding is materialized only through the owner-binding overlay surfaces:
 
-Forbidden reusable absolute host-path literals remain out of scope for this lane unless they appear inside the target executable script surfaces:
+- `identity/protocol/mappings/control-plane-owner-binding.current.yaml`
+- `identity/protocol/mappings/control-plane-owner-binding.v1.yaml`
 
-- `/Users/yangxi/...`
+Those overlay surfaces are explicitly non-portable:
 
-Current adjudication for this lane: the target executable script surfaces are free of forbidden reusable absolute host-path literals, so absolute-host-path cleanup remains a separate remediation track rather than a prerequisite blocker for this lane.
-
-Representative target executable surfaces for this adjudication include:
-
-- `scripts/validate_protocol_feedback_sidecar_contract.py`
-- `scripts/ci/run_protocol_feedback_sidecar_contract_probes_ci.sh`
-- `scripts/ci/run_protocol_feedback_ssot_archival_probes_ci.sh`
-- `scripts/ci/run_sidecar_cwd_parity_probes_ci.sh`
-- `scripts/validate_identity_state_consistency.py`
+- `truth_class = owner_binding_overlay`
+- `scope = repo_local`
+- `portable = false`
+- `binding_policy = role_to_identity_binding_overlay`
 
 ## Authoritative checkout binding
 
@@ -69,11 +69,17 @@ The package binds execution to the local checkout through file-anchored surfaces
 
 - `identity/protocol/mappings/control-plane-lane-registry.current.yaml`
 - `identity/protocol/mappings/control-plane-lane-registry.v1.yaml`
+- `identity/protocol/mappings/control-plane-owner-binding.current.yaml`
+- `identity/protocol/mappings/control-plane-owner-binding.v1.yaml`
 - the control-plane scripts co-located in this repository root
 
 The validator and probes therefore treat the current working directory as admissible only
 when it equals the repository root resolved from the script location and the Git top-level.
 A divergent execution workspace must fail-close before success receipt ingestion.
+
+Machine-exact binding token:
+
+- `cwd_must_equal_repo_root`
 
 ## Canonical runtime tuple pollution policy
 
@@ -83,11 +89,11 @@ tuple literals. The following are forbidden in this package:
 - a concrete `session_id`
 - a concrete `run:*` token
 - a concrete `actor_id` embedded in reusable execution templates
-- a concrete executor identity embedded in runtime-resolved command templates
+- a concrete executor identity embedded in canonical runtime-resolved command templates
 
 Allowed literal exception surfaces remain bounded to:
 
-- `role_bindings`
+- `owner_binding_overlay`
 - actor/session store
 - runtime reports
 - CI/probe fixtures
@@ -101,7 +107,8 @@ The active lane for this package carries these machine-visible fields:
 - `classification`
 - `status`
 - `execution_mode`
-- `role_bindings`
+- `writer_role`
+- `read_only_roles`
 - `exact_fixed_write_set`
 - `read_only_input_surfaces`
 - `validator_command`
@@ -113,48 +120,66 @@ The active lane for this package carries these machine-visible fields:
 - `scope_lock_allowed_actions`
 - `receipt_schema_version`
 
+The canonical registry no longer persists `role_bindings`.
+Concrete identity mapping is resolved only from the repo-local owner-binding overlay.
+
 ## Execution mode
 
 This package remains `split_roles` at the machine-contract layer:
 
-- architect authors the authoritative package
+- architect defines canonical role law
 - executor performs mutation / validator / probe / commit
-- auditor and office remain read-only roles after closure
+- auditor and office remain read-only post-closure roles
 
 The user is not a relay surface for these roles.
 
-## Live lane status semantics
+## Historical lane compatibility
 
-The active target lane remains machine-admissible in exactly two live states:
+This hardening does not reopen already-closed control-plane lanes.
+Instead it preserves historical lane rows while removing concrete owner bindings from
+canonical registry truth:
 
-- `architect_ready` before closure receipt ingestion, where `next_role = executor`
-- `closure_done` after a successful closure receipt is ingested, where `next_role = auditor`
+- `control_plane_lane_registration_transaction_bootstrap`
+- `control_plane_lane_registration_transaction_only`
+- `control_plane_protocol_feedback_instance_state_runner_hardening`
 
-This package must not fail-close merely because the live lane has already advanced
-from executor-owned closure to auditor-owned post-closure review.
+Those rows remain route-compatible because concrete `identity_id` values are now resolved
+through the owner-binding overlay at render / next / ingest time.
 
 ## Fixed write set
 
 The machine-authoritative closeout subset for this package is:
 
 1. `identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md`
-2. `identity/protocol/mappings/control-plane-lane-registry.v1.yaml`
-3. `scripts/control_plane_lane_registry_common.py`
-4. `scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py`
-5. `scripts/ci/run_control_plane_protocol_feedback_instance_state_runner_hardening_probes_ci.sh`
+2. `identity/protocol/mappings/control-plane-lane-registry.current.yaml`
+3. `identity/protocol/mappings/control-plane-lane-registry.v1.yaml`
+4. `identity/protocol/mappings/control-plane-owner-binding.current.yaml`
+5. `identity/protocol/mappings/control-plane-owner-binding.v1.yaml`
+6. `docs/review/protocol-remediation-audit-ledger-v1.6.x-post-closure-handoff-projection-drift.md`
+7. `scripts/control_plane_lane_registry_common.py`
+8. `scripts/control_plane_lane_render.py`
+9. `scripts/control_plane_lane_next.py`
+10. `scripts/control_plane_lane_ingest.py`
+11. `scripts/control_plane_lane_stream_guard.py`
+12. `scripts/validate_identity_control_plane_bootstrap_mvp.py`
+13. `scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh`
+14. `scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py`
+15. `scripts/ci/run_control_plane_protocol_feedback_instance_state_runner_hardening_probes_ci.sh`
+16. `scripts/validate_control_plane_role_binding_overlay_hardening.py`
+17. `scripts/ci/run_control_plane_role_binding_overlay_hardening_probes_ci.sh`
 
 ## Command templates
 
 Validator command:
 
 ```bash
-TMPDIR=$PWD/.tmp python3 scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py --json-only
+TMPDIR=$PWD/.tmp python3 scripts/validate_control_plane_role_binding_overlay_hardening.py --json-only
 ```
 
 Probe command:
 
 ```bash
-TMPDIR=$PWD/.tmp bash scripts/ci/run_control_plane_protocol_feedback_instance_state_runner_hardening_probes_ci.sh
+TMPDIR=$PWD/.tmp bash scripts/ci/run_control_plane_role_binding_overlay_hardening_probes_ci.sh
 ```
 
 These templates are intentionally runtime-generic and contain no concrete actor/session tuple.
@@ -163,14 +188,15 @@ These templates are intentionally runtime-generic and contain no concrete actor/
 
 The machine fail-close token for this package is:
 
-- `control_plane_protocol_feedback_instance_state_runner_hardening_execution_contract_not_machine_authoritative`
+- `control_plane_role_binding_overlay_hardening_not_machine_authoritative`
 
 Representative fail-close reasons include:
 
 - current working directory is not the authoritative checkout root
 - git top-level diverges from the authoritative checkout root
-- the target lane row does not carry a full executable contract
-- target executable surfaces contain forbidden reusable absolute host-path literals
+- canonical registry still persists `role_bindings`
+- owner-binding overlay is missing or malformed
+- route semantics and concrete identity resolution are not split
 - staged paths escape the fixed write set or are not exact
 - commit id does not resolve in the authoritative checkout
 - canonical reusable templates contain forbidden concrete runtime tuple literals

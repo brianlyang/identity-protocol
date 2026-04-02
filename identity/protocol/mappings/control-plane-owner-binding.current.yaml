@@ -1,0 +1,7 @@
+schema_version: control_plane_owner_binding.current.v1
+truth_class: owner_binding_overlay
+scope: repo_local
+portable: false
+binding_policy: role_to_identity_binding_overlay
+active_file: identity/protocol/mappings/control-plane-owner-binding.v1.yaml
+active_binding_id: control_plane_default_owner_binding_profile
