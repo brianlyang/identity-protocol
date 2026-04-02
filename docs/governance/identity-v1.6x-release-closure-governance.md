@@ -22,7 +22,7 @@ Execution mode: canonical static SSOT for `1.6.x` release-closure interpretation
 3. This document freezes the version-boundary interpretation for `1.6.x`; it does **not** by itself declare a tag issuance, bypass stream owners, or replace release gates/readiness validators.
 4. `1.6.x` closure means current-protocol-universe debt is closed on the `1.6.x` side rather than narratively deferred into `1.7.x`.
 5. `1.7.x` admission is future-facing only after `1.6.x` is treated as root-closed, machine-closed, and runtime-closed on the problems that already belong to the current protocol universe.
-6. The authoritative current workbook horizon for this release boundary is `ISSUE-001` through `ISSUE-048`; if that horizon moves, this boundary doc must truth-sync instead of freezing a stale issue universe.; truth-anchor: accepted phase-1 closure `1e0ce227daf87d2f7853c4d7ff8c964bdfe499b0`
+6. The authoritative current workbook horizon for this release boundary is `ISSUE-001` through `ISSUE-049`; if that horizon moves, this boundary doc must truth-sync instead of freezing a stale issue universe.; truth-anchor: accepted phase-1 closure `1e0ce227daf87d2f7853c4d7ff8c964bdfe499b0`
 7. The canonical derived summary surface for this boundary is `docs/release/identity-v1.6x-release-closure-summary.md`; it may compress this law for handoff, but it must not replace this governance surface, current runtime verdict surfaces, or fleet-scope closure matrices.
 8. Historical `docs/release/*.md` surfaces must remain explicitly archival and must not silently reclaim current release-boundary authority.
 
@@ -275,7 +275,7 @@ Frozen consequence:
 
 ## 5) Release-closure and future-admission rule
 
-1. The authoritative current workbook rows for `ISSUE-001` through `ISSUE-048` remain the machine-readable release-closure ledger for the known `1.6.x` universe.
+1. The authoritative current workbook rows for `ISSUE-001` through `ISSUE-049` remain the machine-readable release-closure ledger for the known `1.6.x` universe.
 2. Release issuance still depends on the active machine gates, not this document alone.
 3. But any attempt to classify a still-current-universe closure debt as a `1.7.x` item must fail the interpretation test in this document.
 4. The admission rule for `1.7.x` is therefore:

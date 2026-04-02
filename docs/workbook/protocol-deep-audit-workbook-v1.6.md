@@ -1381,6 +1381,39 @@ Root cause:
   - workbook and issue-register now land ISSUE-048 as the formal issue for release-closure truth-sync / probe companion sync without rewriting the accepted phase-1 owner-surface invariant.
 
 
+
+### ISSUE-049 - Explicit protocol-feedback escalation is not consumed into rail switch + canonical emission/receipt flow
+
+- `status`: OPEN
+- `problem_statement`: when the user explicitly requests protocol feedback / escalation, the identity instance may semantically understand the request yet keep handling it as explanation/chat text. The request is not consumed as machine action, the runtime does not visibly switch onto the `protocol-feedback` rail, and canonical emission / receipt flow is not immediately entered, so explanation-only handling can masquerade as admitted completion.
+- `primary_owner_doc`: `docs/review/protocol-remediation-audit-ledger-v1.6.x-protocol-feedback-rail-switch-and-emission-obligation-consumption.md`
+- `secondary_refs`:
+  - `scripts/emit_protocol_feedback_atomic.py`
+  - `scripts/emit_protocol_feedback_batch.py`
+  - `scripts/validate_protocol_feedback_atomic_emit.py`
+  - `scripts/validate_protocol_feedback_bootstrap_ready.py`
+  - `scripts/validate_protocol_feedback_inbox_channel.py`
+  - `scripts/validate_protocol_feedback_reply_channel.py`
+  - `scripts/validate_protocol_feedback_sidecar_contract.py`
+  - `scripts/validate_protocol_feedback_ssot_archival.py`
+- `machine_gate`: once a request is recognized as explicit `protocol-feedback` / escalation, the instance must switch to the protocol-feedback rail and enter canonical emission / receipt flow; explanation-only handling or generic chat acknowledgement is `FAIL_REQUIRED` and cannot count as admitted completion.
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - explicit protocol-feedback / escalation detection must be machine-visible as `protocol_feedback_request_detected`;
+  - rule knowledge / applicability must be machine-visible as `protocol_feedback_rule_known`;
+  - rail selection must be machine-visible as `protocol_feedback_rail_selected` and must identify entry into the protocol-feedback rail rather than ordinary chat handling;
+  - emission obligation must be machine-visible as `protocol_feedback_emission_obligation_status`;
+  - canonical channel entry / emit invocation / artifact materialization must be machine-visible as `protocol_feedback_channel_entered`, `protocol_feedback_emit_invoked`, and `protocol_feedback_artifact_materialized`;
+  - rule consumption must be machine-visible as `protocol_feedback_rule_consumption_status`;
+  - stale or incomplete handling must be machine-visible through `stale_reasons`;
+  - explanation-only handling after explicit escalation detection must remain fail-closed as non-completion;
+  - this lane remains ISSUE-level and must not be promoted to a stream unless multiple sibling protocol-feedback defects later prove a broader architecture gap.
+- `current_evidence`:
+  - this issue is opened specifically for lane `protocol_feedback_rail_switch_and_emission_obligation_consumption_contract_v1`, which isolates a narrow machine-consumption gap rather than reopening protocol-feedback as a whole;
+  - the currently inspected protocol-feedback emitter / validator surfaces already exist (`emit_protocol_feedback_atomic.py`, `emit_protocol_feedback_batch.py`, and the protocol-feedback validator family), so the defect is not framed as “protocol feedback emission does not exist”;
+  - the missing invariant is immediate rail switch + canonical emission / receipt consumption once explicit escalation is recognized;
+  - non-goals remain fixed: do not mix context-compaction / anti-loop reopen, hardcoded identity binding / owner decoupling, or historical `IP-PFB-CH-006` single-code storytelling into `ISSUE-049`.
+
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
 1. The rows below capture desensitized follow-on reinforcement for active streams; they are routed through this workbook so the protocol architect can land them on canonical governance/review surfaces without reopening the closed `ISSUE-001..024` correctness family.
