@@ -275,6 +275,17 @@ def _sanitize_status_artifact_payload(value: Any) -> Any:
     return value
 
 
+def _normalize_repo_anchored_value(value: Any, repo_root: Path) -> Any:
+    repo_root_text = str(repo_root.resolve())
+    if isinstance(value, dict):
+        return {str(key): _normalize_repo_anchored_value(node, repo_root) for key, node in value.items()}
+    if isinstance(value, list):
+        return [_normalize_repo_anchored_value(item, repo_root) for item in value]
+    if isinstance(value, str) and repo_root_text:
+        return value.replace(repo_root_text, "${REPO_ROOT}")
+    return value
+
+
 def _git_head_short(repo_root: Path) -> str:
     proc = subprocess.run(
         ["git", "rev-parse", "--short", "HEAD"],
@@ -314,7 +325,7 @@ def _run_check(spec: CheckSpec, repo_root: Path) -> dict[str, Any]:
         "error_code": error_code,
         "stdout_tail": [],
         "stderr_tail": [],
-        "payload": _sanitize_status_artifact_payload(payload),
+        "payload": _normalize_repo_anchored_value(_sanitize_status_artifact_payload(payload), repo_root),
     }
 
 
@@ -539,6 +550,7 @@ def main() -> int:
     payload["status_file"] = str(status_file)
     payload["status_file_active_file"] = status_active_file
     payload["status_file_alias_error"] = status_alias_error
+    payload = _normalize_repo_anchored_value(payload, repo_root)
 
     if args.write:
         try:
