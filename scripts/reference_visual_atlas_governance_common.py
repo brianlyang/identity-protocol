@@ -252,9 +252,19 @@ def _append_violation(violations: list[str], reason: str, detail: str) -> None:
     violations.append(f"{reason}:{detail}")
 
 
+def _is_transient_runtime_shadow_path(candidate: Path, repo_root: Path) -> bool:
+    try:
+        relative_path = candidate.relative_to(repo_root)
+    except ValueError:
+        return False
+    return bool(relative_path.parts) and relative_path.parts[0] == ".tmp"
+
+
 def _collect_stray_atlas_docs(repo_root: Path, canonical_doc: Path, atlas_doc_re: re.Pattern[str]) -> list[str]:
     out: list[str] = []
     for candidate in repo_root.rglob("*.md"):
+        if _is_transient_runtime_shadow_path(candidate, repo_root):
+            continue
         if not atlas_doc_re.match(candidate.name):
             continue
         rel = candidate.relative_to(repo_root).as_posix()
@@ -270,6 +280,8 @@ def _collect_stray_svg_files(
 ) -> list[str]:
     out: list[str] = []
     for candidate in repo_root.rglob("*.svg"):
+        if _is_transient_runtime_shadow_path(candidate, repo_root):
+            continue
         if not svg_family_re.match(candidate.name):
             continue
         rel = candidate.relative_to(repo_root).as_posix()

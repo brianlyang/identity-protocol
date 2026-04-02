@@ -21,6 +21,7 @@ SKIP_ENTRY_NAMES = {
     ".git",
     "__pycache__",
     ".DS_Store",
+    ".tmp",
 }
 
 

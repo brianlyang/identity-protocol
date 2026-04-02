@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 102`, `command snippets checked: 1382`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 102`, `command snippets checked: 1387`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -1384,35 +1384,39 @@ Root cause:
 
 ### ISSUE-049 - Explicit protocol-feedback escalation is not consumed into rail switch + canonical emission/receipt flow
 
-- `status`: OPEN
-- `problem_statement`: when the user explicitly requests protocol feedback / escalation, the identity instance may semantically understand the request yet keep handling it as explanation/chat text. The request is not consumed as machine action, the runtime does not visibly switch onto the `protocol-feedback` rail, and canonical emission / receipt flow is not immediately entered, so explanation-only handling can masquerade as admitted completion.
+- `status`: CLOSED
+- `problem_statement`: explicit protocol-feedback / escalation requests were previously able to remain inside explanation-only handling instead of being consumed into machine action that selected the `protocol-feedback` rail and entered canonical emission / receipt flow.
 - `primary_owner_doc`: `docs/review/protocol-remediation-audit-ledger-v1.6.x-protocol-feedback-rail-switch-and-emission-obligation-consumption.md`
 - `secondary_refs`:
-  - `scripts/emit_protocol_feedback_atomic.py`
-  - `scripts/emit_protocol_feedback_batch.py`
-  - `scripts/validate_protocol_feedback_atomic_emit.py`
+  - `docs/governance/identity-protocol-feedback-rail-switch-and-emission-obligation-consumption-governance-v1.6.x.md`
+  - `scripts/protocol_feedback_rail_switch_and_emission_obligation_consumption_contract_common.py`
+  - `scripts/validate_protocol_feedback_rail_switch_and_emission_obligation_consumption.py`
+  - `scripts/ci/run_protocol_feedback_rail_switch_and_emission_obligation_consumption_probes_ci.sh`
   - `scripts/validate_protocol_feedback_bootstrap_ready.py`
-  - `scripts/validate_protocol_feedback_inbox_channel.py`
-  - `scripts/validate_protocol_feedback_reply_channel.py`
-  - `scripts/validate_protocol_feedback_sidecar_contract.py`
-  - `scripts/validate_protocol_feedback_ssot_archival.py`
+  - `scripts/emit_protocol_feedback_atomic.py`
+  - `scripts/validate_protocol_feedback_atomic_emit.py`
 - `machine_gate`: once a request is recognized as explicit `protocol-feedback` / escalation, the instance must switch to the protocol-feedback rail and enter canonical emission / receipt flow; explanation-only handling or generic chat acknowledgement is `FAIL_REQUIRED` and cannot count as admitted completion.
 - `root_cause`: RC-03 and RC-06
 - `stop_condition`:
-  - explicit protocol-feedback / escalation detection must be machine-visible as `protocol_feedback_request_detected`;
-  - rule knowledge / applicability must be machine-visible as `protocol_feedback_rule_known`;
-  - rail selection must be machine-visible as `protocol_feedback_rail_selected` and must identify entry into the protocol-feedback rail rather than ordinary chat handling;
-  - emission obligation must be machine-visible as `protocol_feedback_emission_obligation_status`;
-  - canonical channel entry / emit invocation / artifact materialization must be machine-visible as `protocol_feedback_channel_entered`, `protocol_feedback_emit_invoked`, and `protocol_feedback_artifact_materialized`;
-  - rule consumption must be machine-visible as `protocol_feedback_rule_consumption_status`;
-  - stale or incomplete handling must be machine-visible through `stale_reasons`;
-  - explanation-only handling after explicit escalation detection must remain fail-closed as non-completion;
-  - this lane remains ISSUE-level and must not be promoted to a stream unless multiple sibling protocol-feedback defects later prove a broader architecture gap.
+  - explicit protocol-feedback / escalation detection is machine-visible as `protocol_feedback_request_detected`;
+  - rule knowledge / applicability is machine-visible as `protocol_feedback_rule_known`;
+  - rail selection is machine-visible as `protocol_feedback_rail_selected` and identifies entry into the protocol-feedback rail rather than ordinary chat handling;
+  - emission obligation is machine-visible as `protocol_feedback_emission_obligation_status`;
+  - canonical channel entry / emit invocation / artifact materialization are machine-visible as `protocol_feedback_channel_entered`, `protocol_feedback_emit_invoked`, and `protocol_feedback_artifact_materialized`;
+  - rule consumption is machine-visible as `protocol_feedback_rule_consumption_status`;
+  - stale or incomplete handling remains machine-visible through `stale_reasons`;
+  - explanation-only handling after explicit escalation detection remains fail-closed as non-completion.
+- `closure_evidence`:
+  - `docs/governance/identity-protocol-feedback-rail-switch-and-emission-obligation-consumption-governance-v1.6.x.md` and `docs/review/protocol-remediation-audit-ledger-v1.6.x-protocol-feedback-rail-switch-and-emission-obligation-consumption.md` now freeze the bounded ISSUE-049 contract with the required machine-visible state family;
+  - `scripts/protocol_feedback_rail_switch_and_emission_obligation_consumption_contract_common.py` and `scripts/validate_protocol_feedback_rail_switch_and_emission_obligation_consumption.py` now compose `scripts/validate_protocol_feedback_bootstrap_ready.py`, `scripts/emit_protocol_feedback_atomic.py`, and `scripts/validate_protocol_feedback_atomic_emit.py` into one executable proof lane that fail-closes skipped emit, skipped channel entry, and missing artifacts;
+  - `bash scripts/ci/run_protocol_feedback_rail_switch_and_emission_obligation_consumption_probes_ci.sh` now proves positive explicit-request consumption plus negative fail-close on skipped atomic emit, skipped outbox sync, and document drift;
+  - `TMPDIR=$PWD/.tmp python3 scripts/validate_protocol_feedback_rail_switch_and_emission_obligation_consumption.py --json-only` returns `PASS_REQUIRED`;
+  - `TMPDIR=$PWD/.tmp bash scripts/ci/run_protocol_feedback_rail_switch_and_emission_obligation_consumption_probes_ci.sh` returns `PASS`.
 - `current_evidence`:
-  - this issue is opened specifically for lane `protocol_feedback_rail_switch_and_emission_obligation_consumption_contract_v1`, which isolates a narrow machine-consumption gap rather than reopening protocol-feedback as a whole;
-  - the currently inspected protocol-feedback emitter / validator surfaces already exist (`emit_protocol_feedback_atomic.py`, `emit_protocol_feedback_batch.py`, and the protocol-feedback validator family), so the defect is not framed as “protocol feedback emission does not exist”;
-  - the missing invariant is immediate rail switch + canonical emission / receipt consumption once explicit escalation is recognized;
-  - non-goals remain fixed: do not mix context-compaction / anti-loop reopen, hardcoded identity binding / owner decoupling, or historical `IP-PFB-CH-006` single-code storytelling into `ISSUE-049`.
+  - ISSUE-049 remains narrow: it closes explicit rail switch + canonical emission / receipt consumption only;
+  - existing bootstrap / atomic emit / atomic emit validation surfaces remain the shared primitives consumed by the new lane;
+  - non-goals remain fixed: do not reopen owner-binding portability, anti-loop family semantics, or generalized protocol-feedback scope.
+
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
