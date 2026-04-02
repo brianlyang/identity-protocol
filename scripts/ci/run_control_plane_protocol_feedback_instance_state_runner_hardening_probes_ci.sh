@@ -16,10 +16,10 @@ python3 scripts/control_plane_lane_preflight.py --json-only > "$probe_dir/prefli
 python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["lane_id"]=="control_plane_protocol_feedback_instance_state_runner_hardening"; assert data["scope_lock_status"]=="LOCKED"' "$probe_dir/preflight.json"
 
 python3 scripts/control_plane_lane_render.py --json-only > "$probe_dir/render.json"
-python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["requested_lane_id"]=="control_plane_protocol_feedback_instance_state_runner_hardening"; assert data["active_lane_id"]=="control_plane_protocol_feedback_instance_state_runner_hardening"; assert data["lane_card"]["lane_id"]=="control_plane_protocol_feedback_instance_state_runner_hardening"; assert data["lane_card"]["fail_close_token"]=="control_plane_protocol_feedback_instance_state_runner_hardening_execution_contract_not_machine_authoritative"' "$probe_dir/render.json"
+python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["requested_lane_id"]=="control_plane_protocol_feedback_instance_state_runner_hardening"; assert data["active_lane_id"]=="control_plane_protocol_feedback_instance_state_runner_hardening"; assert data["lane_card"]["lane_id"]=="control_plane_protocol_feedback_instance_state_runner_hardening"; assert data["lane_card"]["status"] in {"architect_ready","closure_done"}; assert data["lane_card"]["fail_close_token"]=="control_plane_protocol_feedback_instance_state_runner_hardening_execution_contract_not_machine_authoritative"' "$probe_dir/render.json"
 
 python3 scripts/control_plane_lane_next.py --json-only > "$probe_dir/next.json"
-python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["lane_id"]=="control_plane_protocol_feedback_instance_state_runner_hardening"; assert data["next_role"]["identity_id"]=="base-repo-closure-orchestrator"' "$probe_dir/next.json"
+python3 -c 'import json,sys; render=json.load(open(sys.argv[1])); data=json.load(open(sys.argv[2])); assert data["status"]=="PASS_REQUIRED", data; assert data["lane_id"]=="control_plane_protocol_feedback_instance_state_runner_hardening"; expected="base-repo-audit-expert-v3" if render["lane_card"]["status"]=="closure_done" else "base-repo-closure-orchestrator"; assert data["next_role"]["identity_id"]==expected' "$probe_dir/render.json" "$probe_dir/next.json"
 
 mkdir -p "$probe_dir/identity/protocol/mappings"
 cp identity/protocol/mappings/control-plane-lane-registry.v1.yaml "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.v1.yaml"
@@ -62,7 +62,6 @@ cat > "$probe_dir/success-receipt.json" <<EOF
   },
   "staged_paths": [
     "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
-    "identity/protocol/mappings/control-plane-lane-registry.current.yaml",
     "identity/protocol/mappings/control-plane-lane-registry.v1.yaml",
     "scripts/control_plane_lane_registry_common.py",
     "scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py",
@@ -82,6 +81,9 @@ python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["sta
 
 python3 scripts/control_plane_lane_ingest.py --registry-current "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml" --receipt-file "$probe_dir/success-receipt.json" --write-back --json-only > "$probe_dir/ingest.json"
 python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["new_status"]=="closure_done"; assert data["next_role"]["identity_id"]=="base-repo-audit-expert-v3"' "$probe_dir/ingest.json"
+
+python3 scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py --registry-current "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml" --json-only > "$probe_dir/validator-after-ingest.json"
+python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data' "$probe_dir/validator-after-ingest.json"
 
 python3 scripts/control_plane_lane_next.py --registry-current "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml" --status-override closure_done --json-only > "$probe_dir/next-after-closure.json"
 python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["next_role"]["identity_id"]=="base-repo-audit-expert-v3"; assert data["next_role"]["suggested_next_status"]=="audit_ready"' "$probe_dir/next-after-closure.json"

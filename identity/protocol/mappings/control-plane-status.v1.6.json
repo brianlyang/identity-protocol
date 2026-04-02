@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-04-02T11:03:12Z",
-  "git_head_short": "7766f37",
+  "generated_at_utc": "2026-04-02T11:16:40Z",
+  "git_head_short": "c4bfb27",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -522,7 +522,7 @@
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_alias_error": "",
         "current_last_updated_utc": "2026-04-02T10:53:20Z",
-        "live_last_updated_utc": "2026-04-02T11:02:33Z",
+        "live_last_updated_utc": "2026-04-02T11:15:59Z",
         "mismatch_count": 0,
         "mismatches": [],
         "observed": {

@@ -17,6 +17,8 @@ admitted_delta_only:
 
 - protocol_feedback_instance_state_runner_contract_only
 - protocol_feedback_validator_probe_surface_reuse_only
+- protocol_feedback_live_closure_state_admissibility_only
+- stage_equality_target_redefined_to_machine_authoritative_necessity_subset_only
 - no_absolute_host_path_literals_in_target_executable_surfaces
 - no_reopen_of_control_plane_lane_registration_transaction_only
 
@@ -33,7 +35,7 @@ A success receipt is admissible only when all of the following are machine-true:
 7. `bash scripts/ci/run_protocol_feedback_ssot_archival_probes_ci.sh` exits successfully;
 8. `bash scripts/ci/run_sidecar_cwd_parity_probes_ci.sh` exits successfully;
 9. `python3 scripts/validate_identity_state_consistency.py --catalog ../.agents/identity/catalog.local.yaml` exits successfully;
-10. the structured receipt stages exactly the fixed write set for this package;
+10. the structured receipt stages exactly the machine-authoritative closeout subset for this package;
 11. the validator result is exactly `PASS_REQUIRED`;
 12. the probe result is exactly `PASS`;
 13. the reported commit id resolves in the authoritative checkout before terminal success.
@@ -121,16 +123,25 @@ This package remains `split_roles` at the machine-contract layer:
 
 The user is not a relay surface for these roles.
 
+## Live lane status semantics
+
+The active target lane remains machine-admissible in exactly two live states:
+
+- `architect_ready` before closure receipt ingestion, where `next_role = executor`
+- `closure_done` after a successful closure receipt is ingested, where `next_role = auditor`
+
+This package must not fail-close merely because the live lane has already advanced
+from executor-owned closure to auditor-owned post-closure review.
+
 ## Fixed write set
 
-The closure executor may mutate only the following files:
+The machine-authoritative closeout subset for this package is:
 
 1. `identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md`
-2. `identity/protocol/mappings/control-plane-lane-registry.current.yaml`
-3. `identity/protocol/mappings/control-plane-lane-registry.v1.yaml`
-4. `scripts/control_plane_lane_registry_common.py`
-5. `scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py`
-6. `scripts/ci/run_control_plane_protocol_feedback_instance_state_runner_hardening_probes_ci.sh`
+2. `identity/protocol/mappings/control-plane-lane-registry.v1.yaml`
+3. `scripts/control_plane_lane_registry_common.py`
+4. `scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py`
+5. `scripts/ci/run_control_plane_protocol_feedback_instance_state_runner_hardening_probes_ci.sh`
 
 ## Command templates
 

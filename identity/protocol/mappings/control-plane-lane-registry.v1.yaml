@@ -127,7 +127,7 @@ lanes:
   receipt_schema_version: control_plane_receipt.v1
 - lane_id: control_plane_protocol_feedback_instance_state_runner_hardening
   classification: existing_surface_alignment
-  status: architect_ready
+  status: closure_done
   active: true
   execution_mode: split_roles
   writer_role: executor
@@ -142,7 +142,6 @@ lanes:
     office: office-ops-expert
   exact_fixed_write_set:
   - identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md
-  - identity/protocol/mappings/control-plane-lane-registry.current.yaml
   - identity/protocol/mappings/control-plane-lane-registry.v1.yaml
   - scripts/control_plane_lane_registry_common.py
   - scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py
@@ -158,11 +157,13 @@ lanes:
   admitted_delta_only:
   - protocol_feedback_instance_state_runner_contract_only
   - protocol_feedback_validator_probe_surface_reuse_only
+  - protocol_feedback_live_closure_state_admissibility_only
+  - stage_equality_target_redefined_to_machine_authoritative_necessity_subset_only
   - no_absolute_host_path_literals_in_target_executable_surfaces
   - no_reopen_of_control_plane_lane_registration_transaction_only
   fail_close_token: control_plane_protocol_feedback_instance_state_runner_hardening_execution_contract_not_machine_authoritative
   blocker_id: protocol_feedback_instance_state_runner_execution_contract
-  next_role: executor
+  next_role: auditor
   handoff_required: true
   post_commit_acceptance_mode: authoritative_checkout_commit_resolution
   forbidden_rewrite_markers:

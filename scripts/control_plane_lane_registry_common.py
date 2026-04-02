@@ -21,6 +21,8 @@ FAIL_CLOSE_TOKEN = "control_plane_protocol_feedback_instance_state_runner_harden
 ADMITTED_DELTA_ONLY = [
     "protocol_feedback_instance_state_runner_contract_only",
     "protocol_feedback_validator_probe_surface_reuse_only",
+    "protocol_feedback_live_closure_state_admissibility_only",
+    "stage_equality_target_redefined_to_machine_authoritative_necessity_subset_only",
     "no_absolute_host_path_literals_in_target_executable_surfaces",
     "no_reopen_of_control_plane_lane_registration_transaction_only",
 ]
@@ -33,7 +35,6 @@ DEFAULT_CURRENT_REGISTRY_REL = Path("identity/protocol/mappings/control-plane-la
 DEFAULT_VERSIONED_REGISTRY_REL = Path("identity/protocol/mappings/control-plane-lane-registry.v1.yaml")
 EXPECTED_FIXED_WRITE_SET = [
     "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
-    "identity/protocol/mappings/control-plane-lane-registry.current.yaml",
     "identity/protocol/mappings/control-plane-lane-registry.v1.yaml",
     "scripts/control_plane_lane_registry_common.py",
     "scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py",

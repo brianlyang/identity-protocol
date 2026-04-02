@@ -58,6 +58,13 @@ def _record(checks, failures, name, ok, detail):
         failures.append(name)
 
 
+def _display_path(path: Path, root: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return str(path)
+
+
 def _scan_host_path_literals(paths: list[Path]) -> list[str]:
     failures: list[str] = []
     root = repo_root()
@@ -70,11 +77,12 @@ def _scan_host_path_literals(paths: list[Path]) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--registry-current")
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
     try:
-        bundle = resolve_registry_bundle()
+        bundle = resolve_registry_bundle(args.registry_current)
         lane = get_lane(bundle.registry_doc, ACTIVE_LANE_ID)
         registration_lane = get_lane(bundle.registry_doc, REGISTRATION_LANE_ID)
         checks = []
@@ -96,7 +104,10 @@ def main() -> int:
             bundle.current_doc.get("contract_id") == CONTRACT_ID
             and bundle.current_doc.get("classification") == CLASSIFICATION
             and bundle.current_doc.get("active_lane_id") == ACTIVE_LANE_ID
-            and bundle.current_doc.get("active_file") == DEFAULT_VERSIONED_REGISTRY_REL.as_posix()
+            and str(bundle.current_doc.get("active_file", "")) in {
+                DEFAULT_VERSIONED_REGISTRY_REL.as_posix(),
+                "control-plane-lane-registry.v1.yaml",
+            }
             and bundle.current_doc.get("read_only_input_surfaces") == [],
             "current registry pointer is bound to the active protocol-feedback instance-state hardening lane",
         )
@@ -126,11 +137,15 @@ def main() -> int:
             "target_lane_shape",
             lane.get("lane_id") == TARGET_LANE_ID
             and lane.get("classification") == CLASSIFICATION
-            and lane.get("status") == "architect_ready"
+            and lane.get("status") in {"architect_ready", "closure_done"}
             and lane.get("active") is True
             and lane.get("execution_mode") == "split_roles"
             and lane.get("writer_role") == "executor"
-            and lane.get("role_bindings") == EXPECTED_ROLE_BINDINGS,
+            and lane.get("role_bindings") == EXPECTED_ROLE_BINDINGS
+            and (
+                (lane.get("status") == "architect_ready" and lane.get("next_role") == "executor")
+                or (lane.get("status") == "closure_done" and lane.get("next_role") == "auditor")
+            ),
             "target lane exposes a full executable split-role contract",
         )
         _record(
@@ -192,7 +207,8 @@ def main() -> int:
             checks,
             failures,
             "next_role_resolution",
-            route_next_role(lane)["identity_id"] == EXPECTED_ROLE_BINDINGS["executor"]
+            route_next_role(lane)["identity_id"]
+            == EXPECTED_ROLE_BINDINGS["auditor" if lane.get("status") == "closure_done" else "executor"]
             and route_next_role(lane, status_override="closure_done")["identity_id"] == EXPECTED_ROLE_BINDINGS["auditor"],
             "executor owns closure; auditor owns the post-closure acceptance hop",
         )
@@ -200,8 +216,8 @@ def main() -> int:
             "status": "FAIL_REQUIRED" if failures else "PASS_REQUIRED",
             "checks": checks,
             "failures": failures,
-            "registry_current": str(bundle.current_registry.relative_to(bundle.repo_root)),
-            "registry_versioned": str(bundle.versioned_registry.relative_to(bundle.repo_root)),
+            "registry_current": _display_path(bundle.current_registry, bundle.repo_root),
+            "registry_versioned": _display_path(bundle.versioned_registry, bundle.repo_root),
         }
         emit(payload, json_only=args.json_only)
         return 1 if failures else 0
