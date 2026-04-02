@@ -2,11 +2,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-TMP_BASE="${TMPDIR:-${ROOT}/.tmp}"
-mkdir -p "${TMP_BASE}"
-TMP_ROOT="$(mktemp -d "${TMP_BASE}/shared-primitive-adoption-ci-isolation.XXXXXX")"
-trap 'rm -rf "${TMP_ROOT}"' EXIT
+
+# shellcheck source=./protocol_root_probe_shadow_common.sh
+source "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"
+protocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-shared-primitive-adoption-ci"
+protocol_root_probe_define_full_mirror
 
 FIXED_WRITE_SET_REL=(
   "scripts/ci/run_protocol_root_shared_primitive_adoption_probes_ci.sh"

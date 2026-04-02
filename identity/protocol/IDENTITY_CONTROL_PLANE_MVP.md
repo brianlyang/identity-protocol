@@ -1,5 +1,8 @@
 # Identity Control Plane MVP
 
+This file is admitted at protocol root only as clearly demoted support material.
+It is not a protocol-root constitution, not a root contract, and not active-runtime truth outside the machine-bound control-plane lane it documents.
+
 contract_id: `control_plane_protocol_feedback_instance_state_runner_hardening`  
 classification: `existing_surface_alignment`
 

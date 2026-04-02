@@ -284,6 +284,14 @@ entry_authority_projection:
   corpus_class: governed_subdomain_extension
   authority_role: governed_subdomain_extension_family
   authority_mode: extension_family
+- rel_path: identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md
+  corpus_class: demoted_support_directory
+  authority_role: demoted_support_material
+  authority_mode: demoted_support_only
+- rel_path: identity/protocol/LANE_HANDOFF_CONTRACT.md
+  corpus_class: demoted_support_directory
+  authority_role: demoted_support_material
+  authority_mode: demoted_support_only
 - rel_path: identity/protocol/fixtures
   corpus_class: demoted_support_directory
   authority_role: demoted_support_material

@@ -27,7 +27,6 @@ FIXED_WRITE_SET = (
 FORBIDDEN_SCOPE_TOKENS = (
     "scripts/validate_protocol_root_*.py",
     "scripts/ci/run_protocol_root_*_probes_ci.sh",
-    "protocol_root_probe_shadow_common.sh",
 )
 
 FORBIDDEN_DIRTY_STATE_TOKENS = (

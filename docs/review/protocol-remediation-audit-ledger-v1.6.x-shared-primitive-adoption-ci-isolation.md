@@ -19,4 +19,5 @@
 
 - the residual lane must not consume unrelated dirty-state evidence.
 - the residual lane must not consume ambient wildcard root-family context.
+- the shared `protocol_root_probe_shadow_common.sh` helper is admissible only as a fixed-write-set implementation primitive and does not relax the nonlane-context boundary.
 - stage and commit boundaries must remain equal to the fixed_write_set.

@@ -61,6 +61,8 @@ This root reading order must remain bound to canonical root-reading-order stage 
    - `plugins/`
    - these extend the root protocol into narrower governed surfaces.
 7. **non-runtime or support material**
+   - `IDENTITY_CONTROL_PLANE_MVP.md`
+   - `LANE_HANDOFF_CONTRACT.md`
    - `fixtures/`
    - these are never active-runtime truth.
 
@@ -86,6 +88,7 @@ The following classes belong here:
    - subdirectories such as `broadcast/` and `plugins/`
 6. **clearly demoted support material**
    - only when it is explicit that the material is not active-runtime truth
+   - `IDENTITY_CONTROL_PLANE_MVP.md` and `LANE_HANDOFF_CONTRACT.md` remain admitted only under this demoted-support boundary
 
 The root directory should remain sparse, law-bearing, and semantically stable.
 
@@ -378,6 +381,8 @@ This question-routing discipline must remain bound to canonical root-question-di
    - `plugins/`
    - what narrower subdomain law is frozen under the root corpus.
 7. **support-material question**
+   - `IDENTITY_CONTROL_PLANE_MVP.md`
+   - `LANE_HANDOFF_CONTRACT.md`
    - `fixtures/`
    - what demoted support material exists without becoming runtime truth.
 8. **gateway target question class preserved**

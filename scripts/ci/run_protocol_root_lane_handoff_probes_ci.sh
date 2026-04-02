@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$REPO_ROOT"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-TMPDIR_VALUE="${TMPDIR:-$REPO_ROOT/.tmp}"
-mkdir -p "$TMPDIR_VALUE"
-PROBE_TMP_DIR="$(mktemp -d "$TMPDIR_VALUE/root-lane-handoff-probe.XXXXXX")"
-trap 'rm -rf "$PROBE_TMP_DIR"' EXIT
+# shellcheck source=./protocol_root_probe_shadow_common.sh
+source "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"
+protocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-lane-handoff-ci"
+protocol_root_probe_define_full_mirror
+
+cd "$ROOT"
+
+PROBE_TMP_DIR="${TMP_ROOT}/root-lane-handoff-probe"
+mkdir -p "$PROBE_TMP_DIR"
 
 CONTRACT_DOC="identity/protocol/LANE_HANDOFF_CONTRACT.md"
 CURRENT_MAPPING="identity/protocol/mappings/root-lane-handoff.current.yaml"

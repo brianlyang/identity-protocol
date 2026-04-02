@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-04-02T09:03:48Z",
-  "git_head_short": "2697777",
+  "generated_at_utc": "2026-04-02T10:55:00Z",
+  "git_head_short": "e4759e6",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -328,8 +328,8 @@
             "${REPO_ROOT}/scripts/validate_writeback_continuity.py"
           ],
           "untracked_validator_scripts": [],
-          "error_codes": 734,
-          "error_code_families": 258,
+          "error_codes": 737,
+          "error_code_families": 259,
           "error_code_metric_scope": "tracked_python_scripts_canonical_tokens_only",
           "tracked_python_script_count": 579,
           "ignored_partial_error_code_tokens": [
@@ -375,12 +375,12 @@
             "fail": 281
           },
           "error_codes": {
-            "warn": 734,
-            "fail": 737
+            "warn": 737,
+            "fail": 740
           },
           "error_code_families": {
-            "warn": 258,
-            "fail": 264
+            "warn": 259,
+            "fail": 265
           },
           "mapping_rows_missing_in_bundle": {
             "warn": 0,
@@ -521,8 +521,8 @@
         "budget_file": "${REPO_ROOT}/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_alias_error": "",
-        "current_last_updated_utc": "2026-04-02T09:03:10Z",
-        "live_last_updated_utc": "2026-04-02T09:03:19Z",
+        "current_last_updated_utc": "2026-04-02T10:53:20Z",
+        "live_last_updated_utc": "2026-04-02T10:54:22Z",
         "mismatch_count": 0,
         "mismatches": [],
         "observed": {
@@ -810,8 +810,8 @@
             "${REPO_ROOT}/scripts/validate_writeback_continuity.py"
           ],
           "untracked_validator_scripts": [],
-          "error_codes": 734,
-          "error_code_families": 258,
+          "error_codes": 737,
+          "error_code_families": 259,
           "error_code_metric_scope": "tracked_python_scripts_canonical_tokens_only",
           "tracked_python_script_count": 579,
           "ignored_partial_error_code_tokens": [
@@ -2464,14 +2464,14 @@
         "scripts/validate_protocol_root_corpus_governance.py",
         "--json-only"
       ],
-      "rc": 1,
-      "status": "FAIL_REQUIRED",
-      "error_code": "IP-RCG-002",
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
       "stdout_tail": [],
       "stderr_tail": [],
       "payload": {
-        "protocol_root_corpus_governance_status": "FAIL_REQUIRED",
-        "error_code": "IP-RCG-002",
+        "protocol_root_corpus_governance_status": "PASS_REQUIRED",
+        "error_code": "",
         "registry_entry_path": "${REPO_ROOT}/identity/protocol/mappings/root-corpus-registry.current.yaml",
         "registry_active_path": "${REPO_ROOT}/identity/protocol/mappings/root-corpus-registry.v1.yaml",
         "root_dir": "identity/protocol",
@@ -2482,12 +2482,14 @@
           "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
           "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
           "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+          "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
           "identity/protocol/IDENTITY_DISCOVERY.md",
           "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
           "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
           "identity/protocol/IDENTITY_PROTOCOL.md",
           "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
           "identity/protocol/IDENTITY_RUNTIME.md",
+          "identity/protocol/LANE_HANDOFF_CONTRACT.md",
           "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
           "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
           "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
@@ -2529,15 +2531,15 @@
           "identity/protocol/mappings",
           "identity/protocol/plugins"
         ],
-        "registered_top_level_count": 24,
+        "registered_top_level_count": 26,
         "actual_top_level_count": 26,
         "law_bearing_entry_count": 23,
-        "validated_file_count": 20,
+        "validated_file_count": 22,
         "validated_directory_count": 4,
         "governance_completeness_row_count": 5,
         "governance_row_family_count": 9,
-        "governance_row_coverage_status": "FAIL_REQUIRED",
-        "governance_row_identity_projection_status": "FAIL_REQUIRED",
+        "governance_row_coverage_status": "PASS_REQUIRED",
+        "governance_row_identity_projection_status": "PASS_REQUIRED",
         "root_doc_anchor_check_count": 4,
         "root_doc_anchor_status": "PASS_REQUIRED",
         "governance_completeness_row_coverage_status": "PASS_REQUIRED",
@@ -2548,7 +2550,7 @@
           {
             "family_id": "registered_top_level_entries",
             "member_id_key": "rel_path",
-            "expected_count": 24,
+            "expected_count": 26,
             "actual_count": 26,
             "expected_ids": [
               "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
@@ -2557,12 +2559,14 @@
               "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
               "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
               "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+              "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
               "identity/protocol/IDENTITY_DISCOVERY.md",
               "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
               "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
               "identity/protocol/IDENTITY_PROTOCOL.md",
               "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
               "identity/protocol/IDENTITY_RUNTIME.md",
+              "identity/protocol/LANE_HANDOFF_CONTRACT.md",
               "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
               "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
               "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
@@ -2605,12 +2609,9 @@
               "identity/protocol/plugins"
             ],
             "missing_ids": [],
-            "unexpected_ids": [
-              "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
-              "identity/protocol/LANE_HANDOFF_CONTRACT.md"
-            ],
-            "coverage_status": "FAIL_REQUIRED",
-            "identity_projection_status": "FAIL_REQUIRED"
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
           },
           {
             "family_id": "corpus_class_profiles",
@@ -2927,7 +2928,8 @@
               "order": 6,
               "projection_label": "clearly demoted support material",
               "body_lines": [
-                "only when it is explicit that the material is not active-runtime truth"
+                "only when it is explicit that the material is not active-runtime truth",
+                "`IDENTITY_CONTROL_PLANE_MVP.md` and `LANE_HANDOFF_CONTRACT.md` remain admitted only under this demoted-support boundary"
               ]
             }
           ],
@@ -3106,23 +3108,12 @@
           "closure_ledger_narration",
           "workbook_issue_projection"
         ],
-        "structure_violations": [
-          {
-            "field": "registered_top_level_entries",
-            "reason": "extra_root_entries",
-            "rel_paths": [
-              "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
-              "identity/protocol/LANE_HANDOFF_CONTRACT.md"
-            ]
-          }
-        ],
+        "structure_violations": [],
         "file_violations": [],
         "directory_violations": [],
         "forbidden_content_hits": [],
         "root_doc_anchor_violations": [],
-        "stale_reasons": [
-          "structure_violation:registered_top_level_entries:extra_root_entries"
-        ]
+        "stale_reasons": []
       }
     },
     {
@@ -3210,8 +3201,8 @@
           {
             "family_id": "reading_order",
             "member_id_key": "rel_path",
-            "expected_count": 24,
-            "actual_count": 24,
+            "expected_count": 26,
+            "actual_count": 26,
             "expected_ids": [
               "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
               "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md",
@@ -3219,12 +3210,14 @@
               "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
               "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
               "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+              "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
               "identity/protocol/IDENTITY_DISCOVERY.md",
               "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
               "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
               "identity/protocol/IDENTITY_PROTOCOL.md",
               "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
               "identity/protocol/IDENTITY_RUNTIME.md",
+              "identity/protocol/LANE_HANDOFF_CONTRACT.md",
               "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
               "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
               "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
@@ -3245,12 +3238,14 @@
               "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
               "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
               "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+              "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
               "identity/protocol/IDENTITY_DISCOVERY.md",
               "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
               "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
               "identity/protocol/IDENTITY_PROTOCOL.md",
               "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
               "identity/protocol/IDENTITY_RUNTIME.md",
+              "identity/protocol/LANE_HANDOFF_CONTRACT.md",
               "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
               "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
               "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
@@ -3831,6 +3826,18 @@
           },
           {
             "order": 24,
+            "rel_path": "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
+            "entry_role": "demoted_support_entry",
+            "corpus_class": "demoted_support_directory"
+          },
+          {
+            "order": 25,
+            "rel_path": "identity/protocol/LANE_HANDOFF_CONTRACT.md",
+            "entry_role": "demoted_support_entry",
+            "corpus_class": "demoted_support_directory"
+          },
+          {
+            "order": 26,
             "rel_path": "identity/protocol/fixtures",
             "entry_role": "demoted_support_entry",
             "corpus_class": "demoted_support_directory"
@@ -3945,9 +3952,13 @@
             "order": 7,
             "stage_label": "non-runtime or support material",
             "bound_reading_order_rel_paths": [
+              "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
+              "identity/protocol/LANE_HANDOFF_CONTRACT.md",
               "identity/protocol/fixtures"
             ],
             "required_markers": [
+              "`IDENTITY_CONTROL_PLANE_MVP.md`",
+              "`LANE_HANDOFF_CONTRACT.md`",
               "`fixtures/`",
               "these are never active-runtime truth."
             ]
@@ -4028,6 +4039,8 @@
               "order": 7,
               "stage_label": "non-runtime or support material",
               "body_lines": [
+                "`IDENTITY_CONTROL_PLANE_MVP.md`",
+                "`LANE_HANDOFF_CONTRACT.md`",
                 "`fixtures/`",
                 "these are never active-runtime truth."
               ]
@@ -4571,10 +4584,10 @@
           "receipts"
         ],
         "source_order_class_count": 7,
-        "reading_order_entry_count": 24,
+        "reading_order_entry_count": 26,
         "adjudication_order_surface_count": 5,
         "adjudication_surface_profile_count": 5,
-        "registered_entry_count": 24,
+        "registered_entry_count": 26,
         "structure_violations": [],
         "coverage_violations": [],
         "anchor_violations": [],
@@ -4606,7 +4619,7 @@
         "root_index_entry": "identity/protocol/README.md",
         "authority_anchor_check_count": 20,
         "authority_class_profile_count": 8,
-        "entry_authority_projection_count": 24,
+        "entry_authority_projection_count": 26,
         "authority_layer_stage_count": 3,
         "authority_completeness_row_count": 5,
         "authority_row_family_count": 6,
@@ -4652,8 +4665,8 @@
           {
             "family_id": "entry_authority_projection",
             "member_id_key": "rel_path",
-            "expected_count": 24,
-            "actual_count": 24,
+            "expected_count": 26,
+            "actual_count": 26,
             "expected_ids": [
               "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
               "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md",
@@ -4661,12 +4674,14 @@
               "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
               "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
               "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+              "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
               "identity/protocol/IDENTITY_DISCOVERY.md",
               "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
               "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
               "identity/protocol/IDENTITY_PROTOCOL.md",
               "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
               "identity/protocol/IDENTITY_RUNTIME.md",
+              "identity/protocol/LANE_HANDOFF_CONTRACT.md",
               "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
               "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
               "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
@@ -4687,12 +4702,14 @@
               "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
               "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
               "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+              "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
               "identity/protocol/IDENTITY_DISCOVERY.md",
               "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
               "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
               "identity/protocol/IDENTITY_PROTOCOL.md",
               "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
               "identity/protocol/IDENTITY_RUNTIME.md",
+              "identity/protocol/LANE_HANDOFF_CONTRACT.md",
               "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
               "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
               "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
@@ -4996,6 +5013,18 @@
             "corpus_class": "governed_subdomain_extension",
             "authority_role": "governed_subdomain_extension_family",
             "authority_mode": "extension_family"
+          },
+          {
+            "rel_path": "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
+            "corpus_class": "demoted_support_directory",
+            "authority_role": "demoted_support_material",
+            "authority_mode": "demoted_support_only"
+          },
+          {
+            "rel_path": "identity/protocol/LANE_HANDOFF_CONTRACT.md",
+            "corpus_class": "demoted_support_directory",
+            "authority_role": "demoted_support_material",
+            "authority_mode": "demoted_support_only"
           },
           {
             "rel_path": "identity/protocol/fixtures",
@@ -6991,13 +7020,13 @@
         "scripts/validate_protocol_root_machine_registry_completeness.py",
         "--json-only"
       ],
-      "rc": 1,
-      "status": "FAIL_REQUIRED",
-      "error_code": "IP-RMRC-003",
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
       "stdout_tail": [],
       "stderr_tail": [],
       "payload": {
-        "protocol_root_machine_registry_completeness_status": "FAIL_REQUIRED",
+        "protocol_root_machine_registry_completeness_status": "PASS_REQUIRED",
         "completeness_family": "protocol_root_machine_registry_completeness",
         "completeness_version": "v1",
         "mapping_entry_file": "identity/protocol/mappings/root-machine-registry-completeness.current.yaml",
@@ -7046,7 +7075,7 @@
           "common_script": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$"
         },
         "family_count": 29,
-        "registered_complete_family_count": 28,
+        "registered_complete_family_count": 29,
         "registered_complete_family_ids": [
           "root-agent-handoff",
           "root-artifact-family-admissibility",
@@ -7067,6 +7096,7 @@
           "root-error-terminality",
           "root-identity-discovery",
           "root-identity-instance-self-judgement",
+          "root-lane-handoff",
           "root-machine-law-primacy",
           "root-machine-registry-completeness",
           "root-machine-world-ontology",
@@ -7146,7 +7176,7 @@
         "missing_family_status_row_ids": [],
         "unexpected_family_status_row_ids": [],
         "family_status_row_identity_projection_status": "PASS_REQUIRED",
-        "validator_surface_contract_row_count": 56,
+        "validator_surface_contract_row_count": 58,
         "expected_family_validator_surface_contract_row_count": 58,
         "validator_surface_contract_row_ids": [
           "root-agent-handoff:validator_root_doc_anchor_contract",
@@ -7187,6 +7217,8 @@
           "root-identity-discovery:validator_row_projection_contract",
           "root-identity-instance-self-judgement:validator_root_doc_anchor_contract",
           "root-identity-instance-self-judgement:validator_row_projection_contract",
+          "root-lane-handoff:validator_root_doc_anchor_contract",
+          "root-lane-handoff:validator_row_projection_contract",
           "root-machine-law-primacy:validator_root_doc_anchor_contract",
           "root-machine-law-primacy:validator_row_projection_contract",
           "root-machine-registry-completeness:validator_root_doc_anchor_contract",
@@ -7206,14 +7238,11 @@
           "root-truth-lifecycle:validator_root_doc_anchor_contract",
           "root-truth-lifecycle:validator_row_projection_contract"
         ],
-        "missing_validator_surface_contract_row_ids": [
-          "root-lane-handoff:validator_root_doc_anchor_contract",
-          "root-lane-handoff:validator_row_projection_contract"
-        ],
+        "missing_validator_surface_contract_row_ids": [],
         "unexpected_validator_surface_contract_row_ids": [],
-        "validator_surface_contract_row_coverage_status": "FAIL_REQUIRED",
-        "validator_surface_contract_row_identity_projection_status": "FAIL_REQUIRED",
-        "probe_surface_contract_row_count": 28,
+        "validator_surface_contract_row_coverage_status": "PASS_REQUIRED",
+        "validator_surface_contract_row_identity_projection_status": "PASS_REQUIRED",
+        "probe_surface_contract_row_count": 29,
         "expected_family_probe_surface_contract_row_count": 29,
         "probe_surface_contract_row_ids": [
           "root-agent-handoff:probe_shadow_bootstrap_contract",
@@ -7235,6 +7264,7 @@
           "root-error-terminality:probe_shadow_bootstrap_contract",
           "root-identity-discovery:probe_shadow_bootstrap_contract",
           "root-identity-instance-self-judgement:probe_shadow_bootstrap_contract",
+          "root-lane-handoff:probe_shadow_bootstrap_contract",
           "root-machine-law-primacy:probe_shadow_bootstrap_contract",
           "root-machine-registry-completeness:probe_shadow_bootstrap_contract",
           "root-machine-world-ontology:probe_shadow_bootstrap_contract",
@@ -7245,16 +7275,14 @@
           "root-success-path-state-admissibility:probe_shadow_bootstrap_contract",
           "root-truth-lifecycle:probe_shadow_bootstrap_contract"
         ],
-        "missing_probe_surface_contract_row_ids": [
-          "root-lane-handoff:probe_shadow_bootstrap_contract"
-        ],
+        "missing_probe_surface_contract_row_ids": [],
         "unexpected_probe_surface_contract_row_ids": [],
-        "probe_surface_contract_row_coverage_status": "FAIL_REQUIRED",
-        "probe_surface_contract_row_identity_projection_status": "FAIL_REQUIRED",
+        "probe_surface_contract_row_coverage_status": "PASS_REQUIRED",
+        "probe_surface_contract_row_identity_projection_status": "PASS_REQUIRED",
         "machine_registry_completeness_row_count": 5,
         "machine_registry_completeness_row_family_count": 6,
-        "machine_registry_completeness_row_coverage_status": "FAIL_REQUIRED",
-        "machine_registry_completeness_row_identity_projection_status": "FAIL_REQUIRED",
+        "machine_registry_completeness_row_coverage_status": "PASS_REQUIRED",
+        "machine_registry_completeness_row_identity_projection_status": "PASS_REQUIRED",
         "root_doc_anchor_check_count": 4,
         "root_doc_anchor_status": "PASS_REQUIRED",
         "machine_registry_completeness_canonical_row_coverage_status": "PASS_REQUIRED",
@@ -7262,10 +7290,10 @@
         "machine_registry_completeness_surface_coverage_status": "PASS_REQUIRED",
         "machine_registry_completeness_surface_identity_projection_status": "PASS_REQUIRED",
         "structure_violation_count": 0,
-        "completeness_violation_count": 7,
+        "completeness_violation_count": 0,
         "anchor_violation_count": 0,
-        "projected_violation_reason_count": 7,
-        "expected_projected_violation_reason_count": 7,
+        "projected_violation_reason_count": 0,
+        "expected_projected_violation_reason_count": 0,
         "violation_projection_status": "PASS_REQUIRED",
         "family_ids": [
           "root-agent-handoff",
@@ -7302,7 +7330,7 @@
           {
             "family_id": "registered_complete_root_mapping_families",
             "member_id_key": "family_id",
-            "expected_count": 28,
+            "expected_count": 29,
             "actual_count": 29,
             "expected_ids": [
               "root-agent-handoff",
@@ -7324,6 +7352,7 @@
               "root-error-terminality",
               "root-identity-discovery",
               "root-identity-instance-self-judgement",
+              "root-lane-handoff",
               "root-machine-law-primacy",
               "root-machine-registry-completeness",
               "root-machine-world-ontology",
@@ -7366,11 +7395,9 @@
               "root-truth-lifecycle"
             ],
             "missing_ids": [],
-            "unexpected_ids": [
-              "root-lane-handoff"
-            ],
-            "coverage_status": "FAIL_REQUIRED",
-            "identity_projection_status": "FAIL_REQUIRED"
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
           },
           {
             "family_id": "family_status_rows",
@@ -7448,7 +7475,7 @@
             "family_id": "family_validator_surface_contract_rows",
             "member_id_key": "contract_row_id",
             "expected_count": 58,
-            "actual_count": 56,
+            "actual_count": 58,
             "expected_ids": [
               "root-agent-handoff:validator_root_doc_anchor_contract",
               "root-agent-handoff:validator_row_projection_contract",
@@ -7548,6 +7575,8 @@
               "root-identity-discovery:validator_row_projection_contract",
               "root-identity-instance-self-judgement:validator_root_doc_anchor_contract",
               "root-identity-instance-self-judgement:validator_row_projection_contract",
+              "root-lane-handoff:validator_root_doc_anchor_contract",
+              "root-lane-handoff:validator_row_projection_contract",
               "root-machine-law-primacy:validator_root_doc_anchor_contract",
               "root-machine-law-primacy:validator_row_projection_contract",
               "root-machine-registry-completeness:validator_root_doc_anchor_contract",
@@ -7567,19 +7596,16 @@
               "root-truth-lifecycle:validator_root_doc_anchor_contract",
               "root-truth-lifecycle:validator_row_projection_contract"
             ],
-            "missing_ids": [
-              "root-lane-handoff:validator_root_doc_anchor_contract",
-              "root-lane-handoff:validator_row_projection_contract"
-            ],
+            "missing_ids": [],
             "unexpected_ids": [],
-            "coverage_status": "FAIL_REQUIRED",
-            "identity_projection_status": "FAIL_REQUIRED"
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
           },
           {
             "family_id": "family_probe_surface_contract_rows",
             "member_id_key": "contract_row_id",
             "expected_count": 29,
-            "actual_count": 28,
+            "actual_count": 29,
             "expected_ids": [
               "root-agent-handoff:probe_shadow_bootstrap_contract",
               "root-artifact-family-admissibility:probe_shadow_bootstrap_contract",
@@ -7631,6 +7657,7 @@
               "root-error-terminality:probe_shadow_bootstrap_contract",
               "root-identity-discovery:probe_shadow_bootstrap_contract",
               "root-identity-instance-self-judgement:probe_shadow_bootstrap_contract",
+              "root-lane-handoff:probe_shadow_bootstrap_contract",
               "root-machine-law-primacy:probe_shadow_bootstrap_contract",
               "root-machine-registry-completeness:probe_shadow_bootstrap_contract",
               "root-machine-world-ontology:probe_shadow_bootstrap_contract",
@@ -7641,12 +7668,10 @@
               "root-success-path-state-admissibility:probe_shadow_bootstrap_contract",
               "root-truth-lifecycle:probe_shadow_bootstrap_contract"
             ],
-            "missing_ids": [
-              "root-lane-handoff:probe_shadow_bootstrap_contract"
-            ],
+            "missing_ids": [],
             "unexpected_ids": [],
-            "coverage_status": "FAIL_REQUIRED",
-            "identity_projection_status": "FAIL_REQUIRED"
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
           },
           {
             "family_id": "machine_registry_completeness_rows",
@@ -10262,15 +10287,95 @@
             "required_probe_surface_contract_values": {
               "probe_shadow_bootstrap_contract": "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings"
             },
-            "descriptor_field_rows": [],
-            "validator_surface_contract_rows": [],
-            "probe_surface_contract_rows": [],
-            "family_status": "FAIL_REQUIRED",
-            "family_violations": [
-              "current_file_not_registered",
-              "version_file_not_registered",
-              "active_file_not_registered"
-            ]
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_lane_handoff.py",
+                "resolved_path": "${REPO_ROOT}/scripts/validate_protocol_root_lane_handoff.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_lane_handoff",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_lane_handoff_probes_ci.sh",
+                "resolved_path": "${REPO_ROOT}/scripts/ci/run_protocol_root_lane_handoff_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_lane_handoff",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_lane_handoff_common.py",
+                "resolved_path": "${REPO_ROOT}/scripts/root_lane_handoff_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_lane_handoff",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_lane_handoff_status",
+                "expected_value": "protocol_root_lane_handoff_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RLH-001",
+                  "IP-RLH-002",
+                  "IP-RLH-003"
+                ],
+                "expected_values": [
+                  "IP-RLH-001",
+                  "IP-RLH-002",
+                  "IP-RLH-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-lane-handoff:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-lane-handoff:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "probe_surface_contract_rows": [
+              {
+                "contract_row_id": "root-lane-handoff:probe_shadow_bootstrap_contract",
+                "contract_field": "probe_shadow_bootstrap_contract",
+                "value": "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings",
+                "expected_value": "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
           },
           {
             "family_id": "root-machine-law-primacy",
@@ -11444,66 +11549,10 @@
           }
         ],
         "structure_violations": [],
-        "completeness_violations": [
-          {
-            "field": "root_mapping_family",
-            "reason": "current_file_not_registered",
-            "family_id": "root-lane-handoff",
-            "child": "root-lane-handoff.current.yaml"
-          },
-          {
-            "field": "root_mapping_family",
-            "reason": "version_file_not_registered",
-            "family_id": "root-lane-handoff",
-            "child": "root-lane-handoff.v1.yaml"
-          },
-          {
-            "field": "root_mapping_family",
-            "reason": "active_file_not_registered",
-            "family_id": "root-lane-handoff",
-            "child": "root-lane-handoff.v1.yaml"
-          },
-          {
-            "field": "root_mapping_family",
-            "reason": "family_validator_surface_contract_row_coverage_incomplete",
-            "expected_count": 58,
-            "actual_count": 56
-          },
-          {
-            "field": "root_mapping_family",
-            "reason": "family_validator_surface_contract_row_identity_projection_incomplete",
-            "missing_contract_row_ids": [
-              "root-lane-handoff:validator_root_doc_anchor_contract",
-              "root-lane-handoff:validator_row_projection_contract"
-            ],
-            "unexpected_contract_row_ids": []
-          },
-          {
-            "field": "root_mapping_family",
-            "reason": "family_probe_surface_contract_row_coverage_incomplete",
-            "expected_count": 29,
-            "actual_count": 28
-          },
-          {
-            "field": "root_mapping_family",
-            "reason": "family_probe_surface_contract_row_identity_projection_incomplete",
-            "missing_contract_row_ids": [
-              "root-lane-handoff:probe_shadow_bootstrap_contract"
-            ],
-            "unexpected_contract_row_ids": []
-          }
-        ],
+        "completeness_violations": [],
         "anchor_violations": [],
-        "stale_reasons": [
-          "completeness_violation:root_mapping_family:current_file_not_registered:root-lane-handoff",
-          "completeness_violation:root_mapping_family:version_file_not_registered:root-lane-handoff",
-          "completeness_violation:root_mapping_family:active_file_not_registered:root-lane-handoff",
-          "completeness_violation:root_mapping_family:family_validator_surface_contract_row_coverage_incomplete",
-          "completeness_violation:root_mapping_family:family_validator_surface_contract_row_identity_projection_incomplete",
-          "completeness_violation:root_mapping_family:family_probe_surface_contract_row_coverage_incomplete",
-          "completeness_violation:root_mapping_family:family_probe_surface_contract_row_identity_projection_incomplete"
-        ],
-        "error_code": "IP-RMRC-003"
+        "stale_reasons": [],
+        "error_code": ""
       }
     },
     {
@@ -11978,7 +12027,7 @@
         "root_question_discipline_stage_count": 8,
         "entry_summary_stage_count": 4,
         "question_routing_completeness_row_count": 5,
-        "entry_question_projection_count": 24,
+        "entry_question_projection_count": 26,
         "gateway_question_projection_count": 4,
         "question_routing_row_family_count": 9,
         "question_routing_row_coverage_status": "PASS_REQUIRED",
@@ -12025,8 +12074,8 @@
           {
             "family_id": "entry_question_projection",
             "member_id_key": "rel_path",
-            "expected_count": 24,
-            "actual_count": 24,
+            "expected_count": 26,
+            "actual_count": 26,
             "expected_ids": [
               "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
               "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md",
@@ -12034,12 +12083,14 @@
               "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
               "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
               "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+              "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
               "identity/protocol/IDENTITY_DISCOVERY.md",
               "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
               "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
               "identity/protocol/IDENTITY_PROTOCOL.md",
               "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
               "identity/protocol/IDENTITY_RUNTIME.md",
+              "identity/protocol/LANE_HANDOFF_CONTRACT.md",
               "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
               "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
               "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
@@ -12060,12 +12111,14 @@
               "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
               "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
               "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+              "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
               "identity/protocol/IDENTITY_DISCOVERY.md",
               "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
               "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
               "identity/protocol/IDENTITY_PROTOCOL.md",
               "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
               "identity/protocol/IDENTITY_RUNTIME.md",
+              "identity/protocol/LANE_HANDOFF_CONTRACT.md",
               "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
               "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
               "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
@@ -12455,6 +12508,18 @@
             ]
           },
           {
+            "rel_path": "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
+            "question_classes": [
+              "support_material_lookup"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/LANE_HANDOFF_CONTRACT.md",
+            "question_classes": [
+              "support_material_lookup"
+            ]
+          },
+          {
             "rel_path": "identity/protocol/fixtures",
             "question_classes": [
               "support_material_lookup"
@@ -12766,6 +12831,8 @@
               "order": 7,
               "stage_label": "support-material question",
               "body_lines": [
+                "`IDENTITY_CONTROL_PLANE_MVP.md`",
+                "`LANE_HANDOFF_CONTRACT.md`",
                 "`fixtures/`",
                 "what demoted support material exists without becoming runtime truth."
               ]
@@ -12875,14 +12942,14 @@
         "scripts/validate_protocol_root_shared_primitive_adoption.py",
         "--json-only"
       ],
-      "rc": 1,
-      "status": "FAIL_REQUIRED",
-      "error_code": "IP-RSPA-002",
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
       "stdout_tail": [],
       "stderr_tail": [],
       "payload": {
-        "protocol_root_shared_primitive_adoption_status": "FAIL_REQUIRED",
-        "error_code": "IP-RSPA-002",
+        "protocol_root_shared_primitive_adoption_status": "PASS_REQUIRED",
+        "error_code": "",
         "repo_root": "${REPO_ROOT}",
         "root_validator_count": 30,
         "scanned_validator_files": [
@@ -13071,7 +13138,7 @@
           },
           {
             "rel_path": "scripts/validate_protocol_root_corpus_ordering.py",
-            "lineno": 1169,
+            "lineno": 1173,
             "module": "root_row_family_projection_common",
             "primitive_name": "project_row_families",
             "primitive_class": "row_family_projection",
@@ -13080,7 +13147,7 @@
           },
           {
             "rel_path": "scripts/validate_protocol_root_corpus_ordering.py",
-            "lineno": 815,
+            "lineno": 819,
             "module": "root_contract_row_validation_common",
             "primitive_name": "validate_contract_row_batches",
             "primitive_class": "contract_row_validation",
@@ -13580,7 +13647,7 @@
           },
           {
             "rel_path": "scripts/validate_protocol_root_corpus_ordering.py",
-            "lineno": 333,
+            "lineno": 337,
             "target": "row_family_projection_rows",
             "assignment_mode": "initializer_empty_list",
             "binding": "List",
@@ -13589,7 +13656,7 @@
           },
           {
             "rel_path": "scripts/validate_protocol_root_corpus_ordering.py",
-            "lineno": 1169,
+            "lineno": 1173,
             "target": "row_family_projection_rows",
             "assignment_mode": "shared_primitive_call",
             "binding": "project_row_families",
@@ -14228,13 +14295,13 @@
           },
           {
             "rel_path": "scripts/ci/run_protocol_root_lane_handoff_probes_ci.sh",
-            "shadow_common_source_present": false,
+            "shadow_common_source_present": true,
             "legacy_probe_repo_mirror_source_present": false,
-            "bootstrap_present": false,
-            "bootstrap_prefix": "",
-            "mirror_binding_mode": "missing",
+            "bootstrap_present": true,
+            "bootstrap_prefix": "protocol-root-lane-handoff-ci",
+            "mirror_binding_mode": "full_mirror",
             "manual_mirror_repo_definition_present": false,
-            "status": "FAIL_REQUIRED"
+            "status": "PASS_REQUIRED"
           },
           {
             "rel_path": "scripts/ci/run_protocol_root_machine_law_primacy_probes_ci.sh",
@@ -14298,13 +14365,13 @@
           },
           {
             "rel_path": "scripts/ci/run_protocol_root_shared_primitive_adoption_probes_ci.sh",
-            "shadow_common_source_present": false,
+            "shadow_common_source_present": true,
             "legacy_probe_repo_mirror_source_present": false,
-            "bootstrap_present": false,
-            "bootstrap_prefix": "",
-            "mirror_binding_mode": "missing",
+            "bootstrap_present": true,
+            "bootstrap_prefix": "protocol-root-shared-primitive-adoption-ci",
+            "mirror_binding_mode": "full_mirror",
             "manual_mirror_repo_definition_present": false,
-            "status": "FAIL_REQUIRED"
+            "status": "PASS_REQUIRED"
           },
           {
             "rel_path": "scripts/ci/run_protocol_root_stream_design_admissibility_probes_ci.sh",
@@ -14338,39 +14405,10 @@
           }
         ],
         "root_probe_shadow_adoption_row_count": 30,
-        "root_probe_shadow_violation_rows": [
-          {
-            "rel_path": "scripts/ci/run_protocol_root_lane_handoff_probes_ci.sh",
-            "reason": "missing_protocol_root_probe_shadow_common_source"
-          },
-          {
-            "rel_path": "scripts/ci/run_protocol_root_lane_handoff_probes_ci.sh",
-            "reason": "missing_protocol_root_probe_bootstrap_call"
-          },
-          {
-            "rel_path": "scripts/ci/run_protocol_root_lane_handoff_probes_ci.sh",
-            "reason": "missing_protocol_root_probe_mirror_binding"
-          },
-          {
-            "rel_path": "scripts/ci/run_protocol_root_shared_primitive_adoption_probes_ci.sh",
-            "reason": "missing_protocol_root_probe_shadow_common_source"
-          },
-          {
-            "rel_path": "scripts/ci/run_protocol_root_shared_primitive_adoption_probes_ci.sh",
-            "reason": "missing_protocol_root_probe_bootstrap_call"
-          },
-          {
-            "rel_path": "scripts/ci/run_protocol_root_shared_primitive_adoption_probes_ci.sh",
-            "reason": "missing_protocol_root_probe_mirror_binding"
-          }
-        ],
-        "root_probe_shadow_violation_count": 6,
-        "root_probe_shadow_violation_file_count": 2,
-        "root_probe_shadow_violation_reason_counts": {
-          "missing_protocol_root_probe_shadow_common_source": 2,
-          "missing_protocol_root_probe_bootstrap_call": 2,
-          "missing_protocol_root_probe_mirror_binding": 2
-        },
+        "root_probe_shadow_violation_rows": [],
+        "root_probe_shadow_violation_count": 0,
+        "root_probe_shadow_violation_file_count": 0,
+        "root_probe_shadow_violation_reason_counts": {},
         "root_probe_scan_errors": [],
         "root_probe_scan_error_count": 0,
         "root_probe_shadow_common_rel_path": "scripts/ci/protocol_root_probe_shadow_common.sh",
@@ -14437,14 +14475,7 @@
         "root_probe_shadow_common_scan_errors": [],
         "root_probe_shadow_common_scan_error_count": 0,
         "root_probe_shadow_common_contract_status": "PASS_REQUIRED",
-        "stale_reasons": [
-          "root_probe_shadow_violation:scripts/ci/run_protocol_root_lane_handoff_probes_ci.sh:missing_protocol_root_probe_shadow_common_source",
-          "root_probe_shadow_violation:scripts/ci/run_protocol_root_lane_handoff_probes_ci.sh:missing_protocol_root_probe_bootstrap_call",
-          "root_probe_shadow_violation:scripts/ci/run_protocol_root_lane_handoff_probes_ci.sh:missing_protocol_root_probe_mirror_binding",
-          "root_probe_shadow_violation:scripts/ci/run_protocol_root_shared_primitive_adoption_probes_ci.sh:missing_protocol_root_probe_shadow_common_source",
-          "root_probe_shadow_violation:scripts/ci/run_protocol_root_shared_primitive_adoption_probes_ci.sh:missing_protocol_root_probe_bootstrap_call",
-          "root_probe_shadow_violation:scripts/ci/run_protocol_root_shared_primitive_adoption_probes_ci.sh:missing_protocol_root_probe_mirror_binding"
-        ]
+        "stale_reasons": []
       }
     },
     {
@@ -14948,9 +14979,9 @@
   ],
   "summary": {
     "check_count": 31,
-    "fail_count": 3,
+    "fail_count": 0,
     "warn_count": 0,
-    "pass_count": 28
+    "pass_count": 31
   },
   "surface_governance": {
     "runtime_summary_surface_governance_status": "PASS_REQUIRED",
@@ -14990,13 +15021,9 @@
     "operator_interpretation_rule": "Treat the control-plane status artifact as a bounded machine-generated control-plane snapshot derived from underlying validators and current mappings; it is suitable for visibility and sync checks, but must not be promoted into standalone semantic authority.",
     "operational_constraints": []
   },
-  "control_plane_status": "FAIL_REQUIRED",
-  "promotion_ready": false,
-  "promotion_block_reasons": [
-    "protocol_root_corpus_governance:FAIL_REQUIRED",
-    "protocol_root_machine_registry_completeness:FAIL_REQUIRED",
-    "protocol_root_shared_primitive_adoption:FAIL_REQUIRED"
-  ],
+  "control_plane_status": "PASS_REQUIRED",
+  "promotion_ready": true,
+  "promotion_block_reasons": [],
   "selected_check_names": [],
   "status_file_entry": "${REPO_ROOT}/identity/protocol/mappings/control-plane-status.current.yaml",
   "status_file": "${REPO_ROOT}/identity/protocol/mappings/control-plane-status.v1.6.json",

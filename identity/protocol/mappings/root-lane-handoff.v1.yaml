@@ -11,6 +11,15 @@
   "validator_script": "scripts/validate_protocol_root_lane_handoff.py",
   "probe_script": "scripts/ci/run_protocol_root_lane_handoff_probes_ci.sh",
   "common_script": "scripts/root_lane_handoff_common.py",
+  "status_key": "protocol_root_lane_handoff_status",
+  "error_codes": [
+    "IP-RLH-001",
+    "IP-RLH-002",
+    "IP-RLH-003"
+  ],
+  "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+  "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+  "probe_shadow_bootstrap_contract": "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings",
   "accepted_issue_commit": "c09a3a6",
   "required_contract_phrases": [
     "This file records the pre-existing `root-lane-handoff` artifact family as a",

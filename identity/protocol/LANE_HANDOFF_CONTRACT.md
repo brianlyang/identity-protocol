@@ -2,6 +2,8 @@
 
 This file records the pre-existing `root-lane-handoff` artifact family as a
 compatibility-only surface.
+This file is admitted at protocol root only as clearly demoted support material.
+It is not active-runtime truth for canonical handoff law and does not compete with the accepted lane-card handoff contract.
 
 The canonical handoff law remains the accepted `ISSUE-040A`
 `lane_card_handoff_contract_v1` surface.

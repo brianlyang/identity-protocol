@@ -239,9 +239,13 @@ EXPECTED_ROOT_READING_ORDER_STAGES = {
     "non-runtime or support material": {
         "order": 7,
         "bound_reading_order_rel_paths": (
+            "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md",
+            "identity/protocol/LANE_HANDOFF_CONTRACT.md",
             "identity/protocol/fixtures",
         ),
         "required_markers": (
+            "`IDENTITY_CONTROL_PLANE_MVP.md`",
+            "`LANE_HANDOFF_CONTRACT.md`",
             "`fixtures/`",
             "these are never active-runtime truth.",
         ),

@@ -271,6 +271,14 @@ registered_top_level_entries:
       - workbook_issue_projection
       - closure_ledger_narration
       - business_domain_example
+  - rel_path: identity/protocol/LANE_HANDOFF_CONTRACT.md
+    entry_kind: file
+    corpus_class: demoted_support_directory
+    law_bearing: false
+    required_markers:
+      - 'This file is admitted at protocol root only as clearly demoted support material.'
+      - 'It is not active-runtime truth for canonical handoff law and does not compete with the accepted lane-card handoff contract.'
+      - 'This file is compatibility-only.'
   - rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
     entry_kind: file
     corpus_class: root_contract
@@ -411,6 +419,13 @@ registered_top_level_entries:
       - workbook_issue_projection
       - closure_ledger_narration
       - business_domain_example
+  - rel_path: identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md
+    entry_kind: file
+    corpus_class: demoted_support_directory
+    law_bearing: false
+    required_markers:
+      - 'This file is admitted at protocol root only as clearly demoted support material.'
+      - 'It is not a protocol-root constitution, not a root contract, and not active-runtime truth outside the machine-bound control-plane lane it documents.'
   - rel_path: identity/protocol/IDENTITY_DISCOVERY.md
     entry_kind: file
     corpus_class: root_contract
@@ -571,6 +586,8 @@ registered_top_level_entries:
       - root-artifact-family-admissibility.v1.yaml
       - root-agent-handoff.current.yaml
       - root-agent-handoff.v1.yaml
+      - root-lane-handoff.current.yaml
+      - root-lane-handoff.v1.yaml
       - root-prompt-bootstrap.current.yaml
       - root-prompt-bootstrap.v1.yaml
       - root-identity-discovery.current.yaml

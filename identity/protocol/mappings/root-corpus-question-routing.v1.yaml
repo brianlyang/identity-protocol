@@ -430,6 +430,12 @@ entry_question_projection:
 - rel_path: identity/protocol/plugins
   question_classes:
   - governed_extension_law
+- rel_path: identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md
+  question_classes:
+  - support_material_lookup
+- rel_path: identity/protocol/LANE_HANDOFF_CONTRACT.md
+  question_classes:
+  - support_material_lookup
 - rel_path: identity/protocol/fixtures
   question_classes:
   - support_material_lookup
