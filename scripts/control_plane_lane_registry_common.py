@@ -13,12 +13,13 @@ import yaml
 
 SCHEMA_VERSION = "control_plane_lane_registry.v1"
 CURRENT_SCHEMA_VERSION = "control_plane_lane_registry.current.v1"
-CONTRACT_ID = "control_plane_lane_registration_transaction_bootstrap"
+CONTRACT_ID = "control_plane_lane_registration_transaction_only"
 CLASSIFICATION = "existing_surface_alignment"
 ACTIVE_LANE_ID = CONTRACT_ID
+REGISTERED_TARGET_LANE_ID = "control_plane_protocol_feedback_instance_state_runner_hardening"
 RECEIPT_SCHEMA_VERSION = "control_plane_receipt.v1"
-FAIL_CLOSE_TOKEN = "control_plane_lane_registration_transaction_bootstrap_not_machine_authoritative"
-ADMITTED_DELTA_ONLY = ["control_plane_lane_registration_transaction_only"]
+FAIL_CLOSE_TOKEN = "control_plane_lane_registration_transaction_only_not_machine_authoritative"
+ADMITTED_DELTA_ONLY = [REGISTERED_TARGET_LANE_ID]
 VALIDATOR_COMMAND = "TMPDIR=$PWD/.tmp python3 scripts/validate_identity_control_plane_bootstrap_mvp.py --json-only"
 PROBE_COMMAND = "TMPDIR=$PWD/.tmp bash scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh"
 VALIDATOR_EXPECTED_STATUS = "PASS_REQUIRED"
@@ -31,11 +32,7 @@ EXPECTED_FIXED_WRITE_SET = [
     "identity/protocol/mappings/control-plane-lane-registry.current.yaml",
     "identity/protocol/mappings/control-plane-lane-registry.v1.yaml",
     "scripts/control_plane_lane_registry_common.py",
-    "scripts/control_plane_lane_preflight.py",
     "scripts/control_plane_lane_render.py",
-    "scripts/control_plane_lane_ingest.py",
-    "scripts/control_plane_lane_next.py",
-    "scripts/control_plane_lane_stream_guard.py",
     "scripts/validate_identity_control_plane_bootstrap_mvp.py",
     "scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh",
 ]

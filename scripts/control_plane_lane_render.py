@@ -19,6 +19,8 @@ def main() -> int:
         lane = get_lane(bundle.registry_doc, args.lane_id)
         payload = {
             "status": "PASS_REQUIRED",
+            "requested_lane_id": args.lane_id,
+            "active_lane_id": bundle.current_doc.get("active_lane_id"),
             "lane_card": lane,
             "authoritative_checkout": bundle.registry_doc.get("authoritative_checkout", {}),
             "canonical_runtime_tuple_policy": bundle.registry_doc.get("canonical_runtime_tuple_policy", {}),

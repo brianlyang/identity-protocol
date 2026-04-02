@@ -1,8 +1,8 @@
 schema_version: control_plane_lane_registry.v1
-contract_id: control_plane_lane_registration_transaction_bootstrap
+contract_id: control_plane_lane_registration_transaction_only
 classification: existing_surface_alignment
 receipt_schema_version: control_plane_receipt.v1
-active_lane_id: control_plane_lane_registration_transaction_bootstrap
+active_lane_id: control_plane_lane_registration_transaction_only
 role_bindings:
   architect: base-repo-architect
   executor: base-repo-closure-orchestrator
@@ -29,6 +29,54 @@ canonical_runtime_tuple_policy:
 lanes:
   - lane_id: control_plane_lane_registration_transaction_bootstrap
     classification: existing_surface_alignment
+    status: closure_done
+    active: false
+    execution_mode: split_roles
+    writer_role: executor
+    read_only_roles:
+      - architect
+      - auditor
+      - office
+    role_bindings:
+      architect: base-repo-architect
+      executor: base-repo-closure-orchestrator
+      auditor: base-repo-audit-expert-v3
+      office: office-ops-expert
+    exact_fixed_write_set:
+      - identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md
+      - identity/protocol/mappings/control-plane-lane-registry.current.yaml
+      - identity/protocol/mappings/control-plane-lane-registry.v1.yaml
+      - scripts/control_plane_lane_registry_common.py
+      - scripts/control_plane_lane_render.py
+      - scripts/validate_identity_control_plane_bootstrap_mvp.py
+      - scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh
+    read_only_input_surfaces: []
+    validator_command: TMPDIR=$PWD/.tmp python3 scripts/validate_identity_control_plane_bootstrap_mvp.py --json-only
+    probe_command: TMPDIR=$PWD/.tmp bash scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh
+    validator_expected_status: PASS_REQUIRED
+    probe_expected_status: PASS
+    warn_preservation_policy: none_required
+    expected_terminal_status: closure_done
+    admitted_delta_only:
+      - control_plane_lane_registration_transaction_only
+    fail_close_token: control_plane_lane_registration_transaction_bootstrap_not_machine_authoritative
+    blocker_id: registration_transaction_execution_context
+    next_role: auditor
+    handoff_required: true
+    post_commit_acceptance_mode: authoritative_checkout_commit_resolution
+    forbidden_rewrite_markers:
+      - runtime_tuple_literal_pollution
+      - divergent_execution_workspace_success
+      - stage_outside_fixed_write_set
+    scope_lock_allowed_actions:
+      - run_validator
+      - run_probe
+      - stage_and_commit
+      - emit_blocker_receipt
+      - emit_fail_close_token
+    receipt_schema_version: control_plane_receipt.v1
+  - lane_id: control_plane_lane_registration_transaction_only
+    classification: existing_surface_alignment
     status: architect_ready
     active: true
     execution_mode: split_roles
@@ -47,11 +95,7 @@ lanes:
       - identity/protocol/mappings/control-plane-lane-registry.current.yaml
       - identity/protocol/mappings/control-plane-lane-registry.v1.yaml
       - scripts/control_plane_lane_registry_common.py
-      - scripts/control_plane_lane_preflight.py
       - scripts/control_plane_lane_render.py
-      - scripts/control_plane_lane_ingest.py
-      - scripts/control_plane_lane_next.py
-      - scripts/control_plane_lane_stream_guard.py
       - scripts/validate_identity_control_plane_bootstrap_mvp.py
       - scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh
     read_only_input_surfaces: []
@@ -62,9 +106,9 @@ lanes:
     warn_preservation_policy: none_required
     expected_terminal_status: closure_done
     admitted_delta_only:
-      - control_plane_lane_registration_transaction_only
-    fail_close_token: control_plane_lane_registration_transaction_bootstrap_not_machine_authoritative
-    blocker_id: registration_transaction_execution_context
+      - control_plane_protocol_feedback_instance_state_runner_hardening
+    fail_close_token: control_plane_lane_registration_transaction_only_not_machine_authoritative
+    blocker_id: target_lane_machine_registration
     next_role: executor
     handoff_required: true
     post_commit_acceptance_mode: authoritative_checkout_commit_resolution
@@ -79,3 +123,10 @@ lanes:
       - emit_blocker_receipt
       - emit_fail_close_token
     receipt_schema_version: control_plane_receipt.v1
+  - lane_id: control_plane_protocol_feedback_instance_state_runner_hardening
+    classification: existing_surface_alignment
+    status: machine_registered
+    active: false
+    registration_origin_lane: control_plane_lane_registration_transaction_only
+    next_role: architect
+    packaging_gate: architect_package_required_before_execution

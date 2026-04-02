@@ -1,19 +1,20 @@
 # Identity Control Plane MVP
 
-contract_id: `control_plane_lane_registration_transaction_bootstrap`  
+contract_id: `control_plane_lane_registration_transaction_only`  
 classification: `existing_surface_alignment`
 
 ## Scope
 
-This bootstrap package narrows the control-plane MVP to one machine-checkable concern:
-authoritative checkout and execution workspace binding for closure execution.
+This package is registration-only. It narrows the control-plane MVP to one machine-checkable concern:
+append `control_plane_protocol_feedback_instance_state_runner_hardening` into authoritative registry truth
+without executing the target hardening lane itself.
 
 admitted_delta_only:
 
-- control_plane_lane_registration_transaction_only
+- control_plane_protocol_feedback_instance_state_runner_hardening
+- no target-lane hardening execution in this package
 - no reopen or writeback of ISSUE-040 / ISSUE-041 / ISSUE-042 / ISSUE-043 / ISSUE-044 / ISSUE-045 / ISSUE-046 / ISSUE-047 / ISSUE-048
-- no registration-transaction bootstrap
-- no protocol_feedback / instance_feedback / archival / reply-channel strengthening
+- no bootstrap-family reentry
 - no broader roadmap, operator projection, or human-only routing
 
 ## Exact success target
@@ -22,10 +23,13 @@ A success receipt is admissible only when all of the following are machine-true:
 
 1. the command is executed from the authoritative checkout root;
 2. the active registry pointer resolves to the versioned registry in the same package;
-3. the structured receipt stages exactly the fixed write set for this bootstrap;
-4. the validator result is exactly `PASS_REQUIRED`;
-5. the probe result is exactly `PASS`;
-6. the reported commit id resolves in the authoritative checkout before terminal success.
+3. the active registration-only lane is exactly `control_plane_lane_registration_transaction_only`;
+4. `identity/protocol/mappings/control-plane-lane-registry.v1.yaml` contains a lane entry whose `lane_id` is exactly `control_plane_protocol_feedback_instance_state_runner_hardening`;
+5. `python3 scripts/control_plane_lane_render.py --lane-id control_plane_protocol_feedback_instance_state_runner_hardening --json-only` returns `status = PASS_REQUIRED` rather than lane not found;
+6. the structured receipt stages exactly the fixed write set for this package;
+7. the validator result is exactly `PASS_REQUIRED`;
+8. the probe result is exactly `PASS`;
+9. the reported commit id resolves in the authoritative checkout before terminal success.
 
 ## Authoritative checkout binding
 
@@ -42,7 +46,7 @@ A divergent execution workspace must fail-close before success receipt ingestion
 ## Canonical runtime tuple pollution policy
 
 Reusable command templates and canonical execution truth must not carry concrete runtime
-tuple literals. The following are forbidden in this bootstrap package:
+tuple literals. The following are forbidden in this package:
 
 - a concrete `session_id`
 - a concrete `run:*` token
@@ -59,7 +63,7 @@ Allowed literal exception surfaces remain bounded to:
 
 ## Lane schema excerpt
 
-The active lane for this package carries these machine-visible fields:
+The active registration-only lane for this package carries these machine-visible fields:
 
 - `lane_id`
 - `classification`
@@ -81,7 +85,7 @@ The active lane for this package carries these machine-visible fields:
 
 This package remains `split_roles`:
 
-- architect authors the authoritative package
+- architect authors the authoritative registration-only package
 - executor performs mutation / validator / probe / commit
 - auditor and office remain read-only roles after closure
 
@@ -93,13 +97,9 @@ The closure executor may mutate only the following files:
 2. `identity/protocol/mappings/control-plane-lane-registry.current.yaml`
 3. `identity/protocol/mappings/control-plane-lane-registry.v1.yaml`
 4. `scripts/control_plane_lane_registry_common.py`
-5. `scripts/control_plane_lane_preflight.py`
-6. `scripts/control_plane_lane_render.py`
-7. `scripts/control_plane_lane_ingest.py`
-8. `scripts/control_plane_lane_next.py`
-9. `scripts/control_plane_lane_stream_guard.py`
-10. `scripts/validate_identity_control_plane_bootstrap_mvp.py`
-11. `scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh`
+5. `scripts/control_plane_lane_render.py`
+6. `scripts/validate_identity_control_plane_bootstrap_mvp.py`
+7. `scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh`
 
 ## Command templates
 
@@ -119,21 +119,22 @@ These templates are intentionally runtime-generic and contain no concrete actor/
 
 ## Fail-close contract
 
-The machine fail-close token for this bootstrap package is:
+The machine fail-close token for this registration-only package is:
 
-- `control_plane_lane_registration_transaction_bootstrap_not_machine_authoritative`
+- `control_plane_lane_registration_transaction_only_not_machine_authoritative`
 
 Representative fail-close reasons include:
 
 - current working directory is not the authoritative checkout root
 - git top-level diverges from the authoritative checkout root
+- the target hardening lane is not appended into the versioned registry
 - staged paths escape the fixed write set or are not exact
 - commit id does not resolve in the authoritative checkout
 - canonical reusable templates contain forbidden concrete runtime tuple literals
 
 ## Post-success routing
 
-After a successful closure receipt is ingested, the lane advances to:
+After a successful closure receipt is ingested, the registration-only lane advances to:
 
 - `status = closure_done`
 - `next_role = auditor`

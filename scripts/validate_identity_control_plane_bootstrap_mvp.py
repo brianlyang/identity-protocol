@@ -18,6 +18,7 @@ from control_plane_lane_registry_common import (
     PROBE_COMMAND,
     PROBE_EXPECTED_STATUS,
     RECEIPT_SCHEMA_VERSION,
+    REGISTERED_TARGET_LANE_ID,
     SCHEMA_VERSION,
     VALIDATOR_COMMAND,
     VALIDATOR_EXPECTED_STATUS,
@@ -38,10 +39,10 @@ def _record(checks, failures, name, ok, detail):
 
 
 REQUIRED_DOC_TOKENS = [
-    "contract_id: `control_plane_lane_registration_transaction_bootstrap`",
+    "contract_id: `control_plane_lane_registration_transaction_only`",
     "classification: `existing_surface_alignment`",
-    "control_plane_lane_registration_transaction_only",
-    "control_plane_lane_registration_transaction_bootstrap_not_machine_authoritative",
+    "control_plane_protocol_feedback_instance_state_runner_hardening",
+    "control_plane_lane_registration_transaction_only_not_machine_authoritative",
 ]
 
 
@@ -74,7 +75,7 @@ def main() -> int:
             and bundle.current_doc.get("active_lane_id") == ACTIVE_LANE_ID
             and bundle.current_doc.get("active_file") == DEFAULT_VERSIONED_REGISTRY_REL.as_posix()
             and bundle.current_doc.get("read_only_input_surfaces") == [],
-            "current registry pointer is narrowed and has no overbound read-only inputs",
+            "current registry pointer is bound to the registration-only transaction with no read-only inputs",
         )
         _record(
             checks,
@@ -85,7 +86,7 @@ def main() -> int:
             and bundle.registry_doc.get("classification") == CLASSIFICATION
             and bundle.registry_doc.get("receipt_schema_version") == RECEIPT_SCHEMA_VERSION
             and bundle.registry_doc.get("active_lane_id") == ACTIVE_LANE_ID,
-            "versioned registry matches the narrowed bootstrap contract",
+            "versioned registry matches the active registration-only contract",
         )
         _record(
             checks,
@@ -96,7 +97,7 @@ def main() -> int:
             and lane.get("status") == "architect_ready"
             and lane.get("writer_role") == "executor"
             and lane.get("role_bindings") == EXPECTED_ROLE_BINDINGS,
-            "active lane exposes split-role execution for the executor",
+            "active registration-only lane exposes split-role execution for the executor",
         )
         _record(
             checks,
@@ -117,15 +118,27 @@ def main() -> int:
             and lane.get("read_only_input_surfaces") == []
             and lane.get("admitted_delta_only") == ADMITTED_DELTA_ONLY
             and lane.get("fail_close_token") == FAIL_CLOSE_TOKEN,
-            "fixed write set is exact and the package is narrowed to lane registration transaction only",
+            "fixed write set is exact and the package is narrowed to registration-only append of the target lane",
         )
+        try:
+            target_lane = get_lane(bundle.registry_doc, REGISTERED_TARGET_LANE_ID)
+            target_ok = (
+                target_lane.get("lane_id") == REGISTERED_TARGET_LANE_ID
+                and target_lane.get("status") == "machine_registered"
+                and target_lane.get("next_role") == "architect"
+            )
+            target_detail = "target hardening lane is machine-registered and awaits normal architect packaging"
+        except Exception as exc:
+            target_ok = False
+            target_detail = str(exc)
+        _record(checks, failures, "registered_target_lane", target_ok, target_detail)
         doc_text = (bundle.repo_root / "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md").read_text(encoding="utf-8")
         _record(
             checks,
             failures,
             "mvp_doc_tokens",
             all(token in doc_text for token in REQUIRED_DOC_TOKENS),
-            "MVP document exposes the narrowed lane registration transaction contract",
+            "MVP document exposes the registration-only contract and target-lane append semantics",
         )
         runtime_literal_failures = check_forbidden_runtime_literals(canonical_package_paths(bundle.repo_root))
         _record(
@@ -141,7 +154,7 @@ def main() -> int:
             "next_role_resolution",
             route_next_role(lane)["identity_id"] == EXPECTED_ROLE_BINDINGS["executor"]
             and route_next_role(lane, status_override="closure_done")["identity_id"] == EXPECTED_ROLE_BINDINGS["auditor"],
-            "executor owns closure; auditor owns the post-closure acceptance hop",
+            "executor owns registration closure; auditor owns the post-closure acceptance hop",
         )
         payload = {
             "status": "FAIL_REQUIRED" if failures else "PASS_REQUIRED",

@@ -6,26 +6,29 @@ cd "$repo_root"
 
 tmp_root="${TMPDIR:-$repo_root/.tmp}"
 mkdir -p "$tmp_root"
-probe_dir="$(mktemp -d "$tmp_root/control-plane-binding-probes.XXXXXX")"
+probe_dir="$(mktemp -d "$tmp_root/control-plane-registration-probes.XXXXXX")"
 trap 'rm -rf "$probe_dir"' EXIT
 
 python3 scripts/validate_identity_control_plane_bootstrap_mvp.py --json-only > "$probe_dir/validator.json"
 python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data' "$probe_dir/validator.json"
 
 python3 scripts/control_plane_lane_preflight.py --json-only > "$probe_dir/preflight.json"
-python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["lane_id"]=="control_plane_lane_registration_transaction_bootstrap"; assert data["scope_lock_status"]=="LOCKED"' "$probe_dir/preflight.json"
+python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["lane_id"]=="control_plane_lane_registration_transaction_only"; assert data["scope_lock_status"]=="LOCKED"' "$probe_dir/preflight.json"
 
 python3 scripts/control_plane_lane_render.py --json-only > "$probe_dir/render.json"
-python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["lane_card"]["read_only_input_surfaces"]==[]; assert data["lane_card"]["classification"]=="existing_surface_alignment"' "$probe_dir/render.json"
+python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["requested_lane_id"]=="control_plane_lane_registration_transaction_only"; assert data["active_lane_id"]=="control_plane_lane_registration_transaction_only"; assert data["lane_card"]["admitted_delta_only"]==["control_plane_protocol_feedback_instance_state_runner_hardening"]' "$probe_dir/render.json"
+
+python3 scripts/control_plane_lane_render.py --lane-id control_plane_protocol_feedback_instance_state_runner_hardening --json-only > "$probe_dir/registered-target-render.json"
+python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["requested_lane_id"]=="control_plane_protocol_feedback_instance_state_runner_hardening"; assert data["active_lane_id"]=="control_plane_lane_registration_transaction_only"; assert data["lane_card"]["lane_id"]=="control_plane_protocol_feedback_instance_state_runner_hardening"' "$probe_dir/registered-target-render.json"
 
 mkdir -p "$probe_dir/identity/protocol/mappings"
 cp identity/protocol/mappings/control-plane-lane-registry.v1.yaml "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.v1.yaml"
 cat > "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml" <<'EOF'
 schema_version: control_plane_lane_registry.current.v1
-contract_id: control_plane_lane_registration_transaction_bootstrap
+contract_id: control_plane_lane_registration_transaction_only
 classification: existing_surface_alignment
 active_file: control-plane-lane-registry.v1.yaml
-active_lane_id: control_plane_lane_registration_transaction_bootstrap
+active_lane_id: control_plane_lane_registration_transaction_only
 authoritative_checkout:
   repo_root_mode: script_anchored
   binding_mode: cwd_must_equal_repo_root
@@ -44,7 +47,7 @@ runtime_tuple_policy:
 read_only_input_surfaces: []
 EOF
 
-python3 scripts/control_plane_lane_preflight.py   --registry-current "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml"   --write-back   --json-only > "$probe_dir/preflight-write.json"
+python3 scripts/control_plane_lane_preflight.py --registry-current "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml" --write-back --json-only > "$probe_dir/preflight-write.json"
 python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["status_transition"]["to"]=="preflight_passed"' "$probe_dir/preflight-write.json"
 
 head_commit="$(git rev-parse HEAD)"
@@ -62,11 +65,7 @@ cat > "$probe_dir/success-receipt.json" <<EOF
     "identity/protocol/mappings/control-plane-lane-registry.current.yaml",
     "identity/protocol/mappings/control-plane-lane-registry.v1.yaml",
     "scripts/control_plane_lane_registry_common.py",
-    "scripts/control_plane_lane_preflight.py",
     "scripts/control_plane_lane_render.py",
-    "scripts/control_plane_lane_ingest.py",
-    "scripts/control_plane_lane_next.py",
-    "scripts/control_plane_lane_stream_guard.py",
     "scripts/validate_identity_control_plane_bootstrap_mvp.py",
     "scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh"
   ],
@@ -79,13 +78,13 @@ cat > "$probe_dir/success-receipt.json" <<EOF
 }
 EOF
 
-python3 scripts/control_plane_lane_stream_guard.py   --registry-current "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml"   --receipt-file "$probe_dir/success-receipt.json"   --phase closeout   --require-exact   --json-only > "$probe_dir/guard-pass.json"
+python3 scripts/control_plane_lane_stream_guard.py --registry-current "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml" --receipt-file "$probe_dir/success-receipt.json" --phase closeout --require-exact --json-only > "$probe_dir/guard-pass.json"
 python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data' "$probe_dir/guard-pass.json"
 
-python3 scripts/control_plane_lane_ingest.py   --registry-current "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml"   --receipt-file "$probe_dir/success-receipt.json"   --write-back   --json-only > "$probe_dir/ingest.json"
+python3 scripts/control_plane_lane_ingest.py --registry-current "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml" --receipt-file "$probe_dir/success-receipt.json" --write-back --json-only > "$probe_dir/ingest.json"
 python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["new_status"]=="closure_done"; assert data["next_role"]["identity_id"]=="base-repo-audit-expert-v3"' "$probe_dir/ingest.json"
 
-python3 scripts/control_plane_lane_next.py   --registry-current "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml"   --status-override closure_done   --json-only > "$probe_dir/next-after-closure.json"
+python3 scripts/control_plane_lane_next.py --registry-current "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml" --status-override closure_done --json-only > "$probe_dir/next-after-closure.json"
 python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["next_role"]["identity_id"]=="base-repo-audit-expert-v3"; assert data["next_role"]["suggested_next_status"]=="audit_ready"' "$probe_dir/next-after-closure.json"
 
 cat > "$probe_dir/bad-receipt.json" <<EOF
@@ -107,7 +106,7 @@ cat > "$probe_dir/bad-receipt.json" <<EOF
 }
 EOF
 
-if python3 scripts/control_plane_lane_stream_guard.py   --registry-current "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml"   --receipt-file "$probe_dir/bad-receipt.json"   --phase closeout   --require-exact   --json-only > "$probe_dir/guard-fail.json"; then
+if python3 scripts/control_plane_lane_stream_guard.py --registry-current "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml" --receipt-file "$probe_dir/bad-receipt.json" --phase closeout --require-exact --json-only > "$probe_dir/guard-fail.json"; then
   echo "expected stream guard to fail-close" >&2
   exit 1
 fi
@@ -119,7 +118,8 @@ printf '{
   "coverage": [
     "validator_baseline",
     "preflight_lock",
-    "render_lane_card",
+    "render_active_registration_lane",
+    "render_registered_target_lane",
     "guard_exact_receipt",
     "ingest_commit_resolution",
     "next_role_routing",
