@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-04-02T11:16:40Z",
-  "git_head_short": "c4bfb27",
+  "generated_at_utc": "2026-04-02T14:15:12Z",
+  "git_head_short": "ea327b0",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -44,7 +44,7 @@
           ".github/workflows/_identity-required-gates.yml"
         ],
         "observed": {
-          "validator_scripts": 279,
+          "validator_scripts": 281,
           "validator_metric_scope": "tracked_validate_scripts_only",
           "tracked_validator_script_paths": [
             "${REPO_ROOT}/scripts/validate_activate_cwd_invariance.py",
@@ -67,12 +67,14 @@
             "${REPO_ROOT}/scripts/validate_compatibility_legacy_boundary.py",
             "${REPO_ROOT}/scripts/validate_compatibility_pointer_terminology.py",
             "${REPO_ROOT}/scripts/validate_compiled_brief_projection_boundary.py",
+            "${REPO_ROOT}/scripts/validate_context_compaction_without_progress_reproduction_audit_stream.py",
             "${REPO_ROOT}/scripts/validate_contract_binding_reference_integrity.py",
             "${REPO_ROOT}/scripts/validate_contract_mapping_coverage.py",
             "${REPO_ROOT}/scripts/validate_control_plane_budget.py",
             "${REPO_ROOT}/scripts/validate_control_plane_budget_sync.py",
             "${REPO_ROOT}/scripts/validate_control_plane_invariants.py",
             "${REPO_ROOT}/scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py",
+            "${REPO_ROOT}/scripts/validate_control_plane_role_binding_overlay_hardening.py",
             "${REPO_ROOT}/scripts/validate_control_plane_status_sync.py",
             "${REPO_ROOT}/scripts/validate_cross_actor_isolation.py",
             "${REPO_ROOT}/scripts/validate_cross_cwd_absolute_input.py",
@@ -331,7 +333,7 @@
           "error_codes": 737,
           "error_code_families": 259,
           "error_code_metric_scope": "tracked_python_scripts_canonical_tokens_only",
-          "tracked_python_script_count": 579,
+          "tracked_python_script_count": 582,
           "ignored_partial_error_code_tokens": [
             "IP-ACTOR-",
             "IP-ASB-",
@@ -371,8 +373,8 @@
         },
         "budgets": {
           "validator_scripts": {
-            "warn": 279,
-            "fail": 281
+            "warn": 281,
+            "fail": 283
           },
           "error_codes": {
             "warn": 737,
@@ -521,12 +523,12 @@
         "budget_file": "${REPO_ROOT}/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_alias_error": "",
-        "current_last_updated_utc": "2026-04-02T10:53:20Z",
-        "live_last_updated_utc": "2026-04-02T11:15:59Z",
+        "current_last_updated_utc": "2026-04-02T14:13:50Z",
+        "live_last_updated_utc": "2026-04-02T14:14:43Z",
         "mismatch_count": 0,
         "mismatches": [],
         "observed": {
-          "validator_scripts": 279,
+          "validator_scripts": 281,
           "validator_metric_scope": "tracked_validate_scripts_only",
           "tracked_validator_script_paths": [
             "${REPO_ROOT}/scripts/validate_activate_cwd_invariance.py",
@@ -549,12 +551,14 @@
             "${REPO_ROOT}/scripts/validate_compatibility_legacy_boundary.py",
             "${REPO_ROOT}/scripts/validate_compatibility_pointer_terminology.py",
             "${REPO_ROOT}/scripts/validate_compiled_brief_projection_boundary.py",
+            "${REPO_ROOT}/scripts/validate_context_compaction_without_progress_reproduction_audit_stream.py",
             "${REPO_ROOT}/scripts/validate_contract_binding_reference_integrity.py",
             "${REPO_ROOT}/scripts/validate_contract_mapping_coverage.py",
             "${REPO_ROOT}/scripts/validate_control_plane_budget.py",
             "${REPO_ROOT}/scripts/validate_control_plane_budget_sync.py",
             "${REPO_ROOT}/scripts/validate_control_plane_invariants.py",
             "${REPO_ROOT}/scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py",
+            "${REPO_ROOT}/scripts/validate_control_plane_role_binding_overlay_hardening.py",
             "${REPO_ROOT}/scripts/validate_control_plane_status_sync.py",
             "${REPO_ROOT}/scripts/validate_cross_actor_isolation.py",
             "${REPO_ROOT}/scripts/validate_cross_cwd_absolute_input.py",
@@ -813,7 +817,7 @@
           "error_codes": 737,
           "error_code_families": 259,
           "error_code_metric_scope": "tracked_python_scripts_canonical_tokens_only",
-          "tracked_python_script_count": 579,
+          "tracked_python_script_count": 582,
           "ignored_partial_error_code_tokens": [
             "IP-ACTOR-",
             "IP-ASB-",
@@ -1673,10 +1677,10 @@
         ],
         "pack_scan_globs": [],
         "active_pack_identity_ids": [],
-        "repo_scan_file_count": 753,
+        "repo_scan_file_count": 758,
         "active_pack_scan_file_count": 0,
         "extra_scan_file_count": 0,
-        "scan_file_count": 753,
+        "scan_file_count": 758,
         "scan_files": [
           ".github/workflows/_identity-required-gates.yml",
           ".github/workflows/identity-protocol-ci.yml",
@@ -1710,10 +1714,12 @@
           "scripts/ci/run_audit_snapshot_index_governance_probes_ci.sh",
           "scripts/ci/run_bounded_commit_required_for_closure_probes_ci.sh",
           "scripts/ci/run_child_runtime_owner_binding_probes_ci.sh",
+          "scripts/ci/run_context_compaction_without_progress_reproduction_audit_stream_probes_ci.sh",
           "scripts/ci/run_contract_bootstrap_emitter_probes_ci.sh",
           "scripts/ci/run_contract_pattern_selection_authority_probes_ci.sh",
           "scripts/ci/run_control_plane_budget_sync_probes_ci.sh",
           "scripts/ci/run_control_plane_protocol_feedback_instance_state_runner_hardening_probes_ci.sh",
+          "scripts/ci/run_control_plane_role_binding_overlay_hardening_probes_ci.sh",
           "scripts/ci/run_control_plane_surface_materialization_probes_ci.sh",
           "scripts/ci/run_doc_command_surface_probes_ci.sh",
           "scripts/ci/run_downsink_path_immutability_probes_ci.sh",
@@ -1865,6 +1871,7 @@
           "scripts/compile_identity_runtime.py",
           "scripts/compose_and_validate_governed_reply.py",
           "scripts/configure_identity_runtime_paths.py",
+          "scripts/context_compaction_without_progress_reproduction_audit_stream_contract_common.py",
           "scripts/contract_binding_doc_defaults_common.py",
           "scripts/contract_binding_mapping_common.py",
           "scripts/contract_bootstrap_emitter_common.py",
@@ -2165,12 +2172,14 @@
           "scripts/validate_compatibility_legacy_boundary.py",
           "scripts/validate_compatibility_pointer_terminology.py",
           "scripts/validate_compiled_brief_projection_boundary.py",
+          "scripts/validate_context_compaction_without_progress_reproduction_audit_stream.py",
           "scripts/validate_contract_binding_reference_integrity.py",
           "scripts/validate_contract_mapping_coverage.py",
           "scripts/validate_control_plane_budget.py",
           "scripts/validate_control_plane_budget_sync.py",
           "scripts/validate_control_plane_invariants.py",
           "scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py",
+          "scripts/validate_control_plane_role_binding_overlay_hardening.py",
           "scripts/validate_control_plane_status_sync.py",
           "scripts/validate_cross_actor_isolation.py",
           "scripts/validate_cross_cwd_absolute_input.py",
@@ -14630,7 +14639,7 @@
         "issue_register_doc": "${REPO_ROOT}/docs/workbook/protocol-issue-register-v1.6.md",
         "governance_doc": "${REPO_ROOT}/docs/governance/identity-v1.6x-release-closure-governance.md",
         "review_doc": "${REPO_ROOT}/docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md",
-        "current_issue_horizon": "ISSUE-048",
+        "current_issue_horizon": "ISSUE-049",
         "highest_closed_v16_stream_version": "v1.6.21",
         "stale_reasons": []
       }
@@ -14652,7 +14661,7 @@
         "error_code": "",
         "repo_root": "${REPO_ROOT}",
         "summary_doc": "${REPO_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md",
-        "current_issue_horizon": "ISSUE-048",
+        "current_issue_horizon": "ISSUE-049",
         "highest_closed_v16_stream_version": "v1.6.21",
         "boundary_stream_versions": [
           "v1.6.6",
