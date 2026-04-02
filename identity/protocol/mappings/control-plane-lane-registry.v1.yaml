@@ -17,7 +17,7 @@ canonical_runtime_tuple_policy:
     - concrete actor_id in reusable execution templates
     - concrete executor identity in runtime-resolved command templates
   allowed_literal_exception_surfaces:
-    - owner_binding_overlay
+    - runtime_evidence_surfaces
     - actor_session_store
     - runtime_reports
     - ci_probe_fixtures

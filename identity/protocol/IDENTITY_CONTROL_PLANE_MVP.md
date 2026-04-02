@@ -22,6 +22,20 @@ admitted_delta_only:
 - canonical_registry_deconcretizes_role_bindings_only
 - no_reopen_of_control_plane_protocol_feedback_instance_state_runner_hardening
 
+## Runtime-evidence-only + fail-close standard
+
+The control plane MUST machine-enforce the following invariant:
+**canonical protocol truth must remain role-level, portable, and free of concrete runtime bindings**.
+Canonical truth may define roles, contracts, admission rules, state transitions, and receipt semantics,
+but it MUST NOT embed, freeze, inherit, or derive authority from any concrete identity, session,
+transaction, checkout-instance, host-path, or other runtime-specific literal.
+
+Concrete runtime bindings are admitted only within explicitly marked runtime-evidence surfaces.
+Those surfaces are non-canonical, non-portable, and receipt-scoped.
+Any reentry, projection, copy-through, normalization, or dependency of those concrete runtime literals
+back into canonical truth is a protocol violation and MUST fail-close before render success,
+ingest success, validation success, probe success, staging success, commit success, or terminal success receipt.
+
 ## Exact success target
 
 A success receipt is admissible only when all of the following are machine-true:
@@ -29,18 +43,18 @@ A success receipt is admissible only when all of the following are machine-true:
 1. the command is executed from the authoritative checkout root;
 2. the active registry pointer resolves to the versioned registry in the same package;
 3. the active lane is exactly `control_plane_role_binding_overlay_hardening`;
-4. canonical role law remains in the lane registry, while repo-local owner binding lives only in:
+4. canonical role law remains in the lane registry, while concrete owner binding is admitted only through `owner_binding_runtime_evidence` surfaces:
    - `identity/protocol/mappings/control-plane-owner-binding.current.yaml`
    - `identity/protocol/mappings/control-plane-owner-binding.v1.yaml`
 5. canonical registry no longer persists `role_bindings` at the top level or inside lane rows;
-6. `route_next_role` semantics and concrete `identity_id` resolution are split, with identity resolution sourced from the owner-binding overlay only;
-7. the historical lanes `control_plane_lane_registration_transaction_only` and `control_plane_protocol_feedback_instance_state_runner_hardening` remain machine-readable and route-compatible after the split;
+6. `route_next_role` and `route_next_role_semantics` remain role-only and portable; the returned binding surface is metadata-only and explicitly marked `DEFERRED_TO_RUNTIME_EVIDENCE`;
+7. the historical lanes `control_plane_lane_registration_transaction_only` and `control_plane_protocol_feedback_instance_state_runner_hardening` remain machine-readable without reintroducing concrete `identity_id` into canonical success paths;
 8. the structured receipt stages exactly the machine-authoritative closeout subset for this package;
 9. the validator result is exactly `PASS_REQUIRED`;
 10. the probe result is exactly `PASS`;
 11. the reported commit id resolves in the authoritative checkout before terminal success.
 
-## Canonical role law vs repo-local owner binding
+## Canonical role law vs runtime evidence
 
 Canonical control-plane truth now carries role semantics only:
 
@@ -51,17 +65,26 @@ Canonical control-plane truth now carries role semantics only:
 - `scope_lock_allowed_actions`
 
 Concrete owner resolution is no longer frozen into canonical lane truth.
-Instead, repo-local owner binding is materialized only through the owner-binding overlay surfaces:
+Instead, repo-local owner binding is materialized only through the owner-binding runtime-evidence surfaces:
+
+route_next_role now emits role-level projections plus a runtime-evidence binding surface only.
 
 - `identity/protocol/mappings/control-plane-owner-binding.current.yaml`
 - `identity/protocol/mappings/control-plane-owner-binding.v1.yaml`
 
-Those overlay surfaces are explicitly non-portable:
+Those surfaces are explicitly non-portable and metadata-only:
 
 - `truth_class = owner_binding_overlay`
 - `scope = repo_local`
 - `portable = false`
-- `binding_policy = role_to_identity_binding_overlay`
+- `runtime_evidence_surface = true`
+- `runtime_evidence_class = concrete_identity_binding`
+- `binding_policy = receipt_scoped_runtime_evidence_only`
+- `canonical_reentry_policy = fail_close`
+
+Helper validators and probes do not freeze exact concrete identity literals.
+They validate required role coverage, admitted runtime-evidence roots, and fail-close reentry policy.
+They do not derive or assert `identity_id` from canonical/versioned surfaces.
 
 ## Authoritative checkout binding
 
@@ -90,14 +113,35 @@ tuple literals. The following are forbidden in this package:
 - a concrete `run:*` token
 - a concrete `actor_id` embedded in reusable execution templates
 - a concrete executor identity embedded in canonical runtime-resolved command templates
+- concrete subagent, collaborator, or outer delivery bindings embedded in canonical truth
 
 Allowed literal exception surfaces remain bounded to:
 
-- `owner_binding_overlay`
+- `runtime_evidence_surfaces`
 - actor/session store
 - runtime reports
 - CI/probe fixtures
 - docs/examples
+
+## Protocol-governed sidecar supplement
+
+For long-chain repository governance, subagent orchestration is admitted as a useful sidecar capability,
+but it is not canonical authority.
+A subagent is treated as a governed sidecar infrastructure object.
+In protocol terms, this is a subagent sidecar infrastructure object.
+It must be distinguished from:
+
+1. the **subagent** itself as sidecar infrastructure;
+2. the **collaborator identity instance** that may operate within or alongside that sidecar;
+3. the **outer delivery surface** that presents receipts, reviews, or handoff artifacts to users.
+
+Canonical control-plane truth MUST NOT bind any of those three layers back into role law.
+If a helper, validator, probe, or receipt path attempts to make canonical truth depend on a concrete subagent,
+a collaborator identity instance, or an outer delivery surface literal, the control plane must fail-close.
+
+Current governance gap note: subagent usage is a net gain, but formal work contract, capability discovery,
+closure receipt, integration receipt, and timeout/fail-close semantics still need explicit protocolization.
+That gap is documented here as governance debt, not as permission to let subagent literals reenter canonical truth.
 
 ## Lane schema excerpt
 
@@ -121,7 +165,7 @@ The active lane for this package carries these machine-visible fields:
 - `receipt_schema_version`
 
 The canonical registry no longer persists `role_bindings`.
-Concrete identity mapping is resolved only from the repo-local owner-binding overlay.
+Concrete identity mapping is admitted only as runtime evidence and is never projected back into canonical truth.
 
 ## Execution mode
 
@@ -143,8 +187,11 @@ canonical registry truth:
 - `control_plane_lane_registration_transaction_only`
 - `control_plane_protocol_feedback_instance_state_runner_hardening`
 
-Those rows remain route-compatible because concrete `identity_id` values are now resolved
-through the owner-binding overlay at render / next / ingest time.
+Those rows remain route-compatible because canonical law still resolves the next role,
+while concrete authority remains deferred to runtime evidence and therefore absent from canonical outputs.
+Historical lanes remain route-compatible because their projections defer concrete binding to runtime evidence instead of persisting `identity_id`.
+route_next_role now emits role-level projections plus a runtime-evidence binding surface only.
+historical lanes remain route-compatible because their projections defer concrete binding to runtime evidence instead of persisting `identity_id`.
 
 ## Fixed write set
 
@@ -182,7 +229,7 @@ Probe command:
 TMPDIR=$PWD/.tmp bash scripts/ci/run_control_plane_role_binding_overlay_hardening_probes_ci.sh
 ```
 
-These templates are intentionally runtime-generic and contain no concrete actor/session tuple.
+These templates are intentionally runtime-generic and contain no concrete actor/session/subagent tuple.
 
 ## Fail-close contract
 
@@ -195,8 +242,8 @@ Representative fail-close reasons include:
 - current working directory is not the authoritative checkout root
 - git top-level diverges from the authoritative checkout root
 - canonical registry still persists `role_bindings`
-- owner-binding overlay is missing or malformed
-- route semantics and concrete identity resolution are not split
+- owner-binding runtime-evidence policy is missing or malformed
+- helper / validator / probe paths reenter concrete identity or subagent literals into canonical truth
 - staged paths escape the fixed write set or are not exact
 - commit id does not resolve in the authoritative checkout
 - canonical reusable templates contain forbidden concrete runtime tuple literals

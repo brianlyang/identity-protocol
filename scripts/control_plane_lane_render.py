@@ -9,7 +9,6 @@ from control_plane_lane_registry_common import (
     display_path,
     emit,
     get_lane,
-    resolve_owner_bindings,
     resolve_registry_bundle,
     route_next_role,
 )
@@ -32,16 +31,21 @@ def main() -> int:
             "active_lane_id": bundle.current_doc.get("active_lane_id"),
             "lane_card": lane,
             "authoritative_checkout": bundle.registry_doc.get("authoritative_checkout", {}),
-            "canonical_runtime_tuple_policy": bundle.registry_doc.get("canonical_runtime_tuple_policy", {}),
-            "owner_binding_overlay": {
+            "canonical_runtime_tuple_policy": (
+                bundle.current_doc.get("runtime_tuple_policy")
+                or bundle.registry_doc.get("canonical_runtime_tuple_policy", {})
+            ),
+            "owner_binding_runtime_evidence": {
                 "current_file": display_path(bundle.owner_binding_current, bundle.repo_root),
                 "versioned_file": display_path(bundle.owner_binding_versioned, bundle.repo_root),
                 "truth_class": bundle.owner_binding_current_doc.get("truth_class"),
                 "scope": bundle.owner_binding_current_doc.get("scope"),
                 "portable": bundle.owner_binding_current_doc.get("portable"),
                 "binding_policy": bundle.owner_binding_current_doc.get("binding_policy"),
+                "runtime_evidence_surface": bundle.owner_binding_current_doc.get("runtime_evidence_surface"),
+                "runtime_evidence_class": bundle.owner_binding_current_doc.get("runtime_evidence_class"),
+                "canonical_reentry_policy": bundle.owner_binding_current_doc.get("canonical_reentry_policy"),
                 "active_binding_id": bundle.owner_binding_current_doc.get("active_binding_id"),
-                "role_to_identity_bindings": resolve_owner_bindings(bundle),
             },
             "next_role_projection": route_next_role(
                 lane,

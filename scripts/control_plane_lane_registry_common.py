@@ -16,8 +16,11 @@ OWNER_BINDING_SCHEMA_VERSION = "control_plane_owner_binding.v1"
 OWNER_BINDING_CURRENT_SCHEMA_VERSION = "control_plane_owner_binding.current.v1"
 OWNER_BINDING_TRUTH_CLASS = "owner_binding_overlay"
 OWNER_BINDING_SCOPE = "repo_local"
-OWNER_BINDING_POLICY = "role_to_identity_binding_overlay"
-OWNER_BINDING_ACTIVE_PROFILE_ID = "control_plane_default_owner_binding_profile"
+OWNER_BINDING_RUNTIME_EVIDENCE_SURFACE = True
+OWNER_BINDING_RUNTIME_EVIDENCE_CLASS = "concrete_identity_binding"
+OWNER_BINDING_CANONICAL_REENTRY_POLICY = "fail_close"
+OWNER_BINDING_POLICY = "receipt_scoped_runtime_evidence_only"
+OWNER_BINDING_ACTIVE_PROFILE_ID = "control_plane_runtime_evidence_policy"
 CONTRACT_ID = "control_plane_role_binding_overlay_hardening"
 CLASSIFICATION = "existing_surface_alignment"
 ACTIVE_LANE_ID = CONTRACT_ID
@@ -62,12 +65,12 @@ EXPECTED_FIXED_WRITE_SET = [
     "scripts/validate_control_plane_role_binding_overlay_hardening.py",
     "scripts/ci/run_control_plane_role_binding_overlay_hardening_probes_ci.sh",
 ]
-EXPECTED_OWNER_BINDINGS = {
-    "architect": "base-repo-architect",
-    "executor": "base-repo-closure-orchestrator",
-    "auditor": "base-repo-audit-expert-v3",
-    "office": "office-ops-expert",
-}
+REQUIRED_OWNER_BINDING_ROLES = (
+    "architect",
+    "executor",
+    "auditor",
+    "office",
+)
 EXPECTED_ALLOWED_ACTIONS = [
     "run_validator",
     "run_probe",
@@ -76,7 +79,7 @@ EXPECTED_ALLOWED_ACTIONS = [
     "emit_fail_close_token",
 ]
 RUNTIME_ALLOWED_LITERAL_EXCEPTION_SURFACES = [
-    "owner_binding_overlay",
+    "runtime_evidence_surfaces",
     "actor_session_store",
     "runtime_reports",
     "ci_probe_fixtures",
@@ -96,12 +99,28 @@ EXPECTED_EXECUTABLE_SURFACES = [
     "scripts/ci/run_protocol_feedback_ssot_archival_probes_ci.sh",
     "scripts/ci/run_sidecar_cwd_parity_probes_ci.sh",
 ]
-FORBIDDEN_HOST_PATH_PATTERN = re.compile(
-    "/" + "Users" + r"/[^/\s]+(?:/[^\s\"']*)?"
-)
+HELPER_LITERAL_LOCK_IN_SURFACES = [
+    "scripts/control_plane_lane_registry_common.py",
+    "scripts/validate_identity_control_plane_bootstrap_mvp.py",
+    "scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py",
+    "scripts/validate_control_plane_role_binding_overlay_hardening.py",
+    "scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh",
+    "scripts/ci/run_control_plane_protocol_feedback_instance_state_runner_hardening_probes_ci.sh",
+    "scripts/ci/run_control_plane_role_binding_overlay_hardening_probes_ci.sh",
+]
+FORBIDDEN_HOST_PATH_PATTERN = re.compile(r"/Users/[^/\s]+(?:/[^\s]*)?")
 PROHIBITED_RUNTIME_LITERAL_PATTERNS = {
     "concrete_run_token": re.compile(r"run:[A-Za-z0-9._:-]+"),
     "concrete_actor_id": re.compile(r"assistant:[A-Za-z0-9._-]+"),
+}
+HELPER_LITERAL_LOCK_IN_PATTERNS = {
+    "concrete_role_binding_mapping_reentry": re.compile(r"\brole_to_identity_bindings\b"),
+    "identity_resolver_reentry": re.compile(r"\bresolve_role_identity\s*\("),
+    "identity_projection_get_reentry": re.compile(r"\.get\((['\"])identity_id\1\)"),
+    "identity_projection_index_reentry": re.compile(r"\[(['\"])identity_id\1\]"),
+    "render_overlay_key_reentry": re.compile(r"\[(['\"])owner_binding_overlay\1\]"),
+    "overlay_exception_surface_reentry": re.compile(r"^\s*-\s*owner_binding_overlay\s*$", re.MULTILINE),
+    "concrete_identity_literal_reentry": re.compile(r"\bbase-repo-[A-Za-z0-9._-]+\b"),
 }
 
 
@@ -283,20 +302,80 @@ def route_next_role_semantics(lane: dict[str, Any], *, status_override: str | No
     }
 
 
-def resolve_owner_bindings(bundle: RegistryBundle) -> dict[str, str]:
-    bindings = bundle.owner_binding_doc.get("role_to_identity_bindings") or {}
-    if not isinstance(bindings, dict):
-        raise ValueError("owner binding role_to_identity_bindings must be a mapping")
-    resolved = {str(key): str(value) for key, value in bindings.items()}
-    missing = [role for role in EXPECTED_OWNER_BINDINGS if role not in resolved or not resolved[role]]
-    if missing:
-        raise KeyError("missing owner binding roles: " + ",".join(missing))
-    return resolved
+def owner_binding_policy_issues(
+    doc: Any,
+    *,
+    require_active_file: bool = False,
+    require_required_roles: bool = False,
+    require_runtime_roots: bool = False,
+) -> list[str]:
+    if not isinstance(doc, dict):
+        return ["owner_binding_doc_not_mapping"]
+    issues: list[str] = []
+    expected_pairs = {
+        "truth_class": OWNER_BINDING_TRUTH_CLASS,
+        "scope": OWNER_BINDING_SCOPE,
+        "portable": False,
+        "runtime_evidence_surface": OWNER_BINDING_RUNTIME_EVIDENCE_SURFACE,
+        "runtime_evidence_class": OWNER_BINDING_RUNTIME_EVIDENCE_CLASS,
+        "canonical_reentry_policy": OWNER_BINDING_CANONICAL_REENTRY_POLICY,
+        "binding_policy": OWNER_BINDING_POLICY,
+        "active_binding_id": OWNER_BINDING_ACTIVE_PROFILE_ID,
+    }
+    for field_name, expected_value in expected_pairs.items():
+        if doc.get(field_name) != expected_value:
+            issues.append(f"{field_name}_mismatch")
+    if require_active_file and not str(doc.get("active_file") or "").strip():
+        issues.append("missing_active_file")
+    if require_required_roles:
+        if list(doc.get("required_roles") or []) != list(REQUIRED_OWNER_BINDING_ROLES):
+            issues.append("required_roles_mismatch")
+    if require_runtime_roots:
+        roots = doc.get("admitted_runtime_evidence_roots")
+        if not isinstance(roots, list) or not roots or any(
+            not isinstance(item, str) or not item.strip() for item in roots
+        ):
+            issues.append("admitted_runtime_evidence_roots_invalid")
+    if "role_to_identity_bindings" in doc:
+        issues.append("concrete_role_bindings_reentered")
+    return issues
 
 
-def resolve_role_identity(bundle: RegistryBundle, role: str) -> str:
-    bindings = resolve_owner_bindings(bundle)
-    return bindings[str(role)]
+def check_helper_literal_lock_in(
+    paths: list[Path],
+    *,
+    root: Path | None = None,
+) -> list[str]:
+    hits: list[str] = []
+    base = root or repo_root()
+    for path in paths:
+        if path.name == "control_plane_lane_registry_common.py":
+            continue
+        text = path.read_text(encoding="utf-8")
+        for token, pattern in HELPER_LITERAL_LOCK_IN_PATTERNS.items():
+            if pattern.search(text):
+                hits.append(f"{token}:{display_path(path, base)}")
+    return hits
+
+
+def binding_surface_projection(bundle: RegistryBundle) -> dict[str, Any]:
+    return {
+        "resolution_status": "DEFERRED_TO_RUNTIME_EVIDENCE",
+        "truth_class": bundle.owner_binding_current_doc.get("truth_class"),
+        "scope": bundle.owner_binding_current_doc.get("scope"),
+        "portable": bundle.owner_binding_current_doc.get("portable"),
+        "binding_policy": bundle.owner_binding_current_doc.get("binding_policy"),
+        "runtime_evidence_surface": bundle.owner_binding_current_doc.get("runtime_evidence_surface"),
+        "runtime_evidence_class": bundle.owner_binding_current_doc.get("runtime_evidence_class"),
+        "canonical_reentry_policy": bundle.owner_binding_current_doc.get("canonical_reentry_policy"),
+        "current_file": display_path(bundle.owner_binding_current, bundle.repo_root),
+        "versioned_file": display_path(bundle.owner_binding_versioned, bundle.repo_root),
+        "active_binding_id": bundle.owner_binding_current_doc.get("active_binding_id"),
+        "required_roles": list(bundle.owner_binding_doc.get("required_roles") or []),
+        "admitted_runtime_evidence_roots": list(
+            bundle.owner_binding_doc.get("admitted_runtime_evidence_roots") or []
+        ),
+    }
 
 
 def route_next_role(
@@ -309,7 +388,7 @@ def route_next_role(
     resolved_bundle = bundle or resolve_registry_bundle()
     return {
         **semantics,
-        "identity_id": resolve_role_identity(resolved_bundle, semantics["role"]),
+        "binding_surface": binding_surface_projection(resolved_bundle),
     }
 
 

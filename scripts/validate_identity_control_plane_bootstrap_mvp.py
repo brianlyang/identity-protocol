@@ -11,11 +11,19 @@ from control_plane_lane_registry_common import (
     CURRENT_SCHEMA_VERSION,
     DEFAULT_OWNER_BINDING_CURRENT_REL,
     DEFAULT_VERSIONED_REGISTRY_REL,
-    EXPECTED_OWNER_BINDINGS,
+    OWNER_BINDING_ACTIVE_PROFILE_ID,
+    OWNER_BINDING_CANONICAL_REENTRY_POLICY,
+    OWNER_BINDING_POLICY,
+    OWNER_BINDING_RUNTIME_EVIDENCE_CLASS,
+    OWNER_BINDING_RUNTIME_EVIDENCE_SURFACE,
+    OWNER_BINDING_SCOPE,
+    OWNER_BINDING_TRUTH_CLASS,
     RECEIPT_SCHEMA_VERSION,
     REGISTRATION_BOOTSTRAP_LANE_ID,
     REGISTRATION_TRANSACTION_LANE_ID,
     REGISTERED_TARGET_LANE_ID,
+    REQUIRED_OWNER_BINDING_ROLES,
+    RUNTIME_ALLOWED_LITERAL_EXCEPTION_SURFACES,
     SCHEMA_VERSION,
     canonical_package_paths,
     check_forbidden_runtime_literals,
@@ -23,6 +31,7 @@ from control_plane_lane_registry_common import (
     emit,
     ensure_registration_transaction_execution_context,
     get_lane,
+    owner_binding_policy_issues,
     resolve_registry_bundle,
     route_next_role,
 )
@@ -66,7 +75,8 @@ REQUIRED_DOC_TOKENS = [
     "## Historical lane compatibility",
     "`control_plane_lane_registration_transaction_only`",
     "`control_plane_protocol_feedback_instance_state_runner_hardening`",
-    "owner-binding overlay",
+    "route_next_role now emits role-level projections plus a runtime-evidence binding surface only.",
+    "historical lanes remain route-compatible because their projections defer concrete binding to runtime evidence instead of persisting `identity_id`.",
 ]
 
 
@@ -74,6 +84,37 @@ def _record(checks, failures, name, ok, detail):
     checks.append({"name": name, "status": "PASS" if ok else "FAIL", "detail": detail})
     if not ok:
         failures.append(name)
+
+
+def _binding_surface_issues(projection) -> list[str]:
+    if not isinstance(projection, dict):
+        return ["projection_not_mapping"]
+    surface = projection.get("binding_surface")
+    if not isinstance(surface, dict):
+        return ["binding_surface_not_mapping"]
+    issues: list[str] = []
+    expected_pairs = {
+        "resolution_status": "DEFERRED_TO_RUNTIME_EVIDENCE",
+        "truth_class": OWNER_BINDING_TRUTH_CLASS,
+        "scope": OWNER_BINDING_SCOPE,
+        "portable": False,
+        "runtime_evidence_surface": OWNER_BINDING_RUNTIME_EVIDENCE_SURFACE,
+        "runtime_evidence_class": OWNER_BINDING_RUNTIME_EVIDENCE_CLASS,
+        "canonical_reentry_policy": OWNER_BINDING_CANONICAL_REENTRY_POLICY,
+        "binding_policy": OWNER_BINDING_POLICY,
+        "active_binding_id": OWNER_BINDING_ACTIVE_PROFILE_ID,
+    }
+    for field_name, expected_value in expected_pairs.items():
+        if surface.get(field_name) != expected_value:
+            issues.append(f"{field_name}_mismatch")
+    if list(surface.get("required_roles") or []) != list(REQUIRED_OWNER_BINDING_ROLES):
+        issues.append("required_roles_mismatch")
+    roots = surface.get("admitted_runtime_evidence_roots")
+    if not isinstance(roots, list) or not roots:
+        issues.append("admitted_runtime_evidence_roots_invalid")
+    if "identity_id" in projection:
+        issues.append("identity_id_reentered")
+    return issues
 
 
 def main() -> int:
@@ -102,7 +143,7 @@ def main() -> int:
             and str(bundle.current_doc.get("owner_binding_file", "")).strip() in ACCEPTABLE_OWNER_CURRENT_REFS
             and bundle.current_doc.get("contract_id") in ACCEPTABLE_CURRENT_CONTRACTS
             and bundle.current_doc.get("active_lane_id") in ACCEPTABLE_CURRENT_ACTIVE_LANES,
-            "current registry may point at the active overlay lane or a registration-lane shadow current file while still resolving the owner-binding overlay",
+            "current registry may point at the active overlay lane or a registration-lane shadow current file while still resolving runtime-evidence metadata",
         )
         _record(
             checks,
@@ -113,6 +154,20 @@ def main() -> int:
             and bundle.registry_doc.get("classification") == CLASSIFICATION
             and bundle.registry_doc.get("receipt_schema_version") == RECEIPT_SCHEMA_VERSION,
             "versioned registry remains anchored to the overlay hardening family while preserving historical rows",
+        )
+        current_runtime_policy = bundle.current_doc.get("runtime_tuple_policy") or {}
+        versioned_runtime_policy = bundle.registry_doc.get("canonical_runtime_tuple_policy") or {}
+        _record(
+            checks,
+            failures,
+            "runtime_tuple_exception_surfaces",
+            current_runtime_policy.get("concrete_tuple_literals_allowed") is False
+            and current_runtime_policy.get("allowed_literal_exception_surfaces")
+            == RUNTIME_ALLOWED_LITERAL_EXCEPTION_SURFACES
+            and versioned_runtime_policy.get("concrete_tuple_literals_allowed") is False
+            and versioned_runtime_policy.get("allowed_literal_exception_surfaces")
+            == RUNTIME_ALLOWED_LITERAL_EXCEPTION_SURFACES,
+            "historical registration replay admits concrete literals only through explicitly marked runtime-evidence surfaces",
         )
 
         role_binding_hits = []
@@ -169,6 +224,18 @@ def main() -> int:
             and target_lane.get("active") is False,
             "the historically registered target lane remains present after the overlay split",
         )
+        binding_issues = owner_binding_policy_issues(
+            bundle.owner_binding_doc,
+            require_required_roles=True,
+            require_runtime_roots=True,
+        )
+        _record(
+            checks,
+            failures,
+            "owner_binding_runtime_evidence_shape",
+            not binding_issues,
+            binding_issues or "owner-binding document exposes required roles and runtime-evidence roots without concrete identity bindings",
+        )
         preflight_projection = route_next_role(
             registration_lane,
             bundle=bundle,
@@ -184,14 +251,24 @@ def main() -> int:
             bundle=bundle,
             status_override="closure_done",
         )
+        preflight_issues = _binding_surface_issues(preflight_projection)
+        closure_issues = _binding_surface_issues(closure_projection)
+        bootstrap_issues = _binding_surface_issues(bootstrap_closure_projection)
         _record(
             checks,
             failures,
-            "route_compatibility_via_owner_binding_overlay",
-            preflight_projection.get("identity_id") == EXPECTED_OWNER_BINDINGS["executor"]
-            and closure_projection.get("identity_id") == EXPECTED_OWNER_BINDINGS["auditor"]
-            and bootstrap_closure_projection.get("identity_id") == EXPECTED_OWNER_BINDINGS["auditor"],
-            "historical registration lanes remain route-compatible because concrete identity resolution now comes from the owner-binding overlay",
+            "route_compatibility_via_runtime_evidence_surface",
+            preflight_projection.get("role") == "executor"
+            and preflight_projection.get("suggested_next_status") == "closure_running"
+            and closure_projection.get("role") == "auditor"
+            and closure_projection.get("suggested_next_status") == "audit_ready"
+            and bootstrap_closure_projection.get("role") == "auditor"
+            and bootstrap_closure_projection.get("suggested_next_status") == "audit_ready"
+            and not preflight_issues
+            and not closure_issues
+            and not bootstrap_issues,
+            preflight_issues + closure_issues + bootstrap_issues
+            or "historical registration lanes remain route-compatible because projections stay role-level and defer concrete binding to runtime evidence",
         )
         doc_text = (bundle.repo_root / "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md").read_text(encoding="utf-8")
         _record(
@@ -199,7 +276,7 @@ def main() -> int:
             failures,
             "mvp_doc_tokens",
             all(token in doc_text for token in REQUIRED_DOC_TOKENS),
-            "MVP doc records historical lane compatibility under the overlay split",
+            "MVP doc records historical lane compatibility under the runtime-evidence-only split",
         )
         runtime_literal_failures = check_forbidden_runtime_literals(
             canonical_package_paths(bundle.repo_root, lane=registration_lane)

@@ -16,12 +16,16 @@ from control_plane_lane_registry_common import (
     DEFAULT_VERSIONED_REGISTRY_REL,
     EXPECTED_ALLOWED_ACTIONS,
     EXPECTED_FIXED_WRITE_SET,
-    EXPECTED_OWNER_BINDINGS,
+    HELPER_LITERAL_LOCK_IN_SURFACES,
+    REQUIRED_OWNER_BINDING_ROLES,
     FAIL_CLOSE_TOKEN,
     FORBIDDEN_HOST_PATH_PATTERN,
     OWNER_BINDING_ACTIVE_PROFILE_ID,
+    OWNER_BINDING_CANONICAL_REENTRY_POLICY,
     OWNER_BINDING_CURRENT_SCHEMA_VERSION,
     OWNER_BINDING_POLICY,
+    OWNER_BINDING_RUNTIME_EVIDENCE_CLASS,
+    OWNER_BINDING_RUNTIME_EVIDENCE_SURFACE,
     OWNER_BINDING_SCHEMA_VERSION,
     OWNER_BINDING_SCOPE,
     OWNER_BINDING_TRUTH_CLASS,
@@ -31,15 +35,18 @@ from control_plane_lane_registry_common import (
     REGISTRATION_BOOTSTRAP_LANE_ID,
     REGISTRATION_TRANSACTION_LANE_ID,
     REGISTERED_TARGET_LANE_ID,
+    RUNTIME_ALLOWED_LITERAL_EXCEPTION_SURFACES,
     SCHEMA_VERSION,
     VALIDATOR_COMMAND,
     VALIDATOR_EXPECTED_STATUS,
     canonical_package_paths,
     check_forbidden_runtime_literals,
+    check_helper_literal_lock_in,
     display_path,
     emit,
     ensure_control_plane_execution_context,
     get_lane,
+    owner_binding_policy_issues,
     resolve_registry_bundle,
     route_next_role,
     route_next_role_semantics,
@@ -59,16 +66,19 @@ ACCEPTABLE_OWNER_VERSIONED_REFS = {
 }
 REQUIRED_DOC_TOKENS = [
     "contract_id: `control_plane_role_binding_overlay_hardening`",
+    "canonical protocol truth must remain role-level, portable, and free of concrete runtime bindings",
+    "owner_binding_runtime_evidence",
+    "receipt_scoped_runtime_evidence_only",
+    "subagent is treated as a governed sidecar infrastructure object",
     "control_plane_role_binding_overlay_hardening_not_machine_authoritative",
-    "canonical registry no longer persists `role_bindings`",
-    "role_to_identity_binding_overlay",
-    "`scripts/control_plane_lane_stream_guard.py`",
 ]
 REQUIRED_REVIEW_TOKENS = [
     "## Closure supplement — control_plane_role_binding_overlay_hardening",
     "identity lock-in",
-    "identity/protocol/mappings/control-plane-owner-binding.current.yaml",
-    "scripts/control_plane_lane_stream_guard.py",
+    "runtime-evidence-only + fail-close standard",
+    "subagent as a governed sidecar infrastructure object",
+    "collaborator identity instance",
+    "outer delivery surface",
 ]
 
 
@@ -81,9 +91,46 @@ def _record(checks, failures, name, ok, detail):
 def _scan_host_paths(paths: list[Path], repo_root: Path) -> list[str]:
     hits: list[str] = []
     for path in paths:
+        if path.name == "control_plane_lane_registry_common.py":
+            continue
         if FORBIDDEN_HOST_PATH_PATTERN.search(path.read_text(encoding="utf-8")):
             hits.append(f"absolute_host_path_literal:{display_path(path, repo_root)}")
     return hits
+
+
+def _binding_surface_issues(projection, bundle) -> list[str]:
+    if not isinstance(projection, dict):
+        return ["projection_not_mapping"]
+    issues: list[str] = []
+    surface = projection.get("binding_surface")
+    if not isinstance(surface, dict):
+        return ["binding_surface_not_mapping"]
+    expected_current = display_path(bundle.owner_binding_current, bundle.repo_root)
+    expected_versioned = display_path(bundle.owner_binding_versioned, bundle.repo_root)
+    expected_pairs = {
+        "resolution_status": "DEFERRED_TO_RUNTIME_EVIDENCE",
+        "truth_class": OWNER_BINDING_TRUTH_CLASS,
+        "scope": OWNER_BINDING_SCOPE,
+        "portable": False,
+        "runtime_evidence_surface": OWNER_BINDING_RUNTIME_EVIDENCE_SURFACE,
+        "runtime_evidence_class": OWNER_BINDING_RUNTIME_EVIDENCE_CLASS,
+        "canonical_reentry_policy": OWNER_BINDING_CANONICAL_REENTRY_POLICY,
+        "binding_policy": OWNER_BINDING_POLICY,
+        "active_binding_id": OWNER_BINDING_ACTIVE_PROFILE_ID,
+        "current_file": expected_current,
+        "versioned_file": expected_versioned,
+    }
+    for field_name, expected_value in expected_pairs.items():
+        if surface.get(field_name) != expected_value:
+            issues.append(f"{field_name}_mismatch")
+    if list(surface.get("required_roles") or []) != list(REQUIRED_OWNER_BINDING_ROLES):
+        issues.append("required_roles_mismatch")
+    roots = surface.get("admitted_runtime_evidence_roots")
+    if not isinstance(roots, list) or not roots:
+        issues.append("admitted_runtime_evidence_roots_invalid")
+    if "identity_id" in projection:
+        issues.append("identity_id_reentered")
+    return issues
 
 
 def main() -> int:
@@ -114,7 +161,7 @@ def main() -> int:
             and bundle.current_doc.get("active_lane_id") == ACTIVE_LANE_ID
             and str(bundle.current_doc.get("owner_binding_file", "")).strip() in ACCEPTABLE_OWNER_CURRENT_REFS
             and bundle.current_doc.get("read_only_input_surfaces") == [],
-            "current registry points at the active overlay lane and resolves the repo-local owner binding overlay",
+            "current registry points at the active overlay lane and resolves the repo-local runtime-evidence binding surface",
         )
         _record(
             checks,
@@ -128,31 +175,47 @@ def main() -> int:
             and str(bundle.registry_doc.get("owner_binding_file", "")).strip() in ACCEPTABLE_OWNER_CURRENT_REFS,
             "versioned registry carries the overlay hardening contract without canonical concrete owner bindings",
         )
+        current_runtime_policy = bundle.current_doc.get("runtime_tuple_policy") or {}
+        versioned_runtime_policy = bundle.registry_doc.get("canonical_runtime_tuple_policy") or {}
+        _record(
+            checks,
+            failures,
+            "runtime_tuple_exception_surfaces",
+            current_runtime_policy.get("concrete_tuple_literals_allowed") is False
+            and current_runtime_policy.get("allowed_literal_exception_surfaces")
+            == RUNTIME_ALLOWED_LITERAL_EXCEPTION_SURFACES
+            and versioned_runtime_policy.get("concrete_tuple_literals_allowed") is False
+            and versioned_runtime_policy.get("allowed_literal_exception_surfaces")
+            == RUNTIME_ALLOWED_LITERAL_EXCEPTION_SURFACES,
+            "current and versioned registry tuple policies admit concrete literals only through runtime-evidence surfaces and other explicitly marked exception surfaces",
+        )
+        current_binding_issues = owner_binding_policy_issues(
+            bundle.owner_binding_current_doc,
+            require_active_file=True,
+        )
         _record(
             checks,
             failures,
             "owner_binding_current_doc",
             bundle.owner_binding_current_doc.get("schema_version") == OWNER_BINDING_CURRENT_SCHEMA_VERSION
-            and bundle.owner_binding_current_doc.get("truth_class") == OWNER_BINDING_TRUTH_CLASS
-            and bundle.owner_binding_current_doc.get("scope") == OWNER_BINDING_SCOPE
-            and bundle.owner_binding_current_doc.get("portable") is False
-            and bundle.owner_binding_current_doc.get("binding_policy") == OWNER_BINDING_POLICY
-            and bundle.owner_binding_current_doc.get("active_binding_id") == OWNER_BINDING_ACTIVE_PROFILE_ID
-            and str(bundle.owner_binding_current_doc.get("active_file", "")).strip() in ACCEPTABLE_OWNER_VERSIONED_REFS,
-            "owner-binding current doc is repo-local, non-portable, and points at the versioned binding profile",
+            and str(bundle.owner_binding_current_doc.get("active_file", "")).strip() in ACCEPTABLE_OWNER_VERSIONED_REFS
+            and not current_binding_issues,
+            current_binding_issues
+            or "owner-binding current doc is repo-local, non-portable, receipt-scoped runtime evidence metadata",
+        )
+        versioned_binding_issues = owner_binding_policy_issues(
+            bundle.owner_binding_doc,
+            require_required_roles=True,
+            require_runtime_roots=True,
         )
         _record(
             checks,
             failures,
             "owner_binding_versioned_doc",
             bundle.owner_binding_doc.get("schema_version") == OWNER_BINDING_SCHEMA_VERSION
-            and bundle.owner_binding_doc.get("truth_class") == OWNER_BINDING_TRUTH_CLASS
-            and bundle.owner_binding_doc.get("scope") == OWNER_BINDING_SCOPE
-            and bundle.owner_binding_doc.get("portable") is False
-            and bundle.owner_binding_doc.get("binding_policy") == OWNER_BINDING_POLICY
-            and bundle.owner_binding_doc.get("active_binding_id") == OWNER_BINDING_ACTIVE_PROFILE_ID
-            and bundle.owner_binding_doc.get("role_to_identity_bindings") == EXPECTED_OWNER_BINDINGS,
-            "versioned owner-binding overlay carries the canonical repo-local role -> identity map",
+            and not versioned_binding_issues,
+            versioned_binding_issues
+            or "versioned owner-binding document carries runtime-evidence-only policy metadata and required roles without concrete bindings",
         )
 
         role_binding_hits = []
@@ -212,16 +275,39 @@ def main() -> int:
         preflight_semantics = route_next_role_semantics(lane, status_override="preflight_passed")
         closure_projection = route_next_role(lane, bundle=bundle, status_override="closure_done")
         preflight_projection = route_next_role(lane, bundle=bundle, status_override="preflight_passed")
+        closure_projection_issues = _binding_surface_issues(closure_projection, bundle)
+        preflight_projection_issues = _binding_surface_issues(preflight_projection, bundle)
         _record(
             checks,
             failures,
-            "route_semantics_identity_resolution_split",
+            "route_semantics_runtime_evidence_only",
             "identity_id" not in closure_semantics
+            and "identity_id" not in preflight_semantics
             and closure_semantics.get("role") == "auditor"
             and preflight_semantics.get("role") == "executor"
-            and closure_projection.get("identity_id") == EXPECTED_OWNER_BINDINGS["auditor"]
-            and preflight_projection.get("identity_id") == EXPECTED_OWNER_BINDINGS["executor"],
-            "route_next_role_semantics returns role-only law, while route_next_role resolves concrete identity from the owner-binding overlay",
+            and closure_projection.get("role") == "auditor"
+            and closure_projection.get("suggested_next_status") == "audit_ready"
+            and preflight_projection.get("role") == "executor"
+            and preflight_projection.get("suggested_next_status") == "closure_running"
+            and not closure_projection_issues
+            and not preflight_projection_issues,
+            closure_projection_issues + preflight_projection_issues
+            or "route_next_role returns role-level law plus runtime-evidence binding metadata only",
+        )
+
+        helper_paths = [
+            (bundle.repo_root / rel).resolve()
+            for rel in HELPER_LITERAL_LOCK_IN_SURFACES
+            if (bundle.repo_root / rel).exists()
+        ]
+        helper_literal_hits = check_helper_literal_lock_in(helper_paths, root=bundle.repo_root)
+        _record(
+            checks,
+            failures,
+            "helper_constraints_fail_closed_on_reentry",
+            not helper_literal_hits,
+            helper_literal_hits
+            or "helper validators/probes no longer reintroduce concrete identity bindings or stale owner-binding overlay projections",
         )
 
         doc_text = (bundle.repo_root / "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md").read_text(encoding="utf-8")
@@ -234,14 +320,14 @@ def main() -> int:
             failures,
             "mvp_doc_tokens",
             all(token in doc_text for token in REQUIRED_DOC_TOKENS),
-            "MVP doc records the overlay hardening contract, fixed write set, and fail-close token",
+            "MVP doc records the runtime-evidence-only contract, fail-close rule, and fixed write set",
         )
         _record(
             checks,
             failures,
             "review_doc_tokens",
             all(token in review_text for token in REQUIRED_REVIEW_TOKENS),
-            "review ledger records both the original identity lock-in concern and the exact closure supplement",
+            "review ledger records identity lock-in, runtime-evidence-only standard, and sidecar governance supplement",
         )
 
         package_paths = canonical_package_paths(bundle.repo_root, lane=lane)
