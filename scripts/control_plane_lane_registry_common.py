@@ -13,15 +13,19 @@ import yaml
 
 SCHEMA_VERSION = "control_plane_lane_registry.v1"
 CURRENT_SCHEMA_VERSION = "control_plane_lane_registry.current.v1"
-CONTRACT_ID = "control_plane_lane_registration_transaction_only"
+CONTRACT_ID = "control_plane_protocol_feedback_instance_state_runner_hardening"
 CLASSIFICATION = "existing_surface_alignment"
 ACTIVE_LANE_ID = CONTRACT_ID
-REGISTERED_TARGET_LANE_ID = "control_plane_protocol_feedback_instance_state_runner_hardening"
 RECEIPT_SCHEMA_VERSION = "control_plane_receipt.v1"
-FAIL_CLOSE_TOKEN = "control_plane_lane_registration_transaction_only_not_machine_authoritative"
-ADMITTED_DELTA_ONLY = [REGISTERED_TARGET_LANE_ID]
-VALIDATOR_COMMAND = "TMPDIR=$PWD/.tmp python3 scripts/validate_identity_control_plane_bootstrap_mvp.py --json-only"
-PROBE_COMMAND = "TMPDIR=$PWD/.tmp bash scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh"
+FAIL_CLOSE_TOKEN = "control_plane_protocol_feedback_instance_state_runner_hardening_execution_contract_not_machine_authoritative"
+ADMITTED_DELTA_ONLY = [
+    "protocol_feedback_instance_state_runner_contract_only",
+    "protocol_feedback_validator_probe_surface_reuse_only",
+    "no_absolute_host_path_literals_in_target_executable_surfaces",
+    "no_reopen_of_control_plane_lane_registration_transaction_only",
+]
+VALIDATOR_COMMAND = "TMPDIR=$PWD/.tmp python3 scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py --json-only"
+PROBE_COMMAND = "TMPDIR=$PWD/.tmp bash scripts/ci/run_control_plane_protocol_feedback_instance_state_runner_hardening_probes_ci.sh"
 VALIDATOR_EXPECTED_STATUS = "PASS_REQUIRED"
 PROBE_EXPECTED_STATUS = "PASS"
 EXPECTED_TERMINAL_STATUS = "closure_done"
@@ -32,9 +36,8 @@ EXPECTED_FIXED_WRITE_SET = [
     "identity/protocol/mappings/control-plane-lane-registry.current.yaml",
     "identity/protocol/mappings/control-plane-lane-registry.v1.yaml",
     "scripts/control_plane_lane_registry_common.py",
-    "scripts/control_plane_lane_render.py",
-    "scripts/validate_identity_control_plane_bootstrap_mvp.py",
-    "scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh",
+    "scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py",
+    "scripts/ci/run_control_plane_protocol_feedback_instance_state_runner_hardening_probes_ci.sh",
 ]
 EXPECTED_ROLE_BINDINGS = {
     "architect": "base-repo-architect",
@@ -49,6 +52,21 @@ EXPECTED_ALLOWED_ACTIONS = [
     "emit_blocker_receipt",
     "emit_fail_close_token",
 ]
+EXPECTED_EXECUTABLE_SURFACES = [
+    "scripts/validate_protocol_feedback_bootstrap_ready.py",
+    "scripts/validate_protocol_feedback_inbox_channel.py",
+    "scripts/validate_protocol_feedback_reply_channel.py",
+    "scripts/validate_protocol_feedback_sidecar_contract.py",
+    "scripts/validate_protocol_feedback_ssot_archival.py",
+    "scripts/validate_sidecar_cwd_parity.py",
+    "scripts/validate_identity_state_consistency.py",
+    "scripts/protocol_feedback_lane_common.py",
+    "scripts/protocol_feedback_contract_common.py",
+    "scripts/ci/run_protocol_feedback_sidecar_contract_probes_ci.sh",
+    "scripts/ci/run_protocol_feedback_ssot_archival_probes_ci.sh",
+    "scripts/ci/run_sidecar_cwd_parity_probes_ci.sh",
+]
+FORBIDDEN_HOST_PATH_LITERAL = "/Users/yangxi"
 PROHIBITED_RUNTIME_LITERAL_PATTERNS = {
     "concrete_run_token": re.compile(r"run:[A-Za-z0-9._:-]+"),
     "concrete_actor_id": re.compile(r"assistant:[A-Za-z0-9._-]+"),
@@ -208,7 +226,7 @@ def validate_receipt(
         failures.append("forbidden_actions_after_scope_lock")
     commit_id = receipt.get("commit_id")
     if not commit_id or not commit_resolves(str(commit_id), cwd=repo_root_path):
-        failures.append("registration_transaction_commit_not_materialized")
+        failures.append("protocol_feedback_instance_state_runner_hardening_commit_not_materialized")
     return failures
 
 
