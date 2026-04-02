@@ -127,7 +127,7 @@ lanes:
   receipt_schema_version: control_plane_receipt.v1
 - lane_id: control_plane_protocol_feedback_instance_state_runner_hardening
   classification: existing_surface_alignment
-  status: closure_done
+  status: architect_ready
   active: true
   execution_mode: split_roles
   writer_role: executor
