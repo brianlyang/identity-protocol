@@ -1,8 +1,8 @@
 schema_version: control_plane_lane_registry.v1
-contract_id: control_plane_authoritative_checkout_execution_workspace_binding_bootstrap
+contract_id: control_plane_lane_registration_transaction_bootstrap
 classification: existing_surface_alignment
 receipt_schema_version: control_plane_receipt.v1
-active_lane_id: control_plane_authoritative_checkout_execution_workspace_binding_bootstrap
+active_lane_id: control_plane_lane_registration_transaction_bootstrap
 role_bindings:
   architect: base-repo-architect
   executor: base-repo-closure-orchestrator
@@ -27,7 +27,7 @@ canonical_runtime_tuple_policy:
     - ci_probe_fixtures
     - docs_examples
 lanes:
-  - lane_id: control_plane_authoritative_checkout_execution_workspace_binding_bootstrap
+  - lane_id: control_plane_lane_registration_transaction_bootstrap
     classification: existing_surface_alignment
     status: architect_ready
     active: true
@@ -62,9 +62,9 @@ lanes:
     warn_preservation_policy: none_required
     expected_terminal_status: closure_done
     admitted_delta_only:
-      - control_plane_authoritative_checkout_execution_workspace_binding_only
-    fail_close_token: control_plane_authoritative_checkout_execution_workspace_binding_not_machine_authoritative
-    blocker_id: control_plane_authoritative_checkout_execution_workspace_binding
+      - control_plane_lane_registration_transaction_only
+    fail_close_token: control_plane_lane_registration_transaction_bootstrap_not_machine_authoritative
+    blocker_id: registration_transaction_execution_context
     next_role: executor
     handoff_required: true
     post_commit_acceptance_mode: authoritative_checkout_commit_resolution

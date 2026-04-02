@@ -24,7 +24,7 @@ from control_plane_lane_registry_common import (
     canonical_package_paths,
     check_forbidden_runtime_literals,
     emit,
-    ensure_authoritative_checkout_binding,
+    ensure_registration_transaction_execution_context,
     get_lane,
     resolve_registry_bundle,
     route_next_role,
@@ -38,10 +38,10 @@ def _record(checks, failures, name, ok, detail):
 
 
 REQUIRED_DOC_TOKENS = [
-    "contract_id: `control_plane_authoritative_checkout_execution_workspace_binding_bootstrap`",
+    "contract_id: `control_plane_lane_registration_transaction_bootstrap`",
     "classification: `existing_surface_alignment`",
-    "control_plane_authoritative_checkout_execution_workspace_binding_only",
-    "control_plane_authoritative_checkout_execution_workspace_binding_not_machine_authoritative",
+    "control_plane_lane_registration_transaction_only",
+    "control_plane_lane_registration_transaction_bootstrap_not_machine_authoritative",
 ]
 
 
@@ -56,8 +56,8 @@ def main() -> int:
         checks = []
         failures = []
 
-        binding_ok, binding_detail = ensure_authoritative_checkout_binding(bundle)
-        _record(checks, failures, "authoritative_checkout_binding", binding_ok, binding_detail)
+        binding_ok, binding_detail = ensure_registration_transaction_execution_context(bundle)
+        _record(checks, failures, "registration_transaction_execution_context", binding_ok, binding_detail)
         _record(
             checks,
             failures,
@@ -117,7 +117,7 @@ def main() -> int:
             and lane.get("read_only_input_surfaces") == []
             and lane.get("admitted_delta_only") == ADMITTED_DELTA_ONLY
             and lane.get("fail_close_token") == FAIL_CLOSE_TOKEN,
-            "fixed write set is exact and the package is narrowed to checkout/workspace binding only",
+            "fixed write set is exact and the package is narrowed to lane registration transaction only",
         )
         doc_text = (bundle.repo_root / "identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md").read_text(encoding="utf-8")
         _record(
@@ -125,7 +125,7 @@ def main() -> int:
             failures,
             "mvp_doc_tokens",
             all(token in doc_text for token in REQUIRED_DOC_TOKENS),
-            "MVP document exposes the narrowed authoritative binding contract",
+            "MVP document exposes the narrowed lane registration transaction contract",
         )
         runtime_literal_failures = check_forbidden_runtime_literals(canonical_package_paths(bundle.repo_root))
         _record(

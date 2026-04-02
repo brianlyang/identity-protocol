@@ -13,12 +13,12 @@ import yaml
 
 SCHEMA_VERSION = "control_plane_lane_registry.v1"
 CURRENT_SCHEMA_VERSION = "control_plane_lane_registry.current.v1"
-CONTRACT_ID = "control_plane_authoritative_checkout_execution_workspace_binding_bootstrap"
+CONTRACT_ID = "control_plane_lane_registration_transaction_bootstrap"
 CLASSIFICATION = "existing_surface_alignment"
 ACTIVE_LANE_ID = CONTRACT_ID
 RECEIPT_SCHEMA_VERSION = "control_plane_receipt.v1"
-FAIL_CLOSE_TOKEN = "control_plane_authoritative_checkout_execution_workspace_binding_not_machine_authoritative"
-ADMITTED_DELTA_ONLY = ["control_plane_authoritative_checkout_execution_workspace_binding_only"]
+FAIL_CLOSE_TOKEN = "control_plane_lane_registration_transaction_bootstrap_not_machine_authoritative"
+ADMITTED_DELTA_ONLY = ["control_plane_lane_registration_transaction_only"]
 VALIDATOR_COMMAND = "TMPDIR=$PWD/.tmp python3 scripts/validate_identity_control_plane_bootstrap_mvp.py --json-only"
 PROBE_COMMAND = "TMPDIR=$PWD/.tmp bash scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh"
 VALIDATOR_EXPECTED_STATUS = "PASS_REQUIRED"
@@ -141,7 +141,7 @@ def commit_resolves(commit_id: str, *, cwd: Path) -> bool:
     return result.returncode == 0
 
 
-def ensure_authoritative_checkout_binding(bundle: RegistryBundle) -> tuple[bool, dict[str, Any]]:
+def ensure_registration_transaction_execution_context(bundle: RegistryBundle) -> tuple[bool, dict[str, Any]]:
     cwd_ok = Path.cwd().resolve() == bundle.repo_root.resolve()
     git_top_ok = git_top_level(bundle.repo_root) == bundle.repo_root.resolve()
     detail = {
@@ -211,7 +211,7 @@ def validate_receipt(
         failures.append("forbidden_actions_after_scope_lock")
     commit_id = receipt.get("commit_id")
     if not commit_id or not commit_resolves(str(commit_id), cwd=repo_root_path):
-        failures.append("commit_not_materialized_in_authoritative_checkout")
+        failures.append("registration_transaction_commit_not_materialized")
     return failures
 
 

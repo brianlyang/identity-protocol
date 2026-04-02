@@ -20,7 +20,7 @@ def main() -> int:
         payload = {
             "status": "PASS_REQUIRED",
             "lane_card": lane,
-            "authoritative_checkout_binding": bundle.registry_doc.get("authoritative_checkout", {}),
+            "authoritative_checkout": bundle.registry_doc.get("authoritative_checkout", {}),
             "canonical_runtime_tuple_policy": bundle.registry_doc.get("canonical_runtime_tuple_policy", {}),
         }
         emit(payload, json_only=args.json_only)

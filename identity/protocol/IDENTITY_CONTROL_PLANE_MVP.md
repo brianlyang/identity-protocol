@@ -1,6 +1,6 @@
 # Identity Control Plane MVP
 
-contract_id: `control_plane_authoritative_checkout_execution_workspace_binding_bootstrap`  
+contract_id: `control_plane_lane_registration_transaction_bootstrap`  
 classification: `existing_surface_alignment`
 
 ## Scope
@@ -10,7 +10,7 @@ authoritative checkout and execution workspace binding for closure execution.
 
 admitted_delta_only:
 
-- control_plane_authoritative_checkout_execution_workspace_binding_only
+- control_plane_lane_registration_transaction_only
 - no reopen or writeback of ISSUE-040 / ISSUE-041 / ISSUE-042 / ISSUE-043 / ISSUE-044 / ISSUE-045 / ISSUE-046 / ISSUE-047 / ISSUE-048
 - no registration-transaction bootstrap
 - no protocol_feedback / instance_feedback / archival / reply-channel strengthening
@@ -121,7 +121,7 @@ These templates are intentionally runtime-generic and contain no concrete actor/
 
 The machine fail-close token for this bootstrap package is:
 
-- `control_plane_authoritative_checkout_execution_workspace_binding_not_machine_authoritative`
+- `control_plane_lane_registration_transaction_bootstrap_not_machine_authoritative`
 
 Representative fail-close reasons include:
 

@@ -13,7 +13,7 @@ python3 scripts/validate_identity_control_plane_bootstrap_mvp.py --json-only > "
 python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data' "$probe_dir/validator.json"
 
 python3 scripts/control_plane_lane_preflight.py --json-only > "$probe_dir/preflight.json"
-python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["lane_id"]=="control_plane_authoritative_checkout_execution_workspace_binding_bootstrap"; assert data["scope_lock_status"]=="LOCKED"' "$probe_dir/preflight.json"
+python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["lane_id"]=="control_plane_lane_registration_transaction_bootstrap"; assert data["scope_lock_status"]=="LOCKED"' "$probe_dir/preflight.json"
 
 python3 scripts/control_plane_lane_render.py --json-only > "$probe_dir/render.json"
 python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="PASS_REQUIRED", data; assert data["lane_card"]["read_only_input_surfaces"]==[]; assert data["lane_card"]["classification"]=="existing_surface_alignment"' "$probe_dir/render.json"
@@ -22,10 +22,10 @@ mkdir -p "$probe_dir/identity/protocol/mappings"
 cp identity/protocol/mappings/control-plane-lane-registry.v1.yaml "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.v1.yaml"
 cat > "$probe_dir/identity/protocol/mappings/control-plane-lane-registry.current.yaml" <<'EOF'
 schema_version: control_plane_lane_registry.current.v1
-contract_id: control_plane_authoritative_checkout_execution_workspace_binding_bootstrap
+contract_id: control_plane_lane_registration_transaction_bootstrap
 classification: existing_surface_alignment
 active_file: control-plane-lane-registry.v1.yaml
-active_lane_id: control_plane_authoritative_checkout_execution_workspace_binding_bootstrap
+active_lane_id: control_plane_lane_registration_transaction_bootstrap
 authoritative_checkout:
   repo_root_mode: script_anchored
   binding_mode: cwd_must_equal_repo_root
@@ -111,7 +111,7 @@ if python3 scripts/control_plane_lane_stream_guard.py   --registry-current "$pro
   echo "expected stream guard to fail-close" >&2
   exit 1
 fi
-python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="FAIL_REQUIRED", data; tokens=data["failure_tokens"]; assert "forbidden_actions_after_scope_lock" in tokens; assert "staged_paths_not_exact_fixed_write_set" in tokens; assert "commit_not_materialized_in_authoritative_checkout" in tokens' "$probe_dir/guard-fail.json"
+python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["status"]=="FAIL_REQUIRED", data; tokens=data["failure_tokens"]; assert "forbidden_actions_after_scope_lock" in tokens; assert "staged_paths_not_exact_fixed_write_set" in tokens; assert "registration_transaction_commit_not_materialized" in tokens' "$probe_dir/guard-fail.json"
 
 printf '{
   "status": "PASS",

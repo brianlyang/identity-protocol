@@ -1,8 +1,8 @@
 schema_version: control_plane_lane_registry.current.v1
-contract_id: control_plane_authoritative_checkout_execution_workspace_binding_bootstrap
+contract_id: control_plane_lane_registration_transaction_bootstrap
 classification: existing_surface_alignment
 active_file: identity/protocol/mappings/control-plane-lane-registry.v1.yaml
-active_lane_id: control_plane_authoritative_checkout_execution_workspace_binding_bootstrap
+active_lane_id: control_plane_lane_registration_transaction_bootstrap
 authoritative_checkout:
   repo_root_mode: script_anchored
   binding_mode: cwd_must_equal_repo_root
