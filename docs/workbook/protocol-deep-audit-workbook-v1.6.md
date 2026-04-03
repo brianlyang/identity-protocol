@@ -1417,6 +1417,36 @@ Root cause:
   - existing bootstrap / atomic emit / atomic emit validation surfaces remain the shared primitives consumed by the new lane;
   - non-goals remain fixed: do not reopen owner-binding portability, anti-loop family semantics, or generalized protocol-feedback scope.
 
+### ISSUE-050 - Architect-authorized execution-governance follow-on lacks machine-admitted single-owner two-phase lane semantics
+
+- `status`: CLOSED
+- `problem_statement`: architect-owned execution-governance follow-on could diagnose the right loop-control gap yet still mix role fields with concrete identity, require avoidable second-owner handoff before the law was frozen, or let implementation begin without a repo-visible contract-freeze receipt.
+- `primary_owner_doc`: `docs/review/protocol-remediation-audit-ledger-v1.6.x-single-owner-two-phase-execution-governance.md`
+- `secondary_refs`:
+  - `docs/governance/identity-single-owner-two-phase-execution-governance-v1.6.x.md`
+  - `scripts/single_owner_two_phase_execution_governance_contract_common.py`
+  - `scripts/validate_single_owner_two_phase_execution_governance.py`
+  - `scripts/ci/run_single_owner_two_phase_execution_governance_probes_ci.sh`
+- `machine_gate`: architect-authorized execution-governance follow-on is admitted only as one non-canonical `protocol_feedback_packet` with `single_owner_two_phase` semantics under `architect_authorized_single_owner_two_phase_execution_governance_contract_v1`; `phase_b` must remain blocked until `execution_governance_contract_freeze_receipt` is repo-visible, and role/identity pollution is fail-closed because concrete identity is not admitted in `owner_role` or `suggested_executor_role`.
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - packet semantics remain machine-visible through `truth_class`, `canonical`, `portable`, and `runtime_binding_not_authoritative`;
+  - role / identity separation remains machine-visible through `owner_role`, `suggested_executor_role`, and non-canonical `suggested_executor_identity` receipt-only admission;
+  - phase ordering remains machine-visible through `lane_execution_model=single_owner_two_phase`, `phase_a_completion_receipt_status`, and `phase_b_precondition_status`;
+  - same-owner continuation remains the default through `handoff_policy.default_mode=single_owner_no_handoff`;
+  - second-owner entry remains fail-closed unless blocker / handoff receipt is machine-visible;
+  - stale or incomplete handling remains machine-visible through `stale_reasons`.
+- `closure_evidence`:
+  - `docs/governance/identity-single-owner-two-phase-execution-governance-v1.6.x.md` and `docs/review/protocol-remediation-audit-ledger-v1.6.x-single-owner-two-phase-execution-governance.md` now freeze ISSUE-050 as a bounded architect-authorized execution-governance lane that does not reopen accepted control-plane runtime-evidence-only closure;
+  - `scripts/single_owner_two_phase_execution_governance_contract_common.py` and `scripts/validate_single_owner_two_phase_execution_governance.py` now freeze the non-canonical packet payload, role/identity separation, phase-A freeze receipt gate, same-owner default, and second-owner fail-close rule;
+  - `bash scripts/ci/run_single_owner_two_phase_execution_governance_probes_ci.sh` now proves positive packet acceptance plus negative fail-close on canonicalization drift and role-field identity pollution;
+  - `TMPDIR=$PWD/.tmp python3 scripts/validate_single_owner_two_phase_execution_governance.py --json-only` returns `PASS_REQUIRED`;
+  - `TMPDIR=$PWD/.tmp bash scripts/ci/run_single_owner_two_phase_execution_governance_probes_ci.sh` returns `PASS`.
+- `current_evidence`:
+  - ISSUE-050 remains narrow: it admits same-owner two-phase execution-governance follow-on only;
+  - ISSUE-045 baton continuity, ISSUE-046 post-lock runtime enforcement, and ISSUE-049 protocol-feedback rail-switch remain upstream prerequisites rather than reopened targets;
+  - concrete identity remains forbidden in role fields and, if needed at all, is admitted only in non-canonical handoff / blocker receipts.
+
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
