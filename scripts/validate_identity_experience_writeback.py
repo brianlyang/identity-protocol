@@ -12,7 +12,7 @@ from primary_execution_report_common import (
 )
 from resolve_identity_context import (
     default_local_catalog_path,
-    merged_catalog,
+    load_yaml_or_empty,
     resolve_local_catalog_path,
     resolve_repo_catalog_path,
 )
@@ -57,20 +57,27 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _resolve_pack(identity_id: str, repo_catalog_path: Path, local_catalog_path: Path) -> Path:
-    catalog = merged_catalog(repo_catalog_path, local_catalog_path)
+def _resolve_pack_path_against_catalog(pack_path: str, local_catalog_path: Path) -> Path:
+    catalog_root = local_catalog_path.expanduser().resolve().parent
+    p = Path(pack_path).expanduser()
+    if not p.is_absolute():
+        p = (catalog_root / p).resolve()
+    else:
+        p = p.resolve()
+    return p
+
+
+def _resolve_pack(identity_id: str, local_catalog_path: Path) -> Path:
+    catalog = load_yaml_or_empty(local_catalog_path)
     identities = catalog.get("identities") or []
     target = next((x for x in identities if str((x or {}).get("id", "")).strip() == identity_id), None)
     if not target:
         raise FileNotFoundError(f"identity id not found in catalog: {identity_id}")
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path)
+        p = _resolve_pack_path_against_catalog(pack_path, local_catalog_path)
         if p.exists():
-            return p.resolve()
-    legacy = Path("identity") / identity_id
-    if legacy.exists():
-        return legacy.resolve()
+            return p
     raise FileNotFoundError(f"identity pack not found: {identity_id}")
 
 
@@ -218,7 +225,7 @@ def main() -> int:
             else resolve_repo_catalog_path(args.repo_catalog, start=script_ref)
         )
         local_catalog = resolve_local_catalog_path(args.local_catalog, start=script_ref)
-        pack = _resolve_pack(args.identity_id, repo_catalog, local_catalog)
+        pack = _resolve_pack(args.identity_id, local_catalog)
         payload["repo_catalog_path"] = str(repo_catalog)
         payload["local_catalog_path"] = str(local_catalog)
         payload["resolved_pack_path"] = str(pack)

@@ -35,6 +35,16 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _resolve_pack_root(catalog_path: Path, pack_path: str) -> Path:
+    catalog_root = catalog_path.expanduser().resolve().parent
+    p = Path(pack_path).expanduser()
+    if not p.is_absolute():
+        p = (catalog_root / p).resolve()
+    else:
+        p = p.resolve()
+    return p
+
+
 def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     catalog = _load_yaml(catalog_path)
     identities = catalog.get("identities") or []
@@ -44,13 +54,9 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
 
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
+        p = _resolve_pack_root(catalog_path, pack_path) / "CURRENT_TASK.json"
         if p.exists():
             return p
-
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
 
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
@@ -90,7 +96,7 @@ def _resolve_replay_evidence_path(identity_id: str, replay_contract: dict[str, A
             if Path(candidate).is_absolute():
                 matched = sorted(Path(p) for p in glob.glob(candidate))
             else:
-                matched = sorted(Path(".").glob(candidate))
+                matched = sorted(pack_root.glob(candidate))
             if not matched:
                 continue
             identity_scoped = [p for p in matched if identity_id in p.name]
@@ -115,10 +121,7 @@ def _resolve_path_with_pack(path_value: str, pack_root: Path) -> Path:
     p = Path(raw).expanduser()
     if p.is_absolute():
         return p
-    candidate = (pack_root / raw).resolve()
-    if candidate.exists():
-        return candidate
-    return (Path.cwd() / raw).resolve()
+    return (pack_root / raw).resolve()
 
 
 def main() -> int:

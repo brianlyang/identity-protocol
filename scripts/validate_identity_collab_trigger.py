@@ -48,6 +48,16 @@ def _load_json(path: Path) -> dict[str, Any]:
     return data
 
 
+def _resolve_pack_root(catalog_path: Path, pack_path: str) -> Path:
+    catalog_root = catalog_path.expanduser().resolve().parent
+    p = Path(pack_path).expanduser()
+    if not p.is_absolute():
+        p = (catalog_root / p).resolve()
+    else:
+        p = p.resolve()
+    return p
+
+
 def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     catalog = _load_yaml(catalog_path)
     identities = catalog.get("identities") or []
@@ -57,13 +67,9 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
 
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
+        p = _resolve_pack_root(catalog_path, pack_path) / "CURRENT_TASK.json"
         if p.exists():
             return p
-
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
 
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
@@ -111,10 +117,7 @@ def _iter_logs(pattern: str, explicit_file: str, *, pack_root: Path) -> list[Pat
         if has_magic:
             return sorted(Path(x).resolve() for x in glob.glob(str(p)))
         return [p.resolve()] if p.exists() else []
-    preferred = sorted(pack_root.glob(raw))
-    if preferred:
-        return preferred
-    return sorted(Path(".").glob(raw))
+    return sorted(pack_root.glob(raw))
 
 
 def _identity_scoped_logs(files: list[Path], identity_id: str) -> list[Path]:

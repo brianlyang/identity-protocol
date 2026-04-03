@@ -22,6 +22,16 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _resolve_pack_root(catalog_path: Path, pack_path: str) -> Path:
+    catalog_root = catalog_path.expanduser().resolve().parent
+    p = Path(pack_path).expanduser()
+    if not p.is_absolute():
+        p = (catalog_root / p).resolve()
+    else:
+        p = p.resolve()
+    return p
+
+
 def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     catalog = _load_yaml(catalog_path)
     identities = catalog.get("identities") or []
@@ -30,12 +40,9 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
         raise FileNotFoundError(f"identity id not found in catalog: {identity_id}")
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
+        p = _resolve_pack_root(catalog_path, pack_path) / "CURRENT_TASK.json"
         if p.exists():
             return p
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
 
@@ -55,14 +62,7 @@ def _glob_paths(pattern: str, *, pack_root: Path) -> list[Path]:
         mapped_raw = f"runtime/{raw[len(local_prefix):]}"
     elif raw.startswith("identity/runtime/"):
         mapped_raw = f"runtime/{raw[len('identity/runtime/'):]}"
-    preferred = sorted(pack_root.glob(mapped_raw))
-    if preferred:
-        return preferred
-    if mapped_raw != raw:
-        fallback = sorted(Path(".").glob(mapped_raw))
-        if fallback:
-            return fallback
-    return sorted(Path(".").glob(raw))
+    return sorted(pack_root.glob(mapped_raw))
 
 
 def main() -> int:

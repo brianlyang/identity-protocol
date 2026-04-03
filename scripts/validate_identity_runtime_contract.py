@@ -92,26 +92,34 @@ def _source_signature(item: dict[str, Any]) -> str:
     if item.get("url"):
         return str(item.get("url"))
     return ""
-def _resolve_task_path(identity: dict[str, Any]) -> Path:
+
+
+def _resolve_pack_path_against_catalog(pack_path: str, catalog_path: Path) -> Path:
+    catalog_root = catalog_path.expanduser().resolve().parent
+    p = Path(pack_path).expanduser()
+    if not p.is_absolute():
+        p = (catalog_root / p).resolve()
+    else:
+        p = p.resolve()
+    return p
+
+
+def _resolve_task_path(identity: dict[str, Any], catalog_path: Path) -> Path:
     identity_id = str(identity.get("id", "")).strip()
     pack_path = str(identity.get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
+        p = _resolve_pack_path_against_catalog(pack_path, catalog_path) / "CURRENT_TASK.json"
         if p.exists():
             return p
-
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
 
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity={identity_id}")
 
 
-def _resolve_pack_root(identity: dict[str, Any]) -> Path | None:
+def _resolve_pack_root(identity: dict[str, Any], catalog_path: Path) -> Path | None:
     pack_path = str((identity or {}).get("pack_path", "")).strip()
     if not pack_path:
         return None
-    return Path(pack_path).expanduser().resolve()
+    return _resolve_pack_path_against_catalog(pack_path, catalog_path)
 
 
 def _is_fixture_identity(identity: dict[str, Any] | None) -> bool:
@@ -157,7 +165,10 @@ def _latest_evidence(pattern: str, identity_id: str, *, pack_root: Path | None =
         if Path(candidate).is_absolute():
             files = sorted((Path(p) for p in glob.glob(candidate)), key=lambda p: p.stat().st_mtime)
         else:
-            files = sorted(Path(".").glob(candidate), key=lambda p: p.stat().st_mtime)
+            if pack_root is None:
+                files = []
+            else:
+                files = sorted(pack_root.glob(candidate), key=lambda p: p.stat().st_mtime)
         if not files:
             continue
         scoped = [p for p in files if identity_id in p.name]
@@ -171,10 +182,7 @@ def _resolve_rulebook_path(raw: str, *, task_path: Path) -> Path:
     path = Path(raw).expanduser()
     if path.is_absolute():
         return path.resolve()
-    repo_relative = path.resolve()
     task_relative = (task_path.parent / path).resolve()
-    if repo_relative.exists():
-        return repo_relative
     if task_relative.exists():
         return task_relative
     return task_relative
@@ -589,7 +597,7 @@ def main() -> int:
     for item in targets:
         identity_id = str(item.get("id", "")).strip() or "(unknown)"
         try:
-            task_path = _resolve_task_path(item)
+            task_path = _resolve_task_path(item, catalog_path)
         except Exception as e:
             print(f"[FAIL] identity={identity_id} {e}")
             rc = 1
@@ -601,7 +609,7 @@ def main() -> int:
             _validate_single_identity(
                 identity_id,
                 task_path,
-                pack_root=_resolve_pack_root(item),
+                pack_root=_resolve_pack_root(item, catalog_path),
                 identity_row=item,
             ),
         )
