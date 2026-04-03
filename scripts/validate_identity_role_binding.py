@@ -53,23 +53,30 @@ def _has_token(text: str, token: str) -> bool:
     return re.search(rf"(^|_){re.escape(token)}(_|$)", text) is not None
 
 
-def _resolve_task_path(identity: dict[str, Any], identity_id: str) -> Path:
+def _resolve_task_path(identity: dict[str, Any], identity_id: str, catalog_path: Path) -> Path:
     pack_path = str((identity or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
-        if p.exists():
-            return p
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
+        p = Path(pack_path).expanduser()
+        if not p.is_absolute():
+            p = (catalog_path.expanduser().resolve().parent / p).resolve()
+        else:
+            p = p.resolve()
+        task_path = p / "CURRENT_TASK.json"
+        if task_path.exists():
+            return task_path
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity={identity_id}")
 
 
-def _resolve_pack_root(identity: dict[str, Any]) -> Path | None:
+def _resolve_pack_root(identity: dict[str, Any], catalog_path: Path) -> Path | None:
     pack_path = str((identity or {}).get("pack_path", "")).strip()
     if not pack_path:
         return None
-    return Path(pack_path).expanduser().resolve()
+    p = Path(pack_path).expanduser()
+    if not p.is_absolute():
+        p = (catalog_path.expanduser().resolve().parent / p).resolve()
+    else:
+        p = p.resolve()
+    return p
 
 
 def _is_fixture_identity(identity: dict[str, Any]) -> bool:
@@ -103,10 +110,13 @@ def _resolve_latest_evidence(pattern: str, identity_id: str, explicit: str, pack
         return p if p.exists() else None
     for candidate in _runtime_pattern_candidates(pattern, pack_root, identity_id):
         candidate = candidate.replace("<identity-id>", identity_id)
-        if Path(candidate).is_absolute():
-            files = sorted((Path(p) for p in glob.glob(candidate)), key=lambda p: p.stat().st_mtime)
+        candidate_path = Path(candidate).expanduser()
+        if candidate_path.is_absolute():
+            files = sorted((Path(p).resolve() for p in glob.glob(str(candidate_path))), key=lambda p: p.stat().st_mtime)
+        elif pack_root is not None:
+            files = sorted(pack_root.glob(candidate), key=lambda p: p.stat().st_mtime)
         else:
-            files = sorted(Path(".").glob(candidate), key=lambda p: p.stat().st_mtime)
+            files = []
         if not files:
             continue
         scoped = [p for p in files if identity_id in p.name]
@@ -155,7 +165,7 @@ def main() -> int:
     fixture_identity = _is_fixture_identity(identity)
 
     try:
-        task_path = _resolve_task_path(identity, identity_id)
+        task_path = _resolve_task_path(identity, identity_id, catalog_path)
     except Exception as e:
         print(f"[FAIL] {e}")
         return 1
@@ -220,7 +230,7 @@ def main() -> int:
         str(contract.get("binding_evidence_path_pattern", "")),
         identity_id,
         args.evidence,
-        _resolve_pack_root(identity),
+        _resolve_pack_root(identity, catalog_path),
     )
     if not evidence:
         print("[FAIL] role-binding evidence not found")

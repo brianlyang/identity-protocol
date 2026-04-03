@@ -42,12 +42,14 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
         raise FileNotFoundError(f"identity id not found in catalog: {identity_id}")
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
-        if p.exists():
-            return p
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
+        p = Path(pack_path).expanduser()
+        if not p.is_absolute():
+            p = (catalog_path.expanduser().resolve().parent / p).resolve()
+        else:
+            p = p.resolve()
+        task_path = p / "CURRENT_TASK.json"
+        if task_path.exists():
+            return task_path
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
 
@@ -56,8 +58,7 @@ def _glob_reports(pattern: str, *, pack_root: Path) -> list[Path]:
     Resolve report candidates in a cwd-agnostic way.
     Supports:
     - absolute patterns (including wildcards),
-    - pack-root relative patterns (preferred),
-    - cwd-relative patterns (legacy fallback).
+    - pack-root relative patterns only.
     """
     raw = str(pattern or "").strip()
     if not raw:
@@ -75,14 +76,7 @@ def _glob_reports(pattern: str, *, pack_root: Path) -> list[Path]:
         mapped_raw = f"runtime/{raw[len(local_prefix):]}"
     elif raw.startswith("identity/runtime/"):
         mapped_raw = f"runtime/{raw[len('identity/runtime/'):]}"
-    preferred = sorted(pack_root.glob(mapped_raw))
-    if preferred:
-        return preferred
-    if mapped_raw != raw:
-        fallback = sorted(Path(".").glob(mapped_raw))
-        if fallback:
-            return fallback
-    return sorted(Path(".").glob(raw))
+    return sorted(pack_root.glob(mapped_raw))
 
 
 def main() -> int:

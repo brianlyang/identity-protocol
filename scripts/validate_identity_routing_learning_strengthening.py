@@ -72,12 +72,11 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
         p = Path(pack_path).expanduser()
         if not p.is_absolute():
             p = (catalog_path.expanduser().resolve().parent / p).resolve()
+        else:
+            p = p.resolve()
         task_path = (p / "CURRENT_TASK.json").resolve()
         if task_path.exists():
             return task_path
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
 

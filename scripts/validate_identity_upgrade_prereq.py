@@ -30,13 +30,14 @@ def _resolve_identity_task(catalog_path: Path, identity_id: str) -> Path:
 
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
-        if p.exists():
-            return p
-
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
+        p = Path(pack_path).expanduser()
+        if not p.is_absolute():
+            p = (catalog_path.expanduser().resolve().parent / p).resolve()
+        else:
+            p = p.resolve()
+        task_path = p / "CURRENT_TASK.json"
+        if task_path.exists():
+            return task_path
 
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
@@ -50,7 +51,12 @@ def _resolve_pack_root(catalog_path: Path, identity_id: str) -> Path | None:
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if not pack_path:
         return None
-    return Path(pack_path).expanduser().resolve()
+    p = Path(pack_path).expanduser()
+    if not p.is_absolute():
+        p = (catalog_path.expanduser().resolve().parent / p).resolve()
+    else:
+        p = p.resolve()
+    return p
 
 
 def _source_signature(item: dict[str, Any]) -> str:
@@ -82,10 +88,13 @@ def _runtime_pattern_candidates(pattern: str, identity_id: str, pack_root: Path 
 
 def _resolve_evidence_files(pattern: str, identity_id: str, pack_root: Path | None) -> list[Path]:
     for candidate in _runtime_pattern_candidates(pattern, identity_id, pack_root):
-        if Path(candidate).is_absolute():
-            files = sorted((Path(p) for p in glob.glob(candidate)), key=lambda p: p.stat().st_mtime)
+        candidate_path = Path(candidate).expanduser()
+        if candidate_path.is_absolute():
+            files = sorted((Path(p).resolve() for p in glob.glob(str(candidate_path))), key=lambda p: p.stat().st_mtime)
+        elif pack_root is not None:
+            files = sorted(pack_root.glob(candidate), key=lambda p: p.stat().st_mtime)
         else:
-            files = sorted(Path(".").glob(candidate), key=lambda p: p.stat().st_mtime)
+            files = []
         if not files:
             continue
         scoped = [p for p in files if identity_id in p.name]
