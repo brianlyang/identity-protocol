@@ -45,7 +45,7 @@ def _reconciled(row: dict[str, Any]) -> bool:
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate dialogue cross-validation trace matrix governance contract.")
     ap.add_argument("--identity-id", required=True)
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--report", default="")
     ap.add_argument("--report-dir", default="")
     ap.add_argument("--enforce-mode", choices=["auto", "warn", "enforce"], default="auto")

@@ -1,0 +1,262 @@
+schema_version: 1
+spine_family: protocol_root_constitutional_spine
+spine_version: v1
+root_dir: identity/protocol
+validator_script: scripts/validate_protocol_root_constitutional_spine.py
+probe_script: scripts/ci/run_protocol_root_constitutional_spine_probes_ci.sh
+common_script: scripts/root_constitutional_spine_common.py
+status_key: protocol_root_constitutional_spine_status
+error_codes:
+- IP-RCS-001
+- IP-RCS-002
+- IP-RCS-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Philosophy-first discipline must stay explicit'
+      - README philosophy-first rules about why protocol law exists must
+        therefore stay bound to canonical philosophy-primacy rows rather than
+        remaining motivational prose.
+      - '### Constitutional spine row-family completeness must stay explicit'
+      - Constitutional-entry rows and spine-bridge rows must remain explicit as
+        separate machine-law families.
+      - README root constitutional-spine completeness discipline must therefore
+        stay congruent with admitted constitutional-spine-completeness rows
+        rather than becoming a freehand completeness summary.
+      - The machine world must not finalize constitutional-spine truth while
+        missing or unexpected entry rel-paths or bridge ids remain known only
+        inside validator logic.
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Why philosophy comes first'
+      - These philosophy-first rules must remain bound to canonical
+        philosophy-primacy rows rather than drifting into motivational prose.
+      - '## Root constitutional-spine discipline'
+      - Constitutional-entry rows and spine-bridge rows must remain explicit as
+        separate machine-governed families.
+      - '## Root constitutional-spine completeness discipline'
+      - These constitutional-spine-completeness rules must remain bound to
+        canonical constitutional-spine-completeness rows rather than drifting
+        into soft summary prose.
+      - Validator or runtime code must not finalize constitutional-spine truth
+        while missing or unexpected entry rel-paths or bridge ids remain known
+        only inside local machinery.
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - Protocol consumes philosophy-first law as explicit philosophy-primacy
+        rows and spine-bridge rows rather than as motivational context alone.
+      - '## Root constitutional-spine boundary'
+      - '1. The root constitutional spine is governed as separate constitutional-entry and spine-bridge row families rather than as one narrative claim.'
+      - '## Root constitutional-spine completeness boundary'
+      - '6. README root constitutional-spine completeness discipline rendered at protocol root must remain congruent with admitted constitutional-spine-completeness rows rather than silently authoring an alternate completeness summary.'
+      - '6. Protocol legality must not finalize constitutional-spine truth while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - Runtime consumes philosophy-first law as explicit philosophy-primacy
+        rows and spine-bridge rows rather than as motivational context alone.
+      - '## Runtime constitutional-spine consumption boundary'
+      - '1. Runtime consumes constitutional spine law as separate constitutional-entry and spine-bridge row families rather than as undifferentiated narrative context.'
+      - '## Runtime constitutional-spine completeness consumption boundary'
+      - '6. Runtime consumes README root constitutional-spine completeness discipline as a governed completeness projection bound to admitted constitutional-spine-completeness rows rather than as a freehand completeness summary.'
+      - '4. Runtime must not finalize constitutional-spine legality while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.'
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+required_constitutional_entry_rows:
+  - order: 1
+    rel_path: identity/protocol/README.md
+    corpus_class: root_index
+    reading_order: 1
+    entry_role: root_index_entry_surface
+    authority_role: navigational_root_index
+    authority_mode: navigational_only
+    question_classes:
+      - root_entry_navigation
+    required_markers:
+      - '## Purpose'
+      - '## Root reading order'
+      - '## Why philosophy comes first'
+      - '## Root constitutional-spine discipline'
+      - '## Authority layering'
+      - '## Source-order, reading-order, and adjudication-order'
+      - These philosophy-first rules must remain bound to canonical
+        philosophy-primacy rows rather than drifting into motivational prose.
+      - 'Constitutional-entry rows and spine-bridge rows must remain explicit as separate machine-governed families.'
+  - order: 2
+    rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    corpus_class: bottom_theory
+    reading_order: 2
+    entry_role: bottom_theory_entry
+    authority_role: interpretive_bottom_theory
+    authority_mode: interpretive_only
+    question_classes:
+      - generative_why
+    required_markers:
+      - '## Document Positioning'
+      - '## One-line motherline'
+      - '### Machine-world reading rule'
+      - '### Constitutional derivation order'
+      - '### Philosophy-first discipline must stay explicit'
+      - '### Constitutional spine row-family completeness must stay explicit'
+      - '### Three orders must never be collapsed'
+      - '### Question class and answer surface must stay paired'
+      - README philosophy-first rules about why protocol law exists must
+        therefore stay bound to canonical philosophy-primacy rows rather than
+        remaining motivational prose.
+      - 'Constitutional-entry rows and spine-bridge rows must remain explicit as'
+  - order: 3
+    rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    corpus_class: constitution
+    reading_order: 3
+    entry_role: protocol_constitution_entry
+    authority_role: constitutional_protocol_law
+    authority_mode: frozen_law_only
+    question_classes:
+      - frozen_protocol_law
+    required_markers:
+      - '## Normative source map (current governed execution)'
+      - '## Foundational design philosophy boundary'
+      - Protocol consumes philosophy-first law as explicit philosophy-primacy
+        rows and spine-bridge rows rather than as motivational context alone.
+      - '## Constitutional derivation discipline'
+      - '## Root constitutional-spine boundary'
+      - '## Root-law promotion and re-entry boundary'
+      - '## Root-law bundle boundary'
+      - 'The root constitutional spine is governed as separate constitutional-entry and spine-bridge row families rather than as one narrative claim.'
+  - order: 4
+    rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    corpus_class: runtime_constitution
+    reading_order: 4
+    entry_role: runtime_constitution_entry
+    authority_role: constitutional_runtime_law
+    authority_mode: frozen_law_only
+    question_classes:
+      - frozen_runtime_law
+    required_markers:
+      - '## Integration objective'
+      - '## Foundational design philosophy anchor'
+      - Runtime consumes philosophy-first law as explicit philosophy-primacy
+        rows and spine-bridge rows rather than as motivational context alone.
+      - '## Runtime derivation boundary'
+      - '## Runtime constitutional-spine consumption boundary'
+      - '## Runtime-to-root promotion boundary'
+      - '## Runtime consumption of the root-law bundle'
+      - 'Runtime consumes constitutional spine law as separate constitutional-entry and spine-bridge row families rather than as undifferentiated narrative context.'
+required_spine_bridge_rows:
+  - order: 1
+    bridge_id: philosophy_to_protocol_constitution
+    source_rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    source_markers:
+      - 'In other words, `IDENTITY_PROTOCOL.md` explains protocol objects and boundaries'
+    target_rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    target_markers:
+      - 'This file is therefore a protocol-law constitution derived from that bottom theory'
+  - order: 2
+    bridge_id: philosophy_to_runtime_constitution
+    source_rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    source_markers:
+      - '`IDENTITY_RUNTIME.md` explains runtime and integration behavior'
+    target_rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    target_markers:
+      - 'runtime is an operational embodiment of protocol bottom theory'
+  - order: 3
+    bridge_id: philosophy_to_protocol_machine_authority_split
+    source_rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    source_markers:
+      - 'philosophical primacy does not mean runtime-source primacy'
+    target_rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    target_markers:
+      - 'Machine-consumed truth remains frozen in governance/review docs, mappings, validators, probes, runtime state, and receipts'
+  - order: 4
+    bridge_id: philosophy_to_runtime_machine_authority_split
+    source_rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    source_markers:
+      - 'machine-consumed authority still lives in frozen contracts, mappings, validators, runtime state, and receipts'
+    target_rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    target_markers:
+      - 'Current-turn runtime legality remains machine-consumed registry and enforcement truth, not raw runtime motivation records.'
+  - order: 5
+    bridge_id: protocol_to_runtime_root_bundle_consumption
+    source_rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    source_markers:
+      - 'The protocol constitution depends on a governed root-law bundle across:'
+    target_rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    target_markers:
+      - 'Runtime does not consume root law as isolated slogans.'
+      - 'Runtime must consume the governed root-law bundle together:'
+philosophy_primacy_rows:
+  - order: 1
+    primacy_label: protocol and runtime are not self-originating law
+    bound_entry_paths:
+      - identity/protocol/IDENTITY_PROTOCOL.md
+      - identity/protocol/IDENTITY_RUNTIME.md
+    bound_reading_roles:
+      - protocol_constitution_entry
+      - runtime_constitution_entry
+    required_markers:
+      - the protocol does not invent its own reason for being at the contract layer;
+      - runtime integration does not create its own reason for being
+        independently of protocol philosophy.
+  - order: 2
+    primacy_label: bottom theory is formalized downstream
+    bound_entry_paths:
+      - identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+      - identity/protocol/IDENTITY_PROTOCOL.md
+      - identity/protocol/IDENTITY_RUNTIME.md
+    bound_bridge_ids:
+      - philosophy_to_protocol_constitution
+      - philosophy_to_runtime_constitution
+    bound_reading_roles:
+      - bottom_theory_entry
+      - protocol_constitution_entry
+      - runtime_constitution_entry
+    required_markers:
+      - the protocol formalizes, freezes, and operationalizes the machine-world
+        bottom theory defined there;
+      - runtime inherits and operationalizes that bottom theory rather than
+        declaring an independent semantic constitution.
+  - order: 3
+    primacy_label: constitutions and contracts are downstream freezings
+    bound_reading_roles:
+      - protocol_constitution_entry
+      - runtime_constitution_entry
+      - root_contract_entry
+    required_markers:
+      - every root constitution or contract file in this directory should be
+        interpreted as a more concrete freezing of those bottom-theory
+        commitments.
+  - order: 4
+    primacy_label: philosophical primacy is not runtime-source primacy
+    bound_entry_paths:
+      - identity/protocol/README.md
+      - identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+      - identity/protocol/IDENTITY_PROTOCOL.md
+      - identity/protocol/IDENTITY_RUNTIME.md
+    bound_bridge_ids:
+      - philosophy_to_protocol_machine_authority_split
+      - philosophy_to_runtime_machine_authority_split
+    required_markers:
+      - Philosophical primacy, however, is not the same as runtime-source
+        primacy.
+      - philosophy-first law remains philosophically generative but not
+        runtime-terminal.
+constitutional_spine_completeness_rows:
+  - order: 1
+    completeness_id: explicit_constitutional_spine_row_families
+    contract_phrase: required constitutional-entry, spine-bridge, philosophy-primacy, and philosophy-primacy-surface rows must remain explicit as separate machine-readable families;
+  - order: 2
+    completeness_id: congruent_constitutional_spine_row_family_totals
+    contract_phrase: expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+  - order: 3
+    completeness_id: explicit_constitutional_spine_row_identity_sets
+    contract_phrase: expected row identity set and emitted row identity set for each constitutional-spine family must also remain machine-readable rather than being collapsed into aggregate counts;
+  - order: 4
+    completeness_id: hidden_constitutional_spine_identity_drift_forbidden
+    contract_phrase: runtime or validator code must not finalize constitutional-spine truth while missing or unexpected row identities remain known only internally;
+  - order: 5
+    completeness_id: fail_close_preserves_constitutional_spine_identity_projection
+    contract_phrase: fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.

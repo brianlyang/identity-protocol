@@ -1,0 +1,1158 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
+
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
+STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
+STATUS_NOT_APPLICABLE = "NOT_APPLICABLE"
+
+TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY = "identity_terminal_truth_cleanliness_contract_v1"
+TERMINAL_TRUTH_CLEANLINESS_CONTRACT_ID = "rq_056_identity_terminal_truth_cleanliness_contract_v1"
+TERMINAL_TRUTH_CLEANLINESS_VALIDATOR_ID = "scripts/validate_terminal_truth_cleanliness.py"
+TERMINAL_TRUTH_CLEANLINESS_PROBE_RUNNER_ID = "scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh"
+
+NEGATIVE_FEEDBACK_TERMINAL_VETO_CONTRACT_ID = "negative_feedback_terminal_veto_contract_v1"
+CANONICAL_PUBLISHABLE_RESULT_GATE_CONTRACT_ID = "canonical_publishable_result_gate_contract_v1"
+INSTANCE_ADOPTION_TERMINAL_TRUTH_PROBE_CONTRACT_ID = "instance_adoption_terminal_truth_probe_contract_v1"
+
+TERMINAL_VETO_SCOPE: tuple[str, ...] = (
+    "clean_terminal_truth",
+    "canonical_publishability",
+)
+
+TERMINAL_TRUTH_CLASSES: tuple[str, ...] = (
+    "clean_terminal_truth",
+    "review_required_execution_closure",
+    "dirty_terminal_execution_closure",
+    "non_terminal_or_failed_execution",
+)
+
+TERMINAL_STATE_CLASSES: tuple[str, ...] = (
+    "completed_clean",
+    "review_pending",
+    "revalidation_pending",
+    "repair_pending",
+    "retry_pending",
+    "quarantined",
+    "failed_terminal",
+    "non_terminal_pending",
+)
+
+TERMINAL_CLEAN_ALIAS_VALUE_FIELDS: tuple[str, ...] = (
+    "overall_status",
+    "final_status",
+    "status",
+    "result",
+    "outcome",
+    "completion_status",
+    "terminal_status",
+    "workflow_status",
+    "state",
+    "completion_state",
+    "result_state",
+    "terminal_state",
+    "final_state",
+)
+
+TERMINAL_CLEAN_ALIAS_BOOLEAN_FIELDS: tuple[str, ...] = (
+    "done",
+    "completed",
+    "is_done",
+    "is_completed",
+)
+
+TERMINAL_CLEAN_ALIAS_DONE_TOKENS: tuple[str, ...] = (
+    "done",
+    "pass",
+    "passed",
+    "success",
+    "succeeded",
+    "completed",
+    "closed",
+    "clean",
+    "publishable",
+)
+
+NEGATIVE_FEEDBACK_CLASSES: tuple[str, ...] = (
+    "none",
+    "review_required",
+    "degraded_execution",
+    "placeholder_result",
+    "unresolved_contradiction",
+    "confidence_below_floor",
+)
+
+DIRTY_SIGNAL_FIELDS: tuple[str, ...] = (
+    "all_ok",
+    "writeback_mode",
+    "writeback_status",
+    "degrade_reason",
+    "fallback_reason",
+    "review_required",
+    "requires_review",
+    "degraded",
+    "needs_revalidation",
+    "revalidation_required",
+    "repair_required",
+    "retry_required",
+    "quarantine_required",
+    "error_info",
+    "next_action",
+    "next_recovery_action",
+    "failure_reason",
+    "prompt_change_required",
+    "prompt_change_applied",
+)
+
+EXPLICIT_REVIEW_REQUIRED_FIELDS: tuple[str, ...] = (
+    "review_required",
+    "requires_review",
+)
+EXPLICIT_DEGRADED_FIELDS: tuple[str, ...] = ("degraded",)
+EXPLICIT_REVALIDATION_REQUIRED_FIELDS: tuple[str, ...] = (
+    "needs_revalidation",
+    "revalidation_required",
+)
+EXPLICIT_REPAIR_REQUIRED_FIELDS: tuple[str, ...] = ("repair_required",)
+EXPLICIT_RETRY_REQUIRED_FIELDS: tuple[str, ...] = ("retry_required",)
+EXPLICIT_QUARANTINE_REQUIRED_FIELDS: tuple[str, ...] = ("quarantine_required",)
+DIRTY_REASON_FIELDS: tuple[str, ...] = (
+    "degrade_reason",
+    "fallback_reason",
+    "next_recovery_action",
+    "failure_reason",
+)
+DIRTY_ERROR_INFO_TOKENS: tuple[str, ...] = (
+    "degraded",
+    "fallback",
+    "review_required",
+    "manual_review",
+    "needs_revalidation",
+    "revalidation",
+    "retry",
+    "retry_needed",
+    "rerun",
+    "replay",
+    "repair",
+    "quarantine",
+)
+
+PLACEHOLDER_SCAN_FIELDS: tuple[str, ...] = (
+    "title",
+    "report_title",
+    "report_payload",
+    "final_payload",
+    "final_report",
+    "canonical_result",
+    "publishable_result",
+    "response_text",
+    "output_title",
+    "output_payload",
+)
+
+REQUIRED_REPORT_FIELDS: tuple[str, ...] = (
+    "identity_terminal_truth_cleanliness_status",
+    "terminal_truth_contract_status",
+    "terminal_state_machine_status",
+    "terminal_state_class",
+    "terminal_state_basis",
+    "terminal_state_conflict_status",
+    "requires_review",
+    "retry_required",
+    "revalidation_required",
+    "repair_required",
+    "quarantine_required",
+    "requires_human",
+    "terminal_failure",
+    "state_transition_required",
+    "state_machine_blockers",
+    "terminal_clean_alias_surface_status",
+    "terminal_clean_alias_claimed",
+    "terminal_clean_alias_claims",
+    "terminal_clean_alias_blockers",
+    "execution_closure_status",
+    "terminal_truth_cleanliness_status",
+    "terminal_truth_class",
+    "is_terminal_clean",
+    "is_terminal_dirty",
+    "terminal_truth_basis",
+    "terminal_truth_blockers",
+    "negative_feedback_terminal_veto_status",
+    "negative_feedback_class",
+    "feedback_severity",
+    "terminal_veto_required",
+    "terminal_veto_scope",
+    "loopback_required",
+    "loopback_target_stage",
+    "loopback_reason",
+    "pre_terminal_veto_applied",
+    "next_state_after_veto",
+    "canonical_publishable_result_status",
+    "publishable",
+    "publish_blockers",
+    "canonical_result_eligible",
+    "canonical_result_basis",
+    "requires_repair_before_publish",
+    "instance_adoption_terminal_truth_probe_status",
+    "dirty_signals",
+    "placeholder_result_fields",
+    "contradiction_fields",
+    "confidence_blocker_fields",
+    "stale_reasons",
+    "error_code",
+)
+
+CANONICAL_STRICT_FIELDS: tuple[str, ...] = (
+    "required",
+    "contract_id",
+    "validator",
+    "probe_runner",
+    "fail_mode",
+    "negative_feedback_terminal_veto_contract_id",
+    "canonical_publishable_result_gate_contract_id",
+    "instance_adoption_probe_contract_id",
+    "dirty_signal_fields",
+    "placeholder_result_scan_fields",
+    "terminal_clean_alias_value_fields",
+    "terminal_clean_alias_boolean_fields",
+    "terminal_clean_alias_done_tokens",
+    "terminal_veto_scope",
+    "required_report_fields",
+    "review_required_execution_closure_allowed",
+    "preserve_execution_closure_distinction",
+    "canonical_publishability_requires_clean_terminal_truth",
+    "philosophy_anchor_refs",
+)
+
+PLACEHOLDER_TOKENS: tuple[str, ...] = (
+    "placeholder",
+    "todo",
+    "tbd",
+    "dummy",
+    "stub",
+)
+
+CONTRADICTION_FIELDS: tuple[str, ...] = (
+    "multimodal_inconsistency_status",
+    "contradiction_status",
+    "consistency_status",
+)
+
+CONFIDENCE_FIELDS: tuple[str, ...] = (
+    "confidence_status",
+    "confidence_floor_status",
+)
+
+
+def clone_json(value: Any) -> Any:
+    return json.loads(json.dumps(value))
+
+
+def clean_string(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def as_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    return clean_string(value).lower() in {"1", "true", "yes", "y", "on"}
+
+
+def status_is_pass(value: Any) -> bool:
+    return clean_string(value).upper() == STATUS_PASS_REQUIRED
+
+
+def _bool_or_false(value: Any) -> bool:
+    return as_bool(value)
+
+
+def terminal_truth_cleanliness_contract_skeleton() -> dict[str, Any]:
+    return {
+        "required": True,
+        "contract_id": TERMINAL_TRUTH_CLEANLINESS_CONTRACT_ID,
+        "validator": TERMINAL_TRUTH_CLEANLINESS_VALIDATOR_ID,
+        "probe_runner": TERMINAL_TRUTH_CLEANLINESS_PROBE_RUNNER_ID,
+        "fail_mode": "fail_required",
+        "negative_feedback_terminal_veto_contract_id": NEGATIVE_FEEDBACK_TERMINAL_VETO_CONTRACT_ID,
+        "canonical_publishable_result_gate_contract_id": CANONICAL_PUBLISHABLE_RESULT_GATE_CONTRACT_ID,
+        "instance_adoption_probe_contract_id": INSTANCE_ADOPTION_TERMINAL_TRUTH_PROBE_CONTRACT_ID,
+        "dirty_signal_fields": list(DIRTY_SIGNAL_FIELDS),
+        "placeholder_result_scan_fields": list(PLACEHOLDER_SCAN_FIELDS),
+        "terminal_clean_alias_value_fields": list(TERMINAL_CLEAN_ALIAS_VALUE_FIELDS),
+        "terminal_clean_alias_boolean_fields": list(TERMINAL_CLEAN_ALIAS_BOOLEAN_FIELDS),
+        "terminal_clean_alias_done_tokens": list(TERMINAL_CLEAN_ALIAS_DONE_TOKENS),
+        "terminal_veto_scope": list(TERMINAL_VETO_SCOPE),
+        "required_report_fields": list(REQUIRED_REPORT_FIELDS),
+        "review_required_execution_closure_allowed": True,
+        "preserve_execution_closure_distinction": True,
+        "canonical_publishability_requires_clean_terminal_truth": True,
+        "philosophy_anchor_refs": [
+            "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+            "identity/protocol/README.md",
+        ],
+    }
+
+
+def canonicalize_terminal_truth_cleanliness_contract_doc(contract_doc: dict[str, Any] | None) -> dict[str, Any]:
+    default = terminal_truth_cleanliness_contract_skeleton()
+    current = clone_json(contract_doc) if isinstance(contract_doc, dict) else {}
+    for key, value in default.items():
+        if key not in current:
+            current[key] = clone_json(value)
+    for key in CANONICAL_STRICT_FIELDS:
+        current[key] = clone_json(default[key])
+    return current
+
+
+def resolve_pack_task(
+    *,
+    catalog_path: Path | None,
+    current_task: str,
+    identity_id: str,
+) -> tuple[Path, Path, dict[str, Any]]:
+    if clean_string(current_task):
+        task_path = Path(clean_string(current_task)).expanduser().resolve()
+        if not task_path.is_file():
+            raise FileNotFoundError(f"current_task_not_found:{task_path}")
+        task_doc = load_json(task_path)
+        return task_path.parent.resolve(), task_path.resolve(), task_doc
+    if catalog_path is None or not catalog_path.exists():
+        missing_catalog = catalog_path if catalog_path is not None else "<missing>"
+        raise FileNotFoundError(f"catalog not found: {missing_catalog}")
+    pack_root, task_path = resolve_pack_and_task(catalog_path, identity_id)
+    task_doc = load_json(task_path)
+    return pack_root.resolve(), task_path.resolve(), task_doc
+
+
+def resolve_terminal_truth_cleanliness_contract(task_doc: dict[str, Any]) -> tuple[bool, dict[str, Any], str]:
+    contract_doc = task_doc.get(TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY)
+    if not isinstance(contract_doc, dict):
+        contract_doc = {}
+    return contract_required(contract_doc), contract_doc, TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY
+
+
+def terminal_truth_cleanliness_contract_issues(contract_doc: dict[str, Any]) -> list[str]:
+    issues: list[str] = []
+    if clean_string(contract_doc.get("contract_id")) != TERMINAL_TRUTH_CLEANLINESS_CONTRACT_ID:
+        issues.append("contract_id_mismatch")
+    if clean_string(contract_doc.get("validator")) != TERMINAL_TRUTH_CLEANLINESS_VALIDATOR_ID:
+        issues.append("validator_mismatch")
+    if clean_string(contract_doc.get("probe_runner")) != TERMINAL_TRUTH_CLEANLINESS_PROBE_RUNNER_ID:
+        issues.append("probe_runner_mismatch")
+    if bool(contract_doc.get("required")) is not True:
+        issues.append("required_flag_not_true")
+    if clean_string(contract_doc.get("fail_mode")).lower() != "fail_required":
+        issues.append("fail_mode_not_fail_required")
+    if clean_string(contract_doc.get("negative_feedback_terminal_veto_contract_id")) != NEGATIVE_FEEDBACK_TERMINAL_VETO_CONTRACT_ID:
+        issues.append("negative_feedback_veto_contract_id_mismatch")
+    if clean_string(contract_doc.get("canonical_publishable_result_gate_contract_id")) != CANONICAL_PUBLISHABLE_RESULT_GATE_CONTRACT_ID:
+        issues.append("publishable_result_gate_contract_id_mismatch")
+    if clean_string(contract_doc.get("instance_adoption_probe_contract_id")) != INSTANCE_ADOPTION_TERMINAL_TRUTH_PROBE_CONTRACT_ID:
+        issues.append("instance_adoption_probe_contract_id_mismatch")
+
+    dirty_fields = [clean_string(item) for item in (contract_doc.get("dirty_signal_fields") or []) if clean_string(item)]
+    if dirty_fields != list(DIRTY_SIGNAL_FIELDS):
+        issues.append("dirty_signal_fields_mismatch")
+
+    placeholder_fields = [clean_string(item) for item in (contract_doc.get("placeholder_result_scan_fields") or []) if clean_string(item)]
+    if placeholder_fields != list(PLACEHOLDER_SCAN_FIELDS):
+        issues.append("placeholder_result_scan_fields_mismatch")
+
+    alias_value_fields = [clean_string(item) for item in (contract_doc.get("terminal_clean_alias_value_fields") or []) if clean_string(item)]
+    if alias_value_fields != list(TERMINAL_CLEAN_ALIAS_VALUE_FIELDS):
+        issues.append("terminal_clean_alias_value_fields_mismatch")
+
+    alias_boolean_fields = [clean_string(item) for item in (contract_doc.get("terminal_clean_alias_boolean_fields") or []) if clean_string(item)]
+    if alias_boolean_fields != list(TERMINAL_CLEAN_ALIAS_BOOLEAN_FIELDS):
+        issues.append("terminal_clean_alias_boolean_fields_mismatch")
+
+    alias_done_tokens = [clean_string(item) for item in (contract_doc.get("terminal_clean_alias_done_tokens") or []) if clean_string(item)]
+    if alias_done_tokens != list(TERMINAL_CLEAN_ALIAS_DONE_TOKENS):
+        issues.append("terminal_clean_alias_done_tokens_mismatch")
+
+    veto_scope = [clean_string(item) for item in (contract_doc.get("terminal_veto_scope") or []) if clean_string(item)]
+    if veto_scope != list(TERMINAL_VETO_SCOPE):
+        issues.append("terminal_veto_scope_mismatch")
+
+    report_fields = [clean_string(item) for item in (contract_doc.get("required_report_fields") or []) if clean_string(item)]
+    if report_fields != list(REQUIRED_REPORT_FIELDS):
+        issues.append("required_report_fields_mismatch")
+
+    philosophy_refs = [clean_string(item) for item in (contract_doc.get("philosophy_anchor_refs") or []) if clean_string(item)]
+    if philosophy_refs != [
+        "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+        "identity/protocol/README.md",
+    ]:
+        issues.append("philosophy_anchor_refs_mismatch")
+
+    if bool(contract_doc.get("review_required_execution_closure_allowed")) is not True:
+        issues.append("review_required_execution_closure_allowed_not_true")
+    if bool(contract_doc.get("preserve_execution_closure_distinction")) is not True:
+        issues.append("preserve_execution_closure_distinction_not_true")
+    if bool(contract_doc.get("canonical_publishability_requires_clean_terminal_truth")) is not True:
+        issues.append("canonical_publishability_requires_clean_terminal_truth_not_true")
+    return issues
+
+
+def _collect_placeholder_hits(report_doc: dict[str, Any]) -> list[str]:
+    hits: list[str] = []
+    for field in PLACEHOLDER_SCAN_FIELDS:
+        raw = report_doc.get(field)
+        if not isinstance(raw, str):
+            continue
+        text = raw.strip().lower()
+        if text and any(token in text for token in PLACEHOLDER_TOKENS):
+            hits.append(field)
+    return hits
+
+
+def _collect_contradiction_hits(report_doc: dict[str, Any]) -> list[str]:
+    hits: list[str] = []
+    for field in CONTRADICTION_FIELDS:
+        value = clean_string(report_doc.get(field)).upper()
+        if value == STATUS_FAIL_REQUIRED:
+            hits.append(field)
+    if as_bool(report_doc.get("contradiction_unresolved")):
+        hits.append("contradiction_unresolved")
+    return hits
+
+
+def _collect_confidence_hits(report_doc: dict[str, Any]) -> list[str]:
+    hits: list[str] = []
+    for field in CONFIDENCE_FIELDS:
+        value = clean_string(report_doc.get(field)).upper()
+        if value and value != STATUS_PASS_REQUIRED:
+            hits.append(field)
+    if as_bool(report_doc.get("confidence_below_floor")):
+        hits.append("confidence_below_floor")
+    score = report_doc.get("confidence_score")
+    floor = report_doc.get("required_confidence_floor")
+    try:
+        if score is not None and floor is not None and float(score) < float(floor):
+            hits.append("confidence_score_below_floor")
+    except Exception:
+        pass
+    return sorted(set(hits))
+
+
+def _structured_text(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if value is None:
+        return ""
+    try:
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    except Exception:
+        return clean_string(value)
+
+
+def _extract_explicit_terminal_dirty_signal_context(report_doc: dict[str, Any]) -> dict[str, Any]:
+    report_doc = report_doc if isinstance(report_doc, dict) else {}
+    fallback_reason = clean_string(report_doc.get("fallback_reason"))
+    error_info_text = _structured_text(report_doc.get("error_info"))
+    explicit_review_required = any(as_bool(report_doc.get(field)) for field in EXPLICIT_REVIEW_REQUIRED_FIELDS)
+    explicit_degraded = any(as_bool(report_doc.get(field)) for field in EXPLICIT_DEGRADED_FIELDS)
+    explicit_revalidation_required = any(
+        as_bool(report_doc.get(field)) for field in EXPLICIT_REVALIDATION_REQUIRED_FIELDS
+    )
+    explicit_repair_required = any(
+        as_bool(report_doc.get(field)) for field in EXPLICIT_REPAIR_REQUIRED_FIELDS
+    )
+    explicit_retry_required = any(as_bool(report_doc.get(field)) for field in EXPLICIT_RETRY_REQUIRED_FIELDS)
+    explicit_quarantine_required = any(
+        as_bool(report_doc.get(field)) for field in EXPLICIT_QUARANTINE_REQUIRED_FIELDS
+    )
+    error_info_dirty_signal = _contains_transition_token(
+        error_info_text,
+        tokens=DIRTY_ERROR_INFO_TOKENS,
+    )
+    error_info_review_required = _contains_transition_token(
+        error_info_text,
+        tokens=("review_required", "manual_review"),
+    )
+    error_info_degraded = _contains_transition_token(error_info_text, tokens=("degraded", "fallback"))
+    error_info_revalidation_required = _contains_transition_token(
+        error_info_text,
+        tokens=("needs_revalidation", "revalidation"),
+    )
+    error_info_retry_required = _contains_transition_token(
+        error_info_text,
+        tokens=("retry", "retry_needed", "rerun", "replay"),
+    )
+    error_info_repair_required = _contains_transition_token(error_info_text, tokens=("repair",))
+    error_info_quarantine_required = _contains_transition_token(error_info_text, tokens=("quarantine",))
+    return {
+        "fallback_reason": fallback_reason,
+        "error_info_text": error_info_text,
+        "explicit_review_required": explicit_review_required,
+        "explicit_degraded": explicit_degraded,
+        "explicit_revalidation_required": explicit_revalidation_required,
+        "explicit_repair_required": explicit_repair_required,
+        "explicit_retry_required": explicit_retry_required,
+        "explicit_quarantine_required": explicit_quarantine_required,
+        "error_info_dirty_signal": error_info_dirty_signal,
+        "error_info_review_required": error_info_review_required,
+        "error_info_degraded": error_info_degraded,
+        "error_info_revalidation_required": error_info_revalidation_required,
+        "error_info_retry_required": error_info_retry_required,
+        "error_info_repair_required": error_info_repair_required,
+        "error_info_quarantine_required": error_info_quarantine_required,
+    }
+
+
+def _execution_closure_basis(report_doc: dict[str, Any]) -> tuple[str, bool]:
+    all_ok = as_bool(report_doc.get("all_ok"))
+    upgrade_required = as_bool(report_doc.get("upgrade_required"))
+    writeback_mode = clean_string(report_doc.get("writeback_mode")).upper()
+    writeback_status = clean_string(report_doc.get("writeback_status")).upper()
+    strict_non_upgrade_closed = (
+        (not upgrade_required)
+        and all_ok
+        and writeback_mode == "STRICT_WRITEBACK"
+        and writeback_status in {"WRITTEN", "NOT_REQUIRED"}
+    )
+    strict_upgrade_closed = upgrade_required and all_ok and writeback_status == "WRITTEN"
+    if strict_non_upgrade_closed:
+        return "strict_non_upgrade_closed", True
+    if strict_upgrade_closed:
+        return "strict_upgrade_closed", True
+    return "execution_closure_not_reached", False
+
+
+def _contains_transition_token(*values: str, tokens: tuple[str, ...]) -> bool:
+    haystack = " ".join(clean_string(value).lower() for value in values if clean_string(value))
+    return any(token in haystack for token in tokens)
+
+
+def _normalize_terminal_alias_token(value: Any) -> str:
+    return clean_string(value).strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _collect_terminal_clean_alias_claims(report_doc: dict[str, Any]) -> list[str]:
+    claims: list[str] = []
+    done_tokens = {_normalize_terminal_alias_token(token) for token in TERMINAL_CLEAN_ALIAS_DONE_TOKENS}
+    for field in TERMINAL_CLEAN_ALIAS_VALUE_FIELDS:
+        raw = report_doc.get(field)
+        normalized = _normalize_terminal_alias_token(raw)
+        if normalized and normalized in done_tokens:
+            claims.append(f"{field}={clean_string(raw)}")
+    for field in TERMINAL_CLEAN_ALIAS_BOOLEAN_FIELDS:
+        if field in report_doc and _bool_or_false(report_doc.get(field)):
+            claims.append(f"{field}=true")
+    return claims
+
+
+def derive_terminal_clean_alias_surface_projection(
+    report_doc: dict[str, Any],
+    *,
+    terminal_truth_projection: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    report_doc = report_doc if isinstance(report_doc, dict) else {}
+    truth = terminal_truth_projection if isinstance(terminal_truth_projection, dict) else derive_terminal_truth_projection(report_doc)
+
+    alias_claims = _collect_terminal_clean_alias_claims(report_doc)
+    terminal_clean_alias_claimed = bool(alias_claims)
+    clean_surface_ok = (
+        bool(truth.get("is_terminal_clean", False))
+        and bool(truth.get("publishable", False))
+        and bool(truth.get("canonical_result_eligible", False))
+    )
+
+    blockers: list[str] = []
+    if terminal_clean_alias_claimed and not clean_surface_ok:
+        blockers.append("report_terminal_clean_alias_claimed_while_not_clean")
+
+    return {
+        "terminal_clean_alias_surface_status": STATUS_FAIL_REQUIRED if blockers else STATUS_PASS_REQUIRED,
+        "terminal_clean_alias_claimed": terminal_clean_alias_claimed,
+        "terminal_clean_alias_claims": alias_claims,
+        "terminal_clean_alias_blockers": blockers,
+    }
+
+
+def derive_terminal_state_projection(
+    report_doc: dict[str, Any],
+    *,
+    terminal_truth_projection: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    report_doc = report_doc if isinstance(report_doc, dict) else {}
+    truth = terminal_truth_projection if isinstance(terminal_truth_projection, dict) else derive_terminal_truth_projection(report_doc)
+
+    next_action = clean_string(report_doc.get("next_action"))
+    next_recovery_action = clean_string(report_doc.get("next_recovery_action"))
+    failure_reason = clean_string(report_doc.get("failure_reason"))
+    explicit_dirty_signal_context = _extract_explicit_terminal_dirty_signal_context(report_doc)
+
+    is_terminal_clean = bool(truth.get("is_terminal_clean", False))
+    publishable = bool(truth.get("publishable", False))
+    negative_feedback_class = clean_string(truth.get("negative_feedback_class"))
+    next_state_after_veto = clean_string(truth.get("next_state_after_veto"))
+    loopback_required = bool(truth.get("loopback_required", False))
+    next_state_hint = next_state_after_veto if next_state_after_veto in TERMINAL_STATE_CLASSES else ""
+
+    explicit_review_required = bool(explicit_dirty_signal_context.get("explicit_review_required"))
+    explicit_revalidation = bool(explicit_dirty_signal_context.get("explicit_revalidation_required"))
+    explicit_repair = bool(explicit_dirty_signal_context.get("explicit_repair_required"))
+    explicit_quarantine = bool(explicit_dirty_signal_context.get("explicit_quarantine_required"))
+    explicit_retry = bool(explicit_dirty_signal_context.get("explicit_retry_required"))
+    explicit_requires_human = as_bool(report_doc.get("requires_human"))
+    explicit_terminal_failure = as_bool(report_doc.get("terminal_failure")) or as_bool(report_doc.get("failed_terminal"))
+
+    requires_review = (
+        next_state_hint == "review_pending"
+        or negative_feedback_class == "review_required"
+        or (not next_state_hint and explicit_review_required)
+    )
+    revalidation_required = next_state_hint == "revalidation_pending" or (
+        not next_state_hint and explicit_revalidation
+    )
+    repair_required = next_state_hint == "repair_pending" or (not next_state_hint and explicit_repair)
+    quarantine_required = next_state_hint == "quarantined" or (
+        not next_state_hint
+        and (
+            explicit_quarantine
+            or _contains_transition_token(
+                next_action,
+                next_recovery_action,
+                failure_reason,
+                next_state_after_veto,
+                tokens=("quarantine", "quarantined"),
+            )
+        )
+    )
+    retry_required = (
+        next_state_hint == "retry_pending"
+        or explicit_retry
+        or revalidation_required
+        or repair_required
+        or (
+            not next_state_hint
+            and _contains_transition_token(
+                next_action,
+                next_recovery_action,
+                failure_reason,
+                next_state_after_veto,
+                tokens=("retry", "rerun", "replay"),
+            )
+        )
+    )
+    requires_human = explicit_requires_human or requires_review or _contains_transition_token(
+        next_action, next_recovery_action, failure_reason, tokens=("human", "manual_review", "approval")
+    )
+    terminal_failure = explicit_terminal_failure or _contains_transition_token(
+        next_action, next_recovery_action, failure_reason, tokens=("failed_terminal", "terminal_failure", "abort_terminal", "fatal")
+    )
+
+    terminal_state_basis = clean_string(truth.get("terminal_truth_class")) or clean_string(truth.get("terminal_truth_basis"))
+
+    if is_terminal_clean and publishable:
+        terminal_state_class = "completed_clean"
+    elif terminal_failure:
+        terminal_state_class = "failed_terminal"
+    elif quarantine_required:
+        terminal_state_class = "quarantined"
+    elif requires_review:
+        terminal_state_class = "review_pending"
+    elif repair_required:
+        terminal_state_class = "repair_pending"
+    elif revalidation_required:
+        terminal_state_class = "revalidation_pending"
+    elif retry_required:
+        terminal_state_class = "retry_pending"
+    else:
+        terminal_state_class = "non_terminal_pending"
+
+    state_transition_required = terminal_state_class not in {"completed_clean", "failed_terminal"}
+
+    primary_specific_flags = {
+        "requires_review": requires_review,
+        "revalidation_required": revalidation_required,
+        "repair_required": repair_required,
+        "quarantine_required": quarantine_required,
+        "terminal_failure": terminal_failure,
+    }
+    specific_true = [name for name, enabled in primary_specific_flags.items() if enabled]
+
+    conflict_reasons: list[str] = []
+    if len(specific_true) > 1:
+        conflict_reasons.append("multiple_primary_terminal_state_markers")
+
+    if terminal_state_class == "completed_clean":
+        if not (is_terminal_clean and publishable):
+            conflict_reasons.append("completed_clean_without_clean_publishable_truth")
+        if specific_true:
+            conflict_reasons.append("completed_clean_with_pending_or_failure_markers")
+        if state_transition_required:
+            conflict_reasons.append("completed_clean_state_transition_required_true")
+    elif terminal_state_class == "review_pending":
+        if not requires_review:
+            conflict_reasons.append("review_pending_without_requires_review")
+        if not requires_human:
+            conflict_reasons.append("review_pending_without_requires_human")
+        if is_terminal_clean or publishable:
+            conflict_reasons.append("review_pending_marked_clean_or_publishable")
+    elif terminal_state_class == "revalidation_pending":
+        if not revalidation_required:
+            conflict_reasons.append("revalidation_pending_without_revalidation_required")
+        if not loopback_required:
+            conflict_reasons.append("revalidation_pending_without_loopback_required")
+        if is_terminal_clean or publishable:
+            conflict_reasons.append("revalidation_pending_marked_clean_or_publishable")
+    elif terminal_state_class == "repair_pending":
+        if not repair_required:
+            conflict_reasons.append("repair_pending_without_repair_required")
+        if is_terminal_clean or publishable:
+            conflict_reasons.append("repair_pending_marked_clean_or_publishable")
+    elif terminal_state_class == "retry_pending":
+        if not retry_required:
+            conflict_reasons.append("retry_pending_without_retry_required")
+        if is_terminal_clean or publishable:
+            conflict_reasons.append("retry_pending_marked_clean_or_publishable")
+    elif terminal_state_class == "quarantined":
+        if not quarantine_required:
+            conflict_reasons.append("quarantined_without_quarantine_required")
+        if is_terminal_clean or publishable:
+            conflict_reasons.append("quarantined_marked_clean_or_publishable")
+    elif terminal_state_class == "failed_terminal":
+        if not terminal_failure:
+            conflict_reasons.append("failed_terminal_without_terminal_failure")
+        if is_terminal_clean or publishable:
+            conflict_reasons.append("failed_terminal_marked_clean_or_publishable")
+        if state_transition_required:
+            conflict_reasons.append("failed_terminal_state_transition_required_true")
+    elif terminal_state_class == "non_terminal_pending":
+        if is_terminal_clean or publishable:
+            conflict_reasons.append("non_terminal_pending_marked_clean_or_publishable")
+        if specific_true:
+            conflict_reasons.append("non_terminal_pending_with_primary_specific_markers")
+
+    adoption_probe_reasons: list[str] = []
+    adoption_fields = {
+        "terminal_state_class": terminal_state_class,
+        "requires_review": requires_review,
+        "retry_required": retry_required,
+        "revalidation_required": revalidation_required,
+        "repair_required": repair_required,
+        "quarantine_required": quarantine_required,
+        "requires_human": requires_human,
+        "terminal_failure": terminal_failure,
+        "state_transition_required": state_transition_required,
+    }
+    for field, expected in adoption_fields.items():
+        if field not in report_doc:
+            continue
+        current = report_doc.get(field)
+        if isinstance(expected, bool):
+            if _bool_or_false(current) != expected:
+                adoption_probe_reasons.append(f"report_{field}_projection_mismatch")
+        elif clean_string(current) != clean_string(expected):
+            adoption_probe_reasons.append(f"report_{field}_projection_mismatch")
+
+    terminal_state_conflict_status = STATUS_FAIL_REQUIRED if conflict_reasons else STATUS_PASS_REQUIRED
+    terminal_state_machine_status = (
+        STATUS_FAIL_REQUIRED if conflict_reasons or adoption_probe_reasons else STATUS_PASS_REQUIRED
+    )
+    state_machine_blockers = sorted(set(conflict_reasons + adoption_probe_reasons))
+
+    return {
+        "terminal_state_machine_status": terminal_state_machine_status,
+        "terminal_state_class": terminal_state_class,
+        "terminal_state_basis": terminal_state_basis or terminal_state_class,
+        "terminal_state_conflict_status": terminal_state_conflict_status,
+        "requires_review": requires_review,
+        "retry_required": retry_required,
+        "revalidation_required": revalidation_required,
+        "repair_required": repair_required,
+        "quarantine_required": quarantine_required,
+        "requires_human": requires_human,
+        "terminal_failure": terminal_failure,
+        "state_transition_required": state_transition_required,
+        "state_machine_blockers": state_machine_blockers,
+    }
+
+
+def derive_terminal_truth_projection(
+    report_doc: dict[str, Any],
+    *,
+    post_execution_status: str = "",
+    writeback_continuity_status: str = "",
+) -> dict[str, Any]:
+    report_doc = report_doc if isinstance(report_doc, dict) else {}
+    basis, execution_from_report = _execution_closure_basis(report_doc)
+    support_statuses = [clean_string(post_execution_status).upper(), clean_string(writeback_continuity_status).upper()]
+    support_statuses = [status for status in support_statuses if status]
+    support_ok = all(status == STATUS_PASS_REQUIRED for status in support_statuses) if support_statuses else True
+    execution_closure_status = STATUS_PASS_REQUIRED if execution_from_report and support_ok else STATUS_FAIL_REQUIRED
+
+    next_action = clean_string(report_doc.get("next_action"))
+    next_recovery_action = clean_string(report_doc.get("next_recovery_action"))
+    writeback_mode = clean_string(report_doc.get("writeback_mode")).upper()
+    writeback_status = clean_string(report_doc.get("writeback_status")).upper()
+    degrade_reason = clean_string(report_doc.get("degrade_reason"))
+    all_ok = as_bool(report_doc.get("all_ok"))
+    prompt_change_required = as_bool(report_doc.get("prompt_change_required"))
+    prompt_change_applied = as_bool(report_doc.get("prompt_change_applied"))
+    explicit_dirty_signal_context = _extract_explicit_terminal_dirty_signal_context(report_doc)
+    fallback_reason = clean_string(explicit_dirty_signal_context.get("fallback_reason"))
+    error_info_text = clean_string(explicit_dirty_signal_context.get("error_info_text"))
+    explicit_review_required = bool(explicit_dirty_signal_context.get("explicit_review_required"))
+    explicit_degraded = bool(explicit_dirty_signal_context.get("explicit_degraded"))
+    explicit_revalidation_required = bool(
+        explicit_dirty_signal_context.get("explicit_revalidation_required")
+    )
+    explicit_repair_required = bool(explicit_dirty_signal_context.get("explicit_repair_required"))
+    explicit_retry_required = bool(explicit_dirty_signal_context.get("explicit_retry_required"))
+    explicit_quarantine_required = bool(
+        explicit_dirty_signal_context.get("explicit_quarantine_required")
+    )
+    error_info_dirty_signal = bool(explicit_dirty_signal_context.get("error_info_dirty_signal"))
+    error_info_review_required = bool(
+        explicit_dirty_signal_context.get("error_info_review_required")
+    )
+    error_info_degraded = bool(explicit_dirty_signal_context.get("error_info_degraded"))
+    error_info_revalidation_required = bool(
+        explicit_dirty_signal_context.get("error_info_revalidation_required")
+    )
+    error_info_retry_required = bool(explicit_dirty_signal_context.get("error_info_retry_required"))
+    error_info_repair_required = bool(explicit_dirty_signal_context.get("error_info_repair_required"))
+    error_info_quarantine_required = bool(
+        explicit_dirty_signal_context.get("error_info_quarantine_required")
+    )
+
+    review_required = (
+        explicit_review_required
+        or error_info_review_required
+        or next_action.startswith("review_required")
+    )
+    placeholder_hits = _collect_placeholder_hits(report_doc)
+    contradiction_hits = _collect_contradiction_hits(report_doc)
+    confidence_hits = _collect_confidence_hits(report_doc)
+    degraded_signal = (
+        explicit_degraded
+        or writeback_mode == "DEGRADED_WRITEBACK"
+        or writeback_status.startswith("DEFERRED_")
+        or not all_ok
+        or bool(next_recovery_action)
+        or bool(degrade_reason)
+        or bool(fallback_reason)
+        or error_info_degraded
+        or error_info_dirty_signal
+        or explicit_revalidation_required
+        or explicit_retry_required
+        or explicit_quarantine_required
+        or explicit_repair_required
+        or error_info_revalidation_required
+        or error_info_retry_required
+        or error_info_repair_required
+        or error_info_quarantine_required
+    )
+
+    dirty_signals: list[str] = []
+    if review_required:
+        dirty_signals.append("review_required_next_action")
+    if explicit_review_required:
+        dirty_signals.append("review_required_flag")
+    if writeback_mode == "DEGRADED_WRITEBACK":
+        dirty_signals.append("degraded_writeback_mode")
+    if explicit_degraded:
+        dirty_signals.append("degraded_flag")
+    if writeback_status.startswith("DEFERRED_"):
+        dirty_signals.append(f"writeback_status:{writeback_status}")
+    if not all_ok:
+        dirty_signals.append("all_ok_false")
+    if next_recovery_action:
+        dirty_signals.append("next_recovery_action_present")
+    if degrade_reason:
+        dirty_signals.append("degrade_reason_present")
+    if fallback_reason:
+        dirty_signals.append("fallback_reason_present")
+    if explicit_revalidation_required:
+        dirty_signals.append("explicit_revalidation_required")
+    if explicit_repair_required:
+        dirty_signals.append("explicit_repair_required")
+    if explicit_retry_required:
+        dirty_signals.append("explicit_retry_required")
+    if explicit_quarantine_required:
+        dirty_signals.append("explicit_quarantine_required")
+    if prompt_change_required and not prompt_change_applied:
+        dirty_signals.append("prompt_change_pending")
+    if error_info_dirty_signal:
+        dirty_signals.append("error_info_dirty_signal")
+    if placeholder_hits:
+        dirty_signals.append("placeholder_result_present")
+    if contradiction_hits:
+        dirty_signals.append("unresolved_contradiction")
+    if confidence_hits:
+        dirty_signals.append("confidence_below_floor")
+    dirty_signals = sorted(set(dirty_signals))
+
+    negative_feedback_class = "none"
+    feedback_severity = "none"
+    loopback_required = False
+    loopback_target_stage = ""
+    loopback_reason = ""
+    next_state_after_veto = ""
+
+    if review_required:
+        negative_feedback_class = "review_required"
+        feedback_severity = "medium"
+        loopback_required = False
+        loopback_target_stage = "human_review"
+        loopback_reason = next_action or error_info_text or "review_required"
+        next_state_after_veto = "review_pending"
+    elif degraded_signal:
+        negative_feedback_class = "degraded_execution"
+        feedback_severity = "high"
+        if explicit_quarantine_required or error_info_quarantine_required:
+            loopback_required = False
+            loopback_target_stage = "quarantine"
+            next_state_after_veto = "quarantined"
+        elif explicit_repair_required or error_info_repair_required:
+            loopback_required = True
+            loopback_target_stage = "repair_before_publish"
+            next_state_after_veto = "repair_pending"
+        elif explicit_retry_required or error_info_retry_required:
+            loopback_required = True
+            loopback_target_stage = "retry_lane"
+            next_state_after_veto = "retry_pending"
+        else:
+            loopback_required = True
+            loopback_target_stage = "first_loop_revalidation"
+            next_state_after_veto = "revalidation_pending"
+        loopback_reason = (
+            next_recovery_action
+            or fallback_reason
+            or degrade_reason
+            or error_info_text
+            or writeback_status
+            or "degraded_execution"
+        )
+    elif contradiction_hits:
+        negative_feedback_class = "unresolved_contradiction"
+        feedback_severity = "high"
+        loopback_required = True
+        loopback_target_stage = "first_loop_revalidation"
+        loopback_reason = "unresolved_contradiction"
+        next_state_after_veto = "revalidation_pending"
+    elif confidence_hits:
+        negative_feedback_class = "confidence_below_floor"
+        feedback_severity = "medium"
+        loopback_required = True
+        loopback_target_stage = "first_loop_revalidation"
+        loopback_reason = "confidence_below_floor"
+        next_state_after_veto = "revalidation_pending"
+    elif placeholder_hits:
+        negative_feedback_class = "placeholder_result"
+        feedback_severity = "medium"
+        loopback_required = True
+        loopback_target_stage = "repair_before_publish"
+        loopback_reason = "placeholder_result"
+        next_state_after_veto = "repair_pending"
+
+    terminal_veto_required = execution_closure_status == STATUS_PASS_REQUIRED and negative_feedback_class != "none"
+    terminal_veto_scope = list(TERMINAL_VETO_SCOPE) if terminal_veto_required else []
+    pre_terminal_veto_applied = terminal_veto_required
+    is_terminal_clean = execution_closure_status == STATUS_PASS_REQUIRED and not terminal_veto_required
+    is_terminal_dirty = execution_closure_status == STATUS_PASS_REQUIRED and terminal_veto_required
+
+    if is_terminal_clean:
+        terminal_truth_class = "clean_terminal_truth"
+    elif execution_closure_status == STATUS_PASS_REQUIRED and review_required:
+        terminal_truth_class = "review_required_execution_closure"
+    elif execution_closure_status == STATUS_PASS_REQUIRED:
+        terminal_truth_class = "dirty_terminal_execution_closure"
+    else:
+        terminal_truth_class = "non_terminal_or_failed_execution"
+        if not next_state_after_veto:
+            next_state_after_veto = "non_terminal_pending"
+
+    terminal_truth_cleanliness_status = STATUS_PASS_REQUIRED if is_terminal_clean else STATUS_FAIL_REQUIRED
+    canonical_result_eligible = is_terminal_clean
+    publishable = canonical_result_eligible
+    canonical_publishable_result_status = STATUS_PASS_REQUIRED if publishable else STATUS_FAIL_REQUIRED
+    publish_blockers = sorted(set(dirty_signals + (["execution_closure_not_reached"] if execution_closure_status != STATUS_PASS_REQUIRED else [])))
+
+    terminal_truth_candidate = execution_closure_status == STATUS_PASS_REQUIRED
+    veto_ok = False
+    if negative_feedback_class == "none":
+        veto_ok = (
+            not terminal_veto_required
+            and not terminal_veto_scope
+            and not pre_terminal_veto_applied
+            and not loopback_required
+        )
+    elif negative_feedback_class == "review_required":
+        if terminal_truth_candidate:
+            veto_ok = (
+                terminal_veto_required
+                and terminal_veto_scope == list(TERMINAL_VETO_SCOPE)
+                and pre_terminal_veto_applied is True
+                and loopback_required is False
+                and bool(clean_string(loopback_reason))
+                and next_state_after_veto == "review_pending"
+            )
+        else:
+            veto_ok = (
+                not terminal_veto_required
+                and not terminal_veto_scope
+                and pre_terminal_veto_applied is False
+                and loopback_required is False
+                and bool(clean_string(loopback_reason))
+                and next_state_after_veto == "review_pending"
+            )
+    else:
+        dirty_veto_state_ok = (
+            (next_state_after_veto in {"revalidation_pending", "repair_pending", "retry_pending"} and loopback_required is True)
+            or (next_state_after_veto == "quarantined" and loopback_required is False)
+        )
+        if terminal_truth_candidate:
+            veto_ok = (
+                terminal_veto_required
+                and terminal_veto_scope == list(TERMINAL_VETO_SCOPE)
+                and pre_terminal_veto_applied is True
+                and bool(clean_string(loopback_reason))
+                and dirty_veto_state_ok
+            )
+        else:
+            veto_ok = (
+                not terminal_veto_required
+                and not terminal_veto_scope
+                and pre_terminal_veto_applied is False
+                and bool(clean_string(loopback_reason))
+                and dirty_veto_state_ok
+            )
+    negative_feedback_terminal_veto_status = STATUS_PASS_REQUIRED if veto_ok else STATUS_FAIL_REQUIRED
+
+    adoption_probe_reasons: list[str] = []
+    if "is_terminal_clean" in report_doc and _bool_or_false(report_doc.get("is_terminal_clean")) != is_terminal_clean:
+        adoption_probe_reasons.append("report_is_terminal_clean_projection_mismatch")
+    if "is_terminal_dirty" in report_doc and _bool_or_false(report_doc.get("is_terminal_dirty")) != is_terminal_dirty:
+        adoption_probe_reasons.append("report_is_terminal_dirty_projection_mismatch")
+    if "publishable" in report_doc and _bool_or_false(report_doc.get("publishable")) != publishable:
+        adoption_probe_reasons.append("report_publishable_projection_mismatch")
+    if "canonical_result_eligible" in report_doc and _bool_or_false(report_doc.get("canonical_result_eligible")) != canonical_result_eligible:
+        adoption_probe_reasons.append("report_canonical_result_projection_mismatch")
+    if clean_string(report_doc.get("terminal_truth_class")) and clean_string(report_doc.get("terminal_truth_class")) != terminal_truth_class:
+        adoption_probe_reasons.append("report_terminal_truth_class_mismatch")
+    if clean_string(report_doc.get("negative_feedback_class")) and clean_string(report_doc.get("negative_feedback_class")) != negative_feedback_class:
+        adoption_probe_reasons.append("report_negative_feedback_class_mismatch")
+    if "negative_feedback_terminal_veto_status" in report_doc and clean_string(
+        report_doc.get("negative_feedback_terminal_veto_status")
+    ).upper() != negative_feedback_terminal_veto_status:
+        adoption_probe_reasons.append("report_negative_feedback_veto_status_projection_mismatch")
+    if "terminal_veto_required" in report_doc and _bool_or_false(report_doc.get("terminal_veto_required")) != terminal_veto_required:
+        adoption_probe_reasons.append("report_terminal_veto_required_projection_mismatch")
+    if "pre_terminal_veto_applied" in report_doc and _bool_or_false(report_doc.get("pre_terminal_veto_applied")) != pre_terminal_veto_applied:
+        adoption_probe_reasons.append("report_pre_terminal_veto_applied_projection_mismatch")
+    if "loopback_required" in report_doc and _bool_or_false(report_doc.get("loopback_required")) != loopback_required:
+        adoption_probe_reasons.append("report_loopback_required_projection_mismatch")
+    if clean_string(report_doc.get("next_state_after_veto")) and clean_string(
+        report_doc.get("next_state_after_veto")
+    ) != next_state_after_veto:
+        adoption_probe_reasons.append("report_next_state_after_veto_projection_mismatch")
+    if clean_string(report_doc.get("terminal_truth_cleanliness_status")).upper() and clean_string(
+        report_doc.get("terminal_truth_cleanliness_status")
+    ).upper() != terminal_truth_cleanliness_status:
+        adoption_probe_reasons.append("report_terminal_truth_cleanliness_status_projection_mismatch")
+    if clean_string(report_doc.get("canonical_publishable_result_status")).upper() and clean_string(
+        report_doc.get("canonical_publishable_result_status")
+    ).upper() != canonical_publishable_result_status:
+        adoption_probe_reasons.append("report_canonical_publishable_result_status_projection_mismatch")
+    if "terminal_veto_scope" in report_doc:
+        current_scope = report_doc.get("terminal_veto_scope")
+        if isinstance(current_scope, (list, tuple)):
+            if [clean_string(item) for item in current_scope if clean_string(item)] != terminal_veto_scope:
+                adoption_probe_reasons.append("report_terminal_veto_scope_projection_mismatch")
+        elif clean_string(current_scope):
+            adoption_probe_reasons.append("report_terminal_veto_scope_projection_mismatch")
+
+    alias_surface_projection = derive_terminal_clean_alias_surface_projection(
+        report_doc,
+        terminal_truth_projection={
+            "is_terminal_clean": is_terminal_clean,
+            "publishable": publishable,
+            "canonical_result_eligible": canonical_result_eligible,
+        },
+    )
+    adoption_probe_reasons.extend(alias_surface_projection.get("terminal_clean_alias_blockers") or [])
+
+    instance_adoption_terminal_truth_probe_status = (
+        STATUS_FAIL_REQUIRED if adoption_probe_reasons else STATUS_PASS_REQUIRED
+    )
+
+    top_level_ok = (
+        execution_closure_status == STATUS_PASS_REQUIRED
+        and terminal_truth_cleanliness_status == STATUS_PASS_REQUIRED
+        and negative_feedback_terminal_veto_status == STATUS_PASS_REQUIRED
+        and canonical_publishable_result_status == STATUS_PASS_REQUIRED
+        and instance_adoption_terminal_truth_probe_status == STATUS_PASS_REQUIRED
+    )
+
+    stale_reasons: list[str] = []
+    if execution_closure_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append("execution_closure_not_reached_or_supporting_validator_red")
+    if negative_feedback_terminal_veto_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append("negative_feedback_veto_projection_invalid")
+    if terminal_truth_cleanliness_status != STATUS_PASS_REQUIRED:
+        stale_reasons.extend(publish_blockers)
+    stale_reasons.extend(adoption_probe_reasons)
+
+    return {
+        "identity_terminal_truth_cleanliness_status": STATUS_PASS_REQUIRED if top_level_ok else STATUS_FAIL_REQUIRED,
+        "execution_closure_status": execution_closure_status,
+        "terminal_truth_cleanliness_status": terminal_truth_cleanliness_status,
+        "terminal_truth_class": terminal_truth_class,
+        "is_terminal_clean": is_terminal_clean,
+        "is_terminal_dirty": is_terminal_dirty,
+        "terminal_truth_basis": basis,
+        "terminal_truth_blockers": publish_blockers,
+        "negative_feedback_terminal_veto_status": negative_feedback_terminal_veto_status,
+        "negative_feedback_class": negative_feedback_class,
+        "feedback_severity": feedback_severity,
+        "terminal_veto_required": terminal_veto_required,
+        "terminal_veto_scope": terminal_veto_scope,
+        "loopback_required": loopback_required,
+        "loopback_target_stage": loopback_target_stage,
+        "loopback_reason": loopback_reason,
+        "pre_terminal_veto_applied": pre_terminal_veto_applied,
+        "next_state_after_veto": next_state_after_veto,
+        "canonical_publishable_result_status": canonical_publishable_result_status,
+        "publishable": publishable,
+        "publish_blockers": publish_blockers,
+        "canonical_result_eligible": canonical_result_eligible,
+        "canonical_result_basis": "clean_terminal_truth_required_for_publishability",
+        "requires_repair_before_publish": not publishable,
+        "instance_adoption_terminal_truth_probe_status": instance_adoption_terminal_truth_probe_status,
+        **alias_surface_projection,
+        "stale_reasons": sorted(set(stale_reasons)),
+        "placeholder_result_fields": placeholder_hits,
+        "contradiction_fields": contradiction_hits,
+        "confidence_blocker_fields": confidence_hits,
+        "dirty_signals": dirty_signals,
+    }
+
+
+def project_terminal_truth_fields(
+    report_doc: dict[str, Any],
+    *,
+    post_execution_status: str = "",
+    writeback_continuity_status: str = "",
+) -> dict[str, Any]:
+    projected = derive_terminal_truth_projection(
+        report_doc,
+        post_execution_status=post_execution_status,
+        writeback_continuity_status=writeback_continuity_status,
+    )
+    merged = dict(report_doc or {})
+    merged.update(projected)
+    merged.update(derive_terminal_state_projection(merged, terminal_truth_projection=projected))
+    return merged

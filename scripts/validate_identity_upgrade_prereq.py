@@ -30,15 +30,33 @@ def _resolve_identity_task(catalog_path: Path, identity_id: str) -> Path:
 
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
-        if p.exists():
-            return p
-
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
+        p = Path(pack_path).expanduser()
+        if not p.is_absolute():
+            p = (catalog_path.expanduser().resolve().parent / p).resolve()
+        else:
+            p = p.resolve()
+        task_path = p / "CURRENT_TASK.json"
+        if task_path.exists():
+            return task_path
 
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
+
+
+def _resolve_pack_root(catalog_path: Path, identity_id: str) -> Path | None:
+    catalog = _load_yaml(catalog_path)
+    identities = catalog.get("identities") or []
+    target = next((x for x in identities if str((x or {}).get("id", "")).strip() == identity_id), None)
+    if not target:
+        return None
+    pack_path = str((target or {}).get("pack_path", "")).strip()
+    if not pack_path:
+        return None
+    p = Path(pack_path).expanduser()
+    if not p.is_absolute():
+        p = (catalog_path.expanduser().resolve().parent / p).resolve()
+    else:
+        p = p.resolve()
+    return p
 
 
 def _source_signature(item: dict[str, Any]) -> str:
@@ -49,22 +67,46 @@ def _source_signature(item: dict[str, Any]) -> str:
     return ""
 
 
-def _resolve_evidence_files(pattern: str, identity_id: str) -> list[Path]:
-    if Path(pattern).is_absolute():
-        files = sorted((Path(p) for p in glob.glob(pattern)), key=lambda p: p.stat().st_mtime)
-    else:
-        files = sorted(Path(".").glob(pattern), key=lambda p: p.stat().st_mtime)
-    if not files:
-        return []
-    scoped = [p for p in files if identity_id in p.name]
-    return (sorted(scoped, key=lambda p: p.stat().st_mtime) if scoped else files)
+def _runtime_pattern_candidates(pattern: str, identity_id: str, pack_root: Path | None) -> list[str]:
+    if not pattern:
+        return [pattern]
+    candidates: list[str] = [pattern]
+    if pack_root is None:
+        return candidates
+    local_prefix = f"identity/runtime/local/{identity_id}/"
+    mapped = ""
+    if pattern.startswith(local_prefix):
+        mapped = str((pack_root / "runtime" / pattern[len(local_prefix) :]).as_posix())
+    elif pattern.startswith("identity/runtime/"):
+        mapped = str((pack_root / "runtime" / pattern[len("identity/runtime/") :]).as_posix())
+    elif pattern.startswith("runtime/"):
+        mapped = str((pack_root / pattern).as_posix())
+    if mapped and mapped not in candidates:
+        candidates.insert(0, mapped)
+    return candidates
+
+
+def _resolve_evidence_files(pattern: str, identity_id: str, pack_root: Path | None) -> list[Path]:
+    for candidate in _runtime_pattern_candidates(pattern, identity_id, pack_root):
+        candidate_path = Path(candidate).expanduser()
+        if candidate_path.is_absolute():
+            files = sorted((Path(p).resolve() for p in glob.glob(str(candidate_path))), key=lambda p: p.stat().st_mtime)
+        elif pack_root is not None:
+            files = sorted(pack_root.glob(candidate), key=lambda p: p.stat().st_mtime)
+        else:
+            files = []
+        if not files:
+            continue
+        scoped = [p for p in files if identity_id in p.name]
+        return sorted(scoped, key=lambda p: p.stat().st_mtime) if scoped else files
+    return []
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Validate protocol baseline review prerequisites for identity update operations"
     )
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--evidence", default="", help="optional explicit evidence json path")
     args = ap.parse_args()
@@ -114,7 +156,11 @@ def main() -> int:
     if args.evidence:
         evidence_files = [Path(args.evidence)]
     else:
-        evidence_files = _resolve_evidence_files(pattern, args.identity_id)
+        evidence_files = _resolve_evidence_files(
+            pattern,
+            args.identity_id,
+            _resolve_pack_root(catalog_path, args.identity_id),
+        )
 
     if not evidence_files:
         print(f"[FAIL] no protocol review evidence matched: {pattern}")

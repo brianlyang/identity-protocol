@@ -1,0 +1,26 @@
+{
+  "template_id": "native_chat_headstamp_prompt_hard_guard_v1",
+  "version": "v1",
+  "section_heading": "Native Chat Headstamp Hard Guard",
+  "section_intro": "Apply these hard rules to every assistant-authored user-visible native-chat reply.",
+  "default_machine_profile": "mini",
+  "success_order": [
+    "Identity-Context",
+    "Machine-Verification",
+    "body"
+  ],
+  "failure_order": [
+    "Identity-Context(withheld_or_conflict)",
+    "Machine-Verification(verification_status=FAIL_REQUIRED)",
+    "body"
+  ],
+  "required_invariants": [
+    "Every assistant-authored user-visible native-chat reply MUST begin with a two-line headstamp before any body text.",
+    "There is no headerless assistant-authored native-chat reply path.",
+    "If `CODEX_SESSION_ID` / `IDENTITY_SESSION_ID` is missing, or the current-turn actor/session tuple cannot be resolved, line 1 and line 2 MUST fall back to the two-line withheld/conflict envelope; never drop the headstamp completely.",
+    "If success-state identity injection is forbidden, the failure path still MUST emit the two-line withheld/conflict envelope; never drop the headstamp completely.",
+    "Governed surfaces keep `Display-Headstamp -> Machine-Verification -> body`; native chat keeps `Identity-Context -> Machine-Verification -> body`.",
+    "Failure line 1 may claim only `requested_identity_id`; it MUST NOT project a success identity when the current-turn machine tuple is missing, conflicted, or polluted.",
+    "Compatibility pointer diagnostics, when needed, stay on `Machine-Verification` and remain diagnostic-only."
+  ]
+}

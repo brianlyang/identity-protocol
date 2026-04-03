@@ -1,0 +1,254 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import yaml
+from control_plane_budget_contract_common import BUDGET_SCALAR_FALLBACK_DELTAS
+from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
+from repo_root_resolution_common import resolve_repo_root
+
+import validate_control_plane_budget as budget_mod
+
+
+DEFAULT_BUDGET_ENTRY = "identity/protocol/mappings/control-plane-budget.current.yaml"
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _as_int(value: Any) -> int | None:
+    try:
+        text = str(value).strip()
+        if text == "":
+            return None
+        return int(text)
+    except Exception:
+        return None
+
+
+def _delta_from_existing(existing: Any, *, fallback: int) -> int:
+    if isinstance(existing, dict):
+        warn = _as_int(existing.get("warn"))
+        fail = _as_int(existing.get("fail"))
+        if warn is not None and fail is not None and fail > warn:
+            return max(1, fail - warn)
+    scalar = _as_int(existing)
+    if scalar is not None and scalar > 0:
+        return max(1, scalar)
+    return max(1, fallback)
+
+
+def _threshold_pair(existing: Any, observed: int, *, fallback_delta: int) -> dict[str, int]:
+    delta = _delta_from_existing(existing, fallback=fallback_delta)
+    warn = max(0, int(observed))
+    fail = warn + delta
+    return {"warn": warn, "fail": fail}
+
+
+def _collect_observed(repo_root: Path) -> dict[str, Any]:
+    error_code_inventory = budget_mod.collect_governed_error_code_inventory(repo_root)
+    tracked_validator_paths = budget_mod.tracked_validator_script_paths(repo_root)
+    untracked_validator_paths = budget_mod.untracked_validator_script_paths(repo_root)
+    codes, families = budget_mod._collect_error_codes(repo_root)
+    missing_cnt, _missing_rows, _bundle_rows = budget_mod._mapping_bundle_gap(repo_root)
+    return {
+        "validator_scripts": budget_mod._count_validator_scripts(repo_root),
+        "validator_metric_scope": budget_mod.TRACKED_VALIDATOR_METRIC_SCOPE,
+        "tracked_validator_script_paths": [str(path) for path in tracked_validator_paths],
+        "untracked_validator_scripts": [str(path) for path in untracked_validator_paths],
+        "error_codes": len(codes),
+        "error_code_families": len(families),
+        "error_code_metric_scope": budget_mod.TRACKED_ERROR_CODE_METRIC_SCOPE,
+        "tracked_python_script_count": len(error_code_inventory.get("tracked_script_paths") or []),
+        "ignored_partial_error_code_tokens": list(error_code_inventory.get("ignored_partial_prefixes") or []),
+        "mapping_rows_missing_in_bundle": missing_cnt,
+        "strict_direct_validate_calls": budget_mod._strict_direct_validate_calls(repo_root),
+    }
+
+
+def _build_next_budget(*, current_doc: dict[str, Any], observed: dict[str, Any]) -> dict[str, Any]:
+    next_doc = dict(current_doc)
+    next_doc["last_updated_utc"] = _utc_now()
+
+    budgets = dict(next_doc.get("budgets") or {})
+
+    for key, fallback_delta in BUDGET_SCALAR_FALLBACK_DELTAS.items():
+        budgets[key] = _threshold_pair(
+            budgets.get(key),
+            int(observed[key]),
+            fallback_delta=fallback_delta,
+        )
+
+    existing_direct = budgets.get("direct_validate_calls") or {}
+    next_direct: dict[str, dict[str, int]] = {}
+    observed_direct = observed.get("strict_direct_validate_calls") or {}
+    for surface in budget_mod.STRICT_SURFACES:
+        current_hits = int(observed_direct.get(surface, -1))
+        baseline = existing_direct.get(surface)
+        if current_hits < 0:
+            # keep existing configuration for missing surfaces to avoid destructive rewrites.
+            if isinstance(baseline, dict):
+                next_direct[surface] = {
+                    "warn": int(baseline.get("warn", 0)),
+                    "fail": int(baseline.get("fail", 1)),
+                }
+            continue
+        next_direct[surface] = _threshold_pair(baseline, current_hits, fallback_delta=5)
+    budgets["direct_validate_calls"] = next_direct
+    next_doc["budgets"] = budgets
+
+    convergence_guard = dict(next_doc.get("convergence_guard") or {})
+    ceilings = dict(convergence_guard.get("ceilings") or {})
+    ceilings["validator_scripts"] = int(observed["validator_scripts"])
+    ceilings["error_codes"] = int(observed["error_codes"])
+    ceilings["error_code_families"] = int(observed["error_code_families"])
+    ceilings["mapping_rows_missing_in_bundle"] = int(observed["mapping_rows_missing_in_bundle"])
+    ceilings["direct_validate_calls"] = {
+        surface: int(count)
+        for surface, count in (observed_direct.items() if isinstance(observed_direct, dict) else [])
+        if int(count) >= 0
+    }
+    convergence_guard["enabled"] = bool(convergence_guard.get("enabled", True))
+    convergence_guard["mode"] = str(convergence_guard.get("mode") or "no_rebound")
+    convergence_guard["enforce_mode"] = str(convergence_guard.get("enforce_mode") or "fail_required")
+    convergence_guard["baseline_snapshot_utc"] = _utc_now()
+    convergence_guard["ceilings"] = ceilings
+    next_doc["convergence_guard"] = convergence_guard
+
+    return next_doc
+
+
+def build_budget_snapshot(
+    repo_root: Path,
+    *,
+    budget_file: str = DEFAULT_BUDGET_ENTRY,
+) -> dict[str, Any]:
+    budget_entry_path = (repo_root / budget_file).resolve()
+    budget_path, active_file, alias_error = budget_mod._resolve_current_yaml_alias(repo_root, budget_file)
+    snapshot: dict[str, Any] = {
+        "repo_root": str(repo_root),
+        "budget_entry_file": str(budget_entry_path),
+        "budget_file": str(budget_path),
+        "budget_file_active_file": active_file,
+        "budget_file_alias_error": alias_error,
+        "surface_governance": build_governed_runtime_summary_surface_payload("control_plane_budget_artifact"),
+        "current_doc": {},
+        "observed": {},
+        "next_doc": {},
+        "stale_reasons": [],
+    }
+    if alias_error:
+        snapshot["stale_reasons"].append(f"budget_alias_error:{alias_error}")
+        return snapshot
+    if not budget_path.exists() or not budget_path.is_file():
+        snapshot["stale_reasons"].append("budget_file_missing")
+        return snapshot
+
+    current_doc = yaml.safe_load(budget_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(current_doc, dict):
+        current_doc = {}
+
+    observed = _collect_observed(repo_root)
+    next_doc = _build_next_budget(current_doc=current_doc, observed=observed)
+    snapshot["current_doc"] = current_doc
+    snapshot["observed"] = observed
+    snapshot["next_doc"] = next_doc
+    return snapshot
+
+
+def resolve_budget_target(
+    repo_root: Path,
+    *,
+    budget_file: str = DEFAULT_BUDGET_ENTRY,
+) -> tuple[Path, str, str]:
+    return budget_mod._resolve_current_yaml_alias(repo_root, str(budget_file))
+
+
+def persist_budget_snapshot(snapshot: dict[str, Any]) -> Path:
+    budget_path = Path(str(snapshot.get("budget_file") or "")).expanduser().resolve()
+    next_doc = snapshot.get("next_doc") or {}
+    if not isinstance(next_doc, dict):
+        raise ValueError("budget_snapshot_missing_next_doc")
+    budget_path.parent.mkdir(parents=True, exist_ok=True)
+    budget_path.write_text(yaml.safe_dump(next_doc, sort_keys=False, allow_unicode=True), encoding="utf-8")
+    return budget_path
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Render/sync control-plane budget from live observed metrics.")
+    ap.add_argument("--repo-root", default="", help="Optional repo root override for shadow/probe execution")
+    ap.add_argument(
+        "--budget-file",
+        default=DEFAULT_BUDGET_ENTRY,
+        help="Budget current-pointer yaml (default: identity/protocol/mappings/control-plane-budget.current.yaml)",
+    )
+    ap.add_argument("--write", action="store_true", help="Persist updates to resolved active budget file")
+    ap.add_argument("--json-only", action="store_true", help="Emit single-line JSON payload")
+    args = ap.parse_args()
+
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
+    snapshot = build_budget_snapshot(repo_root, budget_file=args.budget_file)
+    budget_path = Path(snapshot["budget_file"])
+    active_file = str(snapshot.get("budget_file_active_file", ""))
+    alias_error = str(snapshot.get("budget_file_alias_error", ""))
+
+    payload: dict[str, Any] = {
+        "render_control_plane_budget_status": "PASS_REQUIRED",
+        "error_code": "",
+        "budget_entry_file": str(snapshot["budget_entry_file"]),
+        "budget_file": str(snapshot["budget_file"]),
+        "budget_file_active_file": active_file,
+        "budget_file_alias_error": alias_error,
+        "write_applied": False,
+        "repo_root": str(repo_root),
+        "observed": dict(snapshot.get("observed") or {}),
+        "before": {},
+        "after": {},
+        "stale_reasons": list(snapshot.get("stale_reasons") or []),
+        "surface_governance": snapshot["surface_governance"],
+    }
+
+    if alias_error:
+        payload["render_control_plane_budget_status"] = "FAIL_REQUIRED"
+        payload["error_code"] = "IP-CP-BUDGET-001"
+        print(json.dumps(payload, ensure_ascii=False) if args.json_only else json.dumps(payload, ensure_ascii=False, indent=2))
+        return 1
+
+    if not budget_path.exists() or not budget_path.is_file():
+        payload["render_control_plane_budget_status"] = "FAIL_REQUIRED"
+        payload["error_code"] = "IP-CP-BUDGET-001"
+        print(json.dumps(payload, ensure_ascii=False) if args.json_only else json.dumps(payload, ensure_ascii=False, indent=2))
+        return 1
+
+    current_doc = dict(snapshot.get("current_doc") or {})
+    next_doc = dict(snapshot.get("next_doc") or {})
+    payload["before"] = {
+        "last_updated_utc": current_doc.get("last_updated_utc", ""),
+        "budgets": current_doc.get("budgets", {}),
+        "convergence_guard": current_doc.get("convergence_guard", {}),
+    }
+    payload["after"] = {
+        "last_updated_utc": next_doc.get("last_updated_utc", ""),
+        "budgets": next_doc.get("budgets", {}),
+        "convergence_guard": next_doc.get("convergence_guard", {}),
+    }
+
+    if args.write:
+        persist_budget_snapshot(snapshot)
+        payload["write_applied"] = True
+
+    if args.json_only:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

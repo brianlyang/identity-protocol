@@ -2,6 +2,216 @@
 
 ## Unreleased
 
+- **nested protocol-repo runtime shadow boundary hardening**:
+  - extended runtime-file governance so nested protocol-repo runtime residue is
+    now treated as an explicit local runtime shadow boundary instead of an
+    accidental ungoverned worktree side effect.
+  - `.gitignore` now ignores repo-root `.identity/` alongside the existing
+    runtime shadow scratch set:
+    - `.identity/`
+    - `.identity-protocol/`
+    - `.codex/`
+    - `.tmp/`
+    - `.IDENTITY.run__*.md`
+  - added shared boundary helper + validator enforcement:
+    - `scripts/runtime_shadow_repo_boundary_common.py`
+    - `scripts/validate_runtime_file_boundary_governance.py`
+    - fail-close if nested protocol checkout loses runtime-shadow ignore
+      patterns or if `scripts/use_project_identity_runtime.sh` stops projecting
+      the parent-project runtime preference that keeps runtime artifacts outside
+      protocol_root
+  - added replay surface:
+    - `scripts/ci/run_protocol_repo_runtime_shadow_boundary_probes_ci.sh`
+    - proves positive boundary closure and negative fail-close when `.identity/`
+      is no longer ignored or the parent-runtime selector tokens drift
+  - governance/review docs now freeze the same interpretation:
+    - authoritative runtime stays at parent workspace `.identity/` when the
+      protocol repo is nested
+    - repo-root `.identity/` is shadow scratch only and must never become
+      current-turn runtime authority or version-controlled evidence
+
+- **runtime-shadow repo-global closure projection hardening**:
+  - promoted the nested protocol-repo runtime-shadow boundary from validator-only
+    knowledge into the governed release-readiness one-look export surface.
+  - `scripts/release_readiness_check.py` now captures
+    `scripts/validate_runtime_file_boundary_governance.py` as structured
+    summary data and includes the runtime-shadow probe in post-closure replay.
+  - `scripts/release_readiness_repo_global_closure_projection_common.py` now
+    freezes `one_look.runtime_file_boundary_governance_status` inside the
+    repo-global closure projection marker and owner-lane set.
+  - release-summary governance/review/summary docs now freeze the same bounded
+    projection and keep `scripts/validate_runtime_file_boundary_governance.py`
+    visible as the direct owner lane behind the derived one-look field.
+  - release-summary/runtime-summary probes now fail-close if the new one-look
+    projection literal drifts out of the governed summary surface.
+
+- **release-closure repo-global boundary validator strengthening**:
+  - upgraded `scripts/validate_v16x_release_closure_boundary.py` so the
+    governance/review boundary lane now consumes the full shared
+    `RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS` bundle rather
+    than only partial owner-lane/proof-strength subsets.
+  - `scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh` now proves
+    negative fail-close when the bounded
+    `repo_global_closure_projection=one_look.executable_surface_runtime_literal_lock_status|...`
+    literal itself drifts out of the governance surface.
+  - release-closure governance/review docs now freeze that stronger
+    interpretation explicitly, so release-boundary validation cannot stay green
+    if repo-global projection order/literal disappears while companion owner
+    lanes still remain present.
+
+- **release-summary shared repo-global one-look absorption hardening**:
+  - added shared repo-global one-look marker exports in
+    `scripts/release_readiness_repo_global_closure_projection_common.py` so
+    summary/boundary consumers can import the bounded projection field set
+    rather than re-listing individual `one_look.*` literals.
+  - `scripts/validate_v16x_release_closure_summary.py` now consumes the shared
+    repo-global outer-surface marker bundle, closing the gap where future
+    repo-global closure lane additions could require hand-updated per-field
+    literals before the summary validator noticed drift.
+  - `scripts/ci/run_v16x_release_closure_summary_probes_ci.sh` now resolves the
+    repo-global one-look marker/projection literals from the shared module and
+    proves fail-close when either the shared one-look marker or the bounded
+    `repo_global_closure_projection=...` literal drifts out of the summary doc.
+  - release-closure governance/review docs now freeze the same interpretation:
+    governed summary validation must absorb the shared repo-global one-look
+    bundle rather than relying on a locally maintained partial field list.
+
+- **shared repo-global probe literal hardening**:
+  - `scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh` now resolves
+    the bounded repo-global projection literal from
+    `scripts/release_readiness_repo_global_closure_projection_common.py`
+    instead of mutating a probe-local hardcoded string.
+  - `scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh` now
+    resolves repo-global one-look doc markers from the same shared module
+    rather than hardcoding specific repo-global field names inside the probe.
+  - release-closure governance/review docs now freeze the stronger rule that
+    repo-global probe literals themselves must be shared-module driven, so
+    newly appended repo-global one-look lanes fail-close automatically in the
+    probe layer instead of waiting for manual probe literal refresh.
+
+- **shared active-runtime probe literal hardening**:
+  - `scripts/ci/run_v16x_release_closure_summary_probes_ci.sh` and
+    `scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh` now resolve
+    the bounded active-runtime closure projection literal plus companion
+    `one_look.identity_terminal_truth_class` marker from
+    `scripts/release_readiness_active_runtime_closure_projection_common.py`
+    instead of mutating probe-local literal copies.
+  - this keeps summary/boundary negative probes aligned with the shared
+    active-runtime one-look contract, so future active-runtime lane additions
+    fail-close automatically in the probe layer rather than waiting for manual
+    literal refresh.
+  - release-closure governance/review docs now freeze the stronger rule that
+    summary/boundary validators and their paired probes must consume the shared
+    active-runtime projection bundle rather than probe-local literal copies.
+
+- **root-corpus protocol-boundary probe target hardening**:
+  - `scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh` now resolves
+    its protocol-boundary negative-probe target sentence from
+    `scripts/root_corpus_contract_list_sync_common.py` instead of hardcoding
+    specific contract sentences inline.
+  - the same shared helper now emits both the canonical sentence and a bounded
+    drifted replacement sentence, so missing-entry and label-drift probes stay
+    aligned with the governed protocol-boundary projection surface even if the
+    target row shifts in canonical order.
+  - this keeps root-corpus ordering probes fail-close on projection-surface
+    drift without probe-local sentence copies tied to one contract path.
+
+- **nested gateway wrapper timeout budget propagation**:
+  - hardened `scripts/gateway_wrapper_enforcement.py` so pack-local nested
+    ingress/session wrapper subprocesses inherit the stronger timeout profile of
+    the canonical entry command instead of silently falling back to the generic
+    30-second default.
+  - this removes false `CTX_TOOL_TIMEOUT` failures in long-running strict
+    update lanes where the outer gateway already classified the command
+    correctly but the nested wrapper budget previously drifted lower.
+  - verified against:
+    - direct `required_gate_bundle_runner.py` execution through
+      `run_gateway_wrapped_command(...)`
+    - fresh `identity_creator.py update` rerun for
+      `base-repo-closure-orchestrator`, which now materializes
+      `identity-upgrade-exec-base-repo-closure-orchestrator-1774403117.json`
+      with `all_ok=true`
+
+- **root-law release closure truth-sync + changelog validator hardening**:
+  - recorded the latest root-law closure batch so release/governance checks no
+    longer depend on implicit operator context:
+    - `identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md`
+    - `identity/protocol/mappings/root-decision-evidence-admissibility.current.yaml`
+    - `identity/protocol/mappings/root-decision-evidence-admissibility.v1.yaml`
+    - `scripts/root_decision_evidence_admissibility_common.py`
+    - `scripts/validate_protocol_root_decision_evidence_admissibility.py`
+    - `scripts/ci/run_protocol_root_decision_evidence_admissibility_probes_ci.sh`
+  - hardened `scripts/validate_changelog_updated.py` so it now:
+    - resolves the protocol repo root explicitly instead of inheriting caller cwd
+    - normalizes `--base/--head` commit-ish inputs to concrete SHAs before
+      evaluating historical-backfill eligibility
+    - resolves the changelog path relative to the protocol repo root, removing
+      cross-cwd false failures and symbolic-ref false greens
+  - explicit historical backfill anchors for recent root-law commits:
+    - `f18e834`
+    - `4ba46a5`
+    - `0096593`
+
+- **versioning discipline clarification for patch-numbered stream docs**:
+  - `VERSIONING.md` now explicitly freezes that `v1.x.y` governance/review docs
+    are bounded protocol-owner streams, not ad hoc documentation-supplement
+    buckets.
+  - `VERSIONING.md` now also distinguishes non-versioned
+    `identity/protocol/*.md` interpretive root docs from `v1.x.y`
+    stream-owner docs, preventing bottom-layer philosophy anchors from being
+    mislabeled as patch-numbered streams.
+  - `docs/governance/identity-workbook-governance-v1.6.md` now mirrors the same
+    naming discipline at the workbook control-plane layer so new patch stream
+    numbers cannot be minted for loose truth-sync or commentary-only bundles.
+
+- **acceptance closure hardening for update review-required flow**:
+  - tightened `scripts/execute_identity_upgrade.py` post-check execution so
+    strict validators receive repo/actor/session/run tuple context explicitly,
+    and `required_gate_bundle_runner.py` is executed through the canonical
+    gateway wrapper path instead of raw subprocess calls.
+  - extended `scripts/repair_contract_backfill.py` to backfill canonical
+    acceptance self-test assets into existing runtime packs:
+    - experience-feedback rulebooks now converge to the shared contract schema
+    - handoff positive/negative fixture samples are restored when missing
+  - updated `scripts/create_identity_pack.py` neutral scaffolding to emit the
+    same canonical self-test assets at creation time, removing the need for
+    later repair-only convergence on fresh packs.
+
+- **v1.6.5 dual-layer governance/review stream bootstrap**:
+  - added canonical governance/review stream docs for GitHub rulesets +
+    super-linter dual-layer hardening:
+    - `docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md`
+    - `docs/review/protocol-remediation-audit-ledger-v1.6.5.md`
+  - registered v1.6.5 stream pointers and alias requirements in:
+    - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml`
+  - extended strict-doc evidence allowlist coverage for v1.6.5 stream docs:
+    - `identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml`
+  - updated audit snapshot index to include v1.6.5 stream canonical pointers:
+    - `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
+
+- **v1.6 protocol-lane closure hardening (wave-3.1 + regression guard)**:
+  - closed three residual classes that repeatedly caused non-green upgrade runs:
+    - three-plane coherence strict fail-close closure (`scripts/validate_execution_reply_identity_coherence.py`, `scripts/report_three_plane_status.py`)
+    - required-gate drift alias bypass closure (`scripts/validate_required_gate_surface_drift.py`)
+    - cross-operation tuple parity closure (`scripts/validate_required_gate_tuple_parity.py` + strict surface wiring)
+  - hardened protocol-lane semantic routing fallback:
+    - `scripts/validate_semantic_routing_guard.py` now infers deterministic semantic tuple values when feedback batches omit explicit metadata, preventing recurrent `IP-SEM-001` false blockers on protocol-context batches.
+  - reduced stale evidence false-failure in runtime handoff/collaboration validators by validating a bounded recent evidence window:
+    - `scripts/validate_agent_handoff_contract.py`
+    - `scripts/validate_identity_collab_trigger.py`
+  - changelog linkage backfill anchors for prior strict-gate head commits:
+    - `0a6359a`
+    - `6af084f`
+  - repaired reply-log first-line extraction parser regression:
+    - `scripts/validate_reply_identity_context_first_line.py`
+    - restores `.json/.jsonl/.txt` evidence parsing paths and removes misplaced
+      unreachable parser block that could hide first-line evidence in non-jsonl logs.
+  - reduced multi-binding false blocker in headstamp recurrence replay:
+    - `scripts/validate_headstamp_recurrence_closure.py`
+    - actor-mismatch negative probe now treats `actor_id+session_id` multi-binding
+      without explicit session selector as `SKIPPED_INCONCLUSIVE_MULTIBINDING`
+      (non-regressive) instead of hard failing `IP-ASB-STAMP-SCAN-007`.
+
 - **v1.5.x headstamp recurrence closure hardening (hotfix)**:
   - added strict recurrence closure validator:
     - `scripts/validate_headstamp_recurrence_closure.py`
@@ -656,8 +866,8 @@
     - added release closure snapshot: `docs/governance/audit-snapshot-2026-02-23-release-closure-v1.4.7.md`
     - updated `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
   - canonicalized skills-style runtime home resolution in README + governance record:
-    `IDENTITY_HOME` env override -> `${CODEX_HOME}/identity` -> `~/.codex/identity` default
-    -> `./.codex/identity` fallback when home path creation fails
+    `IDENTITY_HOME` env override -> `${CODEX_HOME}/.identity` -> `~/.codex/.identity` default
+    -> `./.codex/.identity` fallback when home path creation fails
     (removed implicit `~/.identity` auto-branch; legacy migration is explicit)
   - aligned runtime directory naming with skills-style root convention:
     canonical runtime pack root is now `${IDENTITY_HOME}`
@@ -670,7 +880,7 @@
       and added explicit empty-target fail-fast + explicit compile target resolution
   - fixed `create_identity_pack.py` absolute path rewrite bug for local runtime roots:
     - prevents duplicated absolute prefixes during scaffold bootstrap
-    - ensures generated CURRENT_TASK paths remain valid under `$CODEX_HOME/identity`
+    - ensures generated CURRENT_TASK paths remain valid under `$CODEX_HOME/.identity`
   - installer default source alignment hardening:
     - `identity_installer.py` now resolves source pack from local catalog `pack_path` first
     - default `--pack-root` now follows local runtime root instead of repo `identity/packs`

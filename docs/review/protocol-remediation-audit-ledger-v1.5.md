@@ -4,6 +4,20 @@ Status: Active
 Layer: protocol-only tracking ledger (non-governance)  
 Purpose: Central place for architect + audit-expert review/verification of each remediation item before v1.5 tag.
 
+## 0A) Current-state redirect (mandatory)
+
+1. This file is retained as a historical v1.5 review ledger and does not define standalone current-state protocol truth.
+2. Current v1.6.x stream routing must resolve through:
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+3. Current control-plane status/promotion checks must resolve through:
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
+   - `identity/protocol/mappings/control-plane-budget.current.yaml`
+   - `identity/protocol/mappings/control-plane-status.current.yaml`
+   - `identity/protocol/mappings/github-control-plane-offload.current.yaml`
+4. If this v1.5 review ledger conflicts with active stream governance/review docs resolved by stream registry, follow the stream-registry-resolved active stream docs.
+5. Any `/tmp/*` evidence reference in this file is historical replay context only and must not be treated as current wiring contract input.
+
 ## 0) Boundary and usage rules
 
 1. This file is a **review ledger**, not a governance SSOT.
@@ -216,7 +230,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - tail: `no output (compile success)`
 
 2. Command:
-   - `python3 scripts/run_protocol_upgrade_wave.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --dry-run --out /tmp/identity-upgrade-wave-dryrun.json`
+   - `python3 scripts/run_protocol_upgrade_wave.py --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --dry-run --out /tmp/identity-upgrade-wave-dryrun.json`
    - rc: `0`
    - key tail:
      - `"outdated_identities": [...]` populated
@@ -244,7 +258,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 1. Decision: `PASS` (scoped to FIX-001 objective).
 2. Re-validated evidence:
    - `python3 -m py_compile scripts/run_protocol_upgrade_wave.py` => rc=0
-   - `python3 scripts/run_protocol_upgrade_wave.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --dry-run --out /tmp/identity-upgrade-wave-dryrun-audit.json` => rc=0
+   - `python3 scripts/run_protocol_upgrade_wave.py --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --dry-run --out /tmp/identity-upgrade-wave-dryrun-audit.json` => rc=0
    - deterministic branch proof for `IP-PBL-002` => `outdated=True` and `next_action=bootstrap_or_update_required`
 3. Audit note:
    - The dry-run command is cwd-sensitive if `--repo-catalog` is omitted.
@@ -315,14 +329,14 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - tail: `no output (compile success)`
 
 2. Command (positive sample):
-   - `python3 scripts/validate_identity_pack_path_canonical.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --json-only`
+   - `python3 scripts/validate_identity_pack_path_canonical.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --json-only`
    - rc: `0`
    - key tail:
      - `\"path_governance_status\": \"PASS_REQUIRED\"`
      - `\"path_error_codes\": []`
 
 3. Command (negative sample, relative path in runtime catalog):
-   - `python3 scripts/validate_identity_pack_path_canonical.py --identity-id store-manager --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --json-only`
+   - `python3 scripts/validate_identity_pack_path_canonical.py --identity-id store-manager --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --json-only`
    - rc: `1`
    - key tail:
      - `\"path_governance_status\": \"FAIL_REQUIRED\"`
@@ -386,7 +400,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - tail: `no output (compile success)`
 
 2. Command (readiness flow with preflight visibility; escalated context):
-   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report-policy warn --baseline-policy warn --capability-activation-policy strict-union`
+   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --execution-report-policy warn --baseline-policy warn --capability-activation-policy strict-union`
    - rc: `0`
    - key tail:
      - `[RUN] python3 scripts/validate_identity_pack_path_canonical.py ... --json-only`
@@ -411,7 +425,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - `git show --name-only --oneline b80521e` confirms readiness gate wiring change in `scripts/release_readiness_check.py`.
    - `git show --name-only --oneline 8f5db87` confirms review ledger update record for FIX-003.
    - `python3 -m py_compile scripts/release_readiness_check.py scripts/validate_identity_pack_path_canonical.py` => rc=0.
-   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report-policy warn --baseline-policy warn --capability-activation-policy strict-union` => rc=0 (escalated), includes:
+   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --execution-report-policy warn --baseline-policy warn --capability-activation-policy strict-union` => rc=0 (escalated), includes:
      - `[RUN] python3 scripts/validate_identity_pack_path_canonical.py ... --json-only`
      - `[INFO] pack path canonical preflight: status=PASS_REQUIRED error_codes=- identity=custom-creative-ecom-analyst`
      - `[OK] release readiness checks PASSED`
@@ -471,42 +485,42 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - key tail: `RC_STATIC_ALL=0`
 
 2. Command (positive stamp validation; forced check):
-   - `python3 scripts/validate_identity_response_stamp.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --force-check --require-dynamic --require-redacted-external --require-lock-match --json-only`
+   - `python3 scripts/validate_identity_response_stamp.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --force-check --require-dynamic --require-redacted-external --require-lock-match --json-only`
    - rc: `0`
    - key tail:
      - `"stamp_status":"PASS"`
      - `"error_code":""`
 
 3. Command (negative stamp mismatch; blocker receipt generated):
-   - `python3 scripts/validate_identity_response_stamp.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --force-check --require-dynamic --require-redacted-external --require-lock-match --stamp-line "Identity-Context: actor_id=user:test; identity_id=wrong-id; catalog_ref=bad; pack_ref=bad; scope=USER; lock=LOCK_MISMATCH; lease=l1; source=global" --json-only`
+   - `python3 scripts/validate_identity_response_stamp.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --force-check --require-dynamic --require-redacted-external --require-lock-match --stamp-line "Identity-Context: actor_id=user:test; identity_id=wrong-id; catalog_ref=bad; pack_ref=bad; scope=USER; lock=LOCK_MISMATCH; lease=l1; source=global" --json-only`
    - rc: `1`
    - key tail:
      - `"error_code":"IP-ASB-STAMP-001"`
      - `"blocker_receipt_path":"/private/tmp/identity-stamp-blocker-receipt-custom-creative-ecom-analyst.json"`
 
 4. Command (blocker receipt schema validation):
-   - `python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt /tmp/identity-stamp-blocker-receipt-custom-creative-ecom-analyst.json --json-only`
+   - `python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt /tmp/identity-stamp-blocker-receipt-custom-creative-ecom-analyst.json --json-only`
    - rc: `0`
    - key tail:
      - `"receipt_status":"PASS"`
      - `"error_code":"IP-ASB-STAMP-001"` (inside receipt payload)
 
 5. Command (contract-first skip remains machine-readable):
-   - `python3 scripts/validate_identity_response_stamp.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --require-dynamic --require-redacted-external --require-lock-match --json-only`
+   - `python3 scripts/validate_identity_response_stamp.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --require-dynamic --require-redacted-external --require-lock-match --json-only`
    - rc: `0`
    - key tail:
      - `"stamp_status":"SKIPPED_NOT_REQUIRED"`
      - `"stale_reasons":["contract_not_required"]`
 
 6. Command (three-plane visibility with stamp detail):
-   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-fix004.json`
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-fix004.json`
    - rc: `0`
    - key tail:
      - `instance_plane_detail.response_identity_stamp.stamp_status=SKIPPED_NOT_REQUIRED`
      - `validators.response_stamp_render/validation/blocker_receipt all present`
 
 7. Command (e2e chain includes stamp gates; escalated):
-   - `IDENTITY_CATALOG=/Users/yangxi/.codex/identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
+   - `IDENTITY_CATALOG=/Users/yangxi/.codex/.identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
    - rc: `0`
    - key tail:
      - `[12.2/30] render dynamic response identity stamp`
@@ -597,14 +611,14 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - tail: `no output (compile success)`
 
 2. Command (positive sample, canonical absolute report path):
-   - `python3 scripts/validate_identity_execution_report_path_contract.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --report /Users/yangxi/.codex/identity/instances/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772280630.json --json-only`
+   - `python3 scripts/validate_identity_execution_report_path_contract.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --report /Users/yangxi/.codex/.identity/instances/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772280630.json --json-only`
    - rc: `0`
    - key tail:
      - `\"path_governance_status\":\"PASS_REQUIRED\"`
      - `\"path_error_codes\":[]`
 
 3. Command (negative sample, report `resolved_pack_path=\".\"`):
-   - `python3 scripts/validate_identity_execution_report_path_contract.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --report /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772262737.json --json-only`
+   - `python3 scripts/validate_identity_execution_report_path_contract.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --report /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772262737.json --json-only`
    - rc: `1`
    - key tail:
      - `\"path_governance_status\":\"FAIL_REQUIRED\"`
@@ -612,7 +626,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
      - `\"stale_reasons\":[\"report_resolved_pack_path_relative_token\"]`
 
 4. Command (readiness chain visibility; escalated, route-any-ready):
-   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
+   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
    - rc: `0`
    - key tail:
      - `[RUN] python3 scripts/validate_identity_pack_path_canonical.py ...`
@@ -699,14 +713,14 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - key tail: `RC_STATIC_FIX006=0`
 
 2. Command (runtime positive sample):
-   - `python3 scripts/validate_identity_home_catalog_alignment.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --json-only`
+   - `python3 scripts/validate_identity_home_catalog_alignment.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --json-only`
    - rc: `0`
    - key tail:
      - `"path_governance_status":"PASS_REQUIRED"`
      - `"path_error_codes":[]`
 
 3. Command (runtime negative sample via explicit mismatched identity_home):
-   - `python3 scripts/validate_identity_home_catalog_alignment.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-home /Users/yangxi/claude/codex_project/weixinstore/.agents/identity --json-only`
+   - `python3 scripts/validate_identity_home_catalog_alignment.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-home /Users/yangxi/claude/codex_project/weixinstore/.agents/identity --json-only`
    - rc: `1`
    - key tail:
      - `"path_governance_status":"FAIL_REQUIRED"`
@@ -721,7 +735,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
      - `"stale_reasons":["fixture_profile_scope"]`
 
 5. Command (readiness preflight visibility):
-   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report <LATEST_REPORT> --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
+   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --execution-report <LATEST_REPORT> --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
    - rc: `0`
    - key tail:
      - `[RUN] python3 scripts/validate_identity_home_catalog_alignment.py ... --json-only`
@@ -729,27 +743,27 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
      - `[OK] release readiness checks PASSED`
 
 6. Command (identity_creator validate wiring):
-   - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER`
+   - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER`
    - rc: `0`
    - key tail includes:
      - `$ python3 scripts/validate_identity_home_catalog_alignment.py ...`
 
 7. Command (full-scan visibility):
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix006.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/full-scan-fix006.json`
    - rc: `0`
    - key tail (parsed):
      - project layer: `identity_home_catalog_alignment.rc=1`, `status=FAIL_REQUIRED`, `codes=["IP-PATH-003"]`
      - global layer: `identity_home_catalog_alignment.rc=0`, `status=PASS_REQUIRED`, `codes=[]`
 
 8. Command (three-plane visibility):
-   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-fix006.json`
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-fix006.json`
    - rc: `0`
    - key tail (parsed):
      - `instance_plane_detail.identity_home_catalog_alignment.path_governance_status=PASS_REQUIRED`
      - `validators.identity_home_catalog_alignment.rc=0`
 
 9. Command (e2e chain wiring; escalated):
-   - `IDENTITY_CATALOG=/Users/yangxi/.codex/identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
+   - `IDENTITY_CATALOG=/Users/yangxi/.codex/.identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
    - rc: `0`
    - key tail:
      - `[10.16/30] validate identity_home/catalog alignment gate (for each target identity)`
@@ -776,7 +790,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 2. Replayed evidence:
    - `python3 scripts/docs_command_contract_check.py` => rc=0
    - `python3 scripts/validate_protocol_ssot_source.py` => rc=0
-   - `IDENTITY_CATALOG=/Users/yangxi/.codex/identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh` (escalated) => rc=0
+   - `IDENTITY_CATALOG=/Users/yangxi/.codex/.identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh` (escalated) => rc=0
 3. Key assertions observed from replay output:
    - e2e contains `[10.16/30] validate identity_home/catalog alignment gate (for each target identity)`.
    - e2e tail confirms `E2E smoke test PASSED`, `instance_plane_status=CLOSED`, `release_plane_status=NOT_STARTED`.
@@ -828,14 +842,14 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - key tail: `RC_STATIC_FIX007=0`
 
 2. Runtime identity (non-fixture) mutation pass sample:
-   - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --json-only`
+   - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --json-only`
    - rc: `0`
    - key tail:
      - `"path_governance_status":"PASS_REQUIRED"`
      - `"path_error_codes":[]`
 
 3. Fixture mutation fail sample (no override/receipt):
-   - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --json-only`
+   - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --json-only`
    - rc: `1`
    - key tail:
      - `"path_governance_status":"FAIL_REQUIRED"`
@@ -843,21 +857,21 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
      - `"stale_reasons":["fixture_runtime_override_required","fixture_override_receipt_missing"]`
 
 4. Fixture non-mutation scan sample:
-   - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation scan --json-only`
+   - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation scan --json-only`
    - rc: `0`
    - key tail:
      - `"path_governance_status":"SKIPPED_NOT_REQUIRED"`
      - `"stale_reasons":["fixture_non_mutation_scope"]`
 
 5. Fixture override+receipt positive sample:
-   - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --allow-fixture-runtime --fixture-audit-receipt /tmp/fix007-fixture-receipt.json --json-only`
+   - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --allow-fixture-runtime --fixture-audit-receipt /tmp/fix007-fixture-receipt.json --json-only`
    - rc: `0`
    - key tail:
      - `"path_governance_status":"PASS_REQUIRED"`
       - `"allow_fixture_runtime":true`
 
 6. Readiness preflight wiring:
-   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report-policy warn --capability-activation-policy route-any-ready`
+   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --execution-report-policy warn --capability-activation-policy route-any-ready`
    - rc: `0`
    - key tail includes:
      - `[RUN] python3 scripts/validate_fixture_runtime_boundary.py ... --operation readiness --json-only`
@@ -865,25 +879,25 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
      - `[OK] release readiness checks PASSED`
 
 7. `identity_creator validate` wiring:
-   - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER`
+   - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER`
    - rc: `0`
    - key tail includes:
      - `$ python3 scripts/validate_fixture_runtime_boundary.py ... --operation validate`
 
 8. Full-scan visibility:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix007.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/full-scan-fix007.json`
    - rc: `0`
    - key parsed fields include `checks.fixture_runtime_boundary` with machine-readable fields (`path_governance_status`, `path_error_codes`, `operation`, `stale_reasons`) for both project/global layers.
 
 9. Three-plane visibility:
-   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix007.json`
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix007.json`
    - rc: `0`
    - key parsed fields include:
      - `instance_plane_detail.fixture_runtime_boundary.path_governance_status=PASS_REQUIRED`
      - `validators.fixture_runtime_boundary.rc=0`
 
 10. e2e wiring (escalated):
-    - `IDENTITY_CATALOG=/Users/yangxi/.codex/identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
+    - `IDENTITY_CATALOG=/Users/yangxi/.codex/.identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
     - rc: `0`
     - key tail includes:
       - `[10.17/30] validate fixture/runtime boundary gate (for each target identity)`
@@ -915,29 +929,29 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
      - result: `RC_STATIC_FIX007=0`
    - validator semantics:
      - runtime pass:
-       - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --json-only`
+       - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --json-only`
        - rc=0, `path_governance_status=PASS_REQUIRED`
      - fixture mutation fail without override:
-       - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --json-only`
+       - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --json-only`
        - rc=1, `path_error_codes=["IP-PATH-004"]`, stale reasons include `fixture_runtime_override_required` and `fixture_override_receipt_missing`
      - fixture non-mutation skip:
-       - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation scan --json-only`
+       - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation scan --json-only`
        - rc=0, `path_governance_status=SKIPPED_NOT_REQUIRED`
      - fixture override+receipt pass:
-       - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --allow-fixture-runtime --fixture-audit-receipt /tmp/fix007-fixture-receipt.json --json-only`
+       - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --allow-fixture-runtime --fixture-audit-receipt /tmp/fix007-fixture-receipt.json --json-only`
        - rc=0, `path_governance_status=PASS_REQUIRED`
    - chain wiring:
-     - readiness (escalated): `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report-policy warn --capability-activation-policy route-any-ready`
+     - readiness (escalated): `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --execution-report-policy warn --capability-activation-policy route-any-ready`
        - rc=0, logs include:
          - `[RUN] ... validate_fixture_runtime_boundary.py ... --operation readiness --json-only`
          - `[INFO] fixture/runtime boundary preflight: status=PASS_REQUIRED ...`
          - `[OK] release readiness checks PASSED`
-     - e2e (escalated): `IDENTITY_CATALOG=/Users/yangxi/.codex/identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
+     - e2e (escalated): `IDENTITY_CATALOG=/Users/yangxi/.codex/.identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
        - rc=0, includes `[10.17/30] validate fixture/runtime boundary gate ...`, and tail `E2E smoke test PASSED`
      - visibility:
-       - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix007-audit.json`
+       - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/full-scan-fix007-audit.json`
        - parsed rows: `('project', ..., 0, 'PASS_REQUIRED', [])`, `('global', ..., 0, 'PASS_REQUIRED', [])`
-       - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix007-audit.json`
+       - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix007-audit.json`
        - parsed: `instance_plane_detail.fixture_runtime_boundary.path_governance_status=PASS_REQUIRED`, validator `rc=0`
 3. Audit note:
    - FIX-007 acceptance is independent from emergency lane HOTFIX items.
@@ -988,34 +1002,34 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - key tail: `RC_FIX008_STATIC=0`
 
 2. Full scan (target):
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix008.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/full-scan-fix008.json`
    - rc: `0`
    - key tail:
      - actor validator entries visible with inspection semantics
      - inspection scope returns `SKIPPED_NOT_REQUIRED` instead of false fail-closed P0 on absent actor artifacts
 
 3. Three-plane visibility:
-   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix008.json`
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix008.json`
    - rc: `0`
    - key tail:
      - actor-related detail fields present under `instance_plane_detail`
      - no hard failure caused by inspection-only context
 
 4. Readiness strict path (escalated):
-   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --capability-activation-policy strict-union`
+   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --capability-activation-policy strict-union`
    - rc: `0`
    - key tail:
      - actor validators invoked with `--operation readiness`
      - strict semantics retained; readiness remains fail-closed when strict conditions are violated
 
 5. Creator validate path:
-   - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml`
+   - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml`
    - rc: `0`
    - key tail:
      - actor validators invoked with `--operation validate`
 
 6. e2e replay (escalated):
-   - `IDENTITY_CATALOG=/Users/yangxi/.codex/identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
+   - `IDENTITY_CATALOG=/Users/yangxi/.codex/.identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
    - rc: `0`
    - key tail:
      - `[10.18/30] validate actor-scoped session isolation gates ...`
@@ -1103,7 +1117,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - key tail: `RC_FIX009_STATIC=0`
 
 2. Three-plane replay:
-   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix009.json`
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix009.json`
    - rc: `0`
    - key tail:
      - `validators.no_implicit_switch.rc=0`
@@ -1111,14 +1125,14 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
      - no parser error text appears.
 
 3. Full scan replay:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix009.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/full-scan-fix009.json`
    - rc: `0`
    - key tail:
      - check `no_implicit_switch` includes `"operation":"scan"` payload
      - check `no_implicit_switch.rc=0` in both project/global layer outputs.
 
 4. Creator validate replay:
-   - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml`
+   - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml`
    - rc: `0`
    - key tail:
      - command trace includes `validate_no_implicit_switch.py ... --operation validate`
@@ -1141,9 +1155,9 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 1. Decision: `PASS` (scoped to FIX-009 objective).
 2. Replayed evidence:
    - validator direct replay:
-     - `python3 scripts/validate_no_implicit_switch.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only` => rc=`0`, payload includes `"operation":"scan"`, `implicit_switch_status=SKIPPED_NOT_REQUIRED`.
+     - `python3 scripts/validate_no_implicit_switch.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only` => rc=`0`, payload includes `"operation":"scan"`, `implicit_switch_status=SKIPPED_NOT_REQUIRED`.
    - full-scan replay:
-     - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/fix009-full-scan-audit.json` => rc=`0`
+     - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/fix009-full-scan-audit.json` => rc=`0`
      - project/global `no_implicit_switch` tails include `"operation":"scan"`.
    - readiness replay (escalated):
      - `python3 scripts/release_readiness_check.py ...` => rc=`0`
@@ -1151,7 +1165,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
        - `validate_no_implicit_switch.py ... --operation readiness`
        - `[OK] release readiness checks PASSED`
    - e2e replay (escalated):
-     - `IDENTITY_CATALOG=/Users/yangxi/.codex/identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh` => rc=`0`
+     - `IDENTITY_CATALOG=/Users/yangxi/.codex/.identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh` => rc=`0`
      - output includes `"operation":"e2e"` and `E2E smoke test PASSED`.
 3. Audit note:
    - FIX-009 closure does not change FIX-008 historical `REJECT`; that gap is closed by FIX-010.
@@ -1286,10 +1300,10 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - Wired `--force-check --enforce-user-visible-gate` into validate/readiness/e2e/full-scan/three-plane/required-gates.
    - Added deterministic stamp artifact output support via `render_identity_response_stamp.py --out <path>`.
 4. Acceptance replay (rc + key tail):
-   - `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --enforce-user-visible-gate --force-check --json-only`
+   - `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --enforce-user-visible-gate --force-check --json-only`
      - rc=`1`, `error_code=IP-ASB-STAMP-004`, `blocker_receipt_path=/private/tmp/identity-stamp-blocker-receipt-base-repo-architect.json`
-   - `python3 scripts/render_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --view external --out /tmp/hotfix1-stamp.json --json-only`
-     + `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json /tmp/hotfix1-stamp.json --enforce-user-visible-gate --force-check --blocker-receipt-out /tmp/hotfix1-blocker.json --json-only`
+   - `python3 scripts/render_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --view external --out /tmp/hotfix1-stamp.json --json-only`
+     + `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json /tmp/hotfix1-stamp.json --enforce-user-visible-gate --force-check --blocker-receipt-out /tmp/hotfix1-blocker.json --json-only`
      - rc=`0`, `stamp_status=PASS`
    - `python3 scripts/release_readiness_check.py ...`
      - rc=`0`, includes:
@@ -1305,14 +1319,14 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 1. Decision: `REJECT` (HOTFIX-P0-001 is not closed due receipt lifecycle inconsistency).
 2. Replayed evidence:
    - hard-gate negative path:
-     - `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --enforce-user-visible-gate --force-check --json-only`
+     - `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --enforce-user-visible-gate --force-check --json-only`
      - rc=`1`, `error_code=IP-ASB-STAMP-004`, blocker receipt generated.
    - hard-gate positive path:
      - `python3 scripts/render_identity_response_stamp.py ... --out /tmp/hotfix1-stamp-audit.json --json-only`
      - `python3 scripts/validate_identity_response_stamp.py ... --stamp-json /tmp/hotfix1-stamp-audit.json --enforce-user-visible-gate --force-check --blocker-receipt-out /tmp/hotfix1-blocker-audit.json --json-only`
      - rc=`0`, `stamp_status=PASS`.
    - nondeterministic failure path in validate chain:
-     - `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml`
+     - `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml`
      - rc=`1`, key failure:
        - `[FAIL] IP-ASB-STAMP-001 blocker receipt missing required fields: ['actual_identity_id']`
 3. Root-cause anchors:
@@ -1410,10 +1424,10 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
      - `validate_cross_actor_isolation.py`
 4. Acceptance replay (rc + key tail):
    - actor binding source creation:
-     - `python3 scripts/identity_creator.py activate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --actor-id user:yangxi --run-id hotfix-p0-002-actor-sync --switch-reason hotfix_p0_002_actor_binding`
-     - rc=`0`, includes `[OK] session identity actor-bound: /Users/yangxi/.codex/identity/session/actors/user_yangxi.json`
+     - `python3 scripts/identity_creator.py activate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --actor-id user:yangxi --run-id hotfix-p0-002-actor-sync --switch-reason hotfix_p0_002_actor_binding`
+     - rc=`0`, includes `[OK] session identity actor-bound: /Users/yangxi/.codex/.identity/session/actors/user_yangxi.json`
    - default cross-actor demotion block:
-     - `python3 scripts/identity_creator.py activate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --actor-id user:auditor --run-id hotfix-cross-actor-block-2 --switch-reason cross_actor_probe`
+     - `python3 scripts/identity_creator.py activate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --actor-id user:auditor --run-id hotfix-cross-actor-block-2 --switch-reason cross_actor_probe`
      - rc=`1`, includes `[FAIL] cross-actor demotion blocked by default ...`
    - validator replay:
      - `validate_actor_session_binding(base-repo-architect)` => rc=`0`, `actor_binding_status=PASS_REQUIRED`
@@ -1431,14 +1445,14 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 1. Decision: `PASS` (scoped to HOTFIX-P0-002 objective).
 2. Replayed evidence:
    - actor session source exists:
-     - `/Users/yangxi/.codex/identity/session/actors/user_yangxi.json`
+     - `/Users/yangxi/.codex/.identity/session/actors/user_yangxi.json`
      - key fields include `actor_id=user:yangxi`, `identity_id=base-repo-architect`, `session_pointer_type=actor_binding`.
    - validators:
-     - `python3 scripts/validate_actor_session_binding.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --json-only` => rc=`0`, `actor_binding_status=PASS_REQUIRED`
-     - `python3 scripts/validate_no_implicit_switch.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --json-only` => rc=`0`, `implicit_switch_status=PASS_REQUIRED`
-     - `python3 scripts/validate_cross_actor_isolation.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --identity-id base-repo-architect --json-only` => rc=`0`, `cross_actor_isolation_status=PASS_REQUIRED`
+     - `python3 scripts/validate_actor_session_binding.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --json-only` => rc=`0`, `actor_binding_status=PASS_REQUIRED`
+     - `python3 scripts/validate_no_implicit_switch.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --json-only` => rc=`0`, `implicit_switch_status=PASS_REQUIRED`
+     - `python3 scripts/validate_cross_actor_isolation.py --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --identity-id base-repo-architect --json-only` => rc=`0`, `cross_actor_isolation_status=PASS_REQUIRED`
    - default cross-actor block:
-     - `python3 scripts/identity_creator.py activate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --scope USER --actor-id user:auditor --run-id hotfix-cross-actor-block-audit --switch-reason cross_actor_probe`
+     - `python3 scripts/identity_creator.py activate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --scope USER --actor-id user:auditor --run-id hotfix-cross-actor-block-audit --switch-reason cross_actor_probe`
      - rc=`1`, tail includes `[FAIL] cross-actor demotion blocked by default ...`
 3. Audit note:
    - this verdict is isolated to actor-scoped binding and cross-actor isolation behavior.
@@ -1464,7 +1478,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 
 #### Evidence (replay)
 
-1. `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml`
+1. `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml`
    - rc=`1`
    - failure tail:
      - `[FAIL] IP-ASB-STAMP-001 blocker receipt missing required fields: ['actual_identity_id']`
@@ -1503,10 +1517,10 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - On pass path, stale blocker receipt at the same target path is removed, preventing cross-run residue from poisoning subsequent validation.
 4. Acceptance replay (rc + key tail):
    - fail sample (hard-gate missing stamp):
-     - `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --enforce-user-visible-gate --force-check --json-only`
+     - `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --enforce-user-visible-gate --force-check --json-only`
      - rc=`1`, `error_code=IP-ASB-STAMP-004`, blocker receipt includes `actual_identity_id=MISSING_STAMP`
    - blocker receipt schema check:
-     - `python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt /tmp/identity-stamp-blocker-receipt-base-repo-architect.json --json-only`
+     - `python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt /tmp/identity-stamp-blocker-receipt-base-repo-architect.json --json-only`
      - rc=`0`, `receipt_status=PASS`
    - pass sample with same receipt path:
      - `python3 scripts/render_identity_response_stamp.py ... --out /tmp/hotfix3-stamp.json --json-only`
@@ -1514,7 +1528,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
      - rc=`0`, `stamp_status=PASS`, `blocker_receipt_path=""`
      - `ls -l /tmp/identity-stamp-blocker-receipt-base-repo-architect.json` => missing (expected cleanup)
    - deterministic validate chain replay:
-     - `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml`
+     - `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml`
      - rc=`0`, includes:
        - `validate_identity_response_stamp PASSED`
        - `validate_identity_response_stamp_blocker_receipt PASSED`
@@ -1529,15 +1543,15 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 1. Decision: `PASS` (scoped to HOTFIX-P0-003 objective).
 2. Replayed evidence:
    - fail path receipt field hardening:
-     - `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --enforce-user-visible-gate --force-check --blocker-receipt-out /tmp/hotfix003-receipt-audit.json --json-only` => rc=`1`; payload includes `error_code=IP-ASB-STAMP-004` and blocker receipt `actual_identity_id=MISSING_STAMP`.
+     - `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --enforce-user-visible-gate --force-check --blocker-receipt-out /tmp/hotfix003-receipt-audit.json --json-only` => rc=`1`; payload includes `error_code=IP-ASB-STAMP-004` and blocker receipt `actual_identity_id=MISSING_STAMP`.
    - pass path stale-receipt cleanup:
      - render + validate with same `--blocker-receipt-out /tmp/hotfix003-receipt-audit.json` => rc=`0`, `stamp_status=PASS`.
      - receipt file no longer exists after PASS path (`cleanup confirmed`).
    - downstream receipt validator determinism:
-     - `python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --receipt /tmp/hotfix003-receipt-audit.json --force-check --json-only` => rc=`0`, `receipt_status=PASS`.
+     - `python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --receipt /tmp/hotfix003-receipt-audit.json --force-check --json-only` => rc=`0`, `receipt_status=PASS`.
    - full validate-chain determinism:
-     - `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml` => rc=`0`
-     - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml` => rc=`0`.
+     - `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml` => rc=`0`
+     - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml` => rc=`0`.
 3. Audit note:
    - HOTFIX-P0-003 resolves the blocker-receipt lifecycle nondeterminism that caused HOTFIX-P0-001 rejection replay.
 
@@ -1547,9 +1561,9 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 
 ### Snapshot command set
 
-1. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids "base-repo-audit-expert-v3 office-ops-expert store-manager base-repo-architect custom-creative-ecom-analyst system-requirements-analyst" --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-next-task.json`
+1. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids "base-repo-audit-expert-v3 office-ops-expert store-manager base-repo-architect custom-creative-ecom-analyst system-requirements-analyst" --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/full-scan-next-task.json`
 2. `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix010-project-replay2.json`
-3. `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix010-global-replay2.json`
+3. `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix010-global-replay2.json`
 
 ### Observed summary
 
@@ -1617,9 +1631,9 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - `validate_writeback_continuity` on latest runtime report (`custom-creative-ecom-analyst`) => `FAIL_REQUIRED`, `error_code=IP-WRB-001` when `writeback_status=MISSING`.
    - `validate_post_execution_mandatory` on same report => `FAIL_REQUIRED`, `error_code=IP-WRB-003` when post-execution closure is incomplete.
 3. Chain visibility:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix011.json` => `rc=0`; includes `checks.writeback_continuity` + `checks.post_execution_mandatory`.
-   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix011.json` => `rc=0`; includes `instance_plane_detail.writeback_continuity` + `instance_plane_detail.post_execution_mandatory`.
-   - `python3 scripts/collect_identity_health_report.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out-dir /tmp/identity-health-reports` => `rc=0`; report shows Track-A failures as health signals.
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/full-scan-fix011.json` => `rc=0`; includes `checks.writeback_continuity` + `checks.post_execution_mandatory`.
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix011.json` => `rc=0`; includes `instance_plane_detail.writeback_continuity` + `instance_plane_detail.post_execution_mandatory`.
+   - `python3 scripts/collect_identity_health_report.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out-dir /tmp/identity-health-reports` => `rc=0`; report shows Track-A failures as health signals.
 
 #### Residual risk
 
@@ -1637,14 +1651,14 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 1. Decision: `PASS` (scoped to FIX-011 objective).
 2. Replay evidence summary:
    - sandbox:
-     - `python3 scripts/validate_writeback_continuity.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation readiness --json-only` => `rc=1`, `writeback_continuity_status=FAIL_REQUIRED`, `error_code=IP-WRB-001`.
-     - `python3 scripts/validate_post_execution_mandatory.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation readiness --json-only` => `rc=1`, `post_execution_mandatory_status=FAIL_REQUIRED`, `error_code=IP-WRB-003`.
-     - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix011-audit.json` => `rc=0`, includes `checks.writeback_continuity` + `checks.post_execution_mandatory`.
-     - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix011-audit.json` => `rc=0`, includes `instance_plane_detail.writeback_continuity` + `instance_plane_detail.post_execution_mandatory`.
-     - `python3 scripts/collect_identity_health_report.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out-dir /tmp/identity-health-reports-fix011-audit` => `rc=0`, `overall_status=FAIL`, `failed_count=2` with Track-A repair guidance.
+     - `python3 scripts/validate_writeback_continuity.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation readiness --json-only` => `rc=1`, `writeback_continuity_status=FAIL_REQUIRED`, `error_code=IP-WRB-001`.
+     - `python3 scripts/validate_post_execution_mandatory.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation readiness --json-only` => `rc=1`, `post_execution_mandatory_status=FAIL_REQUIRED`, `error_code=IP-WRB-003`.
+     - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/full-scan-fix011-audit.json` => `rc=0`, includes `checks.writeback_continuity` + `checks.post_execution_mandatory`.
+     - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix011-audit.json` => `rc=0`, includes `instance_plane_detail.writeback_continuity` + `instance_plane_detail.post_execution_mandatory`.
+     - `python3 scripts/collect_identity_health_report.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out-dir /tmp/identity-health-reports-fix011-audit` => `rc=0`, `overall_status=FAIL`, `failed_count=2` with Track-A repair guidance.
    - escalated (`~/.codex` writable):
-     - `python3 scripts/identity_creator.py update --identity-id custom-creative-ecom-analyst --mode review-required --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --capability-activation-policy route-any-ready` => `rc=2`, report generated with `all_ok=False` and non-closure `next_action`.
-     - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready` => `rc=2`, early-stop at update non-zero path (expected current behavior).
+     - `python3 scripts/identity_creator.py update --identity-id custom-creative-ecom-analyst --mode review-required --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --capability-activation-policy route-any-ready` => `rc=2`, report generated with `all_ok=False` and non-closure `next_action`.
+     - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready` => `rc=2`, early-stop at update non-zero path (expected current behavior).
 3. Audit note:
    - FIX-011 is accepted as Track-A gate landing and visibility closure; this does not claim Track-A runtime closure for the target identity state.
    - `python3 scripts/docs_command_contract_check.py` and `python3 scripts/validate_protocol_ssot_source.py` replayed clean (`rc=0`).
@@ -1684,14 +1698,14 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - `bash -n scripts/e2e_smoke_test.sh`
    - result: `rc=0`
 2. Contract-first skip path (no Track-B contract and no feedback artifacts):
-   - `python3 scripts/validate_semantic_routing_guard.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only` => `rc=0`, `semantic_routing_status=SKIPPED_NOT_REQUIRED`.
-   - `python3 scripts/validate_vendor_namespace_separation.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only` => `rc=0`, `vendor_namespace_status=SKIPPED_NOT_REQUIRED`.
+   - `python3 scripts/validate_semantic_routing_guard.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only` => `rc=0`, `semantic_routing_status=SKIPPED_NOT_REQUIRED`.
+   - `python3 scripts/validate_vendor_namespace_separation.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only` => `rc=0`, `vendor_namespace_status=SKIPPED_NOT_REQUIRED`.
 3. Auto-required risk path (legacy feedback artifacts present):
-   - `python3 scripts/validate_semantic_routing_guard.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only` => `rc=1`, `semantic_routing_status=FAIL_REQUIRED`, `error_code=IP-SEM-001`, `auto_required_signal=true`.
-   - `python3 scripts/validate_vendor_namespace_separation.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only` => `rc=1`, `vendor_namespace_status=FAIL_REQUIRED`, `error_code=IP-SEM-003`, includes legacy `vendor-intel/*` evidence refs.
+   - `python3 scripts/validate_semantic_routing_guard.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only` => `rc=1`, `semantic_routing_status=FAIL_REQUIRED`, `error_code=IP-SEM-001`, `auto_required_signal=true`.
+   - `python3 scripts/validate_vendor_namespace_separation.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only` => `rc=1`, `vendor_namespace_status=FAIL_REQUIRED`, `error_code=IP-SEM-003`, includes legacy `vendor-intel/*` evidence refs.
 4. Chain visibility:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix012-system.json` => `rc=0`; includes `checks.semantic_routing_guard` + `checks.vendor_namespace_separation`.
-   - `python3 scripts/report_three_plane_status.py --identity-id system-requirements-analyst --scope USER --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix012-system.json` => `rc=0`; includes `instance_plane_detail.semantic_routing_guard` + `instance_plane_detail.vendor_namespace_separation`.
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/full-scan-fix012-system.json` => `rc=0`; includes `checks.semantic_routing_guard` + `checks.vendor_namespace_separation`.
+   - `python3 scripts/report_three_plane_status.py --identity-id system-requirements-analyst --scope USER --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix012-system.json` => `rc=0`; includes `instance_plane_detail.semantic_routing_guard` + `instance_plane_detail.vendor_namespace_separation`.
 
 #### Residual risk
 
@@ -1764,18 +1778,18 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - `bash -n scripts/e2e_smoke_test.sh`
    - result: `rc=0`
 2. Contract-first skip path (no sidecar contract + no protocol-feedback artifacts):
-   - `python3 scripts/validate_protocol_feedback_sidecar_contract.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
+   - `python3 scripts/validate_protocol_feedback_sidecar_contract.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
    - result: `rc=0`, `sidecar_contract_status=SKIPPED_NOT_REQUIRED`
 3. Auto-required risk path (legacy protocol-feedback artifacts present, sidecar contract missing):
-   - `python3 scripts/validate_protocol_feedback_sidecar_contract.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
+   - `python3 scripts/validate_protocol_feedback_sidecar_contract.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
    - result: `rc=1`, `sidecar_contract_status=FAIL_REQUIRED`, `sidecar_error_code=IP-SID-001`, `auto_required_signal=true`
 4. Chain visibility:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix013-system.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/full-scan-fix013-system.json`
    - result: `rc=0`; includes `checks.protocol_feedback_sidecar` with machine-readable sidecar fields.
-   - `python3 scripts/report_three_plane_status.py --identity-id system-requirements-analyst --scope USER --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix013-system.json`
+   - `python3 scripts/report_three_plane_status.py --identity-id system-requirements-analyst --scope USER --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix013-system.json`
    - result: `rc=0`; includes `instance_plane_detail.protocol_feedback_sidecar`.
 5. Health visibility:
-   - `python3 scripts/collect_identity_health_report.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out-dir /tmp/identity-health-reports-fix013`
+   - `python3 scripts/collect_identity_health_report.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out-dir /tmp/identity-health-reports-fix013`
    - result: `rc=0`; `checks[].name=protocol_feedback_sidecar` mapped to structured FAIL/WARN/PASS semantics.
 
 #### Residual risk
@@ -1846,14 +1860,14 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - `bash -n scripts/e2e_smoke_test.sh`
    - result: `rc=0`
 2. Contract-first skip path:
-   - `python3 scripts/validate_required_contract_coverage.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
+   - `python3 scripts/validate_required_contract_coverage.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
    - expected: rc reflects required-contract snapshot and includes Track-B/sidecar rows as `SKIPPED_NOT_REQUIRED` when no contract/auto-required signal.
 3. Auto-required fail path visibility:
-   - `python3 scripts/validate_required_contract_coverage.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
+   - `python3 scripts/validate_required_contract_coverage.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
    - expected: non-zero with Track-B rows carrying `FAIL_REQUIRED` and `IP-SEM-*` reason codes.
 4. Chain wiring visibility:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix014-system.json`
-   - `python3 scripts/report_three_plane_status.py --identity-id system-requirements-analyst --scope USER --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix014-system.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/full-scan-fix014-system.json`
+   - `python3 scripts/report_three_plane_status.py --identity-id system-requirements-analyst --scope USER --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix014-system.json`
    - expected: coverage payload fields remain machine-readable and operation-consistent.
 
 #### Residual risk
@@ -1955,7 +1969,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 ### 8.1 Deep-scan summary
 
 1. Command:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids "custom-creative-ecom-analyst system-requirements-analyst base-repo-audit-expert-v3" --repo-catalog identity/catalog/identities.yaml --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --include-repo-catalog --out /tmp/full-scan-fix015-deep-audit.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids "custom-creative-ecom-analyst system-requirements-analyst base-repo-audit-expert-v3" --repo-catalog identity/catalog/identities.yaml --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --include-repo-catalog --out /tmp/full-scan-fix015-deep-audit.json`
 2. Result:
    - `summary={"total_identities":6,"p0":1,"p1":3,"ok":2}`
    - `repo:system-requirements-analyst => OK`
@@ -1994,11 +2008,11 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 
 1. `identity_creator update --mode review-required`:
    - `rc=2`, report generated:
-     - `/Users/yangxi/.codex/identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772296492.json`
+     - `/Users/yangxi/.codex/.identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772296492.json`
    - key: `all_ok=false`, `next_action=review_required_create_pr_from_patch_plan`
 2. `identity_creator update --mode safe-auto`:
    - `rc=3`, report generated:
-     - `/Users/yangxi/.codex/identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772297050.json`
+     - `/Users/yangxi/.codex/.identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772297050.json`
    - key: `all_ok=false`, `next_action=blocked_by_safe_auto_path_policy`, `permission_error_code=IP-UPG-001`, `experience_writeback.error_code=IP-SAFEAUTO-001`
 3. `release_readiness_check.py` (self):
    - `rc=2`, fail point:
@@ -2129,7 +2143,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
    - Evidence:
      - `scripts/release_readiness_check.py:174-186` calls runtime-mode-guard without `--scope`.
      - replay:
-       - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --base HEAD~1 --head HEAD --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn`
+       - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --base HEAD~1 --head HEAD --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn`
        - result: `IP-ENV-002 ... multiple pack paths ... Pass --scope to arbitrate explicitly.`
      - scope enum reference remains canonical in resolver:
        - `scripts/resolve_identity_context.py:393` (`REPO/USER/ADMIN/SYSTEM`).
@@ -2145,11 +2159,11 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
        - `scripts/full_identity_protocol_scan.py:390`
        - `scripts/report_three_plane_status.py:357`
        - `.github/workflows/_identity-required-gates.yml:167`
-4. Claim: current session cannot write base repo and `~/.codex/identity`.
+4. Claim: current session cannot write base repo and `~/.codex/.identity`.
    - Verdict: `PARTIAL / CONTEXT-DEPENDENT`
    - Evidence from audit replay context:
      - base repo probe (`identity-protocol-local`) write: `ok`
-     - `~/.codex/identity` write: `Operation not permitted`
+     - `~/.codex/.identity` write: `Operation not permitted`
    - implication:
      - platform/sandbox rights differ by path/context; governance gate must enforce policy independent of runtime permission profile.
 5. Claim: protocol-feedback SSOT archival needs required gate with fail-closed errors (`IP-GOV-FEEDBACK-*`).
@@ -2274,7 +2288,7 @@ Replay evidence (architect local):
    - `python3 scripts/validate_protocol_feedback_ssot_archival.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --feedback-root /tmp/ssot-pass --operation ci --json-only`
    - `rc=0`, `feedback_ssot_archival_status=PASS_REQUIRED`.
 3. runtime real sample pass (`system-requirements-analyst`):
-   - `python3 scripts/validate_protocol_feedback_ssot_archival.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
+   - `python3 scripts/validate_protocol_feedback_ssot_archival.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
    - `rc=0`, `feedback_ssot_archival_status=PASS_REQUIRED`.
 
 ### 12.3 HOTFIX-P0-007 (readiness `--scope` arbitration chain)
@@ -2292,7 +2306,7 @@ Implemented:
 Replay evidence (architect local):
 
 1. no-scope dual-catalog ambiguity fail-closed:
-   - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
+   - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
    - `rc=2`, early fail `IP-ENV-002`.
 2. explicit scope replay enters main chain:
    - same command + `--scope USER`
@@ -2302,7 +2316,7 @@ Replay evidence (architect local):
 
 1. `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER`
    - `rc=0` (new validators wired and replayed).
-2. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-hotfix-p0.json`
+2. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/full-scan-hotfix-p0.json`
    - `rc=0`, outputs contain `instance_base_repo_write_boundary` + `protocol_feedback_ssot_archival` checks.
 3. `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --scope USER --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-hotfix-p0.json`
    - `rc=0`, `instance_plane_detail` contains both new governance-boundary sections.
@@ -2327,17 +2341,17 @@ Patch focus:
 Replay evidence (escalated context, `~/.codex` writable):
 
 1. update report canonicality check:
-   - `python3 scripts/identity_creator.py update --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --mode review-required --capability-activation-policy route-any-ready`
+   - `python3 scripts/identity_creator.py update --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --mode review-required --capability-activation-policy route-any-ready`
    - latest report: `.../identity-upgrade-exec-base-repo-audit-expert-v3-1772302614.json`
-   - field check: `resolved_pack_path=/Users/yangxi/.codex/identity/base-repo-audit-expert-v3` (canonical absolute).
+   - field check: `resolved_pack_path=/Users/yangxi/.codex/.identity/base-repo-audit-expert-v3` (canonical absolute).
 2. repair-paths regression guard:
-   - `python3 scripts/identity_installer.py repair-paths --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER`
+   - `python3 scripts/identity_installer.py repair-paths --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER`
    - post-repair check: same report keeps absolute `resolved_pack_path` + `identity_prompt_path`.
 3. heal closure replay:
-   - `python3 scripts/identity_creator.py heal --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --apply`
+   - `python3 scripts/identity_creator.py heal --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --apply`
    - `rc=0` (`FAIL_VALIDATE` no longer reproduced in this replay window).
 4. readiness replay (bounded compare window to exclude changelog noise):
-   - `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --execution-report /Users/yangxi/.codex/identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772302614.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --base 7b5f621 --head 7b5f621`
+   - `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --scope USER --execution-report /Users/yangxi/.codex/.identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772302614.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --base 7b5f621 --head 7b5f621`
    - `rc=0`, tail contains `[OK] release readiness checks PASSED`.
 
 ---
@@ -2358,24 +2372,24 @@ Replay evidence (escalated context, `~/.codex` writable):
 1. Claim: `system-requirements-analyst` protocol-feedback files are in SSOT channel and traceable.
    - Verdict: `CONFIRMED`
    - Evidence:
-     - outbox batch exists: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-01_003.md`
-     - evidence index exists: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`
+     - outbox batch exists: `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-01_003.md`
+     - evidence index exists: `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`
      - validator replay:
-       - `python3 scripts/validate_protocol_feedback_ssot_archival.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+       - `python3 scripts/validate_protocol_feedback_ssot_archival.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only`
        - `rc=0`, `feedback_ssot_archival_status=PASS_REQUIRED`.
 
 2. Claim: semantic routing + vendor namespace separation passed for `system-requirements-analyst`.
    - Verdict: `CONFIRMED`
    - Evidence:
-     - `python3 scripts/validate_semantic_routing_guard.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+     - `python3 scripts/validate_semantic_routing_guard.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only`
        - `rc=0`, `semantic_routing_status=PASS_REQUIRED`.
-     - `python3 scripts/validate_vendor_namespace_separation.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+     - `python3 scripts/validate_vendor_namespace_separation.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only`
        - `rc=0`, `vendor_namespace_status=PASS_REQUIRED`.
 
 3. Claim: `custom-creative-ecom-analyst` validate full chain is `rc=0`.
    - Verdict: `REJECT (stale claim under current HEAD)`
    - Evidence:
-     - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER`
+     - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER`
      - replay result: `rc=1` at `validate_writeback_continuity.py` with `error_code=IP-WRB-001` and `writeback_continuity_status=FAIL_REQUIRED`.
 
 4. Claim: `IP-PBL-001` baseline mismatch still appears in active scans.
@@ -2392,7 +2406,7 @@ Replay evidence (escalated context, `~/.codex` writable):
        - `scripts/release_readiness_check.py` exposes `--scope` and forwards into scope/runtime validators.
        - `scripts/identity_creator.py` update/validate chain also carries `--scope`.
      - escalated replay A (`system-requirements-analyst`, fixed execution report, **no scope**):
-       - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
+       - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
        - `rc=2`, deterministic `IP-ENV-002 ... Pass --scope to arbitrate explicitly.`
      - escalated replay B (same command + `--scope USER`):
        - runtime mode/scope preflight passes; no `IP-ENV-002` branch.
@@ -2408,7 +2422,7 @@ Replay evidence (escalated context, `~/.codex` writable):
        - `validate_instance_base_repo_write_boundary.py` (ci)
        - `validate_protocol_feedback_ssot_archival.py` (ci)
      - hard-fail behavior reproduced:
-       - `python3 scripts/validate_instance_base_repo_write_boundary.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --check-git-diff --base 7b5f621 --head 7b191e5 --operation ci --json-only`
+       - `python3 scripts/validate_instance_base_repo_write_boundary.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --check-git-diff --base 7b5f621 --head 7b191e5 --operation ci --json-only`
        - `rc=1`, `error_code=IP-GOV-BASE-001`, `blocked_paths=["scripts/execute_identity_upgrade.py","scripts/identity_installer.py"]`.
 
 7. Incident: user-visible identity stamp in assistant replies showed abrupt identity drift (`base-repo-audit-expert-v3` -> `base-repo-architect`) during this audit window.
@@ -2418,9 +2432,9 @@ Replay evidence (escalated context, `~/.codex` writable):
        - `/tmp/identity-activation-reports/identity-activation-switch-office-ops-expert-1772361081.json`
        - fields: `switch_reason=explicit_activate`, `target_identity_id=office-ops-expert`, `actor_id=user:yangxi`, `generated_at=2026-03-01T10:31:21Z`.
      - actor session pointer was changed to `office-ops-expert` before manual recovery:
-       - `/Users/yangxi/.codex/identity/session/actors/user_yangxi.json`
+       - `/Users/yangxi/.codex/.identity/session/actors/user_yangxi.json`
      - recovery switch replay:
-       - `python3 scripts/identity_creator.py activate --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --actor-id user:yangxi --run-id p0-hotfix-identity-hard-switch-20260301 --switch-reason restore_audit_identity_after_hard_switch`
+       - `python3 scripts/identity_creator.py activate --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --actor-id user:yangxi --run-id p0-hotfix-identity-hard-switch-20260301 --switch-reason restore_audit_identity_after_hard_switch`
        - `rc=0`, switch report: `/tmp/identity-activation-reports/identity-activation-switch-base-repo-audit-expert-v3-1772361801.json`
        - active identity after recovery: `base-repo-audit-expert-v3`.
    - Audit note:
@@ -2452,34 +2466,34 @@ Replay evidence (escalated context, `~/.codex` writable):
 
 1. Active identity set is now multi-active:
    - `active_identities=['base-repo-audit-expert-v3','base-repo-architect']`, `active_count=2`
-   - source: `python3 scripts/validate_identity_state_consistency.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml`
+   - source: `python3 scripts/validate_identity_state_consistency.py --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml`
 2. Actor binding truth remains stable for current actor:
-   - `/Users/yangxi/.codex/identity/session/actors/user_yangxi.json` -> `identity_id=base-repo-audit-expert-v3`
+   - `/Users/yangxi/.codex/.identity/session/actors/user_yangxi.json` -> `identity_id=base-repo-audit-expert-v3`
 3. Latest switch report shows multi-active activation model and zero demotion:
    - `/tmp/identity-activation-reports/identity-activation-switch-base-repo-audit-expert-v3-1772362504.json`
    - `activation_model=actor_scoped_catalog_with_multi_active`
    - `single_active_enforced=false`
    - `demoted_identities=[]`
 4. No-implicit-switch validator passes with new schema:
-   - `python3 scripts/validate_no_implicit_switch.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --switch-report /tmp/identity-activation-reports/identity-activation-switch-base-repo-audit-expert-v3-1772362504.json --operation three-plane --json-only`
+   - `python3 scripts/validate_no_implicit_switch.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --switch-report /tmp/identity-activation-reports/identity-activation-switch-base-repo-audit-expert-v3-1772362504.json --operation three-plane --json-only`
    - `rc=0`, `implicit_switch_status=PASS_REQUIRED`
 5. Session pointer consistency remains pass under multi-active:
-   - `python3 scripts/validate_identity_session_pointer_consistency.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --actor-id user:yangxi --identity-id base-repo-audit-expert-v3`
+   - `python3 scripts/validate_identity_session_pointer_consistency.py --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --actor-id user:yangxi --identity-id base-repo-audit-expert-v3`
    - `rc=0`, `active_count=2`, canonical+mirror checks pass
 
 ### 14.2 Governance-boundary hotfix replay closure
 
 1. HOTFIX-P0-005 (`validate_instance_base_repo_write_boundary`) replay:
    - command:
-     - `python3 scripts/validate_instance_base_repo_write_boundary.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --check-git-diff --base 7b5f621 --head 7b191e5 --operation ci --json-only`
+     - `python3 scripts/validate_instance_base_repo_write_boundary.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --check-git-diff --base 7b5f621 --head 7b191e5 --operation ci --json-only`
    - result: `rc=1`, `base_repo_write_boundary_status=FAIL_REQUIRED`, `error_code=IP-GOV-BASE-001`, blocked `scripts/*` changes confirmed
 2. HOTFIX-P0-006 (`validate_protocol_feedback_ssot_archival`) replay:
    - command:
-     - `python3 scripts/validate_protocol_feedback_ssot_archival.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+     - `python3 scripts/validate_protocol_feedback_ssot_archival.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only`
    - result: `rc=0`, `feedback_ssot_archival_status=PASS_REQUIRED`, outbox+index linked batches present
 3. HOTFIX-P0-007 (`--scope` arbitration chain) replay:
    - no-scope replay:
-     - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
+     - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
      - `rc=2`, deterministic `IP-ENV-002` with explicit "`Pass --scope`" hint
    - scoped replay:
      - same command + `--scope USER`
@@ -2488,7 +2502,7 @@ Replay evidence (escalated context, `~/.codex` writable):
 ### 14.3 Release-path replay summary
 
 1. Readiness replay for self audit identity passes under bounded compare window:
-   - `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --execution-report /Users/yangxi/.codex/identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772302614.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --base 7b5f621 --head 7b5f621`
+   - `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --scope USER --execution-report /Users/yangxi/.codex/.identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772302614.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --base 7b5f621 --head 7b5f621`
    - `rc=0`, tail: `[OK] release readiness checks PASSED`
 2. `report_three_plane_status` shows actor/session + stamp all PASS while baseline freshness remains WARN:
    - artifact: `/tmp/three-plane-fix015-multi-active-audit.json`
@@ -2584,8 +2598,8 @@ Decision (final, anti-drift):
 
 - Intake source (evidence-only references):
   - `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-protocol-p0-p1-official-research-discovery-and-source-trust-2026-03-01.md`
-  - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-01_005.md`
-  - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`
+  - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-01_005.md`
+  - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`
 - Intake interpretation:
   - preserve existing protocol stability/layering controls,
   - add missing P0 semantic/trust safeguards,
@@ -2761,17 +2775,17 @@ Status: `PASS` (scope: validator implementation + six-surface wiring integrity)
    - `python3 -m py_compile ... && bash -n scripts/e2e_smoke_test.sh`
    - result: `rc=0`
 3. Direct validator replay:
-   - `python3 scripts/validate_external_source_trust_chain.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+   - `python3 scripts/validate_external_source_trust_chain.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only`
    - result: `rc=0`
    - key fields: `external_source_trust_chain_status=SKIPPED_NOT_REQUIRED`, `stale_reasons=["contract_not_required"]`
 4. Full-scan wiring replay:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/scan-p0e-audit.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/scan-p0e-audit.json`
    - result: `rc=0`
    - key extract:
      - project: `checks.external_source_trust_chain.rc=0`, `status=SKIPPED_NOT_REQUIRED`
      - global: `checks.external_source_trust_chain.rc=0`, `status=SKIPPED_NOT_REQUIRED`
 5. Three-plane wiring replay:
-   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --scope USER --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-p0e-audit.json`
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --scope USER --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-p0e-audit.json`
    - result: `rc=0`
    - key extract:
      - `instance_plane_detail.external_source_trust_chain.external_source_trust_chain_status=SKIPPED_NOT_REQUIRED`
@@ -2795,20 +2809,20 @@ Status: `PASS` (scope: validator implementation + six-surface wiring integrity)
    - `python3 -m py_compile ... && bash -n scripts/e2e_smoke_test.sh`
    - result: `rc=0`
 3. Direct validator replay:
-   - `python3 scripts/validate_protocol_data_sanitization_boundary.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+   - `python3 scripts/validate_protocol_data_sanitization_boundary.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only`
    - result: `rc=0`
    - key fields:
      - `protocol_data_sanitization_boundary_status=SKIPPED_NOT_REQUIRED`
      - `violation_count=0`
      - `stale_reasons=["contract_not_required"]`
 4. Full-scan wiring replay:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/scan-p0f-audit.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/scan-p0f-audit.json`
    - result: `rc=0`
    - key extract:
      - project: `checks.protocol_data_sanitization_boundary.rc=0`, `status=SKIPPED_NOT_REQUIRED`, `violation_count=0`
      - global: `checks.protocol_data_sanitization_boundary.rc=0`, `status=SKIPPED_NOT_REQUIRED`, `violation_count=0`
 5. Three-plane wiring replay:
-   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --scope USER --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-p0f-audit.json`
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --scope USER --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-p0f-audit.json`
    - result: `rc=0`
    - key extract:
      - `instance_plane_detail.protocol_data_sanitization_boundary.protocol_data_sanitization_boundary_status=SKIPPED_NOT_REQUIRED`
@@ -2834,8 +2848,8 @@ Incident summary:
 
 Evidence:
 
-1. `/Users/yangxi/.codex/identity/session/active_identity.json`
-2. `/Users/yangxi/.codex/identity/session/actors/user_yangxi.json`
+1. `/Users/yangxi/.codex/.identity/session/active_identity.json`
+2. `/Users/yangxi/.codex/.identity/session/actors/user_yangxi.json`
 3. `/tmp/identity-stamp-runtime-check-20260301.json`
 
 Gap statement:
@@ -2893,22 +2907,22 @@ Implemented package:
 Replay evidence snapshot:
 
 1. negative sample (missing first-line stamp):
-   - `python3 scripts/validate_reply_identity_context_first_line.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --reply-file /tmp/reply-missing-stamp.txt --force-check --enforce-first-line-gate --json-only`
+   - `python3 scripts/validate_reply_identity_context_first_line.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --reply-file /tmp/reply-missing-stamp.txt --force-check --enforce-first-line-gate --json-only`
    - result: `rc=1`
    - key fields: `reply_first_line_status=FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-001`, `reply_first_line_missing_count=1`
 2. positive sample (compliant first-line stamp):
-   - `python3 scripts/render_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --view external --out /tmp/reply-stamp-pass.json --json-only`
-   - `python3 scripts/validate_reply_identity_context_first_line.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json /tmp/reply-stamp-pass.json --force-check --enforce-first-line-gate --json-only`
+   - `python3 scripts/render_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --view external --out /tmp/reply-stamp-pass.json --json-only`
+   - `python3 scripts/validate_reply_identity_context_first_line.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json /tmp/reply-stamp-pass.json --force-check --enforce-first-line-gate --json-only`
    - result: `rc=0`
    - key fields: `reply_first_line_status=PASS_REQUIRED`, `reply_first_line_missing_count=0`
 3. full-scan field visibility:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/scan-hotfix-p0-004.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/scan-hotfix-p0-004.json`
    - result: `rc=0`
    - key extract:
      - project/global both expose `checks.reply_identity_context_first_line`
      - `reply_first_line_status=PASS_REQUIRED`
 4. three-plane field visibility:
-   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract`
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract`
    - result: `rc=0`
    - key extract:
      - `instance_plane_detail.response_identity_stamp.reply_first_line_status=PASS_REQUIRED`
@@ -2977,7 +2991,7 @@ Status: `PASS` (scope: live reply first-line gate contract + six-surface wiring)
    - `python3 -m py_compile ... && bash -n scripts/e2e_smoke_test.sh`
    - result: `rc=0`
 3. Negative sample replay (must fail-closed):
-   - `python3 scripts/validate_reply_identity_context_first_line.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --reply-file /tmp/reply-missing-stamp.txt --force-check --enforce-first-line-gate --json-only`
+   - `python3 scripts/validate_reply_identity_context_first_line.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --reply-file /tmp/reply-missing-stamp.txt --force-check --enforce-first-line-gate --json-only`
    - result: `rc=1`
    - key fields:
      - `reply_first_line_status=FAIL_REQUIRED`
@@ -2985,21 +2999,21 @@ Status: `PASS` (scope: live reply first-line gate contract + six-surface wiring)
      - `reply_first_line_missing_count=1`
      - blocker receipt generated
 4. Positive sample replay (must pass):
-   - `python3 scripts/render_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/reply-stamp-pass.json --json-only`
-   - `python3 scripts/validate_reply_identity_context_first_line.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json /tmp/reply-stamp-pass.json --force-check --enforce-first-line-gate --json-only`
+   - `python3 scripts/render_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/reply-stamp-pass.json --json-only`
+   - `python3 scripts/validate_reply_identity_context_first_line.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json /tmp/reply-stamp-pass.json --force-check --enforce-first-line-gate --json-only`
    - result: `rc=0`
    - key fields:
      - `reply_first_line_status=PASS_REQUIRED`
      - `reply_first_line_missing_count=0`
 5. Full-scan machine-readable exposure:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/scan-hotfix-p0-004-audit.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/scan-hotfix-p0-004-audit.json`
    - result: `rc=0`
    - key extract:
      - project/global both expose `checks.reply_identity_context_first_line.reply_first_line_status=PASS_REQUIRED`
      - `reply_first_line_missing_count=0`
      - `reply_first_line_missing_refs=[]`
 6. Three-plane machine-readable exposure:
-   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-hotfix-p0-004-audit.json`
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-hotfix-p0-004-audit.json`
    - result: `rc=0`
    - key extract:
      - `instance_plane_detail.response_identity_stamp.reply_first_line_status=PASS_REQUIRED`
@@ -3068,7 +3082,7 @@ Replay evidence summary:
      - actor gates in readiness chain are invoked with `--operation readiness`
      - `[OK] release readiness checks PASSED`
 5. Full-scan / three-plane visibility:
-   - `full_identity_protocol_scan.py --scan-mode target --identity-ids \"base-repo-audit-expert-v3 custom-creative-ecom-analyst\" --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix015-current.json`
+   - `full_identity_protocol_scan.py --scan-mode target --identity-ids \"base-repo-audit-expert-v3 custom-creative-ecom-analyst\" --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/full-scan-fix015-current.json`
    - `report_three_plane_status.py --identity-id custom-creative-ecom-analyst --scope USER --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-fix015-custom-creative-ecom-analyst.json`
    - actor binding / implicit switch / cross actor fields remain machine-readable.
 
@@ -3121,12 +3135,12 @@ Replay snapshot (local):
    - `bash -n scripts/e2e_smoke_test.sh`
    - result: `rc=0`
 2. Direct validator replay (`custom-creative-ecom-analyst`, global runtime catalog):
-   - `python3 scripts/validate_identity_capability_fit_optimization.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
-   - `python3 scripts/validate_capability_composition_before_discovery.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
-   - `python3 scripts/validate_capability_fit_review_freshness.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+   - `python3 scripts/validate_identity_capability_fit_optimization.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only`
+   - `python3 scripts/validate_capability_composition_before_discovery.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only`
+   - `python3 scripts/validate_capability_fit_review_freshness.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only`
    - result: `rc=0` for all three; statuses are `SKIPPED_NOT_REQUIRED` on non-required contract path.
 3. Full-scan wiring replay:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/scan-p1f-local.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/scan-p1f-local.json`
    - result: `rc=0`
    - key extract:
      - project/global both expose:
@@ -3134,7 +3148,7 @@ Replay snapshot (local):
        - `checks.capability_composition_before_discovery.rc=0` + `compose_before_discovery_status`
        - `checks.capability_fit_review_freshness.rc=0` + `capability_fit_review_freshness_status`
 4. Three-plane wiring replay:
-   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-p1f-local.json`
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-p1f-local.json`
    - result: `rc=0`
    - key extract:
      - `instance_plane_detail.capability_fit_optimization.*` visible
@@ -3187,12 +3201,12 @@ Replay snapshot (local):
    - `bash -n scripts/e2e_smoke_test.sh`
    - result: `rc=0`
 2. Direct validator/trigger/tool replay (`custom-creative-ecom-analyst`, global runtime catalog):
-   - `python3 scripts/validate_capability_fit_roundtable_evidence.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
-   - `python3 scripts/trigger_capability_fit_review.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
-   - `python3 scripts/build_capability_fit_matrix.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --out-root /tmp/capability-fit-matrices --json-only`
+   - `python3 scripts/validate_capability_fit_roundtable_evidence.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only`
+   - `python3 scripts/trigger_capability_fit_review.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only`
+   - `python3 scripts/build_capability_fit_matrix.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --out-root /tmp/capability-fit-matrices --json-only`
    - result: `rc=0` for all three; statuses are `SKIPPED_NOT_REQUIRED` on non-required contract path.
 3. Full-scan wiring replay:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/scan-p1gh-local.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/scan-p1gh-local.json`
    - result: `rc=0`
    - key extract:
      - project/global both expose:
@@ -3200,7 +3214,7 @@ Replay snapshot (local):
        - `checks.capability_fit_review_trigger.rc=0` + `capability_fit_review_trigger_status`
        - `checks.capability_fit_matrix_builder.rc=0` + `capability_fit_matrix_builder_status`
 4. Three-plane wiring replay:
-   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-p1gh-local.json`
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-p1gh-local.json`
    - result: `rc=0`
    - key extract:
      - `instance_plane_detail.capability_fit_roundtable_evidence.*` visible
@@ -3227,7 +3241,7 @@ Status: `PASS` (scope: protocol-layer wiring + machine-readable visibility under
 2. Static checks:
    - `python3 -m py_compile ...` (all new P1 scripts + wired surfaces) and `bash -n scripts/e2e_smoke_test.sh`
    - result: `rc=0`
-3. Direct replay (`custom-creative-ecom-analyst`, `/Users/yangxi/.codex/identity/catalog.local.yaml`, `--operation scan --json-only`):
+3. Direct replay (`custom-creative-ecom-analyst`, `/Users/yangxi/.codex/.identity/catalog.local.yaml`, `--operation scan --json-only`):
    - `trigger_platform_optimization_discovery.py` -> `rc=0`, `platform_optimization_discovery_status=SKIPPED_NOT_REQUIRED`, `triggered=false`
    - `build_vibe_coding_feeding_pack.py` -> `rc=0`, `vibe_coding_feeding_pack_status=SKIPPED_NOT_REQUIRED`
    - `validate_identity_capability_fit_optimization.py` -> `rc=0`, `capability_fit_optimization_status=SKIPPED_NOT_REQUIRED`
@@ -3237,7 +3251,7 @@ Status: `PASS` (scope: protocol-layer wiring + machine-readable visibility under
    - `trigger_capability_fit_review.py` -> `rc=0`, `capability_fit_review_trigger_status=SKIPPED_NOT_REQUIRED`, `triggered=false`
    - `build_capability_fit_matrix.py` -> `rc=0`, `capability_fit_matrix_builder_status=SKIPPED_NOT_REQUIRED`
 4. Full-scan replay:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/scan-p1defgh-audit2.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/scan-p1defgh-audit2.json`
    - result: `rc=0`
    - project/global both expose:
      - `checks.platform_optimization_discovery_trigger.*`
@@ -3249,7 +3263,7 @@ Status: `PASS` (scope: protocol-layer wiring + machine-readable visibility under
      - `checks.capability_fit_review_trigger.*`
      - `checks.capability_fit_matrix_builder.*`
 5. Three-plane replay:
-   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-p1defgh-audit2.json`
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-p1defgh-audit2.json`
    - result: `rc=0`
    - `instance_plane_detail` exposes all P1-D/E/F/G/H surfaces with non-required semantics; `hard_boundary=false` preserved.
 6. Docs/SSOT checks:
@@ -3282,7 +3296,7 @@ Replay evidence:
    - `python3 -m py_compile scripts/release_readiness_check.py`
    - result: `rc=0`
 2. Readiness replay (explicit scope, system sample):
-   - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --scope USER`
+   - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --scope USER`
    - result: `rc=2` (downstream health failure, expected in this sample)
    - key proof:
      - run log now contains:
@@ -3336,7 +3350,7 @@ Replay evidence:
    - result: both commands expose `--baseline-policy {strict,warn}`.
 3. Readiness command passthrough proof (warn override):
    - command:
-     - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
+     - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --scope USER --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
    - key tail:
      - readiness now emits auto-update command containing `--baseline-policy warn`.
      - readiness update preflight also shows `validate_identity_session_refresh_status ... --baseline-policy warn`.
@@ -3391,7 +3405,7 @@ Replay evidence (local static + targeted runtime replay):
    - `bash -n scripts/e2e_smoke_test.sh`
    - result: `rc=0`
 2. Direct validator replay (`custom-creative-ecom-analyst`, scan/warn):
-   - `python3 scripts/validate_identity_protocol_version_alignment.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --alignment-policy warn --json-only`
+   - `python3 scripts/validate_identity_protocol_version_alignment.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --alignment-policy warn --json-only`
    - result: `rc=0`
    - key fields:
      - `protocol_version_alignment_status=WARN_NON_BLOCKING`
@@ -3402,20 +3416,20 @@ Replay evidence (local static + targeted runtime replay):
      - `tuple_checks.binding_tuple=true`
 3. Readiness preflight wiring proof:
    - command:
-     - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/identity/instances/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772370980.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --scope USER --base fa60caa --head fa60caa`
+     - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/.identity/instances/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772370980.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --scope USER --base fa60caa --head fa60caa`
    - result: `rc=0`
    - readiness log includes:
      - `[INFO] protocol version alignment preflight: status=<...> error_code=<...> report=<...>`
      - `[OK] release readiness checks PASSED`
 4. Full-scan/three-plane visibility:
    - full-scan replay:
-     - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/fix019-scan.json`
+     - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/fix019-scan.json`
      - `rc=0`, project/global both expose `checks.protocol_version_alignment.protocol_version_alignment_status=WARN_NON_BLOCKING`, `error_code=IP-PVA-002`.
    - three-plane replay:
-     - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/fix019-three-plane.json`
+     - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/fix019-three-plane.json`
      - `rc=0`, exposes `instance_plane_detail.protocol_version_alignment.protocol_version_alignment_status=WARN_NON_BLOCKING`, `error_code=IP-PVA-002`, and keeps `hard_boundary=false`.
 5. Strict fail-closed sample (CI semantics):
-   - `python3 scripts/validate_identity_protocol_version_alignment.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --execution-report /Users/yangxi/.codex/identity/instances/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772370980.json --operation ci --alignment-policy strict --json-only`
+   - `python3 scripts/validate_identity_protocol_version_alignment.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --execution-report /Users/yangxi/.codex/.identity/instances/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772370980.json --operation ci --alignment-policy strict --json-only`
    - result: `rc=1`, `protocol_version_alignment_status=FAIL_REQUIRED`, `error_code=IP-PVA-002`.
 6. Docs/SSOT checks:
    - `python3 scripts/docs_command_contract_check.py` -> `rc=0`
@@ -3444,7 +3458,7 @@ Status: `PASS` (scope: protocol-layer behavior + command-path passthrough)
    - `python3 scripts/identity_creator.py update --help | rg baseline-policy`
    - result: both expose `--baseline-policy {strict,warn}`
 4. FIX-017 readiness passthrough replay:
-   - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --scope USER`
+   - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --scope USER`
    - result: `rc=2` (downstream health failure, expected on sample state)
    - key proof:
      - `validate_identity_session_refresh_status ... --baseline-policy warn`
@@ -3512,7 +3526,7 @@ Replay evidence (architect local):
 5. First-line validator inspection mode:
    - `validate_reply_identity_context_first_line.py ... --operation scan --json-only` => `rc=0`
 6. Readiness regression guard:
-   - `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --execution-report /Users/yangxi/.codex/identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772376696.json --execution-report-policy strict --baseline-policy strict --capability-activation-policy route-any-ready` => `rc=0`.
+   - `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --scope USER --execution-report /Users/yangxi/.codex/.identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772376696.json --execution-report-policy strict --baseline-policy strict --capability-activation-policy route-any-ready` => `rc=0`.
 
 Residual risks:
 
@@ -3610,7 +3624,7 @@ Instance / environment blockers (must not be misclassified as protocol regressio
 1. Global `base-repo-architect` baseline freshness is stale in scan view:
    - `IP-PBL-001` (`protocol_baseline_freshness=WARN`)
    - `IP-PVA-002` (`protocol_version_alignment_status=WARN_NON_BLOCKING`)
-   - source: `full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-base-repo-architect.json`
+   - source: `full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/full-scan-base-repo-architect.json`
    - action: run identity update to generate latest bound report.
 2. Capability activation preflight shows environment auth blocked:
    - `IP-CAP-003`, `env_auth_blocked=true`
@@ -3685,9 +3699,9 @@ Acceptance command outputs (HOTFIX-P0-008 / FIX-020):
 | C4 | `1` | `{"identity_id": "base-repo-audit-expert-v3", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml", "operation": "validate", "requ...` |
 | C5 | `0` | `{"identity_id": "base-repo-audit-expert-v3", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml", "stamp_line": "Identity-Contex...` |
 | C6 | `0` | `{"identity_id": "base-repo-audit-expert-v3", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml", "operation": "scan", "required...` |
-| C7 | `0` | `{"identity_id": "base-repo-architect", "catalog_path": "/Users/yangxi/.codex/identity/catalog.local.yaml", "stamp_line": "Identity-Context: actor_id=user:yangxi; identity_id=bas...` |
-| C8 | `0` | `{"identity_id": "base-repo-architect", "catalog_path": "/Users/yangxi/.codex/identity/catalog.local.yaml", "operation": "validate", "required_contract": true, "reply_first_line_...` |
-| C9 | `1` | `[INFO] protocol baseline freshness preflight: status=FAIL error_code=IP-PBL-001 report=/Users/yangxi/.codex/identity/instances/base-repo-architect/runtime/reports/identity-upgra...` |
+| C7 | `0` | `{"identity_id": "base-repo-architect", "catalog_path": "/Users/yangxi/.codex/.identity/catalog.local.yaml", "stamp_line": "Identity-Context: actor_id=user:yangxi; identity_id=bas...` |
+| C8 | `0` | `{"identity_id": "base-repo-architect", "catalog_path": "/Users/yangxi/.codex/.identity/catalog.local.yaml", "operation": "validate", "required_contract": true, "reply_first_line_...` |
+| C9 | `1` | `[INFO] protocol baseline freshness preflight: status=FAIL error_code=IP-PBL-001 report=/Users/yangxi/.codex/.identity/instances/base-repo-architect/runtime/reports/identity-upgra...` |
 | C10 | `0` | `[PASS] docs command contract check passed.` |
 | C11 | `0` | `     artifacts_policy=evidence_only_non_normative` |
 
@@ -3725,7 +3739,7 @@ Identity-Context snapshot:
 
 1. actor_id=`user:yangxi`
 2. identity_id=`base-repo-architect`
-3. catalog_path=`/Users/yangxi/.codex/identity/catalog.local.yaml`
+3. catalog_path=`/Users/yangxi/.codex/.identity/catalog.local.yaml`
 4. scope=`USER`
 
 Layer declaration:
@@ -3822,7 +3836,7 @@ Cross-validation evidence:
    - `bash -n scripts/e2e_smoke_test.sh`
    - result: `rc=0`
 2. Full scan replay (`/tmp/final-audit-replay-20260301.json`):
-   - command: `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect,custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/final-audit-replay-20260301.json`
+   - command: `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect,custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --out /tmp/final-audit-replay-20260301.json`
    - result: `rc=0`
    - summary: `{"total_identities":3,"p0":0,"p1":3,"ok":0}`
    - key fields:
@@ -4649,19 +4663,19 @@ Replay highlights (local):
      - runtime state artifact written with `prompt_policy_hash` binding.
 7. Scenario A cross-validation addendum (`system-requirements-analyst`):
    - report evidence:
-     - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772512085.json`
+     - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772512085.json`
    - key fields:
      - `all_ok=true`
      - `work_layer=instance`
      - `applied_gate_set=instance_required_checks`
      - `writeback_status=WRITTEN`
    - lane receipts present:
-     - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_PROTOCOL_20260303T042034Z.json`
-     - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/LAYER_GATE_PROTOCOL_PENDING_20260303T042103Z.json`
-     - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_EXIT_20260303T042733Z.json`
+     - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_PROTOCOL_20260303T042034Z.json`
+     - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/LAYER_GATE_PROTOCOL_PENDING_20260303T042103Z.json`
+     - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_EXIT_20260303T042733Z.json`
 8. Collaboration hard-block contract verification:
    - command replay:
-     - `python3 scripts/validate_identity_collab_trigger.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml`
+     - `python3 scripts/validate_identity_collab_trigger.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml`
    - result: `rc=0`, notify policy remains `must_notify_when_human_required`; task contract retains `must_emit_receipt_in_chat=true`.
 9. Residual operational gap (historical snapshot, superseded by FIX-044 in `16.8.34`):
    - evidence index currently links protocol lock + pending, but no link for `SESSION_LANE_LOCK_EXIT_20260303T042733Z.json`.
@@ -5240,18 +5254,18 @@ Scope boundary:
 Cross-validated evidence (this round):
 
 1. End-to-end upgrade pass:
-   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772520264.json`
+   - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772520264.json`
    - key fields: `all_ok=true`, `lane_routing_status=PASS_REQUIRED`, `work_layer=instance`, `applied_gate_set=instance_required_checks`.
 2. Semantic routing + sidecar governance pass snapshot:
-   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-03_014.md`
+   - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-03_014.md`
    - section states update-lane replay moved to `P0 已闭环`, while keeping explicit P1 hardening notes.
 3. Strong blocker fail-close negative sample:
    - `/private/tmp/send-time-bad-final-receipt.json`
    - key field: `error_code=IP-ASB-STAMP-SESSION-001` (missing first-line stamp path still fail-closed).
 4. Protocol lane lock closure chain:
-   - lock receipt: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_PROTOCOL_20260303T080218Z.json`
-   - exit receipt: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_EXIT_20260303T080442Z.json`
-   - index linkage: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`.
+   - lock receipt: `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_PROTOCOL_20260303T080218Z.json`
+   - exit receipt: `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_EXIT_20260303T080442Z.json`
+   - index linkage: `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`.
 5. Governance mirror roundtable document exists and is index-referenced:
    - `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-instance-capability-roundtable-audit-2026-03-03.md`.
 
@@ -6555,20 +6569,20 @@ Status: `CROSS_CHECKED (no new protocol code gap; runbook clarification required
 Cross-verification evidence:
 
 1. fail-closed baseline before patch (non-canonical blocker enums):
-   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772591327.json`
+   - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772591327.json`
    - failing validators (from report logs):
      - `validate_identity_runtime_contract.py`
      - `validate_identity_collab_trigger.py`
      - `validate_identity_role_binding.py`
 2. post-patch refresh replay:
-   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772595166.json`
+   - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772595166.json`
    - key fields: `all_ok=true`, `writeback_status=WRITTEN`, `work_layer=instance`, `applied_gate_set=instance_required_checks`.
 3. strict final replay:
-   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772595338.json`
+   - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772595338.json`
    - key fields remain stable (`all_ok=true`, strict lane routing pass).
 4. feedback and evidence linkage:
-   - outbox batch: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_001.md`
-   - evidence index: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`
+   - outbox batch: `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_001.md`
+   - evidence index: `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`
    - roundtable report anchor: `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-self-drive-prompt-hardening-roundtable-2026-03-04.md`
 
 Decision:
@@ -6607,17 +6621,17 @@ Status: `TRIAGED (1x v1.5 candidate + 4x v1.6 backlog)`.
 
 Input package (canonical feedback channel):
 
-1. `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260304T041651Z_office_ops_protocol_upgrade_suggestions.md`
-2. `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/upgrade-proposals/PROTOCOL_UPGRADE_PROPOSAL_20260304T041651Z_office_ops_self_drive.md`
-3. `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/SPLIT_RECEIPT_20260304T041849Z_identity-upgrade-exec-office-ops-expert-1772596487.json`
-4. `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/evidence-index/INDEX.md`
+1. `/Users/yangxi/.codex/.identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260304T041651Z_office_ops_protocol_upgrade_suggestions.md`
+2. `/Users/yangxi/.codex/.identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/upgrade-proposals/PROTOCOL_UPGRADE_PROPOSAL_20260304T041651Z_office_ops_self_drive.md`
+3. `/Users/yangxi/.codex/.identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/SPLIT_RECEIPT_20260304T041849Z_identity-upgrade-exec-office-ops-expert-1772596487.json`
+4. `/Users/yangxi/.codex/.identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/evidence-index/INDEX.md`
 
 Cross-check summary:
 
 1. protocol-feedback archival and split-receipt linkage are green (`PASS_REQUIRED` path confirmed by outbox/index/receipt structure).
 2. current execution reports are stable pass state and do not introduce new v1.5 release blocker:
-   - `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/reports/identity-upgrade-exec-office-ops-expert-1772596487.json`
-   - `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/reports/identity-upgrade-exec-office-ops-expert-1772596350.json`
+   - `/Users/yangxi/.codex/.identity/instances-canonical/office-ops-expert/runtime/reports/identity-upgrade-exec-office-ops-expert-1772596487.json`
+   - `/Users/yangxi/.codex/.identity/instances-canonical/office-ops-expert/runtime/reports/identity-upgrade-exec-office-ops-expert-1772596350.json`
    - key fields: `all_ok=true`, `lane_routing_status=PASS_REQUIRED`, `writeback_status=WRITTEN`.
 
 Triage decision:
@@ -6810,13 +6824,13 @@ Replay evidence snapshot (architect local):
    - rc: `0`
 2. full-scan protocol lane replay:
    - command:
-     `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --expected-work-layer protocol --expected-source-layer global --layer-intent-text "protocol lane replay for FIX-033" --out /tmp/fix033_fullscan_protocol.json`
+     `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --expected-work-layer protocol --expected-source-layer global --layer-intent-text "protocol lane replay for FIX-033" --out /tmp/fix033_fullscan_protocol.json`
    - rc: `0`
    - key fields (`project/global`): `work_layer_gate_set_routing_status=PASS_REQUIRED`, `applied_gate_set=protocol_required_checks`, `requested_applied_gate_set=protocol_required_checks`
    - grep replay result: no `IP-LAYER-GATE-001`, no `applied_gate_set_mismatch`.
 3. three-plane protocol lane replay:
    - command:
-     `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expected-work-layer protocol --expected-source-layer global --layer-intent-text "protocol lane replay for FIX-033" --out /tmp/fix033_threeplane_protocol.json`
+     `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expected-work-layer protocol --expected-source-layer global --layer-intent-text "protocol lane replay for FIX-033" --out /tmp/fix033_threeplane_protocol.json`
    - rc: `0`
    - key fields: `instance_plane_detail.work_layer_gate_set_routing.work_layer_gate_set_routing_status=PASS_REQUIRED`, `applied_gate_set=protocol_required_checks`, nested payload includes `requested_applied_gate_set=protocol_required_checks`
    - grep replay result: no `IP-LAYER-GATE-001`, no `applied_gate_set_mismatch`.
@@ -7037,9 +7051,9 @@ Primary source package:
 3. Scenario A real-run report:
    - `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-protocol-scenarioA-autonomous-upgrade-real-run-feedback-2026-03-02.md`
 4. Scenario A outbox batch:
-   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-02_012.md`
+   - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-02_012.md`
 5. Scenario A pending receipt:
-   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/LAYER_GATE_PROTOCOL_PENDING_20260302T100613Z.json`
+   - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/LAYER_GATE_PROTOCOL_PENDING_20260302T100613Z.json`
 
 Cross-validated attribution decision:
 
@@ -7251,7 +7265,7 @@ Problem statement (cross-validated):
 Local evidence anchors:
 
 1. Canonical actor file currently stores one object:
-   - `/Users/yangxi/.codex/identity/session/actors/user_yangxi.json`
+   - `/Users/yangxi/.codex/.identity/session/actors/user_yangxi.json`
 2. Path and payload model in protocol scripts:
    - `scripts/actor_session_common.py:22`
    - `scripts/actor_session_common.py:33`
@@ -7910,7 +7924,7 @@ Replay evidence snapshot (architect-side, protocol boundary only):
    - rc: `0`
 2. Reply-channel strict fail-closed replay (protocol-root):
    - command:
-     - `python3 scripts/validate_protocol_feedback_reply_channel.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --repo-catalog identity/catalog/identities.yaml --operation validate --force-check --json-only`
+     - `python3 scripts/validate_protocol_feedback_reply_channel.py --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --repo-catalog identity/catalog/identities.yaml --operation validate --force-check --json-only`
    - rc: `1`
    - key fields:
      - `protocol_feedback_reply_channel_status=FAIL_REQUIRED`
@@ -7918,7 +7932,7 @@ Replay evidence snapshot (architect-side, protocol boundary only):
      - `split_receipt_payload_rc=1`
 3. Reply-channel CWD invariance replay (`/tmp`):
    - command:
-     - `python3 /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_feedback_reply_channel.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation validate --force-check --json-only`
+     - `python3 /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_feedback_reply_channel.py --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation validate --force-check --json-only`
    - rc: `1`
    - key fields (same as protocol-root replay):
      - `protocol_feedback_reply_channel_status=FAIL_REQUIRED`
@@ -8409,7 +8423,7 @@ Acceptance replay (A~F, executed):
    - `python3 -m py_compile scripts/response_stamp_common.py scripts/render_identity_response_stamp.py scripts/validate_identity_response_stamp.py scripts/validate_reply_identity_context_first_line.py scripts/validate_execution_reply_identity_coherence.py` => rc=`0`
    - `bash -n scripts/e2e_smoke_test.sh` => rc=`0`
 2. B. render tail block:
-   - `python3 scripts/render_identity_response_stamp.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --json-only` => rc=`0`
+   - `python3 scripts/render_identity_response_stamp.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --json-only` => rc=`0`
    - key: `external_stamp` includes ` | Layer-Context: ` and tail check `True`.
 3. C. stamp gate (strict validate):
    - `validate_identity_response_stamp.py ... --stamp-json /tmp/fix023-render.json --force-check --enforce-user-visible-gate --operation validate --json-only` => rc=`0`
@@ -8478,7 +8492,7 @@ Acceptance replay (local):
      - `send_time_reply_sample_count`
      - `send_time_reply_missing_count`
 5. full-scan visibility:
-   - `full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml` => rc=`0`
+   - `full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml` => rc=`0`
    - target row checks include `send_time_reply_gate` with machine-readable fields.
 6. docs/ssot checks:
    - `python3 scripts/docs_command_contract_check.py` => rc=`0`
@@ -8502,8 +8516,8 @@ Problem statement (cross-validated):
 Cross-validation anchors:
 
 1. Global actor session tuple:
-   - `/Users/yangxi/.codex/identity/session/actors/user_yangxi.json`
-   - `/Users/yangxi/.codex/identity/session/active_identity.json`
+   - `/Users/yangxi/.codex/.identity/session/actors/user_yangxi.json`
+   - `/Users/yangxi/.codex/.identity/session/active_identity.json`
 2. Project actor session tuple:
    - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/session/actors/user_yangxi.json`
    - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/session/active_identity.json`
@@ -8648,7 +8662,7 @@ Cross-validation anchors:
    - `scripts/build_vibe_coding_feeding_pack.py:14`
    - `scripts/validate_identity_capability_fit_optimization.py:16`
 6. Current CI validator set snapshot does not include discovery trio required validators:
-   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/CURRENT_TASK.json:652`
+   - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/CURRENT_TASK.json:652`
 7. Coverage gate currently summarizes required/optional globally; discovery-subset threshold is not yet enforced:
    - `scripts/validate_required_contract_coverage.py:338`
 

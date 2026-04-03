@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -11,7 +12,18 @@ from typing import Any
 
 import yaml
 
-from actor_session_common import load_actor_binding
+from actor_session_common import DEFAULT_BINDING_KEY_MODE, load_actor_binding, load_actor_binding_store
+from headstamp_error_family_common import (
+    ERR_HDSTAMP_ACTOR_LAYER_MISMATCH,
+    ERR_HDSTAMP_MISSING_OR_MALFORMED,
+    ERR_HDSTAMP_REPLY_EVIDENCE_MISSING,
+    ERR_HDSTAMP_RECEIPT_MISSING,
+    inject_legacy_error_fields,
+)
+from identity_runtime_authority_common import ERR_IDENTITY_AUTHORITY_VIOLATION
+from resolve_identity_context import resolve_repo_catalog_path
+from response_stamp_common import classify_headstamp_entrypoint_wiring
+from runtime_temp_path_common import runtime_temp_dir, runtime_temp_file, runtime_temp_root
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -24,14 +36,18 @@ ERR_COMPOSE_POSITIVE = "IP-ASB-STAMP-SCAN-004"
 ERR_OUTLET_NEGATIVE = "IP-ASB-STAMP-SCAN-005"
 ERR_COVERAGE_EQUIV = "IP-ASB-STAMP-SCAN-006"
 ERR_ACTOR_MISMATCH_NEGATIVE = "IP-ASB-STAMP-SCAN-007"
+ERR_RECOVERY_PRECHECK = "IP-ASB-STAMP-SCAN-008"
 
 ERR_ACTOR_REQUIRED = "IP-ASB-ACTOR-001"
 ERR_MIXED_EVIDENCE_UNPARTITIONED = "IP-ASB-ACTOR-002"
 
-ERR_SEND_TIME_GATE = "IP-ASB-STAMP-SESSION-001"
-ERR_SYNTHETIC_EVIDENCE = "IP-ASB-STAMP-SESSION-002"
-ERR_NON_GOVERNED_OUTLET = "IP-ASB-STAMP-SESSION-004"
-ERR_ACTOR_BOUND_MISMATCH = "IP-ASB-STAMP-SESSION-005"
+ERR_SEND_TIME_GATE = ERR_HDSTAMP_MISSING_OR_MALFORMED
+ERR_SEND_TIME_EVIDENCE_MISSING = ERR_HDSTAMP_REPLY_EVIDENCE_MISSING
+ERR_SYNTHETIC_EVIDENCE = ERR_HDSTAMP_RECEIPT_MISSING
+ERR_NON_GOVERNED_OUTLET = ERR_HDSTAMP_RECEIPT_MISSING
+ERR_FINAL_EMIT_CHANNEL_REQUIRED = ERR_HDSTAMP_RECEIPT_MISSING
+ERR_ACTOR_BOUND_MISMATCH = ERR_HDSTAMP_ACTOR_LAYER_MISMATCH
+ERR_RUNTIME_AUTHORITY_MISMATCH = ERR_IDENTITY_AUTHORITY_VIOLATION
 
 STRICT_ACTOR_REQUIRED_OPS = {
     "activate",
@@ -57,12 +73,16 @@ MANDATORY_ENTRYPOINTS = [
     "scripts/e2e_smoke_test.sh",
 ]
 
+WORK_LAYER_RE = re.compile(r"\bwork_layer=([a-zA-Z0-9_-]+)\b")
+SOURCE_LAYER_RE = re.compile(r"\bsource_layer=([a-zA-Z0-9_-]+)\b")
+
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    payload = inject_legacy_error_fields(payload)
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
         return
@@ -118,28 +138,18 @@ def _static_wiring_scan() -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
             missing.append({"path": rel, "missing": "entrypoint_file"})
             continue
         text = p.read_text(encoding="utf-8", errors="ignore")
-        has_compose = "scripts/compose_and_validate_governed_reply.py" in text
-        has_send_time = "scripts/validate_send_time_reply_gate.py" in text
-        if has_compose and has_send_time:
-            mode = "compose_plus_direct"
-        elif has_compose:
-            mode = "compose_wrapper_only"
-        elif has_send_time:
-            mode = "direct_send_time_only"
-        else:
-            mode = "none"
-        normalized = bool(has_compose or has_send_time)
+        wiring = classify_headstamp_entrypoint_wiring(text)
         coverage_rows.append(
             {
                 "path": rel,
                 "entrypoint_exists": True,
-                "has_compose_wrapper": has_compose,
-                "has_direct_send_time": has_send_time,
-                "coverage_mode": mode,
-                "coverage_normalized": normalized,
+                "has_compose_wrapper": bool(wiring.get("has_governed_emit", False)),
+                "has_direct_send_time": bool(wiring.get("has_send_time", False)),
+                "coverage_mode": str(wiring.get("coverage_mode", "")),
+                "coverage_normalized": bool(wiring.get("coverage_normalized", False)),
             }
         )
-        if not normalized:
+        if not bool(wiring.get("coverage_normalized", False)):
             missing.append({"path": rel, "missing": "compose_or_send_time_reference"})
     return coverage_rows, missing
 
@@ -150,10 +160,16 @@ def _send_time_cmd(
     catalog_path: Path,
     repo_catalog_path: Path,
     actor_id: str,
+    session_id: str,
     outlet_channel_id: str,
     blocker_receipt: Path,
     reply_file: Path | None = None,
     reply_text: str = "",
+    expected_work_layer: str = "",
+    expected_source_layer: str = "",
+    layer_intent_text: str = "",
+    current_surface_native_machine_attested: bool = False,
+    host_visible_shadow_root: str = "",
 ) -> list[str]:
     cmd = [
         sys.executable,
@@ -177,14 +193,92 @@ def _send_time_cmd(
         actor_id,
         "--json-only",
     ]
+    if str(session_id or "").strip():
+        cmd += ["--session-id", str(session_id).strip()]
     if reply_file is not None:
         cmd += ["--reply-file", str(reply_file)]
     if reply_text:
         cmd += ["--reply-text", reply_text]
+    if str(expected_work_layer or "").strip():
+        cmd += ["--expected-work-layer", str(expected_work_layer).strip()]
+    if str(expected_source_layer or "").strip():
+        cmd += ["--expected-source-layer", str(expected_source_layer).strip()]
+    if str(layer_intent_text or "").strip():
+        cmd += ["--layer-intent-text", str(layer_intent_text).strip()]
+    if str(host_visible_shadow_root or "").strip():
+        cmd += ["--host-visible-shadow-root", str(host_visible_shadow_root).strip()]
+    if current_surface_native_machine_attested:
+        cmd.append("--current-surface-native-machine-attested")
     return cmd
 
 
-def _catalog_identity_ids(catalog_path: Path) -> list[str]:
+def _extract_stamp_layers(first_line: str) -> tuple[str, str]:
+    line = str(first_line or "").strip()
+    if not line:
+        return "", ""
+    work = ""
+    source = ""
+    m_work = WORK_LAYER_RE.search(line)
+    if m_work:
+        work = str(m_work.group(1) or "").strip().lower()
+    m_source = SOURCE_LAYER_RE.search(line)
+    if m_source:
+        source = str(m_source.group(1) or "").strip().lower()
+    return work, source
+
+
+def _resolve_effective_session_id(
+    *,
+    catalog_path: Path,
+    actor_id: str,
+    identity_id: str,
+    explicit_session_id: str,
+) -> tuple[str, str]:
+    explicit = str(explicit_session_id or "").strip()
+    if not actor_id:
+        return explicit, "actor_missing"
+    if explicit:
+        scoped = load_actor_binding(
+            catalog_path,
+            actor_id,
+            identity_id=identity_id,
+            session_id=explicit,
+        )
+        if scoped:
+            return explicit, "explicit"
+        fallback = load_actor_binding(
+            catalog_path,
+            actor_id,
+            identity_id=identity_id,
+            session_id="",
+        )
+        fallback_session = str(fallback.get("session_id", "")).strip()
+        if fallback_session:
+            return fallback_session, "fallback_identity_binding"
+        return explicit, "explicit_unbound"
+    fallback = load_actor_binding(
+        catalog_path,
+        actor_id,
+        identity_id=identity_id,
+        session_id="",
+    )
+    fallback_session = str(fallback.get("session_id", "")).strip()
+    if fallback_session:
+        return fallback_session, "identity_binding"
+    return "", "session_missing"
+
+
+def _derive_run_id_from_session_id(session_id: str) -> str:
+    token = str(session_id or "").strip()
+    if not token or ":" not in token:
+        return ""
+    prefix, value = token.split(":", 1)
+    if str(prefix or "").strip().lower() != "run":
+        return ""
+    return str(value or "").strip()
+
+
+def _catalog_identity_ids(catalog_path: Path, *, include_fixture: bool = True) -> list[str]:
     try:
         data = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
     except Exception:
@@ -193,8 +287,15 @@ def _catalog_identity_ids(catalog_path: Path) -> list[str]:
     out: list[str] = []
     for row in rows:
         iid = str(row.get("id", "")).strip()
-        if iid:
-            out.append(iid)
+        if not iid:
+            continue
+        if not include_fixture:
+            profile = str(row.get("profile", "")).strip().lower()
+            runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+            status = str(row.get("status", "")).strip().lower()
+            if profile == "fixture" or runtime_mode == "demo_only" or status == "inactive":
+                continue
+        out.append(iid)
     return out
 
 
@@ -202,15 +303,45 @@ def _actor_mismatch_probe(
     *,
     identity_id: str,
     actor_id: str,
+    session_id: str,
     catalog_path: Path,
     repo_catalog_path: Path,
     reply_file: Path,
     blocker_receipt: Path,
+    host_visible_shadow_root: str = "",
 ) -> tuple[bool, dict[str, Any], list[str]]:
     stale_reasons: list[str] = []
-    actor_binding = load_actor_binding(catalog_path, actor_id)
+    actor_binding_store = load_actor_binding_store(catalog_path, actor_id)
+    actor_binding = load_actor_binding(
+        catalog_path,
+        actor_id,
+        identity_id=identity_id,
+        session_id=session_id,
+    )
+    binding_selection_mode = "identity_scoped"
+    if not actor_binding:
+        binding_selection_mode = "identity_scoped_missing"
     actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
     if not actor_bound_identity:
+        if str(session_id or "").strip():
+            stale_reasons.append("actor_mismatch_probe_skipped_session_scoped_binding_missing")
+            return (
+                True,
+                {
+                    "rc": 0,
+                    "status": "SKIPPED_SESSION_SCOPED_BINDING_MISSING",
+                    "probe_actor_id": actor_id,
+                    "probe_session_id": session_id,
+                    "actor_bound_identity_id": "",
+                    "mismatch_identity_id": "",
+                    "binding_selection_mode": binding_selection_mode,
+                    "binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
+                    "binding_compare_token": str(actor_binding_store.get("compare_token", "")),
+                    "binding_session_id": "",
+                    "binding_entry_count": int(actor_binding_store.get("session_entry_count", 0) or 0),
+                },
+                stale_reasons,
+            )
         stale_reasons.append("actor_mismatch_probe_skipped_no_binding")
         return (
             True,
@@ -220,12 +351,20 @@ def _actor_mismatch_probe(
                 "probe_actor_id": actor_id,
                 "actor_bound_identity_id": "",
                 "mismatch_identity_id": "",
+                "binding_selection_mode": binding_selection_mode,
+                "binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
+                "binding_compare_token": str(actor_binding_store.get("compare_token", "")),
+                "binding_session_id": "",
+                "binding_entry_count": int(actor_binding_store.get("session_entry_count", 0) or 0),
             },
             stale_reasons,
         )
 
+    candidate_ids = _catalog_identity_ids(catalog_path, include_fixture=False)
+    if not candidate_ids:
+        candidate_ids = _catalog_identity_ids(catalog_path, include_fixture=True)
     mismatch_identity = ""
-    for iid in _catalog_identity_ids(catalog_path):
+    for iid in candidate_ids:
         if iid != actor_bound_identity:
             mismatch_identity = iid
             break
@@ -239,6 +378,11 @@ def _actor_mismatch_probe(
                 "probe_actor_id": actor_id,
                 "actor_bound_identity_id": actor_bound_identity,
                 "mismatch_identity_id": "",
+                "binding_selection_mode": binding_selection_mode,
+                "binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
+                "binding_compare_token": str(actor_binding_store.get("compare_token", "")),
+                "binding_session_id": str(actor_binding.get("session_id", "")),
+                "binding_entry_count": int(actor_binding_store.get("session_entry_count", 0) or 0),
             },
             stale_reasons,
         )
@@ -259,12 +403,18 @@ def _actor_mismatch_probe(
         "--blocker-receipt-out",
         str(blocker_receipt),
         "--outlet-channel-id",
-        "governed_adapter_v1",
+        "final_emit_governed",
         "--actor-id",
         actor_id,
+        "--session-id",
+        session_id,
+        "--host-visible-shadow-root",
+        str(host_visible_shadow_root).strip(),
         "--json-only",
     ]
     rc, payload, _, _ = _run_json(cmd)
+    binding_key_mode = str(actor_binding_store.get("binding_key_mode", ""))
+    binding_entry_count = int(actor_binding_store.get("session_entry_count", 0) or 0)
     case = {
         "rc": rc,
         "error_code": str(payload.get("error_code", "")),
@@ -274,14 +424,34 @@ def _actor_mismatch_probe(
         "probe_actor_id": actor_id,
         "mismatch_identity_id": mismatch_identity,
         "target_identity_id": identity_id,
+        "binding_selection_mode": binding_selection_mode,
+        "binding_key_mode": binding_key_mode,
+        "binding_compare_token": str(actor_binding_store.get("compare_token", "")),
+        "binding_session_id": str(actor_binding.get("session_id", "")),
+        "binding_entry_count": binding_entry_count,
     }
-    ok = rc != 0 and case["error_code"] == ERR_ACTOR_BOUND_MISMATCH
+    ok = rc != 0 and case["error_code"] in {
+        ERR_ACTOR_BOUND_MISMATCH,
+        ERR_RUNTIME_AUTHORITY_MISMATCH,
+    }
+    if (
+        not ok
+        and rc == 0
+        and case["send_time_gate_status"] == STATUS_PASS_REQUIRED
+        and binding_key_mode == DEFAULT_BINDING_KEY_MODE
+        and binding_entry_count > 1
+    ):
+        case["status"] = "SKIPPED_INCONCLUSIVE_MULTIBINDING"
+        stale_reasons.append("actor_mismatch_probe_inconclusive_multibinding_no_session_selector")
+        return True, case, stale_reasons
+
     if not ok:
         stale_reasons.append("actor_mismatch_negative_not_fail_closed")
     return ok, case, stale_reasons
 
 
 def main() -> int:
+    script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(
         description=(
             "Hard-close headstamp recurrence for v1.5.x by combining static outlet wiring checks "
@@ -292,6 +462,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument(
         "--operation",
         choices=["activate", "update", "mutation", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
@@ -301,9 +472,10 @@ def main() -> int:
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=script_ref)
     operation = str(args.operation or "").strip().lower()
     actor_id = str(args.actor_id or "").strip()
+    session_id_input = str(args.session_id or "").strip()
     actor_required = operation in STRICT_ACTOR_REQUIRED_OPS
 
     if not catalog_path.exists():
@@ -373,23 +545,102 @@ def main() -> int:
     stale_reasons: list[str] = []
     dynamic_cases: dict[str, dict[str, Any]] = {}
     error_code = ""
+    session_id_effective, session_resolution_mode = _resolve_effective_session_id(
+        catalog_path=catalog_path,
+        actor_id=actor_id,
+        identity_id=args.identity_id,
+        explicit_session_id=session_id_input,
+    )
+    if (
+        actor_id
+        and session_id_input
+        and session_id_effective
+        and session_id_effective != session_id_input
+    ):
+        stale_reasons.append("session_id_fallback_to_identity_binding")
 
     if missing_wiring:
         stale_reasons.append("mandatory_entrypoint_wiring_missing")
         error_code = ERR_STATIC_WIRING
 
-    tmp_prefix = f"/tmp/headstamp-closure-{args.identity_id}"
-    missing_file = Path(f"{tmp_prefix}-missing.txt").resolve()
-    pass_file = Path(f"{tmp_prefix}-pass.txt").resolve()
-    missing_receipt = Path(f"{tmp_prefix}-missing-receipt.json").resolve()
-    inline_receipt = Path(f"{tmp_prefix}-inline-receipt.json").resolve()
-    nongov_receipt = Path(f"{tmp_prefix}-nongov-receipt.json").resolve()
-    compose_receipt = Path(f"{tmp_prefix}-compose-receipt.json").resolve()
-    coverage_receipt = Path(f"{tmp_prefix}-coverage-receipt.json").resolve()
-    mismatch_reply = Path(f"{tmp_prefix}-mismatch-probe.txt").resolve()
-    mismatch_receipt = Path(f"{tmp_prefix}-mismatch-probe-receipt.json").resolve()
+    recovery_run_token = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    probe_suffix = f"{args.identity_id}-{recovery_run_token}"
+    host_visible_shadow_root = runtime_temp_dir(
+        channel="headstamp-closure-shadow",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        run_token=probe_suffix,
+        prefix="shadow",
+    ).resolve()
+    missing_file = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-missing-{probe_suffix}",
+        ext="txt",
+    ).resolve()
+    pass_file = (runtime_temp_root() / f"headstamp-closure-pass-{probe_suffix}.txt").resolve()
+    pass_file.parent.mkdir(parents=True, exist_ok=True)
+    missing_receipt = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-missing-receipt-{probe_suffix}",
+        ext="json",
+    ).resolve()
+    inline_receipt = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-inline-receipt-{probe_suffix}",
+        ext="json",
+    ).resolve()
+    nongov_receipt = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-nongov-receipt-{probe_suffix}",
+        ext="json",
+    ).resolve()
+    compose_receipt = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-compose-receipt-{probe_suffix}",
+        ext="json",
+    ).resolve()
+    coverage_receipt = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-coverage-receipt-{probe_suffix}",
+        ext="json",
+    ).resolve()
+    session_bound_run_id = _derive_run_id_from_session_id(session_id_effective)
+    recovery_run_id = (
+        session_bound_run_id
+        or f"headstamp-recurrence-recovery-{args.identity_id}-{recovery_run_token}"
+    )
+    mismatch_reply = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-mismatch-probe-{probe_suffix}",
+        ext="txt",
+    ).resolve()
+    mismatch_receipt = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-mismatch-probe-receipt-{probe_suffix}",
+        ext="json",
+    ).resolve()
 
     missing_file.write_text(
+        "[Audit Receipt] identity-protocol v1.5.1 release on main\nDate: 2026-03-05\nFinal verdict: GO\n",
+        encoding="utf-8",
+    )
+    pass_file.write_text(
         "[Audit Receipt] identity-protocol v1.5.1 release on main\nDate: 2026-03-05\nFinal verdict: GO\n",
         encoding="utf-8",
     )
@@ -399,9 +650,11 @@ def main() -> int:
         catalog_path=catalog_path,
         repo_catalog_path=repo_catalog_path,
         actor_id=actor_id,
-        outlet_channel_id="governed_adapter_v1",
+        session_id=session_id_effective,
+        outlet_channel_id="final_emit_governed",
         blocker_receipt=missing_receipt,
         reply_file=missing_file,
+        host_visible_shadow_root=str(host_visible_shadow_root),
     )
     rc_missing, payload_missing, _, _ = _run_json(negative_missing_cmd)
     dynamic_cases["negative_missing_header"] = {
@@ -409,12 +662,28 @@ def main() -> int:
         "error_code": str(payload_missing.get("error_code", "")),
         "send_time_gate_status": str(payload_missing.get("send_time_gate_status", "")),
         "reply_first_line_status": str(payload_missing.get("reply_first_line_status", "")),
+        "reply_first_line_gate_executed": bool(payload_missing.get("reply_first_line_gate_executed", True)),
+        "send_time_block_stage": str(payload_missing.get("send_time_block_stage", "")),
         "blocker_receipt_path": str(payload_missing.get("blocker_receipt_path", "")),
     }
+    missing_error_code = str(payload_missing.get("error_code", ""))
+    missing_block_stage = str(payload_missing.get("send_time_block_stage", ""))
+    missing_first_line_status = str(payload_missing.get("reply_first_line_status", ""))
+    missing_first_line_gate_executed = bool(payload_missing.get("reply_first_line_gate_executed", True))
+    missing_gate_status = str(payload_missing.get("send_time_gate_status", ""))
     missing_ok = (
         rc_missing != 0
-        and str(payload_missing.get("error_code", "")) == ERR_SEND_TIME_GATE
-        and str(payload_missing.get("send_time_gate_status", "")) == STATUS_FAIL_REQUIRED
+        and missing_gate_status == STATUS_FAIL_REQUIRED
+        and (
+            missing_error_code == ERR_SEND_TIME_GATE
+            or missing_error_code == ERR_SEND_TIME_EVIDENCE_MISSING
+            or (
+                missing_error_code == ERR_SYNTHETIC_EVIDENCE
+                and missing_first_line_status == STATUS_SKIPPED_NOT_REQUIRED
+                and missing_first_line_gate_executed is False
+                and missing_block_stage.startswith("pre_first_line_post_check_")
+            )
+        )
     )
     if not missing_ok and not error_code:
         error_code = ERR_MISSING_HEADER_NEGATIVE
@@ -426,9 +695,11 @@ def main() -> int:
         catalog_path=catalog_path,
         repo_catalog_path=repo_catalog_path,
         actor_id=actor_id,
-        outlet_channel_id="governed_adapter_v1",
+        session_id=session_id_effective,
+        outlet_channel_id="final_emit_governed",
         blocker_receipt=inline_receipt,
         reply_text="manual inline reply without governed file evidence",
+        host_visible_shadow_root=str(host_visible_shadow_root),
     )
     rc_inline, payload_inline, _, _ = _run_json(negative_inline_cmd)
     dynamic_cases["negative_inline_synthetic"] = {
@@ -436,11 +707,15 @@ def main() -> int:
         "error_code": str(payload_inline.get("error_code", "")),
         "send_time_gate_status": str(payload_inline.get("send_time_gate_status", "")),
         "reply_evidence_mode": str(payload_inline.get("reply_evidence_mode", "")),
+        "output_governance_mode": str(payload_inline.get("output_governance_mode", "")),
+        "next_hop_admission_status": str(payload_inline.get("next_hop_admission_status", "")),
     }
     inline_ok = (
         rc_inline != 0
         and str(payload_inline.get("error_code", "")) == ERR_SYNTHETIC_EVIDENCE
         and str(payload_inline.get("send_time_gate_status", "")) == STATUS_FAIL_REQUIRED
+        and str(payload_inline.get("next_hop_admission_status", "")) == STATUS_FAIL_REQUIRED
+        and str(payload_inline.get("output_governance_mode", "")) == "host_direct"
     )
     if not inline_ok and not error_code:
         error_code = ERR_INLINE_NEGATIVE
@@ -452,9 +727,11 @@ def main() -> int:
         catalog_path=catalog_path,
         repo_catalog_path=repo_catalog_path,
         actor_id=actor_id,
+        session_id=session_id_effective,
         outlet_channel_id="direct_text_channel",
         blocker_receipt=nongov_receipt,
         reply_file=missing_file,
+        host_visible_shadow_root=str(host_visible_shadow_root),
     )
     rc_nongov, payload_nongov, _, _ = _run_json(negative_nongov_cmd)
     dynamic_cases["negative_non_governed_outlet"] = {
@@ -463,16 +740,76 @@ def main() -> int:
         "send_time_gate_status": str(payload_nongov.get("send_time_gate_status", "")),
         "governed_outlet_enforced": bool(payload_nongov.get("governed_outlet_enforced", False)),
         "outlet_channel_id": str(payload_nongov.get("outlet_channel_id", "")),
+        "output_governance_mode": str(payload_nongov.get("output_governance_mode", "")),
+        "next_hop_admission_status": str(payload_nongov.get("next_hop_admission_status", "")),
     }
+    nongov_error_code = str(payload_nongov.get("error_code", "")).strip()
     nongov_ok = (
         rc_nongov != 0
-        and str(payload_nongov.get("error_code", "")) == ERR_NON_GOVERNED_OUTLET
+        and nongov_error_code in {ERR_NON_GOVERNED_OUTLET, ERR_FINAL_EMIT_CHANNEL_REQUIRED}
         and str(payload_nongov.get("send_time_gate_status", "")) == STATUS_FAIL_REQUIRED
+        and str(payload_nongov.get("next_hop_admission_status", "")) == STATUS_FAIL_REQUIRED
+        and str(payload_nongov.get("output_governance_mode", "")) == "manual_headstamp"
     )
     if not nongov_ok and not error_code:
         error_code = ERR_OUTLET_NEGATIVE
     if not nongov_ok:
         stale_reasons.append("non_governed_outlet_not_fail_closed")
+
+    recovery_cmd = [
+        sys.executable,
+        str((SCRIPT_DIR / "recover_host_visible_post_check_state.py").resolve()),
+        "--catalog",
+        str(catalog_path),
+        "--repo-catalog",
+        str(repo_catalog_path),
+        "--identity-id",
+        args.identity_id,
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        session_id_effective,
+        "--run-id",
+        recovery_run_id,
+        "--receipt-source",
+        "runtime_dialogue",
+        "--allowed-live-receipt-sources",
+        "runtime_dialogue",
+        "--host-visible-shadow-root",
+        str(host_visible_shadow_root),
+        "--json-only",
+    ]
+    rc_recovery, payload_recovery, _, _ = _run_json(recovery_cmd)
+    dynamic_cases["precheck_host_visible_recovery"] = {
+        "rc": rc_recovery,
+        "error_code": str(payload_recovery.get("error_code", "")),
+        "recovery_status": str(payload_recovery.get("recovery_status", "")),
+        "attestation_status": str(payload_recovery.get("attestation_status", "")),
+        "reply_transport_requested_ref": str(
+            payload_recovery.get("reply_transport_requested_ref", "")
+        ),
+        "reply_transport_resolution_mode": str(
+            payload_recovery.get("reply_transport_resolution_mode", "")
+        ),
+        "reply_transport_source_materialized": bool(
+            payload_recovery.get("reply_transport_source_materialized", False)
+        ),
+        "host_visible_runtime_scope": str(
+            payload_recovery.get("host_visible_runtime_scope", "")
+        ),
+        "host_transport_post_check_blocker_active": bool(
+            payload_recovery.get("host_transport_post_check_blocker_active", True)
+        ),
+    }
+    recovery_ok = (
+        rc_recovery == 0
+        and str(payload_recovery.get("recovery_status", "")) == STATUS_PASS_REQUIRED
+        and str(payload_recovery.get("attestation_status", "")) == STATUS_PASS_REQUIRED
+    )
+    if not recovery_ok:
+        stale_reasons.append("precheck_host_visible_recovery_not_pass")
+        if not error_code:
+            error_code = ERR_RECOVERY_PRECHECK
 
     compose_cmd = [
         sys.executable,
@@ -490,11 +827,16 @@ def main() -> int:
         "--blocker-receipt-out",
         str(compose_receipt),
         "--outlet-channel-id",
-        "governed_adapter_v1",
+        "final_emit_governed",
         "--actor-id",
         actor_id,
+        "--host-visible-shadow-root",
+        str(host_visible_shadow_root),
+        "--current-surface-native-machine-attested",
         "--json-only",
     ]
+    if session_id_effective:
+        compose_cmd += ["--session-id", session_id_effective]
     rc_compose, payload_compose, _, _ = _run_json(compose_cmd)
     first_line = ""
     if pass_file.exists():
@@ -503,19 +845,31 @@ def main() -> int:
             if line.strip():
                 first_line = line.strip()
                 break
+    first_line_work_layer, first_line_source_layer = _extract_stamp_layers(first_line)
     dynamic_cases["positive_governed_compose"] = {
         "rc": rc_compose,
         "error_code": str(payload_compose.get("error_code", "")),
         "send_time_gate_status": str(payload_compose.get("send_time_gate_status", "")),
         "reply_first_line_status": str(payload_compose.get("reply_first_line_status", "")),
         "reply_outlet_guard_applied": bool(payload_compose.get("reply_outlet_guard_applied", False)),
+        "output_governance_mode": str(payload_compose.get("output_governance_mode", "")),
+        "next_hop_admission_status": str(payload_compose.get("next_hop_admission_status", "")),
+        "governed_reply_transport_lifecycle_phase": str(
+            payload_compose.get("governed_reply_transport_lifecycle_phase", "")
+        ),
+        "host_transport_post_check_runtime_scope": str(
+            payload_compose.get("host_transport_post_check_runtime_scope", "")
+        ),
         "first_line_prefix_ok": bool(first_line.startswith("Identity-Context:")),
         "out_reply_file": str(payload_compose.get("out_reply_file", "")),
     }
     compose_ok = (
-        rc_compose == 0
+        recovery_ok
+        and rc_compose == 0
         and str(payload_compose.get("send_time_gate_status", "")) == STATUS_PASS_REQUIRED
         and str(payload_compose.get("reply_first_line_status", "")) == STATUS_PASS_REQUIRED
+        and str(payload_compose.get("next_hop_admission_status", "")) == STATUS_PASS_REQUIRED
+        and str(payload_compose.get("output_governance_mode", "")) == "governed"
         and bool(first_line.startswith("Identity-Context:"))
     )
     if not compose_ok and not error_code:
@@ -531,9 +885,14 @@ def main() -> int:
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             actor_id=actor_id,
-            outlet_channel_id="governed_adapter_v1",
+            session_id=session_id_effective,
+            outlet_channel_id="final_emit_governed",
             blocker_receipt=coverage_receipt,
             reply_file=pass_file,
+            expected_work_layer=first_line_work_layer,
+            expected_source_layer=first_line_source_layer,
+            current_surface_native_machine_attested=True,
+            host_visible_shadow_root=str(host_visible_shadow_root),
         )
         rc_cov, payload_cov, _, _ = _run_json(coverage_cmd)
         coverage_case = {
@@ -542,11 +901,15 @@ def main() -> int:
             "send_time_gate_status": str(payload_cov.get("send_time_gate_status", "")),
             "reply_first_line_status": str(payload_cov.get("reply_first_line_status", "")),
             "reply_evidence_mode": str(payload_cov.get("reply_evidence_mode", "")),
+            "next_hop_admission_status": str(payload_cov.get("next_hop_admission_status", "")),
+            "output_governance_mode": str(payload_cov.get("output_governance_mode", "")),
         }
         coverage_equiv_ok = (
             rc_cov == 0
             and coverage_case["send_time_gate_status"] == STATUS_PASS_REQUIRED
             and coverage_case["reply_first_line_status"] == STATUS_PASS_REQUIRED
+            and coverage_case["next_hop_admission_status"] == STATUS_PASS_REQUIRED
+            and coverage_case["output_governance_mode"] == "governed"
         )
     else:
         coverage_case = {"rc": 2, "error": "compose_positive_not_available"}
@@ -560,10 +923,12 @@ def main() -> int:
     mismatch_ok, mismatch_case, mismatch_stale = _actor_mismatch_probe(
         identity_id=args.identity_id,
         actor_id=actor_id,
+        session_id=session_id_effective,
         catalog_path=catalog_path,
         repo_catalog_path=repo_catalog_path,
         reply_file=mismatch_reply,
         blocker_receipt=mismatch_receipt,
+        host_visible_shadow_root=str(host_visible_shadow_root),
     )
     dynamic_cases["negative_actor_bound_mismatch"] = mismatch_case
     stale_reasons.extend(mismatch_stale)
@@ -580,6 +945,9 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "repo_catalog_path": str(repo_catalog_path),
         "operation": args.operation,
+        "session_id_input": session_id_input,
+        "session_id_effective": session_id_effective,
+        "session_resolution_mode": session_resolution_mode,
         "required_contract": True,
         "actor_id": actor_id,
         "actor_explicit": bool(actor_id),
@@ -598,6 +966,7 @@ def main() -> int:
         "entrypoint_coverage": coverage_rows,
         "missing_wiring_items": missing_wiring,
         "dynamic_cases": dynamic_cases,
+        "host_visible_shadow_root": str(host_visible_shadow_root),
         "stale_reasons": sorted(set(stale_reasons)),
     }
     _emit(payload, json_only=args.json_only)

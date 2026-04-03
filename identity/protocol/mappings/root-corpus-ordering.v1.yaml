@@ -1,0 +1,449 @@
+schema_version: 1
+ordering_family: protocol_root_corpus_ordering
+ordering_version: v1
+root_dir: identity/protocol
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+precedence_current_file: identity/protocol/mappings/root-corpus-precedence.current.yaml
+root_index_entry: identity/protocol/README.md
+validator_script: scripts/validate_protocol_root_corpus_ordering.py
+probe_script: scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh
+common_script: scripts/root_corpus_ordering_common.py
+status_key: protocol_root_corpus_ordering_status
+error_codes:
+- IP-RCO-001
+- IP-RCO-002
+- IP-RCO-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+ordering_anchor_checks:
+- rel_path: identity/protocol/README.md
+  required_markers:
+  - '## Root ordering completeness discipline'
+  - These ordering-completeness rules must remain bound to canonical ordering-completeness
+    rows rather than drifting into soft summary prose.
+  - required source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface,
+    order-plane-stage, order-plane-stage-surface, explanatory root-contract index/projection,
+    adjudication-order, and adjudication-surface-profile rows must remain explicit
+    as separate machine-readable row families;
+  - runtime or validator code must not finalize ordering legality while missing
+    or unexpected source, entry, root-reading-order-stage, order-plane-stage,
+    manual-root-contract, or adjudication-surface identities remain known only
+    internally;
+  - These order distinctions must remain bound to canonical order-plane stage
+    rows rather than becoming a freehand semantic triad.
+  - This root reading order must remain bound to canonical root-reading-order
+    stage rows rather than becoming a freehand alternate entry ladder.
+  - '## Root adjudication-surface discipline'
+  - mappings admit applicable machine law and registry truth for current-turn legality;
+  - validators test legality against that admitted law rather than inventing new
+    origin law;
+  - probes negate drift by fail-closing weakened or hidden legality assumptions;
+  - runtime state binds live current-turn truth only after prior legality phases
+    have remained lawful;
+  - receipts close the adjudicated verdict and must not back-author earlier legality
+    phases.
+  - this manual root-contract index is explanatory only and must remain congruent
+    with the admitted `reading_order` root-contract sequence rather than becoming
+    an independently authored alternate order.
+- rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+  required_markers:
+  - '### Ordering row-family completeness must stay explicit'
+  - README root ordering-completeness discipline must therefore stay congruent
+    with admitted ordering-completeness rows rather than becoming a freehand
+    completeness summary.
+  - README root reading order must therefore stay congruent with admitted root-reading-order-stage
+    rows rather than becoming a freehand alternate entry ladder.
+  - README source-order / reading-order / adjudication-order distinctions must
+    therefore stay congruent with admitted order-plane-stage rows rather than
+    becoming a freehand semantic triad.
+  - '### Adjudication surfaces are phase-governed, not interchangeable'
+  - mappings admit applicable law into the current-turn legality path;
+  - validators evaluate legality against admitted law rather than inventing new
+    origin law;
+  - probes negate hidden drift by fail-closing weakened legality assumptions;
+  - runtime state binds live present-turn truth only after the earlier legality
+    phases remain lawful;
+  - receipts close the adjudicated verdict rather than back-authoring the earlier
+    legality phases they summarize.
+- rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+  required_markers:
+  - '## Root ordering completeness boundary'
+  - README root ordering completeness discipline rendered at protocol root must
+    remain congruent with admitted ordering-completeness rows rather than silently
+    authoring an alternate completeness summary.
+  - README root reading order stages rendered at protocol root must remain congruent
+    with admitted root-reading-order-stage rows rather than silently authoring
+    an alternate entry ladder.
+  - README source-order / reading-order / adjudication-order distinctions rendered
+    at protocol root must remain congruent with admitted order-plane-stage rows
+    rather than silently authoring an alternate semantic triad.
+  - '## Root adjudication-surface boundary'
+  - mappings admit machine-consumed law and registry truth into current-turn legality;
+  - validators evaluate legality against that admitted law rather than authoring
+    new source law;
+  - probes fail-close hidden drift instead of softening legality expectations;
+  - runtime state binds live truth only after prior legality phases remain satisfied;
+  - receipts close the adjudicated verdict and do not replace the earlier legality
+    phases they report.
+  - The manual root-contract enumeration carried by this constitution is an explanatory
+    projection and must remain congruent with the admitted `reading_order` root-contract
+    sequence and admitted root-contract projection labels rather than becoming
+    an independently authored alternate root index or relabeling domain law.
+- rel_path: identity/protocol/IDENTITY_RUNTIME.md
+  required_markers:
+  - '## Runtime ordering consumption boundary'
+  - Runtime consumes README root ordering completeness discipline as a governed
+    completeness projection bound to admitted ordering-completeness rows rather
+    than as a freehand completeness summary.
+  - Runtime consumes README root reading order as a governed stage projection
+    bound to admitted root-reading-order-stage rows rather than as a freehand
+    alternate entry ladder.
+  - Runtime consumes README source-order / reading-order / adjudication-order
+    distinctions as a governed stage projection bound to admitted order-plane-stage
+    rows rather than as a freehand semantic triad.
+  - '## Runtime adjudication-surface consumption boundary'
+  - Runtime consumes mappings as admissible law-resolution surfaces rather than
+    as optional lookup hints.
+  - Runtime consumes validators as legality-evaluation surfaces rather than as
+    replaceable commentary.
+  - Runtime consumes probes as fail-close drift-negation surfaces rather than
+    soft diagnostics.
+  - Runtime consumes runtime state as live-truth binding only after prior legality
+    phases remain satisfied.
+  - Runtime consumes receipts as adjudicated verdict closure rather than as upstream
+    law-authoring surfaces.
+source_order:
+- order: 1
+  corpus_class: bottom_theory
+  source_role: generative_bottom_theory
+  law_bearing_required: true
+- order: 2
+  corpus_class: constitution
+  source_role: constitutional_protocol_law
+  law_bearing_required: true
+- order: 3
+  corpus_class: runtime_constitution
+  source_role: constitutional_runtime_law
+  law_bearing_required: true
+- order: 4
+  corpus_class: root_contract
+  source_role: root_domain_contract_law
+  law_bearing_required: true
+- order: 5
+  corpus_class: machine_registry_directory
+  source_role: machine_consumed_registry_surface
+  law_bearing_required: true
+- order: 6
+  corpus_class: governed_subdomain_extension
+  source_role: governed_subdomain_extension
+  law_bearing_required: true
+- order: 7
+  corpus_class: demoted_support_directory
+  source_role: demoted_support_material
+  law_bearing_required: false
+reading_order:
+- order: 1
+  rel_path: identity/protocol/README.md
+  entry_role: root_index_entry_surface
+- order: 2
+  rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+  entry_role: bottom_theory_entry
+- order: 3
+  rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+  entry_role: protocol_constitution_entry
+- order: 4
+  rel_path: identity/protocol/IDENTITY_RUNTIME.md
+  entry_role: runtime_constitution_entry
+- order: 5
+  rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 6
+  rel_path: identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 7
+  rel_path: identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 8
+  rel_path: identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 9
+  rel_path: identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 10
+  rel_path: identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 11
+  rel_path: identity/protocol/ERROR_TERMINALITY_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 12
+  rel_path: identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 13
+  rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 14
+  rel_path: identity/protocol/IDENTITY_DISCOVERY.md
+  entry_role: root_contract_entry
+- order: 15
+  rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 16
+  rel_path: identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 17
+  rel_path: identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 18
+  rel_path: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 19
+  rel_path: identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 20
+  rel_path: identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
+  entry_role: root_contract_entry
+- order: 21
+  rel_path: identity/protocol/mappings
+  entry_role: machine_registry_directory_entry
+- order: 22
+  rel_path: identity/protocol/broadcast
+  entry_role: governed_subdomain_extension_entry
+- order: 23
+  rel_path: identity/protocol/plugins
+  entry_role: governed_subdomain_extension_entry
+- order: 24
+  rel_path: identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md
+  entry_role: demoted_support_entry
+- order: 25
+  rel_path: identity/protocol/LANE_HANDOFF_CONTRACT.md
+  entry_role: demoted_support_entry
+- order: 26
+  rel_path: identity/protocol/fixtures
+  entry_role: demoted_support_entry
+root_reading_order_stages:
+- order: 1
+  stage_label: '`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`'
+  bound_reading_order_rel_paths:
+  - identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+  required_markers:
+  - the bottom theory;
+  - the generative reason the identity protocol exists at all;
+  - the interpretive source for machine-law priorities, semantic singularity,
+    fail-close preference, lifecycle closure, and shared-law vs instance-adaptation
+    boundaries.
+- order: 2
+  stage_label: '`IDENTITY_PROTOCOL.md`'
+  bound_reading_order_rel_paths:
+  - identity/protocol/IDENTITY_PROTOCOL.md
+  required_markers:
+  - the protocol-law constitution;
+  - the root protocol boundary, governance stack, and active stream framing.
+- order: 3
+  stage_label: '`IDENTITY_RUNTIME.md`'
+  bound_reading_order_rel_paths:
+  - identity/protocol/IDENTITY_RUNTIME.md
+  required_markers:
+  - the runtime constitution;
+  - how protocol law is embodied in runtime integration, startup, execution checks,
+    and active-runtime boundaries.
+- order: 4
+  stage_label: root contract files
+  bound_reading_order_rel_paths:
+  - identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
+  - identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md
+  - identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md
+  - identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md
+  - identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md
+  - identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md
+  - identity/protocol/ERROR_TERMINALITY_CONTRACT.md
+  - identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md
+  - identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
+  - identity/protocol/IDENTITY_DISCOVERY.md
+  - identity/protocol/AGENT_HANDOFF_CONTRACT.md
+  - identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md
+  - identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md
+  - identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
+  - identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md
+  - identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
+  required_markers:
+  - '`MACHINE_LAW_PRIMACY_CONTRACT.md`'
+  - '`MACHINE_WORLD_ONTOLOGY_CONTRACT.md`'
+  - '`CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md`'
+  - '`DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md`'
+  - '`SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md`'
+  - '`ENTRY_SURFACE_LEGITIMACY_CONTRACT.md`'
+  - '`ERROR_TERMINALITY_CONTRACT.md`'
+  - '`ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md`'
+  - '`IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`'
+  - '`IDENTITY_DISCOVERY.md`'
+  - '`AGENT_HANDOFF_CONTRACT.md`'
+  - '`IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md`'
+  - '`PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`'
+  - '`STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`'
+  - '`TRUTH_LIFECYCLE_CONTRACT.md`'
+  - '`OPERATOR_ANSWER_SURFACE_CONTRACT.md`'
+  - this manual root-contract index is explanatory only and must remain congruent
+    with the admitted `reading_order` root-contract sequence rather than becoming
+    an independently authored alternate order.
+  - explanatory root-contract summaries rendered elsewhere in the root corpus
+    must remain congruent with admitted root-contract projection labels rather
+    than relabeling domain law.
+  - these freeze concrete contract law for their specific domains.
+- order: 5
+  stage_label: machine-consumed registries and mappings
+  bound_reading_order_rel_paths:
+  - identity/protocol/mappings
+  required_markers:
+  - '`mappings/`'
+  - these freeze machine-facing rows, bindings, and registry truth.
+- order: 6
+  stage_label: specialized subdomain protocol packs
+  bound_reading_order_rel_paths:
+  - identity/protocol/broadcast
+  - identity/protocol/plugins
+  required_markers:
+  - '`broadcast/`'
+  - '`plugins/`'
+  - these extend the root protocol into narrower governed surfaces.
+- order: 7
+  stage_label: non-runtime or support material
+  bound_reading_order_rel_paths:
+  - identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md
+  - identity/protocol/LANE_HANDOFF_CONTRACT.md
+  - identity/protocol/fixtures
+  required_markers:
+  - '`IDENTITY_CONTROL_PLANE_MVP.md`'
+  - '`LANE_HANDOFF_CONTRACT.md`'
+  - '`fixtures/`'
+  - these are never active-runtime truth.
+protocol_boundary_root_contract_projections:
+- order: 1
+  rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
+  projection_label: The root-domain machine-law primacy and compatibility-shelter boundary
+- order: 2
+  rel_path: identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md
+  projection_label: The root-domain machine-world ontology law for what objects may exist and how they remain semantically separate
+- order: 3
+  rel_path: identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md
+  projection_label: The root-domain current-truth epistemology law for how a machine justifies believing present fact
+- order: 4
+  rel_path: identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md
+  projection_label: The root-domain decision-evidence admissibility law for what may motivate, support, or terminally justify a machine decision
+- order: 5
+  rel_path: identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md
+  projection_label: The root-domain success-path state admissibility law for which state classes may enter active execution, stay optional, or redirect into governed recovery
+- order: 6
+  rel_path: identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md
+  projection_label: The root-domain entry-surface legitimacy law for which entry surfaces are lawful, which may drive active execution, and which must remain helper-only, recovery-only, or demoted
+- order: 7
+  rel_path: identity/protocol/ERROR_TERMINALITY_CONTRACT.md
+  projection_label: The root-domain error terminality law for which errors must fail-close, redirect into governed recovery, or remain explicitly non-blocking
+- order: 8
+  rel_path: identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md
+  projection_label: The root-domain artifact-family admissibility law for which governed families may accept which artifacts, which artifacts remain merely compatible, and which must redirect or stay demoted
+- order: 9
+  rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
+  projection_label: The root-domain prompt-bootstrap law for lawful identity prompt activation and bootstrap discipline
+- order: 10
+  rel_path: identity/protocol/IDENTITY_DISCOVERY.md
+  projection_label: The root-domain identity-discovery law for how lawful identity surfaces are discovered and bound
+- order: 11
+  rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
+  projection_label: The root-domain agent-handoff law for lawful cross-agent responsibility transfer and closure
+- order: 12
+  rel_path: identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md
+  projection_label: The root-domain instance self-judgement law for who I am, what I can do, how I do it, and when I must not decide alone
+- order: 13
+  rel_path: identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md
+  projection_label: The root-domain responsibility and escalation boundary between protocol law and instance adaptation
+- order: 14
+  rel_path: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
+  projection_label: The root-domain admissibility law for new protocol streams and shared strengthenings
+- order: 15
+  rel_path: identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md
+  projection_label: The root-domain truth lifecycle law for existence, discoverability, admissibility, run-binding, and next-hop consumption
+- order: 16
+  rel_path: identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
+  projection_label: The root-domain operator answer-surface and law-preserving compression boundary
+adjudication_order:
+- order: 1
+  machine_surface: mappings
+- order: 2
+  machine_surface: validators
+- order: 3
+  machine_surface: probes
+- order: 4
+  machine_surface: runtime_state
+- order: 5
+  machine_surface: receipts
+adjudication_surface_profiles:
+- machine_surface: mappings
+  phase_order: 1
+  surface_role: admissible_law_resolution
+  closure_terminal: false
+- machine_surface: validators
+  phase_order: 2
+  surface_role: governed_legality_evaluation
+  closure_terminal: false
+- machine_surface: probes
+  phase_order: 3
+  surface_role: fail_close_drift_negation
+  closure_terminal: false
+- machine_surface: runtime_state
+  phase_order: 4
+  surface_role: live_state_truth_binding
+  closure_terminal: false
+- machine_surface: receipts
+  phase_order: 5
+  surface_role: adjudicated_verdict_closure
+  closure_terminal: true
+ordering_completeness_rows:
+- order: 1
+  completeness_id: explicit_ordering_row_families
+  contract_phrase: required source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface, order-plane-stage, order-plane-stage-surface, explanatory root-contract index/projection, adjudication-order, and adjudication-surface-profile rows must remain explicit as separate machine-readable row families;
+- order: 2
+  completeness_id: congruent_ordering_row_family_totals
+  contract_phrase: expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+- order: 3
+  completeness_id: explicit_ordering_row_identity_sets
+  contract_phrase: expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+- order: 4
+  completeness_id: hidden_ordering_identity_drift_forbidden
+  contract_phrase: runtime or validator code must not finalize ordering legality while missing or unexpected source, entry, root-reading-order-stage, order-plane-stage, manual-root-contract, or adjudication-surface identities remain known only internally;
+- order: 5
+  completeness_id: fail_close_preserves_ordering_identity_projection
+  contract_phrase: fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+order_plane_stages:
+- order: 1
+  stage_label: source-order / generative-order
+  bound_row_families:
+  - source_order
+  required_markers:
+  - '`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`'
+  - '`IDENTITY_PROTOCOL.md` / `IDENTITY_RUNTIME.md`'
+  - root contract files
+  - machine-consumed enforcement surfaces
+  - 'answers: where protocol law comes from.'
+- order: 2
+  stage_label: root reading-order
+  bound_row_families:
+  - root_reading_order_stages
+  - root_reading_order_stage_surface
+  required_markers:
+  - the entry sequence defined at the top of this file
+  - the README entry ladder must remain congruent with admitted root-reading-order
+    stage rows rather than becoming a freehand alternate order
+  - 'answers: how to enter the root corpus without semantic confusion.'
+- order: 3
+  stage_label: adjudication-order
+  bound_row_families:
+  - adjudication_order
+  - adjudication_surface_profiles
+  required_markers:
+  - governance/review docs, mappings, validators, probes, runtime state, and
+    receipts
+  - the terminal machine chain stays explicit as mappings → validators → probes
+    → runtime state → receipts
+  - 'answers: how current-turn legality and machine verdict are determined.'

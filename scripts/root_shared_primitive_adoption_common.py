@@ -1,0 +1,783 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import ast
+import re
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+
+ROOT_VALIDATOR_GLOB = "scripts/validate_protocol_root_*.py"
+ROOT_PROBE_GLOB = "scripts/ci/run_protocol_root_*_probes_ci.sh"
+ROOT_PROBE_SHADOW_COMMON = "protocol_root_probe_shadow_common.sh"
+LEGACY_PROBE_MIRROR_COMMON = "probe_repo_mirror_common.sh"
+ROOT_PROBE_SHADOW_COMMON_RELPATH = f"scripts/ci/{ROOT_PROBE_SHADOW_COMMON}"
+
+
+@dataclass(frozen=True)
+class ForbiddenPrimitiveContract:
+    module: str
+    primitive_name: str
+    preferred_primitive: str
+    primitive_class: str
+
+
+FORBIDDEN_PRIMITIVE_CONTRACTS: tuple[ForbiddenPrimitiveContract, ...] = (
+    ForbiddenPrimitiveContract(
+        module="root_row_family_projection_common",
+        primitive_name="project_row_family",
+        preferred_primitive="project_row_families",
+        primitive_class="row_family_projection",
+    ),
+    ForbiddenPrimitiveContract(
+        module="root_contract_row_validation_common",
+        primitive_name="validate_contract_rows",
+        preferred_primitive="validate_contract_row_batches",
+        primitive_class="contract_row_validation",
+    ),
+)
+
+FORBIDDEN_PRIMITIVE_BY_MODULE: dict[str, dict[str, ForbiddenPrimitiveContract]] = {}
+for _contract in FORBIDDEN_PRIMITIVE_CONTRACTS:
+    FORBIDDEN_PRIMITIVE_BY_MODULE.setdefault(_contract.module, {})[
+        _contract.primitive_name
+    ] = _contract
+
+FORBIDDEN_PRIMITIVE_BY_NAME: dict[str, ForbiddenPrimitiveContract] = {
+    contract.primitive_name: contract for contract in FORBIDDEN_PRIMITIVE_CONTRACTS
+}
+
+PREFERRED_PRIMITIVE_BY_MODULE: dict[str, dict[str, dict[str, str]]] = {}
+for _contract in FORBIDDEN_PRIMITIVE_CONTRACTS:
+    PREFERRED_PRIMITIVE_BY_MODULE.setdefault(_contract.module, {})[
+        _contract.preferred_primitive
+    ] = {
+        "module": _contract.module,
+        "primitive_name": _contract.preferred_primitive,
+        "primitive_class": _contract.primitive_class,
+    }
+
+PREFERRED_PRIMITIVE_BY_NAME: dict[str, dict[str, str]] = {
+    primitive_name: primitive_contract
+    for primitive_contracts in PREFERRED_PRIMITIVE_BY_MODULE.values()
+    for primitive_name, primitive_contract in primitive_contracts.items()
+}
+
+PLACEHOLDER_ASSIGNMENT_MODES = frozenset({"initializer_empty_list"})
+
+
+def root_validator_paths(repo_root: Path) -> tuple[Path, ...]:
+    return tuple(sorted((repo_root / "scripts").glob("validate_protocol_root_*.py")))
+
+
+def root_probe_paths(repo_root: Path) -> tuple[Path, ...]:
+    return tuple(sorted((repo_root / "scripts" / "ci").glob("run_protocol_root_*_probes_ci.sh")))
+
+
+def root_probe_shadow_common_path(repo_root: Path) -> Path:
+    return repo_root / ROOT_PROBE_SHADOW_COMMON_RELPATH
+
+
+def _rel_path(repo_root: Path, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except Exception:
+        return str(path.resolve())
+
+
+def _is_empty_list_initializer(node: ast.AST) -> bool:
+    if isinstance(node, ast.List):
+        return len(node.elts) == 0
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        return node.func.id == "list" and len(node.args) == 0 and len(node.keywords) == 0
+    return False
+
+
+def _is_effective_row_family_projection_assignment(row: dict[str, Any]) -> bool:
+    assignment_mode = str(row.get("assignment_mode") or "").strip()
+    return assignment_mode not in PLACEHOLDER_ASSIGNMENT_MODES
+
+
+def _scan_root_validator_file(
+    repo_root: Path,
+    path: Path,
+) -> tuple[
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+]:
+    rel_path = _rel_path(repo_root, path)
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception as exc:
+        return [], [{"rel_path": rel_path, "reason": "read_failed", "detail": str(exc)}]
+    try:
+        tree = ast.parse(text, filename=rel_path)
+    except SyntaxError as exc:
+        return [], [
+            {
+                "rel_path": rel_path,
+                "reason": "parse_failed",
+                "lineno": int(exc.lineno or 0),
+                "detail": str(exc),
+            }
+        ]
+
+    direct_name_bindings: dict[str, ForbiddenPrimitiveContract] = {}
+    preferred_direct_bindings: dict[str, dict[str, str]] = {}
+    module_aliases: dict[str, str] = {}
+    violations: list[dict[str, Any]] = []
+    primitive_adoption_rows: list[dict[str, Any]] = []
+    row_family_projection_assignment_rows: list[dict[str, Any]] = []
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            module_name = str(node.module or "").strip()
+            forbidden_by_name = FORBIDDEN_PRIMITIVE_BY_MODULE.get(module_name, {})
+            preferred_by_name = PREFERRED_PRIMITIVE_BY_MODULE.get(module_name, {})
+            if not forbidden_by_name:
+                for alias in node.names:
+                    primitive_contract = preferred_by_name.get(alias.name)
+                    if primitive_contract is None:
+                        continue
+                    local_name = str(alias.asname or alias.name)
+                    preferred_direct_bindings[local_name] = primitive_contract
+                continue
+            for alias in node.names:
+                contract = forbidden_by_name.get(alias.name)
+                if contract is None and alias.name in preferred_by_name:
+                    local_name = str(alias.asname or alias.name)
+                    preferred_direct_bindings[local_name] = preferred_by_name[alias.name]
+                    continue
+                if contract is None:
+                    continue
+                local_name = str(alias.asname or alias.name)
+                direct_name_bindings[local_name] = contract
+                violations.append(
+                    {
+                        "rel_path": rel_path,
+                        "reason": "forbidden_direct_import_binding",
+                        "lineno": int(getattr(node, "lineno", 0) or 0),
+                        "module": contract.module,
+                        "primitive_name": contract.primitive_name,
+                        "preferred_primitive": contract.preferred_primitive,
+                        "primitive_class": contract.primitive_class,
+                        "binding": local_name,
+                    }
+                )
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                module_name = str(alias.name or "").strip()
+                if (
+                    module_name not in FORBIDDEN_PRIMITIVE_BY_MODULE
+                    and module_name not in PREFERRED_PRIMITIVE_BY_MODULE
+                ):
+                    continue
+                local_name = str(alias.asname or module_name.rsplit(".", 1)[-1])
+                module_aliases[local_name] = module_name
+
+    def _call_binding_details(func: ast.AST) -> tuple[dict[str, str] | None, str]:
+        if isinstance(func, ast.Name):
+            contract = preferred_direct_bindings.get(func.id)
+            if contract is not None:
+                return contract, func.id
+            contract = PREFERRED_PRIMITIVE_BY_NAME.get(func.id)
+            if contract is not None:
+                return contract, func.id
+            return None, func.id
+        if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
+            module_name = module_aliases.get(func.value.id)
+            if not module_name:
+                return None, f"{func.value.id}.{func.attr}"
+            contract = PREFERRED_PRIMITIVE_BY_MODULE.get(module_name, {}).get(func.attr)
+            return contract, f"{func.value.id}.{func.attr}"
+        return None, ast.dump(func, include_attributes=False)
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if isinstance(func, ast.Name):
+            contract = direct_name_bindings.get(func.id)
+            if contract is not None:
+                violations.append(
+                    {
+                        "rel_path": rel_path,
+                        "reason": "forbidden_direct_call_binding",
+                        "lineno": int(getattr(node, "lineno", 0) or 0),
+                        "module": contract.module,
+                        "primitive_name": contract.primitive_name,
+                        "preferred_primitive": contract.preferred_primitive,
+                        "primitive_class": contract.primitive_class,
+                        "binding": func.id,
+                    }
+                )
+                continue
+            contract = FORBIDDEN_PRIMITIVE_BY_NAME.get(func.id)
+            if contract is not None:
+                violations.append(
+                    {
+                        "rel_path": rel_path,
+                        "reason": "forbidden_direct_call_literal",
+                        "lineno": int(getattr(node, "lineno", 0) or 0),
+                        "module": contract.module,
+                        "primitive_name": contract.primitive_name,
+                        "preferred_primitive": contract.preferred_primitive,
+                        "primitive_class": contract.primitive_class,
+                        "binding": func.id,
+                    }
+                )
+        elif isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
+            module_name = module_aliases.get(func.value.id)
+            if not module_name:
+                _, binding = _call_binding_details(func)
+                primitive_contract = None
+            else:
+                contract = FORBIDDEN_PRIMITIVE_BY_MODULE.get(module_name, {}).get(func.attr)
+                if contract is not None:
+                    violations.append(
+                        {
+                            "rel_path": rel_path,
+                            "reason": "forbidden_module_attribute_call_binding",
+                            "lineno": int(getattr(node, "lineno", 0) or 0),
+                            "module": contract.module,
+                            "primitive_name": contract.primitive_name,
+                            "preferred_primitive": contract.preferred_primitive,
+                            "primitive_class": contract.primitive_class,
+                            "binding": f"{func.value.id}.{func.attr}",
+                        }
+                    )
+                primitive_contract, binding = _call_binding_details(func)
+            if primitive_contract is not None:
+                primitive_adoption_rows.append(
+                    {
+                        "rel_path": rel_path,
+                        "lineno": int(getattr(node, "lineno", 0) or 0),
+                        "module": primitive_contract["module"],
+                        "primitive_name": primitive_contract["primitive_name"],
+                        "primitive_class": primitive_contract["primitive_class"],
+                        "binding": binding,
+                        "call_mode": "module_attribute_binding",
+                    }
+                )
+            continue
+        primitive_contract, binding = _call_binding_details(func)
+        if primitive_contract is not None:
+            primitive_adoption_rows.append(
+                {
+                    "rel_path": rel_path,
+                    "lineno": int(getattr(node, "lineno", 0) or 0),
+                    "module": primitive_contract["module"],
+                    "primitive_name": primitive_contract["primitive_name"],
+                    "primitive_class": primitive_contract["primitive_class"],
+                    "binding": binding,
+                    "call_mode": "direct_name_binding",
+                }
+            )
+
+    assignment_nodes = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.Assign, ast.AnnAssign))
+    ]
+    for node in assignment_nodes:
+        target_names: list[str] = []
+        if isinstance(node, ast.Assign):
+            target_names = [
+                target.id
+                for target in node.targets
+                if isinstance(target, ast.Name)
+            ]
+            value = node.value
+        else:
+            target_names = [node.target.id] if isinstance(node.target, ast.Name) else []
+            value = node.value
+        if "row_family_projection_rows" not in target_names or value is None:
+            continue
+
+        assignment_row: dict[str, Any] = {
+            "rel_path": rel_path,
+            "lineno": int(getattr(node, "lineno", 0) or 0),
+            "target": "row_family_projection_rows",
+            "assignment_mode": "",
+            "binding": "",
+            "assignment_role": "",
+            "violation": False,
+        }
+        if _is_empty_list_initializer(value):
+            assignment_row["assignment_mode"] = "initializer_empty_list"
+            assignment_row["binding"] = type(value).__name__
+            row_family_projection_assignment_rows.append(assignment_row)
+            continue
+        if isinstance(value, ast.Call):
+            primitive_contract, binding = _call_binding_details(value.func)
+            assignment_row["binding"] = binding
+            if (
+                primitive_contract is not None
+                and primitive_contract["primitive_name"] == "project_row_families"
+            ):
+                assignment_row["assignment_mode"] = "shared_primitive_call"
+                assignment_row["primitive_class"] = primitive_contract["primitive_class"]
+                assignment_row["primitive_name"] = primitive_contract["primitive_name"]
+                assignment_row["module"] = primitive_contract["module"]
+            else:
+                assignment_row["assignment_mode"] = "non_shared_call"
+        else:
+            assignment_row["assignment_mode"] = f"non_call_{type(value).__name__}"
+            assignment_row["binding"] = type(value).__name__
+        row_family_projection_assignment_rows.append(assignment_row)
+
+    row_family_projection_assignment_rows.sort(
+        key=lambda row: int(row.get("lineno", 0) or 0)
+    )
+    effective_assignment_indices = [
+        index
+        for index, row in enumerate(row_family_projection_assignment_rows)
+        if _is_effective_row_family_projection_assignment(row)
+    ]
+    if effective_assignment_indices:
+        effective_assignment_index = effective_assignment_indices[-1]
+        for index, row in enumerate(row_family_projection_assignment_rows):
+            if index < effective_assignment_index:
+                row["assignment_role"] = (
+                    "superseded_assignment"
+                    if _is_effective_row_family_projection_assignment(row)
+                    else "prebinding_placeholder"
+                )
+            elif index == effective_assignment_index:
+                row["assignment_role"] = "effective_assignment"
+            else:
+                row["assignment_role"] = "post_effective_assignment"
+
+        effective_row = row_family_projection_assignment_rows[effective_assignment_index]
+        assignment_mode = str(effective_row.get("assignment_mode") or "").strip()
+        if assignment_mode != "shared_primitive_call":
+            effective_row["violation"] = True
+            violations.append(
+                {
+                    "rel_path": rel_path,
+                    "reason": (
+                        "row_family_projection_effective_assignment_not_shared_call"
+                        if assignment_mode == "non_shared_call"
+                        else "row_family_projection_effective_assignment_not_call"
+                    ),
+                    "lineno": int(effective_row.get("lineno", 0) or 0),
+                    "primitive_class": "row_family_projection",
+                    "preferred_primitive": "project_row_families",
+                    "binding": str(effective_row.get("binding") or "").strip(),
+                }
+            )
+    elif row_family_projection_assignment_rows:
+        effective_row = row_family_projection_assignment_rows[-1]
+        for row in row_family_projection_assignment_rows[:-1]:
+            row["assignment_role"] = "prebinding_placeholder"
+        effective_row["assignment_role"] = "missing_effective_assignment"
+        effective_row["violation"] = True
+        violations.append(
+            {
+                "rel_path": rel_path,
+                "reason": "row_family_projection_missing_effective_assignment",
+                "lineno": int(effective_row.get("lineno", 0) or 0),
+                "primitive_class": "row_family_projection",
+                "preferred_primitive": "project_row_families",
+                "binding": str(effective_row.get("binding") or "").strip(),
+            }
+        )
+
+    return (
+        violations,
+        [],
+        primitive_adoption_rows,
+        row_family_projection_assignment_rows,
+    )
+
+
+_PROBE_MANUAL_MIRROR_RE = re.compile(r"^\s*mirror_repo\(\)\s*\{", re.MULTILINE)
+_PROBE_SHADOW_SOURCE_RE = re.compile(
+    rf'^\s*source\s+"\$\{{SCRIPT_DIR\}}/{re.escape(ROOT_PROBE_SHADOW_COMMON)}"\s*$',
+    re.MULTILINE,
+)
+_PROBE_LEGACY_SOURCE_RE = re.compile(
+    rf"^\s*source\s+.*{re.escape(LEGACY_PROBE_MIRROR_COMMON)}.*$",
+    re.MULTILINE,
+)
+_PROBE_BOOTSTRAP_RE = re.compile(
+    r'^\s*protocol_root_probe_bootstrap\s+"\$\{SCRIPT_DIR\}"\s+"(?P<prefix>[^"]+)"\s*$',
+    re.MULTILINE,
+)
+_PROBE_FULL_MIRROR_RE = re.compile(
+    r"^\s*protocol_root_probe_define_full_mirror\s*$",
+    re.MULTILINE,
+)
+_PROBE_RELPATH_MIRROR_RE = re.compile(
+    r'^\s*protocol_root_probe_define_relpath_mirror\s+"\$\{PROBE_REL_PATHS\[@\]\}"\s*$',
+    re.MULTILINE,
+)
+
+_ROOT_PROBE_SHADOW_FUNCTION_BODY_TEMPLATE = r"^\s*{name}\(\)\s*\{{(?P<body>.*?)^\}}"
+
+
+def _extract_shell_function_body(text: str, function_name: str) -> str:
+    match = re.search(
+        _ROOT_PROBE_SHADOW_FUNCTION_BODY_TEMPLATE.format(name=re.escape(function_name)),
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    if match is None:
+        return ""
+    return str(match.group("body") or "")
+
+
+def _scan_root_probe_shadow_common_contract(
+    repo_root: Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    rel_path = ROOT_PROBE_SHADOW_COMMON_RELPATH
+    path = root_probe_shadow_common_path(repo_root)
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        rows = [
+            {
+                "rel_path": rel_path,
+                "contract_id": contract_id,
+                "status": "FAIL_REQUIRED",
+                "reason": "root_probe_shadow_common_missing",
+            }
+            for contract_id in (
+                "bootstrap_function_defined",
+                "bootstrap_legacy_mirror_source_binding",
+                "full_mirror_function_defined",
+                "full_mirror_probe_repo_binding",
+                "relpath_mirror_function_defined",
+                "relpath_mirror_probe_repo_binding",
+            )
+        ]
+        violations = [
+            {
+                "rel_path": rel_path,
+                "reason": "root_probe_shadow_common_missing",
+            }
+        ]
+        return violations, [], rows
+    except Exception as exc:
+        return [], [{"rel_path": rel_path, "reason": "read_failed", "detail": str(exc)}], []
+
+    contracts = (
+        (
+            "protocol_root_probe_bootstrap",
+            "bootstrap_function_defined",
+            "",
+            "function_defined",
+        ),
+        (
+            "protocol_root_probe_bootstrap",
+            "bootstrap_legacy_mirror_source_binding",
+            'source "${script_dir}/probe_repo_mirror_common.sh"',
+            "binding_required",
+        ),
+        (
+            "protocol_root_probe_define_full_mirror",
+            "full_mirror_function_defined",
+            "",
+            "function_defined",
+        ),
+        (
+            "protocol_root_probe_define_full_mirror",
+            "full_mirror_probe_repo_binding",
+            'probe_mirror_repo "${ROOT}" "${dst}"',
+            "binding_required",
+        ),
+        (
+            "protocol_root_probe_define_relpath_mirror",
+            "relpath_mirror_function_defined",
+            "",
+            "function_defined",
+        ),
+        (
+            "protocol_root_probe_define_relpath_mirror",
+            "relpath_mirror_probe_repo_binding",
+            'probe_mirror_repo_with_relpaths "${ROOT}" "${dst}" "${PROTOCOL_ROOT_PROBE_REL_PATHS[@]}"',
+            "binding_required",
+        ),
+    )
+
+    violations: list[dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
+    cached_bodies: dict[str, str] = {}
+    for function_name, contract_id, required_literal, contract_mode in contracts:
+        body = cached_bodies.get(function_name)
+        if body is None:
+            body = _extract_shell_function_body(text, function_name)
+            cached_bodies[function_name] = body
+
+        row: dict[str, Any] = {
+            "rel_path": rel_path,
+            "function_name": function_name,
+            "contract_id": contract_id,
+            "contract_mode": contract_mode,
+            "required_literal": required_literal,
+            "status": "PASS_REQUIRED",
+            "reason": "",
+        }
+        if not body:
+            row["status"] = "FAIL_REQUIRED"
+            row["reason"] = "root_probe_shadow_common_function_missing"
+        elif required_literal and required_literal not in body:
+            row["status"] = "FAIL_REQUIRED"
+            row["reason"] = "root_probe_shadow_common_binding_missing"
+
+        if row["status"] != "PASS_REQUIRED":
+            violations.append(
+                {
+                    "rel_path": rel_path,
+                    "function_name": function_name,
+                    "contract_id": contract_id,
+                    "reason": row["reason"],
+                }
+            )
+        rows.append(row)
+
+    return violations, [], rows
+
+
+def _scan_root_probe_file(
+    repo_root: Path,
+    path: Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any] | None]:
+    rel_path = _rel_path(repo_root, path)
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception as exc:
+        return [], [{"rel_path": rel_path, "reason": "read_failed", "detail": str(exc)}], None
+
+    shadow_source_present = _PROBE_SHADOW_SOURCE_RE.search(text) is not None
+    legacy_source_present = _PROBE_LEGACY_SOURCE_RE.search(text) is not None
+    bootstrap_match = _PROBE_BOOTSTRAP_RE.search(text)
+    full_mirror_present = _PROBE_FULL_MIRROR_RE.search(text) is not None
+    relpath_mirror_present = _PROBE_RELPATH_MIRROR_RE.search(text) is not None
+    manual_mirror_present = _PROBE_MANUAL_MIRROR_RE.search(text) is not None
+
+    if full_mirror_present and relpath_mirror_present:
+        mirror_binding_mode = "multiple_bindings"
+    elif full_mirror_present:
+        mirror_binding_mode = "full_mirror"
+    elif relpath_mirror_present:
+        mirror_binding_mode = "relpath_mirror"
+    else:
+        mirror_binding_mode = "missing"
+
+    row: dict[str, Any] = {
+        "rel_path": rel_path,
+        "shadow_common_source_present": shadow_source_present,
+        "legacy_probe_repo_mirror_source_present": legacy_source_present,
+        "bootstrap_present": bootstrap_match is not None,
+        "bootstrap_prefix": (
+            str(bootstrap_match.group("prefix")).strip()
+            if bootstrap_match is not None
+            else ""
+        ),
+        "mirror_binding_mode": mirror_binding_mode,
+        "manual_mirror_repo_definition_present": manual_mirror_present,
+        "status": "PASS_REQUIRED",
+    }
+
+    violations: list[dict[str, Any]] = []
+    if not shadow_source_present:
+        violations.append(
+            {
+                "rel_path": rel_path,
+                "reason": "missing_protocol_root_probe_shadow_common_source",
+            }
+        )
+    if legacy_source_present:
+        violations.append(
+            {
+                "rel_path": rel_path,
+                "reason": "forbidden_direct_probe_repo_mirror_source",
+            }
+        )
+    if bootstrap_match is None:
+        violations.append(
+            {
+                "rel_path": rel_path,
+                "reason": "missing_protocol_root_probe_bootstrap_call",
+            }
+        )
+    if mirror_binding_mode == "missing":
+        violations.append(
+            {
+                "rel_path": rel_path,
+                "reason": "missing_protocol_root_probe_mirror_binding",
+            }
+        )
+    elif mirror_binding_mode == "multiple_bindings":
+        violations.append(
+            {
+                "rel_path": rel_path,
+                "reason": "multiple_protocol_root_probe_mirror_bindings",
+            }
+        )
+    if manual_mirror_present:
+        violations.append(
+            {
+                "rel_path": rel_path,
+                "reason": "forbidden_manual_mirror_repo_definition",
+            }
+        )
+
+    if violations:
+        row["status"] = "FAIL_REQUIRED"
+    return violations, [], row
+
+
+def scan_root_validator_shared_primitive_adoption(repo_root: Path) -> dict[str, Any]:
+    validator_paths = root_validator_paths(repo_root)
+    probe_paths = root_probe_paths(repo_root)
+    violations: list[dict[str, Any]] = []
+    scan_errors: list[dict[str, Any]] = []
+    primitive_adoption_rows: list[dict[str, Any]] = []
+    row_family_projection_assignment_rows: list[dict[str, Any]] = []
+    root_probe_shadow_violation_rows: list[dict[str, Any]] = []
+    root_probe_scan_errors: list[dict[str, Any]] = []
+    root_probe_shadow_adoption_rows: list[dict[str, Any]] = []
+    (
+        root_probe_shadow_common_violation_rows,
+        root_probe_shadow_common_scan_errors,
+        root_probe_shadow_common_contract_rows,
+    ) = _scan_root_probe_shadow_common_contract(repo_root)
+    for path in validator_paths:
+        (
+            file_violations,
+            file_errors,
+            file_primitive_adoption_rows,
+            file_row_family_projection_assignment_rows,
+        ) = _scan_root_validator_file(repo_root, path)
+        violations.extend(file_violations)
+        scan_errors.extend(file_errors)
+        primitive_adoption_rows.extend(file_primitive_adoption_rows)
+        row_family_projection_assignment_rows.extend(
+            file_row_family_projection_assignment_rows
+        )
+    for path in probe_paths:
+        file_violations, file_errors, file_row = _scan_root_probe_file(repo_root, path)
+        root_probe_shadow_violation_rows.extend(file_violations)
+        root_probe_scan_errors.extend(file_errors)
+        if file_row is not None:
+            root_probe_shadow_adoption_rows.append(file_row)
+
+    primitive_class_counts: dict[str, int] = {}
+    reason_counts: dict[str, int] = {}
+    for row in violations:
+        primitive_class = str(row.get("primitive_class") or "").strip() or "unknown"
+        primitive_class_counts[primitive_class] = (
+            primitive_class_counts.get(primitive_class, 0) + 1
+        )
+        reason = str(row.get("reason") or "").strip() or "unknown"
+        reason_counts[reason] = reason_counts.get(reason, 0) + 1
+
+    adoption_class_counts: dict[str, int] = {}
+    for row in primitive_adoption_rows:
+        primitive_class = str(row.get("primitive_class") or "").strip() or "unknown"
+        adoption_class_counts[primitive_class] = (
+            adoption_class_counts.get(primitive_class, 0) + 1
+        )
+
+    root_probe_shadow_reason_counts: dict[str, int] = {}
+    for row in root_probe_shadow_violation_rows:
+        reason = str(row.get("reason") or "").strip() or "unknown"
+        root_probe_shadow_reason_counts[reason] = (
+            root_probe_shadow_reason_counts.get(reason, 0) + 1
+        )
+
+    root_probe_shadow_common_reason_counts: dict[str, int] = {}
+    for row in root_probe_shadow_common_violation_rows:
+        reason = str(row.get("reason") or "").strip() or "unknown"
+        root_probe_shadow_common_reason_counts[reason] = (
+            root_probe_shadow_common_reason_counts.get(reason, 0) + 1
+        )
+
+    row_family_projection_assignment_violation_rows = [
+        row
+        for row in row_family_projection_assignment_rows
+        if bool(row.get("violation"))
+    ]
+
+    return {
+        "root_validator_count": len(validator_paths),
+        "scanned_validator_files": [_rel_path(repo_root, path) for path in validator_paths],
+        "primitive_binding_violations": violations,
+        "scan_errors": scan_errors,
+        "primitive_violation_count": len(violations),
+        "scan_error_count": len(scan_errors),
+        "primitive_violation_file_count": len(
+            {
+                str(row.get("rel_path") or "")
+                for row in violations
+                if str(row.get("rel_path") or "").strip()
+            }
+        ),
+        "primitive_violation_reason_counts": reason_counts,
+        "primitive_class_violation_counts": primitive_class_counts,
+        "primitive_adoption_rows": primitive_adoption_rows,
+        "primitive_adoption_row_count": len(primitive_adoption_rows),
+        "primitive_adoption_file_count": len(
+            {
+                str(row.get("rel_path") or "")
+                for row in primitive_adoption_rows
+                if str(row.get("rel_path") or "").strip()
+            }
+        ),
+        "primitive_adoption_class_counts": adoption_class_counts,
+        "row_family_projection_assignment_rows": row_family_projection_assignment_rows,
+        "row_family_projection_assignment_count": len(
+            row_family_projection_assignment_rows
+        ),
+        "row_family_projection_assignment_violation_rows": (
+            row_family_projection_assignment_violation_rows
+        ),
+        "row_family_projection_assignment_violation_count": len(
+            row_family_projection_assignment_violation_rows
+        ),
+        "root_probe_count": len(probe_paths),
+        "scanned_root_probe_files": [_rel_path(repo_root, path) for path in probe_paths],
+        "root_probe_shadow_adoption_rows": root_probe_shadow_adoption_rows,
+        "root_probe_shadow_adoption_row_count": len(root_probe_shadow_adoption_rows),
+        "root_probe_shadow_violation_rows": root_probe_shadow_violation_rows,
+        "root_probe_shadow_violation_count": len(root_probe_shadow_violation_rows),
+        "root_probe_shadow_violation_file_count": len(
+            {
+                str(row.get("rel_path") or "")
+                for row in root_probe_shadow_violation_rows
+                if str(row.get("rel_path") or "").strip()
+            }
+        ),
+        "root_probe_shadow_violation_reason_counts": root_probe_shadow_reason_counts,
+        "root_probe_scan_errors": root_probe_scan_errors,
+        "root_probe_scan_error_count": len(root_probe_scan_errors),
+        "root_probe_shadow_common_rel_path": ROOT_PROBE_SHADOW_COMMON_RELPATH,
+        "root_probe_shadow_common_contract_rows": root_probe_shadow_common_contract_rows,
+        "root_probe_shadow_common_contract_row_count": len(
+            root_probe_shadow_common_contract_rows
+        ),
+        "root_probe_shadow_common_violation_rows": (
+            root_probe_shadow_common_violation_rows
+        ),
+        "root_probe_shadow_common_violation_count": len(
+            root_probe_shadow_common_violation_rows
+        ),
+        "root_probe_shadow_common_violation_reason_counts": (
+            root_probe_shadow_common_reason_counts
+        ),
+        "root_probe_shadow_common_scan_errors": root_probe_shadow_common_scan_errors,
+        "root_probe_shadow_common_scan_error_count": len(
+            root_probe_shadow_common_scan_errors
+        ),
+        "root_probe_shadow_common_contract_status": (
+            "PASS_REQUIRED"
+            if not root_probe_shadow_common_violation_rows
+            and not root_probe_shadow_common_scan_errors
+            else "FAIL_REQUIRED"
+        ),
+    }

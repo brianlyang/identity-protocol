@@ -12,6 +12,29 @@ from typing import Any
 
 import yaml
 
+from capability_activation_projection_common import (
+    CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS,
+)
+from instance_script_orchestration_common import (
+    STATUS_FAIL_REQUIRED as ORCHESTRATION_FAIL_REQUIRED,
+    STATUS_PASS_REQUIRED as ORCHESTRATION_PASS_REQUIRED,
+    build_route_receipt_join_matrix,
+    build_route_execution_lane_matrix,
+    build_aggregate_dependency_projection,
+    build_route_orchestration_matrix,
+    clean_string_list,
+    copy_optional_projection_fields,
+    execution_lane_required as instance_script_execution_lane_required,
+    load_manifest_doc,
+    manifest_required as instance_script_manifest_required,
+    normalize_source_layer,
+    orchestration_required as instance_script_orchestration_required,
+    route_uses_instance_scripts,
+    route_uses_execution_lanes,
+    summarize_optional_projection_families,
+    validate_optional_projection_payload,
+    validate_manifest_doc,
+)
 from resolve_identity_context import resolve_identity
 
 
@@ -105,7 +128,14 @@ def _load_mcp_servers(cwd: Path) -> dict[str, str]:
     return servers
 
 
-def _collect_contract(pack: Path, task_path: Path) -> dict[str, Any]:
+def _collect_contract(
+    pack: Path,
+    task_path: Path,
+    *,
+    identity_id: str,
+    work_layer: str,
+    source_layer: str,
+) -> dict[str, Any]:
     task = _load_json(task_path)
     c = (task.get("capability_orchestration_contract") or {}) if isinstance(task, dict) else {}
     routes = c.get("task_type_routes") or {}
@@ -122,26 +152,126 @@ def _collect_contract(pack: Path, task_path: Path) -> dict[str, Any]:
                 token = str(s).strip()
                 required_skills.add(token)
                 route_skills.add(token)
+        primary_skills = clean_string_list(route.get("primary_skills"))
         for s in route.get("fallback_skills") or []:
             if str(s).strip():
                 token = str(s).strip()
                 required_skills.add(token)
                 route_skills.add(token)
+        fallback_skills = clean_string_list(route.get("fallback_skills"))
         for m in route.get("required_mcp") or []:
             if str(m).strip():
                 token = str(m).strip()
                 required_mcp.add(token)
                 route_mcp.add(token)
+        primary_instance_scripts = clean_string_list(route.get("primary_instance_scripts"))
+        fallback_instance_scripts = clean_string_list(route.get("fallback_instance_scripts"))
         tool_routes.append(
             {
                 "route": str(route_name),
                 "pipeline": route.get("pipeline") or [],
                 "max_tool_calls": route.get("max_tool_calls"),
                 "max_runtime_minutes": route.get("max_runtime_minutes"),
+                "primary_skills": primary_skills,
+                "fallback_skills": fallback_skills,
                 "required_skills": sorted(route_skills),
                 "required_mcp": sorted(route_mcp),
+                "uses_instance_scripts": route_uses_instance_scripts(route),
+                "primary_instance_scripts": primary_instance_scripts,
+                "fallback_instance_scripts": fallback_instance_scripts,
+                "script_receipt_pattern": str(route.get("script_receipt_pattern", "")).strip(),
+                "uses_execution_lanes": route_uses_execution_lanes(route),
+                "allowed_execution_lanes": list(route.get("allowed_execution_lanes") or []),
+                "lane_admission_policy": dict(route.get("lane_admission_policy") or {}),
+                "lane_receipt_pattern": str(route.get("lane_receipt_pattern", "")).strip(),
+                "lane_block_on_fallback": bool(route.get("lane_block_on_fallback")),
+                "direct_tool_entry_policy": dict(route.get("direct_tool_entry_policy") or {}),
+                **copy_optional_projection_fields(route),
             }
         )
+    manifest_path, manifest_doc = load_manifest_doc(pack)
+    manifest_required = instance_script_manifest_required(task, pack)
+    orchestration_required = instance_script_orchestration_required(task)
+    execution_lane_required = instance_script_execution_lane_required(task)
+    manifest_status = "SKIPPED_NOT_REQUIRED"
+    orchestration_status = "SKIPPED_NOT_REQUIRED"
+    execution_lane_status = "SKIPPED_NOT_REQUIRED"
+    manifest_stale_reasons: list[str] = []
+    orchestration_stale_reasons: list[str] = []
+    execution_lane_stale_reasons: list[str] = []
+    route_script_rows: list[dict[str, Any]] = []
+    route_receipt_rows: list[dict[str, Any]] = []
+    route_receipt_join_status = "SKIPPED_NOT_REQUIRED"
+    route_receipt_join_stale_reasons: list[str] = []
+    route_execution_lane_rows: list[dict[str, Any]] = []
+    if manifest_required:
+        if manifest_doc is None:
+            manifest_status = ORCHESTRATION_FAIL_REQUIRED
+            manifest_stale_reasons = ["manifest_missing"]
+            if orchestration_required:
+                orchestration_status = ORCHESTRATION_FAIL_REQUIRED
+                orchestration_stale_reasons = ["manifest_missing_for_adopted_routes"]
+            if execution_lane_required:
+                execution_lane_status = ORCHESTRATION_FAIL_REQUIRED
+                execution_lane_stale_reasons = ["manifest_missing_for_execution_lane_routes"]
+        else:
+            manifest_validation = validate_manifest_doc(
+                manifest_doc=manifest_doc,
+                manifest_path=manifest_path,
+                pack_root=pack,
+                identity_id=identity_id,
+            )
+            manifest_status = str(manifest_validation.get("status", "")).strip() or ORCHESTRATION_FAIL_REQUIRED
+            manifest_stale_reasons = list(manifest_validation.get("stale_reasons") or [])
+            if orchestration_required:
+                if manifest_status == ORCHESTRATION_PASS_REQUIRED:
+                    route_validation = build_route_orchestration_matrix(
+                        task_doc=task,
+                        manifest_validation=manifest_validation,
+                        identity_id=identity_id,
+                        work_layer=work_layer,
+                        source_layer=source_layer,
+                    )
+                    orchestration_status = (
+                        str(route_validation.get("status", "")).strip() or ORCHESTRATION_FAIL_REQUIRED
+                    )
+                    orchestration_stale_reasons = list(route_validation.get("stale_reasons") or [])
+                    route_script_rows = list(route_validation.get("route_rows") or [])
+                    route_receipt_validation = build_route_receipt_join_matrix(
+                        pack_root=pack,
+                        task_doc=task,
+                        manifest_validation=manifest_validation,
+                        route_validation=route_validation,
+                        identity_id=identity_id,
+                        require_observed=False,
+                    )
+                    route_receipt_join_status = (
+                        str(route_receipt_validation.get("status", "")).strip() or ORCHESTRATION_FAIL_REQUIRED
+                    )
+                    route_receipt_join_stale_reasons = list(
+                        route_receipt_validation.get("stale_reasons") or []
+                    )
+                    route_receipt_rows = list(route_receipt_validation.get("route_rows") or [])
+                    if execution_lane_required:
+                        lane_validation = build_route_execution_lane_matrix(
+                            pack_root=pack,
+                            task_doc=task,
+                            manifest_validation=manifest_validation,
+                            route_validation=route_validation,
+                            identity_id=identity_id,
+                            require_observed=False,
+                        )
+                        execution_lane_status = (
+                            str(lane_validation.get("status", "")).strip() or ORCHESTRATION_FAIL_REQUIRED
+                        )
+                        execution_lane_stale_reasons = list(lane_validation.get("stale_reasons") or [])
+                        route_execution_lane_rows = list(lane_validation.get("route_rows") or [])
+                else:
+                    orchestration_status = ORCHESTRATION_FAIL_REQUIRED
+                    orchestration_stale_reasons = ["manifest_invalid_for_adopted_routes"]
+                    if execution_lane_required:
+                        execution_lane_status = ORCHESTRATION_FAIL_REQUIRED
+                        execution_lane_stale_reasons = ["manifest_invalid_for_execution_lane_routes"]
     return {
         "required": bool(c.get("required", False)),
         "required_skills": sorted(required_skills),
@@ -150,6 +280,21 @@ def _collect_contract(pack: Path, task_path: Path) -> dict[str, Any]:
         "tool_routes": tool_routes,
         "pack_path": str(pack),
         "task_path": str(task_path),
+        "instance_script_manifest_required": manifest_required,
+        "instance_script_manifest_status": manifest_status,
+        "instance_script_manifest_stale_reasons": manifest_stale_reasons,
+        "instance_script_orchestration_required": orchestration_required,
+        "instance_script_orchestration_status": orchestration_status,
+        "instance_script_orchestration_stale_reasons": orchestration_stale_reasons,
+        "route_script_rows": route_script_rows,
+        "route_receipt_join_status": route_receipt_join_status,
+        "route_receipt_join_stale_reasons": route_receipt_join_stale_reasons,
+        "route_receipt_rows": route_receipt_rows,
+        "instance_script_execution_lane_required": execution_lane_required,
+        "instance_script_execution_lane_status": execution_lane_status,
+        "instance_script_execution_lane_stale_reasons": execution_lane_stale_reasons,
+        "route_execution_lane_rows": route_execution_lane_rows,
+        "manifest_path": str(manifest_path),
     }
 
 
@@ -187,11 +332,110 @@ def _check_gh_auth_status() -> tuple[bool, str]:
 
 def _derive_activation_mode(catalog: Path) -> str:
     p = str(catalog)
-    if "/.agents/identity/" in p:
-        return "project"
-    if "/.codex/identity/" in p:
+    if "/.codex/.identity/" in p:
         return "global"
+    if "/.identity/" in p:
+        return "project"
+    if "/.agents/identity/" in p:
+        return "legacy_project"
+    # Legacy forbidden root kept for migration detection.
+    if "/.codex/identity/" in p:
+        return "legacy_global"
     return "unknown"
+
+
+def _aggregate_lane_rows(route_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    if not route_rows:
+        return {
+            "execution_lane_contract_status": "SKIPPED_NOT_REQUIRED",
+            "execution_lane_receipt_status": "SKIPPED_NOT_REQUIRED",
+            "direct_tool_entry_policy_status": "SKIPPED_NOT_REQUIRED",
+            "direct_tool_entry_receipt_status": "SKIPPED_NOT_REQUIRED",
+            "execution_lane_diagnostic_label": "",
+            "execution_lane_diagnostic_labels": [],
+            "execution_lane_stale_reasons": [],
+            "execution_lane_scripts": [],
+            "direct_tool_entry_required": False,
+            "execution_lane_ready": True,
+        }
+
+    contract_statuses = [
+        str(row.get("lane_contract_status", "")).strip() or "SKIPPED_NOT_REQUIRED"
+        for row in route_rows
+    ]
+    receipt_statuses = [
+        str(row.get("lane_receipt_validation_status", "")).strip() or "SKIPPED_NOT_REQUIRED"
+        for row in route_rows
+    ]
+    direct_tool_policy_statuses = [
+        str(row.get("direct_tool_entry_policy_status", "")).strip() or "SKIPPED_NOT_REQUIRED"
+        for row in route_rows
+    ]
+    direct_tool_receipt_statuses = [
+        str(row.get("direct_tool_entry_receipt_status", "")).strip() or "SKIPPED_NOT_REQUIRED"
+        for row in route_rows
+    ]
+    diagnostic_labels = [
+        str(row.get("diagnostic_label", "")).strip()
+        for row in route_rows
+        if str(row.get("diagnostic_label", "")).strip()
+    ]
+    stale_reasons: list[str] = []
+    for row in route_rows:
+        for reason in (row.get("stale_reasons") or []):
+            token = str(reason).strip()
+            if token:
+                stale_reasons.append(token)
+
+    def _merge_status(statuses: list[str]) -> str:
+        if any(status == ORCHESTRATION_FAIL_REQUIRED for status in statuses):
+            return ORCHESTRATION_FAIL_REQUIRED
+        if any(status == ORCHESTRATION_PASS_REQUIRED for status in statuses):
+            return ORCHESTRATION_PASS_REQUIRED
+        return "SKIPPED_NOT_REQUIRED"
+
+    merged_contract_status = _merge_status(contract_statuses)
+    merged_receipt_status = _merge_status(receipt_statuses)
+    merged_direct_tool_policy_status = _merge_status(direct_tool_policy_statuses)
+    merged_direct_tool_receipt_status = _merge_status(direct_tool_receipt_statuses)
+    route_ready = (
+        merged_contract_status != ORCHESTRATION_FAIL_REQUIRED
+        and merged_receipt_status != ORCHESTRATION_FAIL_REQUIRED
+        and merged_direct_tool_policy_status != ORCHESTRATION_FAIL_REQUIRED
+        and merged_direct_tool_receipt_status != ORCHESTRATION_FAIL_REQUIRED
+    )
+    preferred_label = ""
+    if not route_ready:
+        preferred_label = next(
+            (
+                str(row.get("diagnostic_label", "")).strip()
+                for row in route_rows
+                if str(row.get("lane_receipt_validation_status", "")).strip() == ORCHESTRATION_FAIL_REQUIRED
+                and str(row.get("diagnostic_label", "")).strip()
+            ),
+            diagnostic_labels[0] if diagnostic_labels else "",
+        )
+    elif any(label == "ready" for label in diagnostic_labels):
+        preferred_label = "ready"
+    elif diagnostic_labels:
+        preferred_label = diagnostic_labels[0]
+
+    return {
+        "execution_lane_contract_status": merged_contract_status,
+        "execution_lane_receipt_status": merged_receipt_status,
+        "direct_tool_entry_policy_status": merged_direct_tool_policy_status,
+        "direct_tool_entry_receipt_status": merged_direct_tool_receipt_status,
+        "execution_lane_diagnostic_label": preferred_label,
+        "execution_lane_diagnostic_labels": diagnostic_labels,
+        "execution_lane_stale_reasons": sorted(set(stale_reasons)),
+        "execution_lane_scripts": [
+            str(row.get("script_id", "")).strip()
+            for row in route_rows
+            if str(row.get("script_id", "")).strip()
+        ],
+        "direct_tool_entry_required": any(bool(row.get("direct_tool_entry_required")) for row in route_rows),
+        "execution_lane_ready": route_ready,
+    }
 
 
 def _build_runtime_payload(
@@ -199,10 +443,19 @@ def _build_runtime_payload(
     identity_id: str,
     catalog_path: Path,
     repo_catalog_path: Path,
+    work_layer: str,
+    source_layer: str,
     activation_policy: str = "strict-union",
 ) -> dict[str, Any]:
     pack, task_path = _resolve_current_task(catalog_path, identity_id)
-    contract = _collect_contract(pack, task_path)
+    resolved_source_layer = str(source_layer or "").strip().lower() or normalize_source_layer(catalog_path)
+    contract = _collect_contract(
+        pack,
+        task_path,
+        identity_id=identity_id,
+        work_layer=str(work_layer or "instance").strip().lower() or "instance",
+        source_layer=resolved_source_layer,
+    )
     cwd = Path.cwd().resolve()
     skill_rows: list[dict[str, Any]] = []
     active_skills: list[str] = []
@@ -254,13 +507,56 @@ def _build_runtime_payload(
     skill_ok_map = {row["skill"]: bool(row["available"]) for row in skill_rows}
     route_activation_matrix: list[dict[str, Any]] = []
     route_ready_count = 0
+    route_script_rows = {
+        str(row.get("route", "")).strip(): row
+        for row in (contract.get("route_script_rows") or [])
+        if str(row.get("route", "")).strip()
+    }
+    route_receipt_rows: dict[str, list[dict[str, Any]]] = {}
+    for row in (contract.get("route_receipt_rows") or []):
+        route_name = str(row.get("route", "")).strip()
+        if not route_name:
+            continue
+        route_receipt_rows.setdefault(route_name, []).append(dict(row))
+    route_execution_lane_rows: dict[str, list[dict[str, Any]]] = {}
+    for row in (contract.get("route_execution_lane_rows") or []):
+        route_name = str(row.get("route", "")).strip()
+        if not route_name:
+            continue
+        route_execution_lane_rows.setdefault(route_name, []).append(dict(row))
     for route in contract["tool_routes"]:
         route_name = str(route.get("route", "")).strip()
         route_skills = [str(x).strip() for x in (route.get("required_skills") or []) if str(x).strip()]
         route_mcp = [str(x).strip() for x in (route.get("required_mcp") or []) if str(x).strip()]
         route_missing_skills = [s for s in route_skills if not skill_ok_map.get(s, False)]
         route_missing_mcp = [m for m in route_mcp if not mcp_ok_map.get(m, False)]
-        route_ready = not route_missing_skills and not route_missing_mcp
+        route_script_row = route_script_rows.get(route_name, {})
+        route_receipt_rowset = route_receipt_rows.get(route_name, [])
+        route_execution_lane_rowset = route_execution_lane_rows.get(route_name, [])
+        lane_summary = _aggregate_lane_rows(route_execution_lane_rowset)
+        route_optional_projection, route_optional_projection_reasons = summarize_optional_projection_families(
+            route_receipt_rowset,
+            ambiguity_scope="script_aggregation",
+        )
+        route_uses_instance_scripts = bool(route.get("uses_instance_scripts"))
+        route_uses_execution_lanes = bool(route.get("uses_execution_lanes"))
+        route_missing_script_ids = [
+            str(x).strip()
+            for x in (route_script_row.get("missing_script_ids") or [])
+            if str(x).strip()
+        ]
+        script_preconditions_status = str(route_script_row.get("script_preconditions_status", "")).strip()
+        route_script_ready = (
+            not route_uses_instance_scripts
+            or str(route_script_row.get("route_ready", "")).strip().lower() == "true"
+            or route_script_row.get("route_ready") is True
+        )
+        route_ready = (
+            not route_missing_skills
+            and not route_missing_mcp
+            and route_script_ready
+            and (not route_uses_execution_lanes or bool(lane_summary.get("execution_lane_ready")))
+        )
         if route_ready:
             route_ready_count += 1
         route_activation_matrix.append(
@@ -270,7 +566,54 @@ def _build_runtime_payload(
                 "required_mcp": route_mcp,
                 "missing_skills": route_missing_skills,
                 "missing_mcp": route_missing_mcp,
+                "uses_instance_scripts": route_uses_instance_scripts,
+                "primary_instance_scripts": list(route.get("primary_instance_scripts") or []),
+                "fallback_instance_scripts": list(route.get("fallback_instance_scripts") or []),
+                "missing_script_ids": route_missing_script_ids,
+                "resolved_script_ids": list(route_script_row.get("resolved_script_ids") or []),
+                "script_receipt_pattern": str(route.get("script_receipt_pattern", "")).strip(),
+                "route_receipt_rows": route_receipt_rowset,
+                "uses_execution_lanes": route_uses_execution_lanes,
+                "allowed_execution_lanes": list(route.get("allowed_execution_lanes") or []),
+                "lane_admission_policy": dict(route.get("lane_admission_policy") or {}),
+                "lane_receipt_pattern": str(route.get("lane_receipt_pattern", "")).strip(),
+                "lane_block_on_fallback": bool(route.get("lane_block_on_fallback")),
+                "direct_tool_entry_policy": dict(route.get("direct_tool_entry_policy") or {}),
+                "execution_lane_rows": route_execution_lane_rowset,
+                "execution_lane_scripts": list(lane_summary.get("execution_lane_scripts") or []),
+                "script_preconditions_status": script_preconditions_status or "SKIPPED_NOT_REQUIRED",
+                "script_route_contract_status": str(
+                    route_script_row.get("route_contract_status", "SKIPPED_NOT_REQUIRED")
+                ).strip(),
+                "script_manifest_binding_status": str(
+                    route_script_row.get("manifest_binding_status", "SKIPPED_NOT_REQUIRED")
+                ).strip(),
+                "execution_lane_contract_status": str(
+                    lane_summary.get("execution_lane_contract_status", "SKIPPED_NOT_REQUIRED")
+                ).strip(),
+                "execution_lane_receipt_status": str(
+                    lane_summary.get("execution_lane_receipt_status", "SKIPPED_NOT_REQUIRED")
+                ).strip(),
+                "direct_tool_entry_policy_status": str(
+                    lane_summary.get("direct_tool_entry_policy_status", "SKIPPED_NOT_REQUIRED")
+                ).strip(),
+                "direct_tool_entry_receipt_status": str(
+                    lane_summary.get("direct_tool_entry_receipt_status", "SKIPPED_NOT_REQUIRED")
+                ).strip(),
+                "direct_tool_entry_required": bool(lane_summary.get("direct_tool_entry_required")),
+                "execution_lane_diagnostic_label": str(
+                    lane_summary.get("execution_lane_diagnostic_label", "")
+                ).strip(),
+                "execution_lane_diagnostic_labels": list(
+                    lane_summary.get("execution_lane_diagnostic_labels") or []
+                ),
+                "execution_lane_stale_reasons": list(lane_summary.get("execution_lane_stale_reasons") or []),
+                "script_diagnostic_label": str(route_script_row.get("diagnostic_label", "")).strip(),
+                "script_stale_reasons": list(route_script_row.get("stale_reasons") or []),
+                "optional_projection_reasons": route_optional_projection_reasons,
                 "ready": route_ready,
+                **copy_optional_projection_fields(route_script_row),
+                **route_optional_projection,
             }
         )
 
@@ -309,6 +652,28 @@ def _build_runtime_payload(
             status = "BLOCKED"
             error_code = "IP-CAP-003"
             notes.append(f"mcp_auth_not_ready={missing_mcp_auth}")
+    if bool(contract.get("instance_script_orchestration_required")) and str(
+        contract.get("instance_script_orchestration_status", "")
+    ).strip() != ORCHESTRATION_PASS_REQUIRED:
+        status = "BLOCKED"
+        error_code = "IP-CAP-005"
+        notes.append(
+            "instance_script_orchestration_not_ready="
+            + ",".join(str(x).strip() for x in (contract.get("instance_script_orchestration_stale_reasons") or []) if str(x).strip())
+        )
+    if bool(contract.get("instance_script_execution_lane_required")) and str(
+        contract.get("instance_script_execution_lane_status", "")
+    ).strip() != ORCHESTRATION_PASS_REQUIRED:
+        status = "BLOCKED"
+        error_code = "IP-CAP-006"
+        notes.append(
+            "instance_script_execution_lane_not_ready="
+            + ",".join(
+                str(x).strip()
+                for x in (contract.get("instance_script_execution_lane_stale_reasons") or [])
+                if str(x).strip()
+            )
+        )
     if not contract["required"]:
         status = "NOT_REQUIRED"
         error_code = ""
@@ -317,6 +682,14 @@ def _build_runtime_payload(
         repo_catalog_path.expanduser().resolve(),
         catalog_path.expanduser().resolve(),
         allow_conflict=True,
+    )
+    aggregate_dependency_projection = build_aggregate_dependency_projection(
+        tool_routes=list(contract.get("tool_routes") or []),
+        route_activation_matrix=route_activation_matrix,
+        active_skills=active_skills,
+        mcp_tools_used=mcp_tools_used,
+        route_activation_strategy=policy,
+        route_ready_count=route_ready_count,
     )
     return {
         "identity_id": identity_id,
@@ -340,10 +713,37 @@ def _build_runtime_payload(
         "mcp_tools_used": mcp_tools_used,
         "tool_calls_used": ["validate_identity_capability_activation"],
         "tool_routes": contract["tool_routes"],
-        "route_activation_strategy": policy,
+        "route_script_rows": list(contract.get("route_script_rows") or []),
+        "route_receipt_join_status": str(contract.get("route_receipt_join_status", "")).strip(),
+        "route_receipt_join_stale_reasons": list(contract.get("route_receipt_join_stale_reasons") or []),
+        "route_receipt_rows": list(contract.get("route_receipt_rows") or []),
+        "route_execution_lane_rows": list(contract.get("route_execution_lane_rows") or []),
         "route_activation_matrix": route_activation_matrix,
-        "route_ready_count": route_ready_count,
-        "route_total_count": len(route_activation_matrix),
+        **aggregate_dependency_projection,
+        "instance_script_manifest_required": bool(contract.get("instance_script_manifest_required")),
+        "instance_script_manifest_status": str(contract.get("instance_script_manifest_status", "")).strip(),
+        "instance_script_manifest_stale_reasons": list(
+            contract.get("instance_script_manifest_stale_reasons") or []
+        ),
+        "instance_script_orchestration_required": bool(
+            contract.get("instance_script_orchestration_required")
+        ),
+        "instance_script_orchestration_status": str(
+            contract.get("instance_script_orchestration_status", "")
+        ).strip(),
+        "instance_script_orchestration_stale_reasons": list(
+            contract.get("instance_script_orchestration_stale_reasons") or []
+        ),
+        "instance_script_execution_lane_required": bool(
+            contract.get("instance_script_execution_lane_required")
+        ),
+        "instance_script_execution_lane_status": str(
+            contract.get("instance_script_execution_lane_status", "")
+        ).strip(),
+        "instance_script_execution_lane_stale_reasons": list(
+            contract.get("instance_script_execution_lane_stale_reasons") or []
+        ),
+        "instance_script_manifest_path": str(contract.get("manifest_path", "")).strip(),
         "capability_contract_required": bool(contract.get("required", False)),
         "capability_activation_status": status,
         "capability_activation_error_code": error_code,
@@ -353,18 +753,7 @@ def _build_runtime_payload(
 
 def _validate_report(path: Path, require_activated: bool) -> tuple[bool, str]:
     data = _load_json(path)
-    required = [
-        "skills_used",
-        "mcp_tools_used",
-        "tool_calls_used",
-        "active_skills",
-        "mcp_servers_checked",
-        "tool_routes",
-        "capability_activation_status",
-        "capability_activation_error_code",
-        "capability_contract_required",
-    ]
-    missing = [k for k in required if k not in data]
+    missing = [k for k in CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS if k not in data]
     if missing:
         return False, f"report_missing_fields:{missing}"
     status = str(data.get("capability_activation_status", "")).strip().upper()
@@ -382,6 +771,25 @@ def _validate_report(path: Path, require_activated: bool) -> tuple[bool, str]:
         return False, "mcp_servers_checked_must_be_list"
     if not isinstance(data.get("tool_routes"), list):
         return False, "tool_routes_must_be_list"
+    if not isinstance(data.get("declared_dependency_projection"), dict):
+        return False, "declared_dependency_projection_must_be_object"
+    if not isinstance(data.get("observed_dependency_projection"), dict):
+        return False, "observed_dependency_projection_must_be_object"
+    if not isinstance(data.get("dependency_gap_reasons"), list):
+        return False, "dependency_gap_reasons_must_be_list"
+    if not isinstance(data.get("route_ids"), list):
+        return False, "route_ids_must_be_list"
+    if not isinstance(data.get("undeclared_usage_detected"), bool):
+        return False, "undeclared_usage_detected_must_be_bool"
+    if not isinstance(data.get("undeclared_usage_rows"), list):
+        return False, "undeclared_usage_rows_must_be_list"
+    if not isinstance(data.get("missing_declared_dependency_detected"), bool):
+        return False, "missing_declared_dependency_detected_must_be_bool"
+    if not isinstance(data.get("missing_declared_dependency_rows"), list):
+        return False, "missing_declared_dependency_rows_must_be_list"
+    optional_projection_issues = validate_optional_projection_payload(data)
+    if optional_projection_issues:
+        return False, optional_projection_issues[0]
     return True, "ok"
 
 
@@ -398,6 +806,8 @@ def main() -> int:
         default="strict-union",
         help="strict-union blocks when any required capability is unavailable; route-any-ready allows activation when at least one route is ready.",
     )
+    ap.add_argument("--work-layer", default="instance")
+    ap.add_argument("--source-layer", default="")
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 
@@ -424,6 +834,8 @@ def main() -> int:
             identity_id=args.identity_id,
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
+            work_layer=args.work_layer,
+            source_layer=args.source_layer,
             activation_policy=args.activation_policy,
         )
     except Exception as exc:

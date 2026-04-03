@@ -10,9 +10,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from actor_session_common import load_actor_binding, resolve_actor_id
+from actor_session_common import load_actor_binding, resolve_protocol_actor_id
+from blocker_taxonomy_common import CANONICAL_BLOCKER_TYPE_SET
+from protocol_infra_contract import CANONICAL_FINAL_EMIT_SCRIPT
 from resolve_identity_context import resolve_identity
-from tool_vendor_governance_common import load_json
 
 
 @dataclass
@@ -29,12 +30,75 @@ class StampContext:
     pack_ref: str
 
 
+AUTHORITY_CONSUMER_EXEMPT = True  # Provider module; not a direct authority-consuming surface.
 ALLOWED_DISCLOSURE_LEVELS = {"minimal", "standard", "verbose", "audit"}
 DEFAULT_DISCLOSURE_LEVEL = "standard"
+ALLOWED_RESPONSE_STAMP_FORMATS = {"header_line", "structured_block", "mail_header"}
+ALLOWED_RESPONSE_STAMP_AUDIENCE_MODES = {"external", "internal", "dual"}
+ALLOWED_RESPONSE_STAMP_REDACTION_POLICIES = {"strict", "standard"}
+ALLOWED_RESPONSE_STAMP_MISMATCH_ACTIONS = {"blocker_receipt"}
 ALLOWED_WORK_LAYERS = {"protocol", "instance", "dual"}
-ALLOWED_SOURCE_LAYERS = {"project", "global", "env", "auto"}
+ALLOWED_SOURCE_LAYERS = {"project", "global"}
+DISPLAY_HEADSTAMP_PREFIX = "Display-Headstamp:"
+IDENTITY_RESPONSE_STAMP_RENDER_SCRIPT = "scripts/render_identity_response_stamp.py"
+IDENTITY_RESPONSE_STAMP_VALIDATOR_ID = "scripts/validate_identity_response_stamp.py"
+IDENTITY_RESPONSE_STAMP_BLOCKER_RECEIPT_VALIDATOR_ID = (
+    "scripts/validate_identity_response_stamp_blocker_receipt.py"
+)
+LAYER_INTENT_RESOLUTION_VALIDATOR_ID = "scripts/validate_layer_intent_resolution.py"
+REPLY_IDENTITY_CONTEXT_FIRST_LINE_VALIDATOR_ID = (
+    "scripts/validate_reply_identity_context_first_line.py"
+)
+SEND_TIME_REPLY_GATE_VALIDATOR_ID = "scripts/validate_send_time_reply_gate.py"
+EXECUTION_REPLY_IDENTITY_COHERENCE_VALIDATOR_ID = (
+    "scripts/validate_execution_reply_identity_coherence.py"
+)
+HEADSTAMP_RECURRENCE_CLOSURE_VALIDATOR_ID = "scripts/validate_headstamp_recurrence_closure.py"
+HEADSTAMP_GOVERNED_ENTRYPOINT_SURFACES = (
+    "scripts/compose_and_validate_governed_reply.py",
+    CANONICAL_FINAL_EMIT_SCRIPT,
+)
+HEADSTAMP_SEND_TIME_ENFORCEMENT_SURFACES = (
+    SEND_TIME_REPLY_GATE_VALIDATOR_ID,
+)
+REPLY_FIRST_LINE_SURFACE_RAW_CANONICAL = "raw_canonical"
+REPLY_FIRST_LINE_SURFACE_VISIBLE_PROJECTION = "visible_projection"
+REPLY_FIRST_LINE_SURFACE_INVALID = "invalid"
+LEGACY_SOURCE_LAYER_ALIASES = {
+    "local": "project",
+    "repo": "global",
+    "env": "global",
+    "auto": "project",
+}
 LAYER_INTENT_STRICT_THRESHOLD = 0.75
 DEFAULT_WORK_LAYER = "instance"
+DEFAULT_RESPONSE_STAMP_FORMAT = "structured_block"
+DEFAULT_RESPONSE_STAMP_AUDIENCE_MODE = "external"
+DEFAULT_RESPONSE_STAMP_REDACTION_POLICY = "strict"
+DEFAULT_RESPONSE_STAMP_ON_MISMATCH = "blocker_receipt"
+DEFAULT_RESPONSE_STAMP_TEMPLATE_REF = (
+    "identity/protocol/plugins/templates/response-stamp.operator_dual_segment_v1.json"
+)
+DEFAULT_MACHINE_VERIFICATION_SOURCE = "context_checkpoint"
+CONTROLLED_RUNTIME_MACHINE_VERIFICATION_SOURCE = "external_controlled_runtime_selftest"
+OPERATOR_ENVELOPE_MACHINE_FIELD_ORDER = (
+    "verification_source",
+    "display_headstamp_identity_id",
+    "authoritative_identity_id",
+    "headstamp_consistency_status",
+    "headstamp_consistency_mode",
+    "headstamp_consistency_reason",
+    "surface_class",
+    "native_attestation_wiring_capability",
+    "closure_blocker_scope",
+    "current_chat_surface_native_machine_attested",
+    "current_surface_native_machine_attested",
+    "output_governance_mode",
+    "control_lane_attestation_status",
+    "post_check_blocker_status",
+    "next_hop_admission_status",
+    "next_hop_admission_reason",
+)
 
 PROTOCOL_TRIGGER_FLAG_PATTERNS = (
     re.compile(r"\bprotocol[_\-\s]?trigger(?:ed)?\s*[:=]\s*(true|1|yes|on)\b"),
@@ -94,6 +158,58 @@ LAYER_LITERAL_META_TOKENS = (
     "layer-context:",
 )
 
+FALLBACK_TAXONOMY_VERSION = "v1"
+FALLBACK_TAXONOMY_ENUM = {
+    "data_missing",
+    "model_weak_signal",
+    "transport_error",
+    "policy_blocked",
+}
+FALLBACK_REASON_CLASS_MAP = {
+    "intent_text_missing": "data_missing",
+    "no_intent_signal": "data_missing",
+    "zero_action_counters": "data_missing",
+    "instance_intent_low_confidence": "model_weak_signal",
+    "ambiguous_intent_signal": "model_weak_signal",
+    "protocol_trigger_not_met": "policy_blocked",
+    "actor_binding_lock_mismatch": "policy_blocked",
+    "non_governed_outlet_channel": "policy_blocked",
+    "synthetic_reply_evidence_forbidden": "policy_blocked",
+    "reply_outlet_guard_missing": "policy_blocked",
+}
+BLOCKER_TAXONOMY_RESERVED = CANONICAL_BLOCKER_TYPE_SET
+TRANSPORT_ERROR_HINTS = (
+    "transport",
+    "network",
+    "timeout",
+    "connection",
+    "dns",
+    "socket",
+    "unreachable",
+    "http_5",
+    "ioerror",
+)
+
+
+def classify_headstamp_entrypoint_wiring(entrypoint_text: str) -> dict[str, Any]:
+    text = str(entrypoint_text or "")
+    has_governed_emit = any(token in text for token in HEADSTAMP_GOVERNED_ENTRYPOINT_SURFACES)
+    has_send_time = any(token in text for token in HEADSTAMP_SEND_TIME_ENFORCEMENT_SURFACES)
+    if has_governed_emit and has_send_time:
+        mode = "governed_emit_plus_direct"
+    elif has_governed_emit:
+        mode = "governed_emit_only"
+    elif has_send_time:
+        mode = "direct_send_time_only"
+    else:
+        mode = "none"
+    return {
+        "has_governed_emit": has_governed_emit,
+        "has_send_time": has_send_time,
+        "coverage_mode": mode,
+        "coverage_normalized": bool(has_governed_emit or has_send_time),
+    }
+
 
 def _has_protocol_lane_directive(text: str) -> bool:
     raw = str(text or "").strip().lower()
@@ -118,15 +234,15 @@ def _detect_repo_root(start: Path | None = None) -> Path:
 
 def _project_identity_home(repo_root: Path) -> Path:
     if repo_root.name == "identity-protocol-local":
-        return (repo_root.parent / ".agents" / "identity").resolve()
-    return (repo_root / ".agents" / "identity").resolve()
+        return (repo_root.parent / ".identity").resolve()
+    return (repo_root / ".identity").resolve()
 
 
 def _global_identity_home() -> Path:
     codex_home = os.environ.get("CODEX_HOME", "").strip()
     if codex_home:
-        return (Path(codex_home).expanduser().resolve() / "identity").resolve()
-    return (Path.home() / ".codex" / "identity").resolve()
+        return (Path(codex_home).expanduser().resolve() / ".identity").resolve()
+    return (Path.home() / ".codex" / ".identity").resolve()
 
 
 def _source_domain(catalog_path: Path, explicit_catalog: bool, *, repo_root_hint: Path | None = None) -> str:
@@ -145,7 +261,7 @@ def _source_domain(catalog_path: Path, explicit_catalog: bool, *, repo_root_hint
         return "global"
     except Exception:
         pass
-    return "env" if explicit_catalog else "auto"
+    return "unknown"
 
 
 def _ref_token(path: Path) -> str:
@@ -154,26 +270,21 @@ def _ref_token(path: Path) -> str:
     return f"{path.name}#{h}"
 
 
-def _session_pointer_path(catalog_path: Path) -> Path:
-    return (catalog_path.parent / "session" / "active_identity.json").resolve()
-
-
-def _session_data(catalog_path: Path, actor_id: str, identity_id: str) -> dict[str, Any]:
-    actor_binding = load_actor_binding(catalog_path, actor_id, identity_id=identity_id)
+def _session_data(catalog_path: Path, actor_id: str, identity_id: str, session_id: str = "") -> dict[str, Any]:
+    actor = str(actor_id or "").strip()
+    sid = str(session_id or "").strip()
+    if not actor or not sid:
+        return {}
+    actor_binding = load_actor_binding(
+        catalog_path,
+        actor,
+        identity_id=identity_id,
+        session_id=sid,
+    )
     if actor_binding:
         payload = dict(actor_binding)
-        payload["session_pointer_source"] = "actor"
+        payload["session_pointer_source"] = "actor_session_primary"
         return payload
-    p = _session_pointer_path(catalog_path)
-    if not p.exists():
-        return {}
-    try:
-        data = load_json(p)
-    except Exception:
-        return {}
-    if isinstance(data, dict):
-        data["session_pointer_source"] = "canonical"
-        return data
     return {}
 
 
@@ -207,9 +318,10 @@ def resolve_stamp_context(
     catalog_path: Path,
     repo_catalog_path: Path,
     actor_id: str = "",
+    session_id: str = "",
     explicit_catalog: bool = True,
 ) -> StampContext:
-    actor = resolve_actor_id(actor_id)
+    actor = resolve_protocol_actor_id(actor_id)
     resolved = resolve_identity(
         identity_id,
         repo_catalog_path.resolve(),
@@ -218,14 +330,23 @@ def resolve_stamp_context(
     )
     pack_path = Path(str(resolved.get("pack_path", "")).strip()).expanduser().resolve()
     resolved_scope = str(resolved.get("resolved_scope", "")).strip().upper() or "UNKNOWN"
-    pointer = _session_data(catalog_path, actor, identity_id)
+    pointer = _session_data(
+        catalog_path,
+        actor,
+        identity_id,
+        session_id=str(session_id or "").strip(),
+    )
     lock_state = _lock_state(identity_id, pointer)
     lease_id = _lease_id(pointer)
-    source = _source_domain(
-        catalog_path,
-        explicit_catalog=explicit_catalog,
-        repo_root_hint=repo_catalog_path.parent,
-    )
+    resolved_source = str(resolved.get("source_layer", "")).strip().lower()
+    if resolved_source:
+        source = resolved_source
+    else:
+        source = _source_domain(
+            catalog_path,
+            explicit_catalog=explicit_catalog,
+            repo_root_hint=repo_catalog_path.parent,
+        )
     return StampContext(
         actor_id=actor,
         identity_id=identity_id,
@@ -297,12 +418,21 @@ def _normalize_work_layer(value: str, *, fallback: str = "protocol") -> str:
     return fb if fb in ALLOWED_WORK_LAYERS else "protocol"
 
 
-def _normalize_source_layer(value: str, *, fallback: str = "auto") -> str:
+def _normalize_source_layer(value: str, *, fallback: str = "project") -> str:
     v = str(value or "").strip().lower()
+    if v in LEGACY_SOURCE_LAYER_ALIASES:
+        v = LEGACY_SOURCE_LAYER_ALIASES[v]
     if v in ALLOWED_SOURCE_LAYERS:
         return v
     fb = str(fallback or "").strip().lower()
-    return fb if fb in ALLOWED_SOURCE_LAYERS else "auto"
+    if fb in LEGACY_SOURCE_LAYER_ALIASES:
+        fb = LEGACY_SOURCE_LAYER_ALIASES[fb]
+    if fb in ALLOWED_SOURCE_LAYERS:
+        return fb
+    raw_fallback = str(fallback or "").strip().lower()
+    if raw_fallback:
+        return raw_fallback
+    return "unknown"
 
 
 def _detect_protocol_trigger(intent_text: str) -> dict[str, Any]:
@@ -346,6 +476,25 @@ def _detect_protocol_trigger(intent_text: str) -> dict[str, Any]:
     }
 
 
+def normalize_fallback_taxonomy_class(fallback_reason: str) -> str:
+    raw = str(fallback_reason or "").strip().lower()
+    if not raw:
+        return ""
+    if raw in FALLBACK_REASON_CLASS_MAP:
+        return FALLBACK_REASON_CLASS_MAP[raw]
+    if raw in BLOCKER_TAXONOMY_RESERVED:
+        return "policy_blocked"
+    if any(h in raw for h in TRANSPORT_ERROR_HINTS):
+        return "transport_error"
+    if "missing" in raw:
+        return "data_missing"
+    if any(x in raw for x in ("low_confidence", "weak_signal", "ambiguous", "uncertain")):
+        return "model_weak_signal"
+    if any(x in raw for x in ("blocked", "forbidden", "mismatch", "policy", "not_met", "not_met")):
+        return "policy_blocked"
+    return ""
+
+
 def _sanitize_layer_intent_text(intent_text: str) -> str:
     raw = str(intent_text or "").strip()
     if not raw:
@@ -376,7 +525,7 @@ def resolve_layer_intent(
     explicit_source_layer: str = "",
     intent_text: str = "",
     default_work_layer: str = DEFAULT_WORK_LAYER,
-    default_source_layer: str = "auto",
+    default_source_layer: str = "project",
 ) -> dict[str, Any]:
     resolved_source = _normalize_source_layer(explicit_source_layer, fallback=default_source_layer)
     fallback_work = _normalize_work_layer(default_work_layer, fallback=DEFAULT_WORK_LAYER)
@@ -396,6 +545,8 @@ def resolve_layer_intent(
         protocol_trigger_reasons: list[str] | None = None,
     ) -> dict[str, Any]:
         resolved_work = _normalize_work_layer(work_layer, fallback=fallback_work)
+        fallback_reason_raw = str(fallback_reason or "").strip()
+        fallback_taxonomy_class = normalize_fallback_taxonomy_class(fallback_reason_raw)
         applied_trigger = bool(protocol_triggered and resolved_work in {"protocol", "dual"})
         reasons = sorted(set(protocol_trigger_reasons or [])) if applied_trigger else []
         return {
@@ -403,7 +554,10 @@ def resolve_layer_intent(
             "resolved_source_layer": resolved_source,
             "intent_confidence": confidence,
             "intent_source": intent_source,
-            "fallback_reason": fallback_reason,
+            "fallback_reason": fallback_reason_raw,
+            "fallback_reason_raw": fallback_reason_raw,
+            "fallback_taxonomy_class": fallback_taxonomy_class,
+            "fallback_taxonomy_version": FALLBACK_TAXONOMY_VERSION,
             "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
             "protocol_triggered": applied_trigger,
             "protocol_trigger_reasons": reasons,
@@ -442,7 +596,7 @@ def resolve_layer_intent(
         )
 
     m_work = re.search(r"(work[_\-\s]?layer)\s*[:=]\s*(protocol|instance|dual)\b", text)
-    m_source = re.search(r"(source[_\-\s]?layer)\s*[:=]\s*(project|global|env|auto)\b", text)
+    m_source = re.search(r"(source[_\-\s]?layer)\s*[:=]\s*(project|global|local|repo|env|auto)\b", text)
     if m_source:
         resolved_source = _normalize_source_layer(m_source.group(2), fallback=resolved_source)
     if m_work:
@@ -722,6 +876,187 @@ def _persist_response_stamp_profile_state(ctx: StampContext, *, level: str, trig
     return p
 
 
+def default_response_stamp_profile(*, disclosure_level: str = DEFAULT_DISCLOSURE_LEVEL) -> dict[str, Any]:
+    return {
+        "enabled": True,
+        "format": DEFAULT_RESPONSE_STAMP_FORMAT,
+        "audience_mode": DEFAULT_RESPONSE_STAMP_AUDIENCE_MODE,
+        "redaction_policy": DEFAULT_RESPONSE_STAMP_REDACTION_POLICY,
+        "template_ref": DEFAULT_RESPONSE_STAMP_TEMPLATE_REF,
+        "on_mismatch": DEFAULT_RESPONSE_STAMP_ON_MISMATCH,
+        "disclosure_level": normalize_disclosure_level(disclosure_level),
+    }
+
+
+def normalize_response_stamp_profile(
+    raw_profile: Any,
+    *,
+    disclosure_level: str = DEFAULT_DISCLOSURE_LEVEL,
+) -> dict[str, Any]:
+    profile = raw_profile if isinstance(raw_profile, dict) else {}
+    normalized = default_response_stamp_profile(disclosure_level=disclosure_level)
+
+    enabled = profile.get("enabled")
+    if isinstance(enabled, bool):
+        normalized["enabled"] = enabled
+
+    fmt = str(profile.get("format", "")).strip().lower()
+    if fmt in ALLOWED_RESPONSE_STAMP_FORMATS:
+        normalized["format"] = fmt
+
+    audience_mode = str(profile.get("audience_mode", "")).strip().lower()
+    if audience_mode in ALLOWED_RESPONSE_STAMP_AUDIENCE_MODES:
+        normalized["audience_mode"] = audience_mode
+
+    redaction_policy = str(profile.get("redaction_policy", "")).strip().lower()
+    if redaction_policy in ALLOWED_RESPONSE_STAMP_REDACTION_POLICIES:
+        normalized["redaction_policy"] = redaction_policy
+
+    template_ref = str(profile.get("template_ref", "")).strip()
+    if template_ref:
+        normalized["template_ref"] = template_ref
+
+    on_mismatch = str(profile.get("on_mismatch", "")).strip().lower()
+    if on_mismatch in ALLOWED_RESPONSE_STAMP_MISMATCH_ACTIONS:
+        normalized["on_mismatch"] = on_mismatch
+
+    explicit_level = normalize_disclosure_level(
+        str(profile.get("disclosure_level", "")).strip(),
+        default="",
+        allow_empty=True,
+    )
+    if explicit_level:
+        normalized["disclosure_level"] = explicit_level
+
+    return normalized
+
+
+def resolve_task_response_stamp_profile(ctx: StampContext) -> dict[str, Any]:
+    return normalize_response_stamp_profile(_load_task_response_stamp_profile(ctx))
+
+
+def _format_machine_verification_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return ""
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return str(value)
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return str(value).strip()
+
+
+def render_machine_verification_line(
+    machine_payload: dict[str, Any] | None,
+    *,
+    field_order: tuple[str, ...] = OPERATOR_ENVELOPE_MACHINE_FIELD_ORDER,
+) -> str:
+    payload = machine_payload if isinstance(machine_payload, dict) else {}
+    ordered_parts: list[str] = []
+    seen: set[str] = set()
+    for key in field_order:
+        rendered = _format_machine_verification_value(payload.get(key))
+        if rendered == "":
+            continue
+        ordered_parts.append(f"{key}={rendered}")
+        seen.add(key)
+
+    extra_parts: list[str] = []
+    for key in sorted(payload.keys()):
+        if key in seen:
+            continue
+        rendered = _format_machine_verification_value(payload.get(key))
+        if rendered == "":
+            continue
+        extra_parts.append(f"{key}={rendered}")
+
+    parts = ordered_parts + extra_parts
+    return "Machine-Verification: " + "; ".join(parts) if parts else ""
+
+
+def render_operator_headstamp_lines(
+    ctx: StampContext,
+    *,
+    disclosure_level: str = DEFAULT_DISCLOSURE_LEVEL,
+    work_layer: str = DEFAULT_WORK_LAYER,
+    source_layer: str = "",
+    machine_payload: dict[str, Any] | None = None,
+) -> list[str]:
+    lines = [
+        DISPLAY_HEADSTAMP_PREFIX + " "
+        + render_external_stamp_with_layer_context(
+            ctx,
+            disclosure_level=disclosure_level,
+            work_layer=work_layer,
+            source_layer=source_layer,
+        )
+    ]
+    machine_line = render_machine_verification_line(machine_payload)
+    if machine_line:
+        lines.append(machine_line)
+    return lines
+
+
+def build_operator_machine_verification_payload(
+    base_payload: dict[str, Any] | None = None,
+    *,
+    verification_source: str = DEFAULT_MACHINE_VERIFICATION_SOURCE,
+    current_surface_native_machine_attested: bool | None = None,
+) -> dict[str, Any]:
+    source_payload = base_payload if isinstance(base_payload, dict) else {}
+    machine_payload: dict[str, Any] = {"verification_source": verification_source}
+    if current_surface_native_machine_attested is not None:
+        machine_payload["current_surface_native_machine_attested"] = bool(
+            current_surface_native_machine_attested
+        )
+    for key in OPERATOR_ENVELOPE_MACHINE_FIELD_ORDER:
+        if key in {"verification_source", "current_surface_native_machine_attested"}:
+            continue
+        value = source_payload.get(key)
+        if value is None:
+            continue
+        if isinstance(value, str) and not value.strip():
+            continue
+        machine_payload[key] = value
+    return machine_payload
+
+
+def split_canonical_reply_text(reply_text: str) -> tuple[str, str]:
+    text = str(reply_text or "")
+    if not text:
+        return "", ""
+    lines = text.splitlines()
+    if not lines:
+        return "", ""
+    first_line = str(lines[0]).rstrip()
+    remainder = "\n".join(lines[1:]).strip()
+    return first_line, remainder
+
+
+def render_visible_reply_with_operator_envelope(
+    *,
+    reply_text: str,
+    operator_envelope_lines: list[str] | tuple[str, ...] | None = None,
+) -> str:
+    lines = [str(line).strip() for line in (operator_envelope_lines or []) if str(line).strip()]
+    first_line, body_text = split_canonical_reply_text(reply_text)
+    visible_lines: list[str] = []
+    if lines:
+        visible_lines.extend(lines)
+    elif first_line:
+        visible_lines.append(first_line)
+
+    if first_line.startswith("Identity-Context:"):
+        if body_text:
+            visible_lines.append(body_text)
+    else:
+        normalized_reply = str(reply_text or "").strip()
+        if normalized_reply:
+            visible_lines.append(normalized_reply)
+    return "\n".join([line for line in visible_lines if str(line).strip()]).rstrip() + "\n"
+
+
 def resolve_disclosure_level(
     ctx: StampContext,
     *,
@@ -820,9 +1155,7 @@ def render_external_stamp_with_layer_context(
     wl = str(work_layer or "").strip().lower() or DEFAULT_WORK_LAYER
     if wl not in ALLOWED_WORK_LAYERS:
         wl = DEFAULT_WORK_LAYER
-    sl = str(source_layer or "").strip().lower() or ctx.source_domain
-    if sl not in ALLOWED_SOURCE_LAYERS:
-        sl = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
+    sl = str(source_layer or "").strip().lower() or str(ctx.source_domain or "").strip().lower() or "unknown"
     parts = [
         f"actor_id={ctx.actor_id}",
         f"identity_id={ctx.identity_id}",
@@ -869,9 +1202,7 @@ def render_structured_context(
     wl = str(work_layer or "").strip().lower() or DEFAULT_WORK_LAYER
     if wl not in ALLOWED_WORK_LAYERS:
         wl = DEFAULT_WORK_LAYER
-    sl = str(source_layer or "").strip().lower() or ctx.source_domain
-    if sl not in ALLOWED_SOURCE_LAYERS:
-        sl = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
+    sl = str(source_layer or "").strip().lower() or str(ctx.source_domain or "").strip().lower() or "unknown"
     return {
         "actor_id": ctx.actor_id,
         "identity_id": ctx.identity_id,
@@ -928,6 +1259,33 @@ def parse_identity_context_stamp(stamp_line: str) -> dict[str, Any]:
     fields["_raw_identity_segment"] = identity_segment.strip()
     fields["_raw_layer_segment"] = layer_segment.strip()
     return fields
+
+
+def parse_reply_first_line_surface(first_line: str) -> dict[str, Any]:
+    raw = str(first_line or "").strip()
+    payload: dict[str, Any] = {
+        "surface_mode": REPLY_FIRST_LINE_SURFACE_INVALID,
+        "raw_first_line": raw,
+        "canonical_identity_context_line": "",
+        "display_headstamp_prefix": "",
+        "parsed_stamp": {},
+    }
+    if not raw:
+        return payload
+    if raw.startswith("Identity-Context:"):
+        payload["surface_mode"] = REPLY_FIRST_LINE_SURFACE_RAW_CANONICAL
+        payload["canonical_identity_context_line"] = raw
+        payload["parsed_stamp"] = parse_identity_context_stamp(raw)
+        return payload
+    if raw.startswith(DISPLAY_HEADSTAMP_PREFIX):
+        candidate = raw[len(DISPLAY_HEADSTAMP_PREFIX) :].strip()
+        if candidate.startswith("Identity-Context:"):
+            payload["surface_mode"] = REPLY_FIRST_LINE_SURFACE_VISIBLE_PROJECTION
+            payload["canonical_identity_context_line"] = candidate
+            payload["display_headstamp_prefix"] = DISPLAY_HEADSTAMP_PREFIX
+            payload["parsed_stamp"] = parse_identity_context_stamp(candidate)
+            return payload
+    return payload
 
 
 def blocker_receipt(

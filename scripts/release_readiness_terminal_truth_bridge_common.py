@@ -1,0 +1,619 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
+STATUS_UNKNOWN = "UNKNOWN"
+
+ADMISSION_BLOCKED_BY_TERMINAL_TRUTH = "BLOCKED_BY_TERMINAL_TRUTH"
+ADMISSION_NOT_BLOCKED_BY_TERMINAL_TRUTH = "NOT_BLOCKED_BY_TERMINAL_TRUTH"
+
+
+@dataclass(frozen=True)
+class ReleaseReadinessTerminalTruthBridgeCaseSpec:
+    case_id: str
+    marker: str
+
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_BOUNDARY_FIELDS: tuple[str, ...] = (
+    "one_look.terminal_truth_boundary_projection_status",
+    "one_look.terminal_truth_observation_status",
+    "one_look.admission_lane_projection",
+    "one_look.repair_success_not_clean_terminal_truth",
+    "one_look.terminal_truth_class",
+    "one_look.terminal_state_class",
+    "one_look.terminal_truth_negative_feedback_class",
+    "one_look.terminal_truth_publishable",
+    "one_look.terminal_truth_canonical_result_eligible",
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ACTIVE_RUNTIME_FIELDS: tuple[str, ...] = (
+    "one_look.identity_terminal_truth_cleanliness_status",
+    "one_look.identity_terminal_truth_execution_closure_status",
+    "one_look.identity_terminal_truth_canonical_publishable_result_status",
+    "one_look.identity_terminal_truth_class",
+    "one_look.identity_terminal_truth_state_machine_status",
+    "one_look.identity_terminal_truth_state_class",
+    "one_look.identity_terminal_truth_negative_feedback_class",
+    "one_look.identity_terminal_truth_negative_feedback_terminal_veto_status",
+    "one_look.identity_terminal_truth_loopback_required",
+    "one_look.identity_terminal_truth_publishable",
+    "one_look.identity_terminal_truth_next_state_after_veto",
+    "one_look.identity_terminal_truth_alias_surface_status",
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER = (
+    "terminal_truth_bridge_surface="
+    + "|".join(
+        (
+            *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_BOUNDARY_FIELDS,
+            *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ACTIVE_RUNTIME_FIELDS,
+        )
+    )
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CLEAN_CASE_SPEC = (
+    ReleaseReadinessTerminalTruthBridgeCaseSpec(
+        case_id="clean_terminal_truth",
+        marker="terminal_truth_bridge_case=clean_terminal_truth",
+    )
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_SPEC = (
+    ReleaseReadinessTerminalTruthBridgeCaseSpec(
+        case_id="review_required_execution_closure",
+        marker="terminal_truth_bridge_case=review_required_execution_closure",
+    )
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_EXPLICIT_DIRTY_RETRY_CASE_SPEC = (
+    ReleaseReadinessTerminalTruthBridgeCaseSpec(
+        case_id="explicit_dirty_retry_execution_closure",
+        marker="terminal_truth_bridge_case=explicit_dirty_retry_execution_closure",
+    )
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_SPECS: tuple[
+    ReleaseReadinessTerminalTruthBridgeCaseSpec,
+    ...,
+] = (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CLEAN_CASE_SPEC,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_SPEC,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_EXPLICIT_DIRTY_RETRY_CASE_SPEC,
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_ORDER: tuple[str, ...] = tuple(
+    spec.case_id for spec in RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_SPECS
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CLEAN_CASE_MARKER = (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CLEAN_CASE_SPEC.marker
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_MARKER = (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_REVIEW_REQUIRED_CASE_SPEC.marker
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_EXPLICIT_DIRTY_RETRY_CASE_MARKER = (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_EXPLICIT_DIRTY_RETRY_CASE_SPEC.marker
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_MARKERS: tuple[str, ...] = tuple(
+    spec.marker for spec in RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_SPECS
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR = (
+    "scripts/validate_release_readiness_terminal_truth_bridge.py"
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE = (
+    "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh"
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_POSITIVE_OUTPUT_REL = (
+    ".tmp/release-readiness-probe-outputs/"
+    "release-readiness-terminal-truth-bridge-positive.json"
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR_COMMAND: tuple[str, ...] = (
+    "python3",
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR,
+    "--json-only",
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE_COMMAND: tuple[str, ...] = (
+    "bash",
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE,
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROOF_LANES: tuple[str, ...] = (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_VALIDATOR,
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROBE,
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_BOUNDARY_COMPANION_FIELDS: tuple[str, ...] = (
+    "boundary_execution_closure_status",
+    "boundary_state_machine_status",
+    "boundary_negative_feedback_terminal_veto_status",
+    "boundary_loopback_required",
+    "boundary_next_state_after_veto",
+    "boundary_dirty_signals",
+    "boundary_terminal_truth_blockers",
+    "boundary_placeholder_result_fields",
+    "boundary_contradiction_fields",
+    "boundary_confidence_blocker_fields",
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ALIGNMENT_FIELDS: tuple[str, ...] = (
+    "execution_closure_alignment_status",
+    "state_machine_alignment_status",
+    "negative_feedback_veto_alignment_status",
+    "loopback_flag_alignment_status",
+    "next_state_after_veto_alignment_status",
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_COMPANION_FIELDS: tuple[str, ...] = (
+    *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_RICH_BOUNDARY_COMPANION_FIELDS,
+    *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_ALIGNMENT_FIELDS,
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS: tuple[str, ...] = (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER,
+    *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_MARKERS,
+    *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_PROOF_LANES,
+)
+
+
+def find_release_readiness_terminal_truth_bridge_case_spec(
+    case_id: str,
+) -> ReleaseReadinessTerminalTruthBridgeCaseSpec | None:
+    for spec in RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_SPECS:
+        if spec.case_id == case_id:
+            return spec
+    return None
+
+
+def _clean_status(value: Any) -> str:
+    return str(value or "").strip().upper()
+
+
+def _clean_str(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _clean_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _clean_reason_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    cleaned: list[str] = []
+    for item in value:
+        token = _clean_str(item)
+        if token:
+            cleaned.append(token)
+    return cleaned
+
+
+def _alignment_status(ok: bool) -> str:
+    return STATUS_PASS_REQUIRED if ok else STATUS_FAIL_REQUIRED
+
+
+def _loopback_status_matches_terminal_state(
+    next_state_after_veto: str,
+    loopback_required: bool,
+) -> bool:
+    if next_state_after_veto in {"", "review_pending"}:
+        return loopback_required is False
+    if next_state_after_veto in {
+        "revalidation_pending",
+        "repair_pending",
+        "retry_pending",
+        "quarantined",
+        "failed_terminal",
+    }:
+        return loopback_required is True
+    return True
+
+
+
+def build_release_readiness_terminal_truth_bridge_projection(
+    summary: dict[str, Any] | None,
+) -> dict[str, Any]:
+    summary = summary if isinstance(summary, dict) else {}
+    boundary = summary.get("terminal_truth_boundary_projection")
+    if not isinstance(boundary, dict):
+        boundary = {}
+    one_look = summary.get("one_look")
+    if not isinstance(one_look, dict):
+        one_look = {}
+    return build_release_readiness_terminal_truth_bridge_from_parts(
+        boundary_projection=boundary,
+        one_look=one_look,
+    )
+
+
+
+def build_release_readiness_terminal_truth_bridge_from_parts(
+    *,
+    boundary_projection: dict[str, Any] | None,
+    one_look: dict[str, Any] | None,
+) -> dict[str, Any]:
+    boundary_projection = boundary_projection if isinstance(boundary_projection, dict) else {}
+    one_look = one_look if isinstance(one_look, dict) else {}
+
+    boundary_projection_status = _clean_status(
+        boundary_projection.get("terminal_truth_boundary_projection_status")
+    ) or STATUS_UNKNOWN
+    boundary_observation_status = _clean_status(
+        boundary_projection.get("terminal_truth_observation_status")
+    ) or STATUS_UNKNOWN
+    admission_lane_projection = _clean_str(
+        boundary_projection.get("admission_lane_projection")
+    )
+    boundary_terminal_truth_class = _clean_str(
+        boundary_projection.get("terminal_truth_class")
+    )
+    boundary_terminal_state_class = _clean_str(
+        boundary_projection.get("terminal_state_class")
+    )
+    boundary_negative_feedback_class = _clean_str(
+        boundary_projection.get("negative_feedback_class")
+    )
+    boundary_publishable = _clean_bool(boundary_projection.get("publishable"))
+    boundary_canonical_result_eligible = _clean_bool(
+        boundary_projection.get("canonical_result_eligible")
+    )
+    repair_success_not_clean_terminal_truth = _clean_bool(
+        boundary_projection.get("repair_success_not_clean_terminal_truth")
+    )
+    boundary_execution_closure_status = _clean_status(
+        boundary_projection.get("terminal_truth_execution_closure_status")
+    ) or STATUS_UNKNOWN
+    boundary_state_machine_status = _clean_status(
+        boundary_projection.get("terminal_truth_state_machine_status")
+    ) or STATUS_UNKNOWN
+    boundary_negative_feedback_terminal_veto_status = _clean_status(
+        boundary_projection.get("terminal_truth_negative_feedback_terminal_veto_status")
+    ) or STATUS_UNKNOWN
+    boundary_loopback_required = _clean_bool(
+        boundary_projection.get("terminal_truth_loopback_required")
+    )
+    boundary_next_state_after_veto = _clean_str(
+        boundary_projection.get("terminal_truth_next_state_after_veto")
+    )
+    boundary_dirty_signals = _clean_reason_list(
+        boundary_projection.get("terminal_truth_dirty_signals")
+    )
+    boundary_terminal_truth_blockers = _clean_reason_list(
+        boundary_projection.get("terminal_truth_blockers")
+    )
+    boundary_placeholder_result_fields = _clean_reason_list(
+        boundary_projection.get("terminal_truth_placeholder_result_fields")
+    )
+    boundary_contradiction_fields = _clean_reason_list(
+        boundary_projection.get("terminal_truth_contradiction_fields")
+    )
+    boundary_confidence_blocker_fields = _clean_reason_list(
+        boundary_projection.get("terminal_truth_confidence_blocker_fields")
+    )
+
+    active_runtime_cleanliness_status = _clean_status(
+        one_look.get("identity_terminal_truth_cleanliness_status")
+    ) or STATUS_UNKNOWN
+    active_runtime_execution_closure_status = _clean_status(
+        one_look.get("identity_terminal_truth_execution_closure_status")
+    ) or STATUS_UNKNOWN
+    active_runtime_canonical_publishable_result_status = _clean_status(
+        one_look.get("identity_terminal_truth_canonical_publishable_result_status")
+    ) or STATUS_UNKNOWN
+    active_runtime_state_machine_status = _clean_status(
+        one_look.get("identity_terminal_truth_state_machine_status")
+    ) or STATUS_UNKNOWN
+    active_runtime_terminal_truth_class = _clean_str(
+        one_look.get("identity_terminal_truth_class")
+    )
+    active_runtime_terminal_state_class = _clean_str(
+        one_look.get("identity_terminal_truth_state_class")
+    )
+    active_runtime_negative_feedback_class = _clean_str(
+        one_look.get("identity_terminal_truth_negative_feedback_class")
+    )
+    active_runtime_negative_feedback_terminal_veto_status = _clean_status(
+        one_look.get("identity_terminal_truth_negative_feedback_terminal_veto_status")
+    ) or STATUS_UNKNOWN
+    active_runtime_loopback_required = _clean_bool(
+        one_look.get("identity_terminal_truth_loopback_required")
+    )
+    active_runtime_publishable = _clean_bool(
+        one_look.get("identity_terminal_truth_publishable")
+    )
+    active_runtime_next_state_after_veto = _clean_str(
+        one_look.get("identity_terminal_truth_next_state_after_veto")
+    )
+    active_runtime_alias_surface_status = _clean_status(
+        one_look.get("identity_terminal_truth_alias_surface_status")
+    ) or STATUS_UNKNOWN
+
+    stale_reasons: list[str] = []
+
+    if boundary_projection_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            f"boundary_projection_not_pass:{boundary_projection_status or STATUS_UNKNOWN}"
+        )
+    if boundary_observation_status not in {STATUS_PASS_REQUIRED, STATUS_FAIL_REQUIRED}:
+        stale_reasons.append(
+            f"boundary_observation_status_unusable:{boundary_observation_status or STATUS_UNKNOWN}"
+        )
+    if active_runtime_cleanliness_status not in {STATUS_PASS_REQUIRED, STATUS_FAIL_REQUIRED}:
+        stale_reasons.append(
+            f"active_runtime_cleanliness_status_unusable:{active_runtime_cleanliness_status or STATUS_UNKNOWN}"
+        )
+    if active_runtime_canonical_publishable_result_status not in {
+        STATUS_PASS_REQUIRED,
+        STATUS_FAIL_REQUIRED,
+    }:
+        stale_reasons.append(
+            "active_runtime_canonical_publishable_result_status_unusable:"
+            f"{active_runtime_canonical_publishable_result_status or STATUS_UNKNOWN}"
+        )
+    if active_runtime_state_machine_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            f"active_runtime_state_machine_not_pass:{active_runtime_state_machine_status or STATUS_UNKNOWN}"
+        )
+    if active_runtime_negative_feedback_terminal_veto_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "active_runtime_negative_feedback_terminal_veto_status_not_pass:"
+            f"{active_runtime_negative_feedback_terminal_veto_status or STATUS_UNKNOWN}"
+        )
+    if active_runtime_alias_surface_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "active_runtime_alias_surface_status_not_pass:"
+            f"{active_runtime_alias_surface_status or STATUS_UNKNOWN}"
+        )
+    if not boundary_terminal_truth_class:
+        stale_reasons.append("boundary_terminal_truth_class_missing")
+    if not boundary_terminal_state_class:
+        stale_reasons.append("boundary_terminal_state_class_missing")
+    if not active_runtime_terminal_truth_class:
+        stale_reasons.append("active_runtime_terminal_truth_class_missing")
+    if not active_runtime_terminal_state_class:
+        stale_reasons.append("active_runtime_terminal_state_class_missing")
+    if admission_lane_projection not in {
+        ADMISSION_BLOCKED_BY_TERMINAL_TRUTH,
+        ADMISSION_NOT_BLOCKED_BY_TERMINAL_TRUTH,
+    }:
+        stale_reasons.append(
+            f"admission_lane_projection_unusable:{admission_lane_projection or STATUS_UNKNOWN}"
+        )
+    if boundary_execution_closure_status not in {STATUS_PASS_REQUIRED, STATUS_FAIL_REQUIRED}:
+        stale_reasons.append(
+            "boundary_execution_closure_status_unusable:"
+            f"{boundary_execution_closure_status or STATUS_UNKNOWN}"
+        )
+    if boundary_state_machine_status not in {STATUS_PASS_REQUIRED, STATUS_FAIL_REQUIRED}:
+        stale_reasons.append(
+            "boundary_state_machine_status_unusable:"
+            f"{boundary_state_machine_status or STATUS_UNKNOWN}"
+        )
+    if boundary_negative_feedback_terminal_veto_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "boundary_negative_feedback_terminal_veto_status_not_pass:"
+            f"{boundary_negative_feedback_terminal_veto_status or STATUS_UNKNOWN}"
+        )
+
+    terminal_truth_class_alignment_status = _alignment_status(
+        boundary_terminal_truth_class == active_runtime_terminal_truth_class
+    )
+    if terminal_truth_class_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "terminal_truth_class_bridge_mismatch:"
+            f"{boundary_terminal_truth_class or STATUS_UNKNOWN}!={active_runtime_terminal_truth_class or STATUS_UNKNOWN}"
+        )
+
+    terminal_state_class_alignment_status = _alignment_status(
+        boundary_terminal_state_class == active_runtime_terminal_state_class
+    )
+    if terminal_state_class_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "terminal_state_class_bridge_mismatch:"
+            f"{boundary_terminal_state_class or STATUS_UNKNOWN}!={active_runtime_terminal_state_class or STATUS_UNKNOWN}"
+        )
+
+    terminal_truth_observation_alignment_status = _alignment_status(
+        boundary_observation_status == active_runtime_cleanliness_status
+    )
+    if terminal_truth_observation_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "terminal_truth_observation_bridge_mismatch:"
+            f"{boundary_observation_status or STATUS_UNKNOWN}!={active_runtime_cleanliness_status or STATUS_UNKNOWN}"
+        )
+
+    negative_feedback_class_alignment_status = _alignment_status(
+        boundary_negative_feedback_class == active_runtime_negative_feedback_class
+    )
+    if negative_feedback_class_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "negative_feedback_class_bridge_mismatch:"
+            f"{boundary_negative_feedback_class or STATUS_UNKNOWN}!={active_runtime_negative_feedback_class or STATUS_UNKNOWN}"
+        )
+
+    publishable_alignment_status = _alignment_status(
+        boundary_publishable is active_runtime_publishable
+    )
+    if publishable_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "terminal_truth_publishable_bridge_mismatch:"
+            f"{boundary_publishable}!={active_runtime_publishable}"
+        )
+
+    canonical_publishable_alignment_status = _alignment_status(
+        (
+            boundary_canonical_result_eligible
+            and active_runtime_canonical_publishable_result_status == STATUS_PASS_REQUIRED
+        )
+        or (
+            not boundary_canonical_result_eligible
+            and active_runtime_canonical_publishable_result_status == STATUS_FAIL_REQUIRED
+        )
+    )
+    if canonical_publishable_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "canonical_publishable_bridge_mismatch:"
+            f"{boundary_canonical_result_eligible}!={active_runtime_canonical_publishable_result_status or STATUS_UNKNOWN}"
+        )
+
+    execution_closure_alignment_status = _alignment_status(
+        boundary_execution_closure_status == active_runtime_execution_closure_status
+    )
+    if execution_closure_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "execution_closure_bridge_mismatch:"
+            f"{boundary_execution_closure_status or STATUS_UNKNOWN}!={active_runtime_execution_closure_status or STATUS_UNKNOWN}"
+        )
+
+    state_machine_alignment_status = _alignment_status(
+        boundary_state_machine_status == active_runtime_state_machine_status
+    )
+    if state_machine_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "state_machine_bridge_mismatch:"
+            f"{boundary_state_machine_status or STATUS_UNKNOWN}!={active_runtime_state_machine_status or STATUS_UNKNOWN}"
+        )
+
+    negative_feedback_veto_alignment_status = _alignment_status(
+        boundary_negative_feedback_terminal_veto_status
+        == active_runtime_negative_feedback_terminal_veto_status
+    )
+    if negative_feedback_veto_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "negative_feedback_terminal_veto_bridge_mismatch:"
+            f"{boundary_negative_feedback_terminal_veto_status or STATUS_UNKNOWN}!={active_runtime_negative_feedback_terminal_veto_status or STATUS_UNKNOWN}"
+        )
+
+    loopback_flag_alignment_status = _alignment_status(
+        boundary_loopback_required is active_runtime_loopback_required
+    )
+    if loopback_flag_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "loopback_flag_bridge_mismatch:"
+            f"{boundary_loopback_required}!={active_runtime_loopback_required}"
+        )
+
+    next_state_after_veto_alignment_status = _alignment_status(
+        boundary_next_state_after_veto == active_runtime_next_state_after_veto
+    )
+    if next_state_after_veto_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "next_state_after_veto_bridge_mismatch:"
+            f"{boundary_next_state_after_veto or STATUS_UNKNOWN}!={active_runtime_next_state_after_veto or STATUS_UNKNOWN}"
+        )
+
+    loopback_alignment_status = _alignment_status(
+        _loopback_status_matches_terminal_state(
+            active_runtime_next_state_after_veto,
+            active_runtime_loopback_required,
+        )
+    )
+    if loopback_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "loopback_requirement_bridge_mismatch:"
+            f"{active_runtime_next_state_after_veto or STATUS_UNKNOWN}|{active_runtime_loopback_required}"
+        )
+
+    admission_semantics_alignment_ok = False
+    if admission_lane_projection == ADMISSION_NOT_BLOCKED_BY_TERMINAL_TRUTH:
+        admission_semantics_alignment_ok = (
+            active_runtime_cleanliness_status == STATUS_PASS_REQUIRED
+            and active_runtime_execution_closure_status == STATUS_PASS_REQUIRED
+            and active_runtime_canonical_publishable_result_status == STATUS_PASS_REQUIRED
+            and active_runtime_negative_feedback_terminal_veto_status == STATUS_PASS_REQUIRED
+            and active_runtime_loopback_required is False
+            and active_runtime_publishable is True
+            and active_runtime_next_state_after_veto == ""
+        )
+    elif admission_lane_projection == ADMISSION_BLOCKED_BY_TERMINAL_TRUTH:
+        admission_semantics_alignment_ok = (
+            active_runtime_cleanliness_status == STATUS_FAIL_REQUIRED
+            and active_runtime_canonical_publishable_result_status == STATUS_FAIL_REQUIRED
+            and active_runtime_negative_feedback_terminal_veto_status == STATUS_PASS_REQUIRED
+            and active_runtime_publishable is False
+        )
+    admission_semantics_alignment_status = _alignment_status(
+        admission_semantics_alignment_ok
+    )
+    if admission_semantics_alignment_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append(
+            "admission_lane_projection_bridge_mismatch:"
+            f"{admission_lane_projection or STATUS_UNKNOWN}"
+        )
+
+    if repair_success_not_clean_terminal_truth:
+        review_veto_semantics_alignment_ok = (
+            admission_lane_projection == ADMISSION_BLOCKED_BY_TERMINAL_TRUTH
+            and active_runtime_execution_closure_status == STATUS_PASS_REQUIRED
+            and active_runtime_cleanliness_status == STATUS_FAIL_REQUIRED
+            and active_runtime_canonical_publishable_result_status == STATUS_FAIL_REQUIRED
+            and active_runtime_negative_feedback_terminal_veto_status
+            == STATUS_PASS_REQUIRED
+            and active_runtime_next_state_after_veto == boundary_terminal_state_class
+            and active_runtime_negative_feedback_class not in {"", "none"}
+            and _loopback_status_matches_terminal_state(
+                active_runtime_next_state_after_veto,
+                active_runtime_loopback_required,
+            )
+        )
+        review_veto_semantics_alignment_status = _alignment_status(
+            review_veto_semantics_alignment_ok
+        )
+        if review_veto_semantics_alignment_status != STATUS_PASS_REQUIRED:
+            stale_reasons.append(
+                "review_veto_bridge_mismatch:"
+                f"{active_runtime_execution_closure_status or STATUS_UNKNOWN}|"
+                f"{active_runtime_cleanliness_status or STATUS_UNKNOWN}|"
+                f"{active_runtime_canonical_publishable_result_status or STATUS_UNKNOWN}|"
+                f"{active_runtime_negative_feedback_terminal_veto_status or STATUS_UNKNOWN}|"
+                f"{active_runtime_negative_feedback_class or STATUS_UNKNOWN}|"
+                f"{active_runtime_next_state_after_veto or STATUS_UNKNOWN}"
+            )
+    else:
+        review_veto_semantics_alignment_status = STATUS_SKIPPED_NOT_REQUIRED
+
+    return {
+        "terminal_truth_bridge_status": STATUS_PASS_REQUIRED
+        if not stale_reasons
+        else STATUS_FAIL_REQUIRED,
+        "boundary_projection_status": boundary_projection_status,
+        "boundary_observation_status": boundary_observation_status,
+        "admission_lane_projection": admission_lane_projection,
+        "boundary_terminal_truth_class": boundary_terminal_truth_class,
+        "boundary_terminal_state_class": boundary_terminal_state_class,
+        "boundary_negative_feedback_class": boundary_negative_feedback_class,
+        "boundary_publishable": boundary_publishable,
+        "boundary_canonical_result_eligible": boundary_canonical_result_eligible,
+        "boundary_execution_closure_status": boundary_execution_closure_status,
+        "boundary_state_machine_status": boundary_state_machine_status,
+        "boundary_negative_feedback_terminal_veto_status": boundary_negative_feedback_terminal_veto_status,
+        "boundary_loopback_required": boundary_loopback_required,
+        "boundary_next_state_after_veto": boundary_next_state_after_veto,
+        "boundary_dirty_signals": boundary_dirty_signals,
+        "boundary_terminal_truth_blockers": boundary_terminal_truth_blockers,
+        "boundary_placeholder_result_fields": boundary_placeholder_result_fields,
+        "boundary_contradiction_fields": boundary_contradiction_fields,
+        "boundary_confidence_blocker_fields": boundary_confidence_blocker_fields,
+        "repair_success_not_clean_terminal_truth": repair_success_not_clean_terminal_truth,
+        "active_runtime_cleanliness_status": active_runtime_cleanliness_status,
+        "active_runtime_execution_closure_status": active_runtime_execution_closure_status,
+        "active_runtime_canonical_publishable_result_status": active_runtime_canonical_publishable_result_status,
+        "active_runtime_state_machine_status": active_runtime_state_machine_status,
+        "active_runtime_terminal_truth_class": active_runtime_terminal_truth_class,
+        "active_runtime_terminal_state_class": active_runtime_terminal_state_class,
+        "active_runtime_negative_feedback_class": active_runtime_negative_feedback_class,
+        "active_runtime_negative_feedback_terminal_veto_status": active_runtime_negative_feedback_terminal_veto_status,
+        "active_runtime_loopback_required": active_runtime_loopback_required,
+        "active_runtime_publishable": active_runtime_publishable,
+        "active_runtime_next_state_after_veto": active_runtime_next_state_after_veto,
+        "active_runtime_alias_surface_status": active_runtime_alias_surface_status,
+        "terminal_truth_class_alignment_status": terminal_truth_class_alignment_status,
+        "terminal_state_class_alignment_status": terminal_state_class_alignment_status,
+        "terminal_truth_observation_alignment_status": terminal_truth_observation_alignment_status,
+        "negative_feedback_class_alignment_status": negative_feedback_class_alignment_status,
+        "publishable_alignment_status": publishable_alignment_status,
+        "canonical_publishable_alignment_status": canonical_publishable_alignment_status,
+        "execution_closure_alignment_status": execution_closure_alignment_status,
+        "state_machine_alignment_status": state_machine_alignment_status,
+        "negative_feedback_veto_alignment_status": negative_feedback_veto_alignment_status,
+        "loopback_flag_alignment_status": loopback_flag_alignment_status,
+        "next_state_after_veto_alignment_status": next_state_after_veto_alignment_status,
+        "loopback_alignment_status": loopback_alignment_status,
+        "admission_semantics_alignment_status": admission_semantics_alignment_status,
+        "review_veto_semantics_alignment_status": review_veto_semantics_alignment_status,
+        "stale_reasons": stale_reasons,
+    }

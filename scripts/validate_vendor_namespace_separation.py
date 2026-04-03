@@ -12,7 +12,9 @@ from protocol_feedback_lane_common import (
     collect_protocol_feedback_activity,
     decide_requiredization_scope,
     discover_default_correlation_keys,
+    should_seed_default_correlation_keys,
 )
+from protocol_feedback_contract_common import resolve_feedback_root
 from response_stamp_common import resolve_layer_intent
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
@@ -103,21 +105,26 @@ def main() -> int:
 
     contract = _select_contract(task)
     required_declared = contract_required(contract) if contract else False
-    feedback_root = Path(args.feedback_root).expanduser().resolve() if args.feedback_root.strip() else (
-        pack_path / "runtime" / "protocol-feedback"
-    ).resolve()
+    feedback_root = resolve_feedback_root(pack_path, args.feedback_root)
     layer_intent = resolve_layer_intent(
         explicit_work_layer=str(args.expected_work_layer or "").strip(),
         explicit_source_layer=str(args.expected_source_layer or "").strip(),
         intent_text=str(args.layer_intent_text or "").strip(),
         default_work_layer="instance",
-        default_source_layer="auto",
+        default_source_layer="project",
+    )
+    run_id = str(args.run_id or "").strip()
+    explicit_corr_keys = list(args.correlation_key or [])
+    default_seeded = should_seed_default_correlation_keys(
+        operation=args.operation,
+        run_id=run_id,
+        explicit_keys=explicit_corr_keys,
     )
     default_corr = discover_default_correlation_keys(pack_path)
     correlation_keys = build_correlation_keys(
-        default_keys=default_corr.get("correlation_keys", []),
-        run_id=str(args.run_id or "").strip(),
-        explicit_keys=list(args.correlation_key or []),
+        default_keys=(default_corr.get("correlation_keys", []) if default_seeded else []),
+        run_id=run_id,
+        explicit_keys=explicit_corr_keys,
     )
     activity = collect_protocol_feedback_activity(
         feedback_root=feedback_root,
@@ -166,6 +173,7 @@ def main() -> int:
         "intent_source": str(layer_intent.get("intent_source", "")),
         "intent_confidence": layer_intent.get("intent_confidence"),
         "fallback_reason": str(layer_intent.get("fallback_reason", "")),
+        "default_correlation_seeded": default_seeded,
         "default_correlation_run_id": str(default_corr.get("latest_run_id", "")),
         "default_correlation_report": str(default_corr.get("latest_report_path", "")),
         "correlation_keys": correlation_keys,

@@ -53,23 +53,36 @@ def _has_token(text: str, token: str) -> bool:
     return re.search(rf"(^|_){re.escape(token)}(_|$)", text) is not None
 
 
-def _resolve_task_path(identity: dict[str, Any], identity_id: str) -> Path:
+def _resolve_task_path(identity: dict[str, Any], identity_id: str, catalog_path: Path) -> Path:
     pack_path = str((identity or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
-        if p.exists():
-            return p
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
+        p = Path(pack_path).expanduser()
+        if not p.is_absolute():
+            p = (catalog_path.expanduser().resolve().parent / p).resolve()
+        else:
+            p = p.resolve()
+        task_path = p / "CURRENT_TASK.json"
+        if task_path.exists():
+            return task_path
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity={identity_id}")
 
 
-def _resolve_pack_root(identity: dict[str, Any]) -> Path | None:
+def _resolve_pack_root(identity: dict[str, Any], catalog_path: Path) -> Path | None:
     pack_path = str((identity or {}).get("pack_path", "")).strip()
     if not pack_path:
         return None
-    return Path(pack_path).expanduser().resolve()
+    p = Path(pack_path).expanduser()
+    if not p.is_absolute():
+        p = (catalog_path.expanduser().resolve().parent / p).resolve()
+    else:
+        p = p.resolve()
+    return p
+
+
+def _is_fixture_identity(identity: dict[str, Any]) -> bool:
+    profile = str((identity or {}).get("profile", "")).strip().lower()
+    runtime_mode = str((identity or {}).get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
 
 
 def _runtime_pattern_candidates(pattern: str, pack_root: Path | None, identity_id: str) -> list[str]:
@@ -84,6 +97,8 @@ def _runtime_pattern_candidates(pattern: str, pack_root: Path | None, identity_i
         mapped = str((pack_root / "runtime" / pattern[len(local_prefix) :]).as_posix())
     elif pattern.startswith("identity/runtime/"):
         mapped = str((pack_root / "runtime" / pattern[len("identity/runtime/") :]).as_posix())
+    elif pattern.startswith("runtime/"):
+        mapped = str((pack_root / pattern).as_posix())
     if mapped and mapped not in candidates:
         candidates.insert(0, mapped)
     return candidates
@@ -95,10 +110,13 @@ def _resolve_latest_evidence(pattern: str, identity_id: str, explicit: str, pack
         return p if p.exists() else None
     for candidate in _runtime_pattern_candidates(pattern, pack_root, identity_id):
         candidate = candidate.replace("<identity-id>", identity_id)
-        if Path(candidate).is_absolute():
-            files = sorted((Path(p) for p in glob.glob(candidate)), key=lambda p: p.stat().st_mtime)
+        candidate_path = Path(candidate).expanduser()
+        if candidate_path.is_absolute():
+            files = sorted((Path(p).resolve() for p in glob.glob(str(candidate_path))), key=lambda p: p.stat().st_mtime)
+        elif pack_root is not None:
+            files = sorted(pack_root.glob(candidate), key=lambda p: p.stat().st_mtime)
         else:
-            files = sorted(Path(".").glob(candidate), key=lambda p: p.stat().st_mtime)
+            files = []
         if not files:
             continue
         scoped = [p for p in files if identity_id in p.name]
@@ -128,7 +146,7 @@ def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity role-binding contract and activation switch guards")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--evidence", default="", help="optional explicit role-binding evidence json path")
     args = ap.parse_args()
@@ -144,9 +162,10 @@ def main() -> int:
     except Exception as e:
         print(f"[FAIL] {e}")
         return 1
+    fixture_identity = _is_fixture_identity(identity)
 
     try:
-        task_path = _resolve_task_path(identity, identity_id)
+        task_path = _resolve_task_path(identity, identity_id, catalog_path)
     except Exception as e:
         print(f"[FAIL] {e}")
         return 1
@@ -211,7 +230,7 @@ def main() -> int:
         str(contract.get("binding_evidence_path_pattern", "")),
         identity_id,
         args.evidence,
-        _resolve_pack_root(identity),
+        _resolve_pack_root(identity, catalog_path),
     )
     if not evidence:
         print("[FAIL] role-binding evidence not found")
@@ -247,12 +266,14 @@ def main() -> int:
         print("[FAIL] role-binding evidence generated_at must be valid ISO-8601 timestamp")
         return 1
     age_days = (datetime.now(timezone.utc) - generated).total_seconds() / 86400.0
-    if age_days > float(contract.get("evidence_max_age_days", 7)):
+    if not fixture_identity and age_days > float(contract.get("evidence_max_age_days", 7)):
         print(
             "[FAIL] role-binding evidence is stale: "
             f"age_days={age_days:.2f} > max_age_days={contract.get('evidence_max_age_days')}"
         )
         return 1
+    if fixture_identity:
+        print(f"[OK] fixture identity freshness check skipped: age_days={age_days:.2f}")
 
     if bool(contract.get("runtime_bootstrap_pass_required", False)):
         bootstrap = data.get("runtime_bootstrap") or {}

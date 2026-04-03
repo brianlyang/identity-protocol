@@ -1,0 +1,180 @@
+schema_version: 1
+agent_handoff_family: protocol_root_agent_handoff
+agent_handoff_version: v1
+contract_file: identity/protocol/AGENT_HANDOFF_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_agent_handoff.py
+probe_script: scripts/ci/run_protocol_root_agent_handoff_probes_ci.sh
+common_script: scripts/root_agent_handoff_common.py
+status_key: protocol_root_agent_handoff_status
+error_codes:
+- IP-RAH-001
+- IP-RAH-002
+- IP-RAH-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Governed handoff law'
+  - '## Two governed handoff roles'
+  - '## Mandatory handoff payload fields'
+  - '## Required handoff evidence and next-step anchors'
+  - '## Handoff-proof discipline'
+  - '## Handoff-proof limits'
+  - '## Non-compliant handoff collapses'
+  - 'This file remains the authoritative root-domain contract for governed agent-handoff law.'
+  - 'Governed handoff law must also remain machine-readable as separate role, payload, anchor, handoff-proof, handoff-limit, and collapse row families rather than one narrative coordination claim.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Agent-handoff row-family completeness must stay explicit'
+      - 'Required role, payload, anchor, handoff-proof, handoff-limit, and collapse families must remain explicit as separate machine-readable row families.'
+      - 'README root agent-handoff completeness discipline must therefore stay congruent with admitted agent-handoff-completeness rows rather than becoming a freehand completeness summary.'
+      - 'The machine world must not finalize handoff legality while required role, payload, anchor, proof, limit, or collapse identity drift remains known only internally.'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root agent-handoff completeness discipline'
+      - '`AGENT_HANDOFF_CONTRACT.md` freezes governed handoff law as root-domain contract law rather than informal collaboration guidance.'
+      - 'These agent-handoff-completeness rules must remain bound to canonical agent-handoff-completeness rows rather than drifting into soft summary prose.'
+      - '1. required role, payload, anchor, handoff-proof, handoff-limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root agent-handoff completeness boundary'
+      - '1. Agent-handoff law must remain machine-readable as separate role, payload, anchor, handoff-proof, handoff-limit, and collapse row families.'
+      - '4. Protocol legality must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only inside validator logic.'
+      - '6. README root agent-handoff completeness discipline rendered at protocol root must remain congruent with admitted agent-handoff-completeness rows rather than silently authoring an alternate completeness summary.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime agent-handoff consumption boundary'
+      - '1. Runtime consumes agent-handoff law as separate role, payload, anchor, handoff-proof, handoff-limit, and collapse row families rather than as undifferentiated collaboration prose.'
+      - '4. Runtime must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root agent-handoff completeness discipline as a governed completeness projection bound to admitted agent-handoff-completeness rows rather than as a freehand completeness summary.'
+agent_handoff_completeness_rows:
+  - order: 1
+    completeness_id: explicit_agent_handoff_row_families
+    contract_phrase: 'required role, payload, anchor, handoff-proof, handoff-limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - order: 2
+    completeness_id: congruent_agent_handoff_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_agent_handoff_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_agent_handoff_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_agent_handoff_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected role, payload, anchor, proof, limit, and collapse row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'
+required_role_rows:
+  - order: 1
+    role_id: master_orchestrator
+    contract_heading: '### 1. Master orchestration role'
+    handoff_role: master_orchestrator
+  - order: 2
+    role_id: delegated_sub_agent_execution
+    contract_heading: '### 2. Delegated sub-agent execution role'
+    handoff_role: delegated_sub_agent_execution
+required_payload_rows:
+  - order: 1
+    payload_field_id: handoff_id
+    contract_phrase: '`handoff_id`'
+  - order: 2
+    payload_field_id: task_id
+    contract_phrase: '`task_id`'
+  - order: 3
+    payload_field_id: from_agent
+    contract_phrase: '`from_agent`'
+  - order: 4
+    payload_field_id: to_agent
+    contract_phrase: '`to_agent`'
+  - order: 5
+    payload_field_id: input_scope
+    contract_phrase: '`input_scope`'
+  - order: 6
+    payload_field_id: actions_taken
+    contract_phrase: '`actions_taken`'
+  - order: 7
+    payload_field_id: artifacts
+    contract_phrase: '`artifacts`'
+  - order: 8
+    payload_field_id: result
+    contract_phrase: '`result`'
+  - order: 9
+    payload_field_id: next_action
+    contract_phrase: '`next_action`'
+  - order: 10
+    payload_field_id: rulebook_update
+    contract_phrase: '`rulebook_update`'
+required_anchor_rows:
+  - order: 1
+    anchor_id: artifact_path_kind
+    contract_phrase: 'each artifact item includes `path` and `kind`;'
+  - order: 2
+    anchor_id: rulebook_update_run_binding
+    contract_phrase: '`rulebook_update.evidence_run_id` is required when `rulebook_update.applied=true`;'
+  - order: 3
+    anchor_id: next_action_triplet
+    contract_phrase: '`next_action` includes `owner`, `action`, and `input`;'
+  - order: 4
+    anchor_id: production_identity_task_freshness
+    contract_phrase: 'production handoff evidence remains freshness-bounded and identity/task scoped when current-turn legality is claimed;'
+  - order: 5
+    anchor_id: production_sample_track_separation
+    contract_phrase: 'production and sample validation tracks remain separated so sample proof never stands in for current-run runtime proof.'
+required_handoff_proof_rows:
+  - order: 1
+    proof_id: role_boundary_proof
+    contract_heading: '### 1. Role-boundary proof'
+    proof_role: role_boundary_governed_handoff_proof
+  - order: 2
+    proof_id: payload_completeness_proof
+    contract_heading: '### 2. Payload-completeness proof'
+    proof_role: payload_completeness_governed_handoff_proof
+  - order: 3
+    proof_id: evidence_binding_proof
+    contract_heading: '### 3. Evidence-binding proof'
+    proof_role: evidence_binding_governed_handoff_proof
+  - order: 4
+    proof_id: next_step_executability_proof
+    contract_heading: '### 4. Next-step-executability proof'
+    proof_role: next_step_executability_governed_handoff_proof
+  - order: 5
+    proof_id: validation_track_separation_proof
+    contract_heading: '### 5. Validation-track-separation proof'
+    proof_role: validation_track_separation_governed_handoff_proof
+required_handoff_limit_rows:
+  - order: 1
+    limit_id: role_boundary_not_payload_completeness
+    contract_phrase: 'role-boundary proof is not proof of payload completeness;'
+  - order: 2
+    limit_id: payload_completeness_not_evidence_binding
+    contract_phrase: 'payload-completeness proof is not proof of evidence binding;'
+  - order: 3
+    limit_id: evidence_binding_not_next_step_executability
+    contract_phrase: 'evidence-binding proof is not proof of next-step executability;'
+  - order: 4
+    limit_id: next_step_executability_not_validation_track_separation
+    contract_phrase: 'next-step-executability proof is not proof of validation-track separation;'
+  - order: 5
+    limit_id: validation_track_separation_not_current_turn_legality
+    contract_phrase: 'validation-track-separation proof is not proof of current-turn production handoff legality by itself.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: delegated_scope_as_global_contract_authority
+    contract_phrase: 'a delegated sub-agent mutates top-level identity or protocol contract surfaces as if delegated execution granted global law authorship.'
+  - order: 2
+    collapse_id: completion_without_evidence_artifacts
+    contract_phrase: 'a handoff claims completion without evidence artifacts that support the claimed result.'
+  - order: 3
+    collapse_id: missing_executable_next_action_as_valid_delivery
+    contract_phrase: 'a handoff omits an executable next action but is treated as a valid delivery.'
+  - order: 4
+    collapse_id: contradictory_evidence_as_successful_handoff
+    contract_phrase: 'a handoff result is treated as valid even when it contradicts the provided evidence.'
+  - order: 5
+    collapse_id: sample_track_as_production_runtime_proof
+    contract_phrase: 'sample or self-test validation is treated as if it proved present-turn production handoff legality.'

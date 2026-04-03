@@ -1,0 +1,10 @@
+schema_version: control_plane_owner_binding.current.v1
+truth_class: owner_binding_overlay
+scope: repo_local
+portable: false
+runtime_evidence_surface: true
+runtime_evidence_class: concrete_identity_binding
+canonical_reentry_policy: fail_close
+binding_policy: receipt_scoped_runtime_evidence_only
+active_file: identity/protocol/mappings/control-plane-owner-binding.v1.yaml
+active_binding_id: control_plane_runtime_evidence_policy

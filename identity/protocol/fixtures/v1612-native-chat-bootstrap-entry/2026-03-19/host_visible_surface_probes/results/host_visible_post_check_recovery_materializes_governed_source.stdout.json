@@ -1,0 +1,10 @@
+{
+  "recovery_status": "PASS_REQUIRED",
+  "attestation_status": "PASS_REQUIRED",
+  "reply_transport_requested_ref": "runtime:host_visible_post_check_recovery",
+  "reply_transport_resolution_mode": "materialize_runtime_sentinel",
+  "reply_transport_source_materialized": true,
+  "reply_transport_source_status": "PASS_REQUIRED",
+  "reply_transport_source_headstamp_present": true,
+  "host_visible_runtime_scope": "shadow"
+}

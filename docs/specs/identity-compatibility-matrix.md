@@ -44,10 +44,9 @@ Define compatibility guarantees between protocol versions, creator tooling, and 
 ## Consumer upgrade checklist
 
 1. Update `identity/PROTOCOL_PIN.yaml` tag+commit.
-2. Run `scripts/identity/upgrade_and_verify_v1.sh`.
+2. Run `scripts/protocol_consumer/upgrade_and_verify_v1.sh`.
 3. Confirm discovery artifact generated:
    - `/tmp/identity_discovery_contract.latest.json`
 4. If fail:
    - rollback pin
    - rerun validation
-

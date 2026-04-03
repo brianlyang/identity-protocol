@@ -9,7 +9,7 @@ Scope: identity instance runtime path decoupling, skill-style convergence
 
 Real runtime operations exposed a repeatable failure mode:
 
-- identity instance assets are complete under local runtime home (for example `/Users/yangxi/.codex/identity/office-ops-expert`)
+- identity instance assets are complete under local runtime home (for example `/Users/yangxi/.codex/.identity/office-ops-expert`)
 - but execution quality still depends on whichever protocol repository happens to be the current shell workspace
 - when the current workspace is stale, dirty, or temporarily offline, install/validate/upgrade paths become inconsistent
 
@@ -49,9 +49,9 @@ To prevent mixed interpretations across upgrade windows:
 1. `v1.4.9` era discussions captured historical runtime-home drift risk and legacy compatibility context.
 2. `v1.4.10+` target baseline is the explicit order documented in runtime tooling/docs:
    - `IDENTITY_HOME` (if explicitly set)
-   - `${CODEX_HOME}/identity`
-   - `~/.codex/identity`
-   - fallback `./.codex/identity` when creation fails
+   - `${CODEX_HOME}/.identity`
+   - `~/.codex/.identity`
+   - fallback `./.codex/.identity` when creation fails
 3. This memo focuses on protocol-root determinism and dual-mode governance, and does not redefine the local runtime-home contract.
 
 ## 2. Roundtable synthesis
@@ -185,8 +185,8 @@ All reports used for promotion arbitration must carry at least:
   "protocol_root": "/abs/path/to/protocol",
   "protocol_commit_sha": "40-hex",
   "protocol_ref": "v1.4.10",
-  "identity_home": "/Users/yangxi/.codex/identity",
-  "catalog_path": "/Users/yangxi/.codex/identity/catalog.local.yaml",
+  "identity_home": "/Users/yangxi/.codex/.identity",
+  "catalog_path": "/Users/yangxi/.codex/.identity/catalog.local.yaml",
   "generated_at": "2026-02-23T14:30:00Z"
 }
 ```
@@ -250,7 +250,7 @@ Arbitration note minimum fields:
 Shared synchronized base mode:
 
 ```bash
-export IDENTITY_HOME="/Users/yangxi/.codex/identity"
+export IDENTITY_HOME="/Users/yangxi/.codex/.identity"
 export IDENTITY_PROTOCOL_HOME="/Users/yangxi/claude/codex_project/ddm/identity-protocol-regression-v1.4.9"
 python "$IDENTITY_PROTOCOL_HOME/scripts/identity_creator.py" \
   --protocol-root "$IDENTITY_PROTOCOL_HOME" \
@@ -266,7 +266,7 @@ python /Users/yangxi/claude/codex_project/ddm/identity-protocol-regression-v1.4.
   update \
   --identity-id office-ops-expert \
   --mode review-required \
-  --catalog /Users/yangxi/.codex/identity/catalog.local.yaml
+  --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml
 ```
 
 
@@ -279,7 +279,7 @@ This section converts policy intent into deterministic configuration points.
 1. `IDENTITY_HOME`
    - **Meaning**: runtime identity asset root (local identity packs + local catalog + local reports).
    - **Scope**: instance data plane (who is running and where runtime artifacts are stored).
-   - **Typical value**: `/Users/<user>/.codex/identity`.
+   - **Typical value**: `/Users/<user>/.codex/.identity`.
    - **Used by**: creator/installer/update when resolving local pack paths and local catalog default.
 
 2. `IDENTITY_PROTOCOL_HOME`
@@ -313,9 +313,9 @@ Protocol root resolution (proposal target):
 Identity home resolution (current baseline):
 
 1. env `IDENTITY_HOME`
-2. `${CODEX_HOME}/identity`
-3. `~/.codex/identity`
-4. fallback `./.codex/identity` (only when home path creation fails)
+2. `${CODEX_HOME}/.identity`
+3. `~/.codex/.identity`
+4. fallback `./.codex/.identity` (only when home path creation fails)
 
 Catalog resolution:
 
@@ -330,7 +330,7 @@ Configure in shell profile once (for example `~/.zshrc`):
 
 ```bash
 export CODEX_HOME="$HOME/.codex"
-export IDENTITY_HOME="$CODEX_HOME/identity"
+export IDENTITY_HOME="$CODEX_HOME/.identity"
 export IDENTITY_PROTOCOL_HOME="/abs/path/to/identity-protocol"
 ```
 
@@ -347,7 +347,7 @@ Set environment in workflow job (for example `.github/workflows/*`):
 ```yaml
 env:
   CODEX_HOME: /home/runner/.codex
-  IDENTITY_HOME: /home/runner/.codex/identity
+  IDENTITY_HOME: /home/runner/.codex/.identity
   IDENTITY_PROTOCOL_HOME: ${{ github.workspace }}
 ```
 

@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="980" viewBox="0 0 1480 980">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8fbff"/>
+      <stop offset="100%" stop-color="#eef7ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <style>
+      .title { font: 700 30px Inter, Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 15px Inter, Arial, sans-serif; fill: #334155; }
+      .section { font: 700 18px Inter, Arial, sans-serif; fill: #0f172a; }
+      .boxTitle { font: 700 20px Inter, Arial, sans-serif; fill: #0f172a; }
+      .boxLine { font: 400 13px Inter, Arial, sans-serif; fill: #1e293b; }
+      .chip { font: 700 12px Inter, Arial, sans-serif; fill: #0f172a; }
+      .calloutTitle { font: 700 16px Inter, Arial, sans-serif; fill: #7c2d12; }
+      .calloutLine { font: 400 13px Inter, Arial, sans-serif; fill: #7c2d12; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1480" height="980" fill="url(#bg)"/>
+  <text x="48" y="56" class="title">Identity Protocol · Upgrade-Safe Runtime Truth</text>
+  <text x="48" y="86" class="subtitle">Healthy upgrades preserve required lines, cleanly skip optional lines, and keep quarantine-only lines out of the success path</text>
+
+  <rect x="56" y="144" width="1368" height="72" rx="16" fill="#ffffff" stroke="#dbeafe"/>
+  <text x="84" y="188" class="boxLine">`rq_052` protects whole-matrix routing, but inherited family validators still own family-deep semantics. Routing green must never mask inherited red.</text>
+
+  <rect x="64" y="270" width="416" height="360" rx="24" fill="#dcfce7" stroke="#4ade80" stroke-width="2" filter="url(#shadow)"/>
+  <text x="92" y="310" class="boxTitle">State A · Required / adopted family</text>
+  <text x="92" y="340" class="boxLine">Canonical result after upgrade: `PASS_REQUIRED`</text>
+  <text x="92" y="364" class="boxLine">Examples: active dialogue retention / continuity / routing lanes</text>
+  <text x="92" y="388" class="boxLine">Contract requirement remains blocking and replay-backed</text>
+  <rect x="92" y="410" width="180" height="28" rx="14" fill="#fff" stroke="#86efac"/><text x="112" y="429" class="chip">must stay alive</text>
+  <text x="92" y="470" class="boxLine">Healthy proof:</text>
+  <text x="112" y="495" class="boxLine">• validator = PASS_REQUIRED</text>
+  <text x="112" y="518" class="boxLine">• probe = PASS_REQUIRED</text>
+  <text x="112" y="541" class="boxLine">• live replay still works on the identities that need it</text>
+  <text x="112" y="564" class="boxLine">• no compatibility shortcut is hiding a residual red</text>
+
+  <rect x="532" y="270" width="416" height="360" rx="24" fill="#dbeafe" stroke="#60a5fa" stroke-width="2" filter="url(#shadow)"/>
+  <text x="560" y="310" class="boxTitle">State B · Optional / not-required family</text>
+  <text x="560" y="340" class="boxLine">Canonical result after upgrade: `SKIPPED_NOT_REQUIRED`</text>
+  <text x="560" y="364" class="boxLine">Example: optional dialogue-retention on identities that do not require it</text>
+  <text x="560" y="388" class="boxLine">Skip is explicit, machine-readable, and non-poisoning</text>
+  <rect x="560" y="410" width="234" height="28" rx="14" fill="#fff" stroke="#93c5fd"/><text x="580" y="429" class="chip">clean skip, not silent omission</text>
+  <text x="560" y="470" class="boxLine">Healthy proof:</text>
+  <text x="580" y="495" class="boxLine">• family status = SKIPPED_NOT_REQUIRED</text>
+  <text x="580" y="518" class="boxLine">• outer routing lane remains PASS_REQUIRED</text>
+  <text x="580" y="541" class="boxLine">• no synthetic replay debt is manufactured</text>
+  <text x="580" y="564" class="boxLine">• the skip reason is explicit and expected</text>
+
+  <rect x="1000" y="270" width="416" height="360" rx="24" fill="#fee2e2" stroke="#ef4444" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1028" y="310" class="boxTitle">State C · Quarantine-only family</text>
+  <text x="1028" y="340" class="boxLine">Canonical result: never promoted to active success-path truth</text>
+  <text x="1028" y="364" class="boxLine">Example: `runtime/memory-absorption/**`</text>
+  <text x="1028" y="388" class="boxLine">Presence alone does not satisfy any active contract</text>
+  <rect x="1028" y="410" width="206" height="28" rx="14" fill="#fff" stroke="#fca5a5"/><text x="1048" y="429" class="chip">non-promotable quarantine</text>
+  <text x="1028" y="470" class="boxLine">Healthy proof:</text>
+  <text x="1048" y="495" class="boxLine">• kept on migration / re-materialization paths only</text>
+  <text x="1048" y="518" class="boxLine">• never substituted for continuity / dialogue / feedback truth</text>
+  <text x="1048" y="541" class="boxLine">• routing validator fail-closes on active-path leakage</text>
+
+  <path d="M 272 630 C 272 710, 420 748, 740 748" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#arrowBlue)"/>
+  <path d="M 740 630 C 740 700, 740 714, 740 748" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#arrowBlue)"/>
+  <path d="M 1208 630 C 1208 710, 1060 748, 740 748" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#arrowBlue)"/>
+
+  <rect x="434" y="748" width="612" height="126" rx="24" fill="#ffffff" stroke="#94a3b8" stroke-width="2" filter="url(#shadow)"/>
+  <text x="464" y="790" class="boxTitle">Canonical upgrade verdict</text>
+  <text x="464" y="818" class="boxLine">The upgrade is healthy only when these three states coexist correctly.</text>
+  <text x="464" y="842" class="boxLine">A protocol that tries to force everything green or lets routing green hide inherited-family red is semantically broken.</text>
+
+  <rect x="84" y="894" width="1312" height="54" rx="16" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+  <text x="112" y="928" class="calloutTitle">Architect rule</text>
+  <text x="252" y="928" class="calloutLine">Do not ask “is every family green?” Ask instead: are required lines alive, optional lines cleanly skipped, and quarantine lines still quarantined?</text>
+</svg>

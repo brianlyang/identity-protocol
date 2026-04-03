@@ -134,7 +134,7 @@ def _parse_batch(path: Path) -> dict[str, Any]:
     if not upgrade_ref:
         upgrade_ref = _extract_first(raw, r"\bupgrade_proposal_ref\b\s*[:=]\s*(.+)$")
     if not upgrade_ref:
-        m = re.search(r"runtime/protocol-feedback/upgrade-proposals/[^\s`]+", raw, flags=re.IGNORECASE)
+        m = re.search(r"runtime/protocol-feedback/upgrade-proposals/[^\s`]+", raw, flags=re.IGNORECASE)  # downsink-path-lock: allow-nonregistry-literal
         if m:
             upgrade_ref = m.group(0).strip()
 

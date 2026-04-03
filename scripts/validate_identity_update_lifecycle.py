@@ -35,6 +35,16 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _resolve_pack_root(catalog_path: Path, pack_path: str) -> Path:
+    catalog_root = catalog_path.expanduser().resolve().parent
+    p = Path(pack_path).expanduser()
+    if not p.is_absolute():
+        p = (catalog_root / p).resolve()
+    else:
+        p = p.resolve()
+    return p
+
+
 def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     catalog = _load_yaml(catalog_path)
     identities = catalog.get("identities") or []
@@ -44,13 +54,9 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
 
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
+        p = _resolve_pack_root(catalog_path, pack_path) / "CURRENT_TASK.json"
         if p.exists():
             return p
-
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
 
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
@@ -63,23 +69,43 @@ def _require_keys(block: dict[str, Any], keys: list[str], prefix: str) -> list[s
     return missing
 
 
-def _resolve_replay_evidence_path(identity_id: str, replay_contract: dict[str, Any], override: str) -> Path:
+def _runtime_pattern_candidates(pattern: str, identity_id: str, pack_root: Path) -> list[str]:
+    if not pattern:
+        return [pattern]
+    candidates: list[str] = [pattern]
+    local_prefix = f"identity/runtime/local/{identity_id}/"
+    mapped = ""
+    if pattern.startswith(local_prefix):
+        mapped = str((pack_root / "runtime" / pattern[len(local_prefix) :]).as_posix())
+    elif pattern.startswith("identity/runtime/"):
+        mapped = str((pack_root / "runtime" / pattern[len("identity/runtime/") :]).as_posix())
+    elif pattern.startswith("runtime/"):
+        mapped = str((pack_root / pattern).as_posix())
+    if mapped and mapped not in candidates:
+        candidates.insert(0, mapped)
+    return candidates
+
+
+def _resolve_replay_evidence_path(identity_id: str, replay_contract: dict[str, Any], override: str, pack_root: Path) -> Path:
     if override:
         return Path(override)
 
     pattern = str(replay_contract.get("evidence_path_pattern") or "")
     if pattern:
-        if Path(pattern).is_absolute():
-            matched = sorted(Path(p) for p in glob.glob(pattern))
-        else:
-            matched = sorted(Path(".").glob(pattern))
-        identity_scoped = [p for p in matched if identity_id in p.name]
-        if identity_scoped:
-            matched = identity_scoped
-        if matched:
-            return matched[-1]
+        for candidate in _runtime_pattern_candidates(pattern, identity_id, pack_root):
+            if Path(candidate).is_absolute():
+                matched = sorted(Path(p) for p in glob.glob(candidate))
+            else:
+                matched = sorted(pack_root.glob(candidate))
+            if not matched:
+                continue
+            identity_scoped = [p for p in matched if identity_id in p.name]
+            if identity_scoped:
+                matched = identity_scoped
+            if matched:
+                return matched[-1]
 
-    return Path(f"identity/runtime/examples/{identity_id}-update-replay-sample.json")
+    return (pack_root / "runtime" / "examples" / f"{identity_id}-update-replay-sample.json").resolve()
 
 
 def _sha256_file(path: Path) -> str:
@@ -95,15 +121,12 @@ def _resolve_path_with_pack(path_value: str, pack_root: Path) -> Path:
     p = Path(raw).expanduser()
     if p.is_absolute():
         return p
-    candidate = (pack_root / raw).resolve()
-    if candidate.exists():
-        return candidate
-    return (Path.cwd() / raw).resolve()
+    return (pack_root / raw).resolve()
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity update lifecycle contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--replay-evidence", default="")
     args = ap.parse_args()
@@ -223,7 +246,12 @@ def main() -> int:
     print("[OK] trigger_regression_contract present")
 
     # Replay evidence validation (execution-level)
-    replay_evidence_path = _resolve_replay_evidence_path(args.identity_id, replay, args.replay_evidence)
+    replay_evidence_path = _resolve_replay_evidence_path(
+        args.identity_id,
+        replay,
+        args.replay_evidence,
+        pack_root,
+    )
     if not replay_evidence_path.exists():
         print(f"[FAIL] replay evidence file not found: {replay_evidence_path}")
         return 1

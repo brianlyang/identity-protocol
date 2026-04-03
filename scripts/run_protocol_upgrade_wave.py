@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 from datetime import datetime, timezone
@@ -14,6 +15,7 @@ import yaml
 ERR_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
 REPORT_RE = re.compile(r"^report=(.+)$", re.MULTILINE)
 OUTDATED_BASELINE_CODES = {"IP-PBL-001", "IP-PBL-002", "IP-PBL-003", "IP-PBL-004"}
+ERR_ACTOR_ENTRY_REQUIRED = "IP-ACTOR-ENTRY-001"
 
 
 def _run(cmd: list[str]) -> tuple[int, str, str]:
@@ -134,6 +136,11 @@ def main() -> int:
     )
     ap.add_argument("--dry-run", action="store_true", default=True, help="preview only (default true)")
     ap.add_argument("--apply", action="store_true", help="execute updates for outdated identities")
+    ap.add_argument(
+        "--actor-id",
+        default=os.environ.get("CODEX_ACTOR_ID", "").strip(),
+        help="explicit actor id required when --apply is used",
+    )
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 
@@ -147,6 +154,11 @@ def main() -> int:
         return 2
 
     dry_run = False if args.apply else True
+    actor_id = str(args.actor_id or "").strip()
+    if not dry_run and not actor_id:
+        print(f"[FAIL] {ERR_ACTOR_ENTRY_REQUIRED} explicit --actor-id is required when --apply is enabled")
+        print("[HINT] pass --actor-id <actor_id> so update chain uses actor-scoped binding deterministically.")
+        return 1
     target_ids = {x.strip() for x in args.identity_ids.replace(",", " ").split() if x.strip()}
     rows = _load_catalog(catalog_path)
     runtime_rows = [r for r in rows if str(r.get("profile", "")).strip().lower() == "runtime"]
@@ -236,6 +248,8 @@ def main() -> int:
             str(catalog_path),
             "--repo-catalog",
             str(repo_catalog_path),
+            "--actor-id",
+            actor_id,
             "--capability-activation-policy",
             args.capability_activation_policy,
             "--baseline-policy",

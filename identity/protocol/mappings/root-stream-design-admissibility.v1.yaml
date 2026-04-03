@@ -1,0 +1,152 @@
+schema_version: 1
+admissibility_family: protocol_root_stream_design_admissibility
+admissibility_version: v1
+contract_file: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_stream_design_admissibility.py
+probe_script: scripts/ci/run_protocol_root_stream_design_admissibility_probes_ci.sh
+common_script: scripts/root_stream_design_admissibility_common.py
+status_key: protocol_root_stream_design_admissibility_status
+error_codes:
+- IP-RSDA-001
+- IP-RSDA-002
+- IP-RSDA-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Admissibility law'
+  - Stream-design admissibility law must also remain machine-readable as separate
+    question, admissibility-proof, admissibility-limit, outcome-class, and
+    projection-surface row families rather than one narrative admissibility
+    claim.
+  - '## Five required design questions'
+  - '## Admissibility-proof discipline'
+  - '## Admissibility-proof limits'
+  - '## Mandatory projection surfaces'
+  - '## Admissibility outcome classes'
+  - 'No protocol stream, shared strengthening, owner split, or runtime extension may enter governed implementation unless'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Stream-design admissibility row-family completeness must stay explicit'
+      - Required question, admissibility-proof, admissibility-limit,
+        outcome-class, and projection-surface families must remain explicit as
+        separate machine-readable row families.
+      - The machine world must not finalize stream-design admissibility
+        legality while required row identity drift remains known only
+        internally.
+      - "README root stream-design admissibility completeness discipline must therefore\nstay congruent with admitted stream-design-admissibility-completeness rows\nrather than becoming a freehand completeness summary."
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root stream-design admissibility completeness discipline'
+      - Stream-design admissibility law is not a soft prose bundle.
+      - 'These stream-design-admissibility-completeness rules must remain bound to canonical stream-design-admissibility-completeness rows rather than drifting into soft summary prose.'
+      - '1. required question, admissibility-proof, admissibility-limit, outcome-class, and projection-surface rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root stream-design admissibility completeness boundary'
+      - '1. Stream-design admissibility law must remain machine-readable as separate question, admissibility-proof, admissibility-limit, outcome-class, and projection-surface row families.'
+      - '4. Protocol legality must not finalize stream-design admissibility legality while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root stream-design admissibility completeness discipline rendered at protocol root must remain congruent with admitted stream-design-admissibility-completeness rows rather than silently authoring an alternate completeness summary.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime stream-design admissibility consumption boundary'
+      - '1. Runtime consumes stream-design admissibility law as separate question, admissibility-proof, admissibility-limit, outcome-class, and projection-surface row families rather than as undifferentiated design prose.'
+      - '4. Runtime must not finalize stream-design admissibility legality while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root stream-design admissibility completeness discipline as a governed completeness projection bound to admitted stream-design-admissibility-completeness rows rather than as a freehand completeness summary.'
+required_question_rows:
+  - order: 1
+    question_id: ontology
+    contract_heading: '### 1. Ontology question'
+    normative_focus: object_identity_and_non_collapse
+  - order: 2
+    question_id: truth_lifecycle
+    contract_heading: '### 2. Truth-lifecycle question'
+    normative_focus: canonical_truth_discoverability_admissibility_binding_consumption
+  - order: 3
+    question_id: normative
+    contract_heading: '### 3. Normative question'
+    normative_focus: allowed_actions_fail_close_success_path_and_forbidden_shortcuts
+  - order: 4
+    question_id: responsibility_split
+    contract_heading: '### 4. Responsibility-split question'
+    normative_focus: protocol_instance_operator_boundary
+  - order: 5
+    question_id: answer_surface
+    contract_heading: '### 5. Answer-surface question'
+    normative_focus: stable_operator_delivery_surface
+required_admissibility_proof_rows:
+  - order: 1
+    proof_id: ontology_closure_proof
+    contract_heading: '### 1. Ontology-closure proof'
+    proof_role: object_identity_non_collapse_proof
+  - order: 2
+    proof_id: truth_lifecycle_closure_proof
+    contract_heading: '### 2. Truth-lifecycle-closure proof'
+    proof_role: truth_lifecycle_closure_proof
+  - order: 3
+    proof_id: normative_closure_proof
+    contract_heading: '### 3. Normative-closure proof'
+    proof_role: normative_boundary_closure_proof
+  - order: 4
+    proof_id: responsibility_split_closure_proof
+    contract_heading: '### 4. Responsibility-split-closure proof'
+    proof_role: responsibility_split_closure_proof
+  - order: 5
+    proof_id: answer_surface_closure_proof
+    contract_heading: '### 5. Answer-surface-closure proof'
+    proof_role: operator_answer_surface_closure_proof
+required_admissibility_limit_rows:
+  - order: 1
+    limit_id: ontology_not_truth_lifecycle
+    contract_phrase: 'ontology-closure proof is not proof of truth-lifecycle closure;'
+  - order: 2
+    limit_id: truth_lifecycle_not_normative
+    contract_phrase: 'truth-lifecycle-closure proof is not proof of normative closure;'
+  - order: 3
+    limit_id: normative_not_responsibility_split
+    contract_phrase: 'normative-closure proof is not proof of responsibility-split closure;'
+  - order: 4
+    limit_id: responsibility_split_not_answer_surface
+    contract_phrase: 'responsibility-split-closure proof is not proof of answer-surface closure;'
+  - order: 5
+    limit_id: proof_not_projection_substitute
+    contract_phrase: 'no admissibility proof may substitute for mandatory projection into governed surfaces.'
+admissibility_outcome_rows:
+  - order: 1
+    outcome_class: local_technique_only
+  - order: 2
+    outcome_class: instance_adaptation_only
+  - order: 3
+    outcome_class: governed_extension_strengthening
+  - order: 4
+    outcome_class: root_contract_strengthening
+  - order: 5
+    outcome_class: constitutional_strengthening
+required_projection_surfaces:
+  - governed_governance_surface
+  - governed_review_surface
+  - root_contract_or_machine_registry_surface
+  - validator_and_probe_surface
+  - runtime_answer_surface_if_applicable
+stream_design_admissibility_completeness_rows:
+  - order: 1
+    completeness_id: explicit_stream_design_admissibility_row_families
+    contract_phrase: 'required question, admissibility-proof, admissibility-limit, outcome-class, and projection-surface rows must remain explicit as separate machine-readable families;'
+  - order: 2
+    completeness_id: congruent_stream_design_admissibility_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_stream_design_admissibility_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_stream_design_admissibility_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize stream-design admissibility legality while missing or unexpected row identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_stream_design_admissibility_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'

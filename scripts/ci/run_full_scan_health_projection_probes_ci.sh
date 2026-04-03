@@ -1,0 +1,195 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+cd "${REPO_ROOT}"
+
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/full-scan-health-projection-ci.XXXXXX")"
+trap 'rm -rf "${TMP_DIR}"' EXIT
+
+python3 - <<'PY' "${TMP_DIR}"
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+repo_root = Path.cwd().resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from full_identity_protocol_scan import (
+    _record_summary_health_report_experience_writeback_closure,
+)
+from full_identity_protocol_scan_projection_profile_common import (
+    resolve_full_identity_protocol_scan_projection_profile,
+)
+from health_report_experience_writeback_projection_common import (
+    HEALTH_REPORT_EXPERIENCE_WRITEBACK_CLOSURE_EXCLUDED_AREA,
+    STATUS_FAIL_REQUIRED,
+    STATUS_PASS_REQUIRED,
+    STATUS_SKIPPED_NOT_REQUIRED,
+    build_health_report_experience_writeback_closure_projection,
+    build_health_report_experience_writeback_closure_summary_skeleton,
+    build_projection_profile_excluded_health_report_experience_writeback_closure,
+)
+from primary_execution_report_common import report_logical_identity_key
+
+tmp_dir = Path(sys.argv[1]).resolve()
+identity_id = "probe-full-scan-health"
+execution_report = (tmp_dir / "execution-report.json").resolve()
+execution_report.write_text("{}\n", encoding="utf-8")
+
+
+def write_json(path: Path, doc: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+pass_health_dir = (tmp_dir / "health-pass").resolve()
+write_json(
+    pass_health_dir / f"identity-health-{identity_id}-1001.json",
+    {
+        "identity_id": identity_id,
+        "execution_report_ref": str(execution_report),
+        "experience_writeback_closure": {
+            "status": "PASS",
+            "validation_status": STATUS_PASS_REQUIRED,
+            "report_selected_path": str(execution_report),
+            "report_logical_identity_key": report_logical_identity_key(execution_report),
+            "report_selection_mode": "explicit_report",
+            "report_selected_authority_class": "explicit_report_argument",
+            "report_pointer_resolution_mode": "explicit_report",
+            "report_run_id": "probe-full-scan-health-pass",
+            "writeback_status": "WRITTEN",
+            "writeback_rule_id": "rule-entry-full-scan-pass",
+            "rulebook_match_count": 1,
+            "task_history_contains_run_id": True,
+            "stale_reasons": [],
+        },
+    },
+)
+pass_projection = build_health_report_experience_writeback_closure_projection(
+    identity_id=identity_id,
+    health_report_dir=str(pass_health_dir),
+    execution_report=str(execution_report),
+    command_execution={"failed_scripts": [], "first_failed_script": ""},
+    boundary_repair_lane_status=STATUS_PASS_REQUIRED,
+    boundary_post_execution_obligation_status=STATUS_PASS_REQUIRED,
+    boundary_writeback_continuity_status=STATUS_PASS_REQUIRED,
+    boundary_experience_writeback_validation_status=STATUS_PASS_REQUIRED,
+)
+pass_summary = build_health_report_experience_writeback_closure_summary_skeleton()
+_record_summary_health_report_experience_writeback_closure(
+    pass_summary,
+    identity_id=identity_id,
+    projection=pass_projection,
+)
+assert pass_summary["total_identities"] == 1, pass_summary
+assert pass_summary["projection_pass"] == 1, pass_summary
+assert pass_summary["projection_fail"] == 0, pass_summary
+assert pass_summary["projection_skipped_not_required"] == 0, pass_summary
+assert pass_summary["health_report_contract_fail"] == 0, pass_summary
+assert pass_summary["health_report_validation_fail"] == 0, pass_summary
+assert pass_summary["selected_path_mismatch"] == 0, pass_summary
+assert pass_summary["boundary_bridge_fail"] == 0, pass_summary
+assert pass_projection["report_logical_identity_key_matches_execution_report"] is True, pass_projection
+assert pass_projection["boundary_bridge_status"] == STATUS_PASS_REQUIRED, pass_projection
+
+projection_profile = resolve_full_identity_protocol_scan_projection_profile(
+    "terminal_truth_boundary_projection"
+)
+projection_only = build_projection_profile_excluded_health_report_experience_writeback_closure(
+    profile_id=projection_profile.profile_id,
+    execution_mode=projection_profile.execution_mode,
+    description=projection_profile.description,
+    owner_surface="full_identity_protocol_scan_summary",
+)
+projection_only_summary = build_health_report_experience_writeback_closure_summary_skeleton()
+_record_summary_health_report_experience_writeback_closure(
+    projection_only_summary,
+    identity_id=f"{identity_id}-projection-only",
+    projection=projection_only,
+)
+assert projection_only_summary["total_identities"] == 1, projection_only_summary
+assert projection_only_summary["projection_pass"] == 0, projection_only_summary
+assert projection_only_summary["projection_fail"] == 0, projection_only_summary
+assert projection_only_summary["projection_skipped_not_required"] == 1, projection_only_summary
+assert projection_only_summary["projection_scope_excluded_identity_ids"] == [
+    f"{identity_id}-projection-only"
+], projection_only_summary
+assert projection_only_summary["projection_scope_classes"] == [
+    "bounded_projection_profile_exclusion"
+], projection_only_summary
+assert projection_only_summary["projection_scope_reasons"] == [
+    "projection_profile_out_of_scope"
+], projection_only_summary
+assert projection_only["projection_excluded_area"] == HEALTH_REPORT_EXPERIENCE_WRITEBACK_CLOSURE_EXCLUDED_AREA, projection_only
+assert projection_only["boundary_bridge_status"] == STATUS_SKIPPED_NOT_REQUIRED, projection_only
+
+fail_health_dir = (tmp_dir / "health-fail").resolve()
+write_json(
+    fail_health_dir / f"identity-health-{identity_id}-2001.json",
+    {
+        "identity_id": identity_id,
+        "execution_report_ref": str(execution_report),
+        "experience_writeback_closure": {
+            "status": "PASS",
+            "validation_status": STATUS_FAIL_REQUIRED,
+            "report_selected_path": str(execution_report),
+            "report_logical_identity_key": report_logical_identity_key(execution_report),
+            "report_selection_mode": "explicit_report",
+            "report_selected_authority_class": "explicit_report_argument",
+            "report_pointer_resolution_mode": "explicit_report",
+            "report_run_id": "probe-full-scan-health-fail",
+            "writeback_status": "WRITTEN",
+            "writeback_rule_id": "rule-entry-full-scan-fail",
+            "rulebook_match_count": 1,
+            "task_history_contains_run_id": True,
+            "stale_reasons": [],
+        },
+    },
+)
+fail_projection = build_health_report_experience_writeback_closure_projection(
+    identity_id=identity_id,
+    health_report_dir=str(fail_health_dir),
+    execution_report=str(execution_report),
+    command_execution={"failed_scripts": [], "first_failed_script": ""},
+    boundary_repair_lane_status=STATUS_PASS_REQUIRED,
+    boundary_post_execution_obligation_status=STATUS_PASS_REQUIRED,
+    boundary_writeback_continuity_status=STATUS_PASS_REQUIRED,
+    boundary_experience_writeback_validation_status=STATUS_PASS_REQUIRED,
+)
+fail_summary = build_health_report_experience_writeback_closure_summary_skeleton()
+_record_summary_health_report_experience_writeback_closure(
+    fail_summary,
+    identity_id=f"{identity_id}-fail",
+    projection=fail_projection,
+)
+assert fail_summary["total_identities"] == 1, fail_summary
+assert fail_summary["projection_pass"] == 0, fail_summary
+assert fail_summary["projection_fail"] == 1, fail_summary
+assert fail_summary["projection_skipped_not_required"] == 0, fail_summary
+assert fail_summary["health_report_validation_fail"] == 1, fail_summary
+assert fail_summary["boundary_validation_mismatch"] == 1, fail_summary
+assert fail_summary["boundary_bridge_fail"] == 1, fail_summary
+assert fail_summary["projection_fail_identity_ids"] == [f"{identity_id}-fail"], fail_summary
+assert fail_summary["boundary_bridge_fail_identity_ids"] == [f"{identity_id}-fail"], fail_summary
+assert "health_report_boundary_validation_status_mismatch" in fail_summary["projection_stale_reasons"], fail_summary
+assert fail_projection["boundary_bridge_status"] == STATUS_FAIL_REQUIRED, fail_projection
+
+print(
+    json.dumps(
+        {
+            "full_scan_health_projection_probe_status": STATUS_PASS_REQUIRED,
+            "pass_projection_status": pass_projection["projection_status"],
+            "projection_only_status": projection_only["projection_status"],
+            "projection_only_excluded_area": projection_only["projection_excluded_area"],
+            "fail_projection_status": fail_projection["projection_status"],
+        },
+        ensure_ascii=False,
+    )
+)
+PY
+
+echo "[PASS] full-scan health projection probes passed"

@@ -1,0 +1,247 @@
+schema_version: 1
+transition_family: protocol_root_corpus_transition
+transition_version: v1
+root_dir: identity/protocol
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+derivation_current_file: identity/protocol/mappings/root-corpus-derivation.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+validator_script: scripts/validate_protocol_root_corpus_transition.py
+probe_script: scripts/ci/run_protocol_root_corpus_transition_probes_ci.sh
+common_script: scripts/root_corpus_transition_common.py
+status_key: protocol_root_corpus_transition_status
+error_codes:
+- IP-RCT-001
+- IP-RCT-002
+- IP-RCT-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+transition_anchor_checks:
+- rel_path: identity/protocol/README.md
+  required_markers:
+  - '## Root promotion-demotion discipline'
+  - outer governance, review, workbook, reference, evidence, runtime, receipt, and
+    implementation surfaces may motivate strengthening, but they do not directly promote
+    themselves into root law;
+  - demoted support material cannot directly climb back into law-bearing root status;
+  - '## Root transition completeness discipline'
+  - These transition-completeness rules must remain bound to canonical transition-completeness
+    rows rather than drifting into soft summary prose.
+  - '1. required surface-class-profile, direct-root-target-edge, and strengthening-gateway-edge rows must remain explicit as separate machine-readable row families;'
+- rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+  required_markers:
+  - '### Promotion, demotion, and re-entry must stay governed'
+  - demotion removes law-bearing authority; it does not preserve a suspended sovereignty
+    that can silently reclaim root status later;
+  - outer governance, review, workbook, reference, evidence, runtime, receipt, and
+    implementation surfaces may motivate strengthening, but they do not directly author
+    root law by themselves;
+  - '### Transition row-family completeness must stay explicit'
+  - README root transition completeness discipline must therefore stay congruent
+    with admitted transition-completeness rows rather than becoming a freehand
+    completeness summary.
+  - The machine world must not finalize transition legality while required
+    surface, promotion-edge, or re-entry-gateway identity drift remains known
+    only internally.
+- rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+  required_markers:
+  - '## Root-law promotion and re-entry boundary'
+  - Promotion into root law without governed refreezing is non-compliant, even if
+    the motivating surface contains true evidence.
+  - '## Root transition completeness boundary'
+  - '1. Transition law must remain machine-readable as separate surface-class-profile, direct-root-target-edge, and strengthening-gateway-edge row families.'
+  - '4. Protocol legality must not finalize transition legality while missing or unexpected surface, promotion-edge, or re-entry-gateway identities remain known only inside validator logic.'
+  - '6. README root transition completeness discipline rendered at protocol root must remain congruent with admitted transition-completeness rows rather than silently authoring an alternate completeness summary.'
+- rel_path: identity/protocol/IDENTITY_RUNTIME.md
+  required_markers:
+  - '## Runtime-to-root promotion boundary'
+  - Runtime-origin evidence must re-enter shared law only through governed refreezing
+    at constitutional, runtime-constitutional, root-contract, or machine-registry
+    gateways.
+  - '## Runtime transition consumption boundary'
+  - '1. Runtime consumes transition law as separate surface-class-profile, direct-root-target-edge, and strengthening-gateway-edge row families rather than as undifferentiated transition prose.'
+  - '4. Runtime must not finalize transition legality while missing or unexpected surface, promotion-edge, or re-entry-gateway identities remain known only inside validator machinery.'
+  - '6. Runtime consumes README root transition completeness discipline as a governed completeness projection bound to admitted transition-completeness rows rather than as a freehand completeness summary.'
+transition_completeness_rows:
+- order: 1
+  completeness_id: explicit_transition_row_families
+  contract_phrase: 'required surface-class-profile, direct-root-target-edge, and strengthening-gateway-edge rows must remain explicit as separate machine-readable row families;'
+- order: 2
+  completeness_id: congruent_transition_row_family_totals
+  contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+- order: 3
+  completeness_id: explicit_transition_row_identity_sets
+  contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+- order: 4
+  completeness_id: hidden_transition_identity_drift_forbidden
+  contract_phrase: 'runtime or validator code must not finalize transition legality while missing or unexpected surface, promotion-edge, or re-entry-gateway identities remain known only internally;'
+- order: 5
+  completeness_id: fail_close_preserves_transition_identity_projection
+  contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'
+surface_class_profiles:
+- surface_class: bottom_theory
+  surface_scope: root
+  law_bearing: true
+  transition_mode: generative_origin
+  direct_root_targets:
+  - constitution
+  - runtime_constitution
+  - root_contract
+  - machine_registry_directory
+  - governed_subdomain_extension
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways: []
+- surface_class: root_index
+  surface_scope: root
+  law_bearing: true
+  transition_mode: navigational_projection_only
+  direct_root_targets: []
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways:
+  - constitution
+  - runtime_constitution
+  - root_contract
+  - machine_registry_directory
+- surface_class: constitution
+  surface_scope: root
+  law_bearing: true
+  transition_mode: constitutional_freeze
+  direct_root_targets:
+  - runtime_constitution
+  - root_contract
+  - machine_registry_directory
+  - governed_subdomain_extension
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways: []
+- surface_class: runtime_constitution
+  surface_scope: root
+  law_bearing: true
+  transition_mode: runtime_constitutional_freeze
+  direct_root_targets:
+  - root_contract
+  - machine_registry_directory
+  - governed_subdomain_extension
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways: []
+- surface_class: root_contract
+  surface_scope: root
+  law_bearing: true
+  transition_mode: domain_contract_freeze
+  direct_root_targets:
+  - machine_registry_directory
+  - governed_subdomain_extension
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways: []
+- surface_class: machine_registry_directory
+  surface_scope: root
+  law_bearing: true
+  transition_mode: machine_registry_projection
+  direct_root_targets: []
+  direct_current_turn_legality_allowed: true
+  strengthening_gateways:
+  - constitution
+  - runtime_constitution
+  - root_contract
+- surface_class: governed_subdomain_extension
+  surface_scope: root
+  law_bearing: true
+  transition_mode: governed_extension_projection
+  direct_root_targets: []
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways:
+  - constitution
+  - runtime_constitution
+  - root_contract
+  - machine_registry_directory
+- surface_class: demoted_support_directory
+  surface_scope: root
+  law_bearing: false
+  transition_mode: demoted_support_only
+  direct_root_targets: []
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways:
+  - constitution
+  - runtime_constitution
+  - root_contract
+  - machine_registry_directory
+- surface_class: outer_governance_surface
+  surface_scope: outer
+  law_bearing: false
+  transition_mode: governed_motivation_only
+  direct_root_targets: []
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways:
+  - constitution
+  - runtime_constitution
+  - root_contract
+  - machine_registry_directory
+- surface_class: outer_review_surface
+  surface_scope: outer
+  law_bearing: false
+  transition_mode: governed_motivation_only
+  direct_root_targets: []
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways:
+  - constitution
+  - runtime_constitution
+  - root_contract
+  - machine_registry_directory
+- surface_class: outer_workbook_surface
+  surface_scope: outer
+  law_bearing: false
+  transition_mode: governed_motivation_only
+  direct_root_targets: []
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways:
+  - constitution
+  - runtime_constitution
+  - root_contract
+  - machine_registry_directory
+- surface_class: outer_reference_surface
+  surface_scope: outer
+  law_bearing: false
+  transition_mode: governed_motivation_only
+  direct_root_targets: []
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways:
+  - root_contract
+  - machine_registry_directory
+- surface_class: outer_evidence_surface
+  surface_scope: outer
+  law_bearing: false
+  transition_mode: governed_motivation_only
+  direct_root_targets: []
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways:
+  - constitution
+  - runtime_constitution
+  - root_contract
+  - machine_registry_directory
+- surface_class: outer_runtime_state_surface
+  surface_scope: outer
+  law_bearing: false
+  transition_mode: governed_motivation_only
+  direct_root_targets: []
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways:
+  - runtime_constitution
+  - root_contract
+  - machine_registry_directory
+- surface_class: outer_receipt_surface
+  surface_scope: outer
+  law_bearing: false
+  transition_mode: governed_motivation_only
+  direct_root_targets: []
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways:
+  - root_contract
+  - machine_registry_directory
+- surface_class: outer_implementation_surface
+  surface_scope: outer
+  law_bearing: false
+  transition_mode: governed_motivation_only
+  direct_root_targets: []
+  direct_current_turn_legality_allowed: false
+  strengthening_gateways:
+  - root_contract
+  - machine_registry_directory

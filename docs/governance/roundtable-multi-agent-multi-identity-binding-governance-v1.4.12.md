@@ -164,8 +164,8 @@ Governance implication:
 {
   "agent_id": "office-ops-expert-agent-01",
   "identity_id": "office-ops-expert",
-  "identity_home": "/Users/yangxi/.codex/identity",
-  "catalog_path": "/Users/yangxi/.codex/identity/catalog.local.yaml",
+  "identity_home": "/Users/yangxi/.codex/.identity",
+  "catalog_path": "/Users/yangxi/.codex/.identity/catalog.local.yaml",
   "protocol_root": "/abs/path/to/identity-protocol",
   "protocol_commit_sha": "40-hex",
   "protocol_ref": "v1.4.12",
@@ -252,7 +252,7 @@ This section answers: `IDENTITY_HOME`, `IDENTITY_PROTOCOL_HOME`, `catalog_path`,
 
 ### 7.2 Resolution order (baseline)
 
-- `IDENTITY_HOME`: env > runtime-paths.env > `CODEX_HOME/identity` > `~/.codex/identity` > local fallback
+- `IDENTITY_HOME`: env > runtime-paths.env > `CODEX_HOME/.identity` > `~/.codex/.identity` > local fallback
 - `IDENTITY_PROTOCOL_HOME`: env > explicit CLI > current workspace (compat warning)
 - `catalog_path`: CLI `--catalog` > `${IDENTITY_HOME}/catalog.local.yaml`
 - `protocol_root`: CLI `--protocol-root` > `IDENTITY_PROTOCOL_HOME` > workspace fallback (warning)

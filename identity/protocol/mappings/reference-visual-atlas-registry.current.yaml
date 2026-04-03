@@ -1,0 +1,5 @@
+schema_version: 1
+pointer_version: v1
+control_plane_contract: reference_visual_atlas_inventory_control_plane
+active_family: v1.6
+active_file: identity/protocol/mappings/reference-visual-atlas-registry.v1.6.yaml

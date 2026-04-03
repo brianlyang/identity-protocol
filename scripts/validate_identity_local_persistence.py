@@ -7,7 +7,13 @@ from typing import Any
 
 import yaml
 
-from resolve_identity_context import default_local_catalog_path, load_yaml_or_empty
+from resolve_identity_context import (
+    default_local_catalog_path,
+    load_yaml_or_empty,
+    resolve_local_catalog_path,
+    resolve_protocol_root_from_repo_catalog,
+    resolve_repo_catalog_path,
+)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -29,15 +35,17 @@ def _is_repo_path(path: str, repo_root: Path) -> bool:
 
 
 def main() -> int:
+    script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(description="Validate local-instance persistence boundary (fixture/demo vs local runtime).")
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
-    ap.add_argument("--local-catalog", default=str(default_local_catalog_path()))
+    ap.add_argument("--local-catalog", default=str(default_local_catalog_path(start=script_ref)))
     ap.add_argument("--runtime-mode", action="store_true", help="enforce local catalog existence for runtime operations")
     args = ap.parse_args()
 
-    repo_root = Path.cwd().resolve()
-    repo_catalog = _load_yaml(Path(args.repo_catalog))
-    local_catalog_path = Path(args.local_catalog).expanduser().resolve()
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=script_ref)
+    repo_root = resolve_protocol_root_from_repo_catalog(repo_catalog_path, start=script_ref)
+    repo_catalog = _load_yaml(repo_catalog_path)
+    local_catalog_path = resolve_local_catalog_path(args.local_catalog, start=script_ref)
     local_catalog = load_yaml_or_empty(local_catalog_path)
 
     rc = 0
@@ -74,7 +82,7 @@ def main() -> int:
 
     if rc == 0:
         print("[OK] local persistence boundary validation passed")
-        print(f"     repo_catalog={Path(args.repo_catalog)}")
+        print(f"     repo_catalog={repo_catalog_path}")
         print(f"     local_catalog={local_catalog_path} exists={local_catalog_path.exists()}")
     return rc
 

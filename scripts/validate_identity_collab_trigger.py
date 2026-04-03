@@ -4,24 +4,19 @@ from __future__ import annotations
 import argparse
 import glob
 import json
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import yaml
-
-CANONICAL_BLOCKERS = {
-    "auth_login_required",
-    "anti_automation_challenge_required",
-    "session_reauthentication_required",
-    "manual_verification_required",
-}
-
-LEGACY_BLOCKER_ALIAS_MAP = {
-    "login_required": "auth_login_required",
-    "captcha_required": "anti_automation_challenge_required",
-    "session_expired": "session_reauthentication_required",
-}
+from blocker_taxonomy_common import (
+    CANONICAL_BLOCKER_TYPE_SET as CANONICAL_BLOCKERS,
+    build_blocker_alias_map,
+    canonicalize_blocker,
+    normalize_blocker_membership,
+)
+from collaboration_trigger_sample_common import materialize_collaboration_trigger_samples
 
 REQUIRED_TAXONOMY_FIELDS = {
     "blocker_type",
@@ -39,49 +34,6 @@ REQUIRED_RECEIPT_FIELDS = {
     "dedupe_key",
     "status",
 }
-
-
-def _build_alias_map(*raw_maps: Any) -> dict[str, str]:
-    alias_map = dict(LEGACY_BLOCKER_ALIAS_MAP)
-    for raw_map in raw_maps:
-        if not isinstance(raw_map, dict):
-            continue
-        for raw_key, raw_value in raw_map.items():
-            key = str(raw_key or "").strip()
-            value = str(raw_value or "").strip()
-            if key and value in CANONICAL_BLOCKERS:
-                alias_map[key] = value
-    return alias_map
-
-
-def _canonicalize_blocker(raw: Any, *, alias_map: dict[str, str]) -> tuple[str, str]:
-    value = str(raw or "").strip()
-    if value in CANONICAL_BLOCKERS:
-        return value, "canonical"
-    mapped = alias_map.get(value)
-    if mapped:
-        return mapped, "legacy_alias_bridge"
-    return "", "invalid"
-
-
-def _normalize_blocker_set(values: Any, *, alias_map: dict[str, str]) -> tuple[set[str], list[str], list[str]]:
-    normalized: set[str] = set()
-    alias_hits: list[str] = []
-    invalid: list[str] = []
-    if not isinstance(values, list):
-        return normalized, alias_hits, invalid
-    for raw in values:
-        canonical, mode = _canonicalize_blocker(raw, alias_map=alias_map)
-        if mode == "canonical":
-            normalized.add(canonical)
-        elif mode == "legacy_alias_bridge":
-            normalized.add(canonical)
-            alias_hits.append(str(raw))
-        else:
-            invalid.append(str(raw))
-    return normalized, sorted(set(alias_hits)), sorted(set(invalid))
-
-
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(data, dict):
@@ -96,6 +48,16 @@ def _load_json(path: Path) -> dict[str, Any]:
     return data
 
 
+def _resolve_pack_root(catalog_path: Path, pack_path: str) -> Path:
+    catalog_root = catalog_path.expanduser().resolve().parent
+    p = Path(pack_path).expanduser()
+    if not p.is_absolute():
+        p = (catalog_root / p).resolve()
+    else:
+        p = p.resolve()
+    return p
+
+
 def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     catalog = _load_yaml(catalog_path)
     identities = catalog.get("identities") or []
@@ -105,13 +67,9 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
 
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
+        p = _resolve_pack_root(catalog_path, pack_path) / "CURRENT_TASK.json"
         if p.exists():
             return p
-
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
 
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
@@ -126,6 +84,14 @@ def _is_fixture_identity(row: dict[str, Any] | None) -> bool:
     profile = str((row or {}).get("profile", "")).strip().lower()
     runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
     return profile == "fixture" or runtime_mode == "demo_only"
+
+
+def _compatibility_overlay_allowed(*, fixture_mode: bool, task: dict[str, Any]) -> bool:
+    if fixture_mode:
+        return True
+    scaffold_profile = str(task.get("scaffold_profile", "")).strip().lower()
+    scaffold_generation_mode = str(task.get("scaffold_generation_mode", "")).strip().lower()
+    return scaffold_profile == "legacy-commerce-overlay" or scaffold_generation_mode == "explicit_opt_in"
 
 
 def _parse_iso_dt(value: str) -> datetime:
@@ -151,10 +117,7 @@ def _iter_logs(pattern: str, explicit_file: str, *, pack_root: Path) -> list[Pat
         if has_magic:
             return sorted(Path(x).resolve() for x in glob.glob(str(p)))
         return [p.resolve()] if p.exists() else []
-    preferred = sorted(pack_root.glob(raw))
-    if preferred:
-        return preferred
-    return sorted(Path(".").glob(raw))
+    return sorted(pack_root.glob(raw))
 
 
 def _identity_scoped_logs(files: list[Path], identity_id: str) -> list[Path]:
@@ -175,6 +138,40 @@ def _identity_scoped_logs(files: list[Path], identity_id: str) -> list[Path]:
         if str(rec.get("identity_id") or "").strip() == identity_id:
             scoped.append(p)
     return scoped or files
+
+
+def _select_recent_logs(files: list[Path], *, keep: int) -> list[Path]:
+    if not files:
+        return files
+    limit = max(1, int(keep))
+
+    def _score(path: Path) -> tuple[float, str]:
+        ts = 0.0
+        try:
+            rec = _load_json(path)
+            for key in ("notified_at", "detected_at"):
+                raw = str(rec.get(key) or "").strip()
+                if not raw:
+                    continue
+                try:
+                    ts = max(ts, _parse_iso_dt(raw).timestamp())
+                except Exception:
+                    continue
+        except Exception:
+            ts = 0.0
+        if ts <= 0.0 and path.exists():
+            try:
+                ts = float(path.stat().st_mtime)
+            except Exception:
+                ts = 0.0
+        return ts, str(path)
+
+    ranked = sorted(
+        files,
+        key=_score,
+        reverse=True,
+    )
+    return ranked[:limit]
 
 
 def _validate_log(
@@ -203,7 +200,7 @@ def _validate_log(
         rc = 1
 
     blocker = str(rec.get("blocker_type") or "")
-    blocker_canonical, blocker_mode = _canonicalize_blocker(blocker, alias_map=alias_map)
+    blocker_canonical, blocker_mode = canonicalize_blocker(blocker, alias_map=alias_map)
     if not blocker_canonical:
         allowed = sorted(set(CANONICAL_BLOCKERS).union(alias_map.keys()))
         logs.append(f"[FAIL] {p} blocker_type must be one of {allowed}")
@@ -266,8 +263,15 @@ def _validate_log(
     return rc, logs
 
 
-def _run_self_test(sample_root: Path) -> int:
-    alias_map = _build_alias_map()
+def _run_self_test() -> int:
+    with tempfile.TemporaryDirectory(prefix="collaboration-trigger-selftest-") as tmp_dir:
+        sample_root = Path(tmp_dir).resolve()
+        materialize_collaboration_trigger_samples(sample_root, apply=True)
+        return _run_self_test_against_root(sample_root)
+
+
+def _run_self_test_against_root(sample_root: Path) -> int:
+    alias_map = build_blocker_alias_map()
     pos = sorted((sample_root / "positive").glob("*.json"))
     neg = sorted((sample_root / "negative").glob("*.json"))
     if not pos or not neg:
@@ -310,7 +314,10 @@ def _run_self_test(sample_root: Path) -> int:
             alias_map=alias_map,
         )
         for ln in logs:
-            print(ln)
+            if ln.startswith("[FAIL] "):
+                print(f"[OK] expected negative probe: {ln[7:]}")
+            else:
+                print(ln)
         if irc == 0:
             print(f"[FAIL] negative sample should fail: {p}")
             rc = 1
@@ -322,7 +329,7 @@ def _run_self_test(sample_root: Path) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity collaboration trigger contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--file", default="", help="validate explicit collaboration log file")
     ap.add_argument("--self-test", action="store_true")
@@ -355,9 +362,13 @@ def main() -> int:
         print("[FAIL] blocker_taxonomy_contract.required must be true")
         return 1
 
-    alias_map = _build_alias_map(taxonomy.get("legacy_alias_bridge"))
+    compatibility_overlay_allowed = _compatibility_overlay_allowed(fixture_mode=fixture_mode, task=task)
+    if taxonomy.get("legacy_alias_bridge") and not compatibility_overlay_allowed:
+        print("[FAIL] blocker_taxonomy_contract.legacy_alias_bridge is migration/fixture-only")
+        return 1
+    alias_map = build_blocker_alias_map(taxonomy.get("legacy_alias_bridge"))
 
-    blockers_norm, blockers_alias_hits, blockers_invalid = _normalize_blocker_set(
+    blockers_norm, blockers_alias_hits, blockers_invalid = normalize_blocker_membership(
         taxonomy.get("required_blocker_types") or [],
         alias_map=alias_map,
     )
@@ -369,6 +380,9 @@ def main() -> int:
             "[FAIL] blocker_taxonomy_contract.required_blocker_types missing canonical blockers: "
             f"{sorted(CANONICAL_BLOCKERS - blockers_norm)}"
         )
+        return 1
+    if blockers_alias_hits and not compatibility_overlay_allowed:
+        print(f"[FAIL] blocker taxonomy legacy alias bridge is migration/fixture-only: {blockers_alias_hits}")
         return 1
     mode = "legacy_alias_bridge" if blockers_alias_hits else "canonical"
     print(f"[OK] blocker taxonomy covers canonical classes (mode={mode})")
@@ -404,8 +418,11 @@ def main() -> int:
         print(f"[FAIL] collaboration_trigger_contract missing fields: {miss}")
         return 1
 
-    alias_map = _build_alias_map(alias_map, contract.get("legacy_alias_bridge"))
-    trig_norm, trig_alias_hits, trig_invalid = _normalize_blocker_set(
+    if contract.get("legacy_alias_bridge") and not compatibility_overlay_allowed:
+        print("[FAIL] collaboration_trigger_contract.legacy_alias_bridge is migration/fixture-only")
+        return 1
+    alias_map = build_blocker_alias_map(alias_map, contract.get("legacy_alias_bridge"))
+    trig_norm, trig_alias_hits, trig_invalid = normalize_blocker_membership(
         contract.get("trigger_conditions") or [],
         alias_map=alias_map,
     )
@@ -417,6 +434,9 @@ def main() -> int:
             "[FAIL] collaboration_trigger_contract.trigger_conditions missing canonical blockers: "
             f"{sorted(CANONICAL_BLOCKERS - trig_norm)}"
         )
+        return 1
+    if trig_alias_hits and not compatibility_overlay_allowed:
+        print(f"[FAIL] collaboration trigger legacy alias bridge is migration/fixture-only: {trig_alias_hits}")
         return 1
     if trig_alias_hits:
         print(f"[OK] collaboration trigger legacy alias hits: {trig_alias_hits}")
@@ -472,10 +492,14 @@ def main() -> int:
     if len(files) < minimum:
         print(f"[FAIL] collaboration evidence logs insufficient: found={len(files)}, required={minimum}")
         return 1
+    validation_max_logs = int(contract.get("validation_max_logs") or minimum)
+    files = _select_recent_logs(files, keep=max(minimum, validation_max_logs))
 
     task_id = str(task.get("task_id") or "")
     max_age_days = int(contract.get("max_log_age_days") or 7)
     if fixture_mode:
+        max_age_days = 0
+    if args.self_test:
         max_age_days = 0
 
     rc = 0
@@ -494,8 +518,7 @@ def main() -> int:
         rc = max(rc, irc)
 
     if args.self_test:
-        sample_root = Path("identity/runtime/examples/collaboration-trigger")
-        rc = max(rc, _run_self_test(sample_root))
+        rc = max(rc, _run_self_test())
 
     if rc == 0:
         print("validate_identity_collab_trigger PASSED")

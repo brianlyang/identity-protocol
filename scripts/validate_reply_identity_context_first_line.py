@@ -6,25 +6,51 @@ import json
 from pathlib import Path
 from typing import Any
 
-from actor_session_common import load_actor_binding
+from actor_session_common import load_actor_binding, load_actor_binding_store
+from headstamp_error_family_common import (
+    ERR_HDSTAMP_ACTOR_LAYER_MISMATCH,
+    ERR_HDSTAMP_MISSING_OR_MALFORMED,
+    ERR_HDSTAMP_REPLY_EVIDENCE_MISSING,
+    inject_legacy_error_fields,
+)
+from identity_runtime_authority_common import validate_runtime_egress_identity_authority
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
+    REPLY_FIRST_LINE_SURFACE_INVALID,
+    REPLY_FIRST_LINE_SURFACE_RAW_CANONICAL,
+    REPLY_FIRST_LINE_SURFACE_VISIBLE_PROJECTION,
     blocker_receipt,
-    parse_identity_context_stamp,
+    parse_reply_first_line_surface,
     resolve_layer_intent,
     resolve_stamp_context,
 )
+from governed_reply_observability_common import build_headstamp_consistency_projection
+from runtime_temp_path_common import runtime_temp_file
 from tool_vendor_governance_common import contract_required, load_json
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
-ERR_REPLY_FIRST_LINE = "IP-ASB-STAMP-SESSION-001"
+ERR_REPLY_FIRST_LINE = ERR_HDSTAMP_MISSING_OR_MALFORMED
+ERR_REPLY_EVIDENCE_MISSING = ERR_HDSTAMP_REPLY_EVIDENCE_MISSING
 ERR_INVALID_EXPECTED_SOURCE_LAYER = "IP-SOURCE-LAYER-001"
-ERR_RUNTIME_BINDING_MISMATCH = "IP-ASB-STAMP-SESSION-005"
-STRICT_LOCK_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate"}
+ERR_RUNTIME_BINDING_MISMATCH = ERR_HDSTAMP_ACTOR_LAYER_MISMATCH
+STRICT_LOCK_OPERATIONS = {
+    "activate",
+    "update",
+    "mutation",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "three-plane",
+}
+ALLOWED_REPLY_FIRST_LINE_SURFACE_MODES = {
+    REPLY_FIRST_LINE_SURFACE_RAW_CANONICAL,
+    REPLY_FIRST_LINE_SURFACE_VISIBLE_PROJECTION,
+}
 
 
 def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
@@ -152,6 +178,26 @@ def _extract_reply_samples(reply_log_path: Path) -> list[str]:
     return [x.strip() for x in text.splitlines() if x.strip()]
 
 
+def _resolve_actor_binding_with_target(
+    *,
+    catalog_path: Path,
+    actor_id: str,
+    target_identity_id: str,
+    session_id: str = "",
+) -> tuple[dict[str, Any], dict[str, Any], str]:
+    store = load_actor_binding_store(catalog_path, actor_id)
+    selected = load_actor_binding(
+        catalog_path,
+        actor_id,
+        identity_id=target_identity_id,
+        session_id=session_id,
+    )
+    selection_mode = "identity_scoped"
+    if not selected:
+        selection_mode = "identity_scoped_missing"
+    return selected, store, selection_mode
+
+
 def _first_nonempty_line(text: str) -> str:
     for line in str(text or "").splitlines():
         s = line.strip()
@@ -161,6 +207,7 @@ def _first_nonempty_line(text: str) -> str:
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    payload = inject_legacy_error_fields(payload)
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
     else:
@@ -172,16 +219,37 @@ def _emit_blocker(receipt_path: Path, payload: dict[str, Any]) -> None:
     receipt_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _parse_allowed_surface_modes(raw_value: str) -> list[str]:
+    tokens = [
+        str(item).strip()
+        for item in str(raw_value or "").replace(";", ",").split(",")
+        if str(item).strip()
+    ]
+    modes = [token for token in tokens if token in ALLOWED_REPLY_FIRST_LINE_SURFACE_MODES]
+    if modes:
+        return modes
+    return [REPLY_FIRST_LINE_SURFACE_RAW_CANONICAL]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate that user-visible assistant replies start with Identity-Context first line.")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument("--reply-log", default="", help="assistant reply evidence (.json/.jsonl/.txt)")
     ap.add_argument("--reply-file", default="", help="single reply text file")
     ap.add_argument("--reply-text", default="", help="inline single reply text")
     ap.add_argument("--stamp-json", default="", help="optional rendered stamp payload json (external_stamp field)")
+    ap.add_argument(
+        "--accepted-surface-modes",
+        default=REPLY_FIRST_LINE_SURFACE_RAW_CANONICAL,
+        help=(
+            "comma-separated accepted first-line surface modes. "
+            "Supported: raw_canonical, visible_projection"
+        ),
+    )
     ap.add_argument("--expected-work-layer", default="")
     ap.add_argument("--expected-source-layer", default="")
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language intent text for layer auto-resolution")
@@ -213,7 +281,9 @@ def main() -> int:
         return 1
 
     contract = _select_contract(task)
-    force_required = bool(args.force_check or args.enforce_first_line_gate)
+    strict_format_enforced = args.operation in STRICT_LOCK_OPERATIONS
+    first_line_gate_enforced = bool(args.enforce_first_line_gate or strict_format_enforced)
+    force_required = bool(args.force_check or first_line_gate_enforced)
     if not force_required and not contract_required(contract):
         payload = {
             "identity_id": args.identity_id,
@@ -237,11 +307,19 @@ def main() -> int:
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             actor_id=args.actor_id,
+            session_id=str(args.session_id or "").strip(),
             explicit_catalog=bool(args.catalog.strip()),
         )
     except Exception as exc:
         print(f"[FAIL] unable to resolve stamp context: {exc}")
         return 1
+
+    authority = validate_runtime_egress_identity_authority(
+        catalog_path=catalog_path,
+        identity_id=ctx.identity_id,
+        actor_id=ctx.actor_id,
+        session_id=str(args.session_id or "").strip(),
+    )
 
     reply_samples: list[str] = []
     evidence_ref = ""
@@ -284,25 +362,48 @@ def main() -> int:
     first_lines = [_first_nonempty_line(x) for x in reply_samples]
     first_lines = [x for x in first_lines if x]
 
+    accepted_surface_modes = _parse_allowed_surface_modes(args.accepted_surface_modes)
+    parsed_surface_entries = [parse_reply_first_line_surface(line) for line in first_lines]
+
     missing_refs: list[str] = []
-    for idx, line in enumerate(first_lines, start=1):
-        if not line.startswith("Identity-Context:"):
+    for idx, entry in enumerate(parsed_surface_entries, start=1):
+        surface_mode = str(entry.get("surface_mode", "")).strip()
+        if surface_mode == REPLY_FIRST_LINE_SURFACE_INVALID:
+            missing_refs.append(f"sample:{idx}")
+            continue
+        if surface_mode not in accepted_surface_modes:
             missing_refs.append(f"sample:{idx}")
 
     stale_reasons: list[str] = []
     error_code = ""
 
-    if args.enforce_first_line_gate and len(first_lines) == 0:
+    if str(authority.get("identity_authority_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+        stale_reasons.extend(list(authority.get("identity_authority_stale_reasons") or []))
+        error_code = str(authority.get("identity_authority_error_code", "")).strip() or ERR_REPLY_FIRST_LINE
+
+    if first_line_gate_enforced and len(first_lines) == 0:
         stale_reasons.append("reply_evidence_missing")
-        error_code = ERR_REPLY_FIRST_LINE
+        if strict_format_enforced and not args.enforce_first_line_gate:
+            stale_reasons.append("reply_evidence_missing_strict_default_gate")
+        error_code = ERR_REPLY_EVIDENCE_MISSING
+
+    first_surface_entry = parsed_surface_entries[0] if parsed_surface_entries else {}
+    first_surface_mode = str(first_surface_entry.get("surface_mode", "")).strip() or REPLY_FIRST_LINE_SURFACE_INVALID
+    if first_lines and first_surface_mode == REPLY_FIRST_LINE_SURFACE_INVALID:
+        stale_reasons.append("reply_first_line_surface_mode_invalid")
+    elif first_lines and first_surface_mode not in accepted_surface_modes:
+        stale_reasons.append("reply_first_line_surface_mode_not_allowed")
 
     if len(missing_refs) > 0:
         stale_reasons.append("reply_first_line_identity_context_missing")
         if not error_code:
             error_code = ERR_REPLY_FIRST_LINE
 
-    parsed_first: dict[str, Any] = parse_identity_context_stamp(first_lines[0]) if first_lines else {}
-    strict_format_enforced = args.operation in STRICT_LOCK_OPERATIONS
+    parsed_first: dict[str, Any] = (
+        dict(first_surface_entry.get("parsed_stamp") or {})
+        if isinstance(first_surface_entry.get("parsed_stamp"), dict)
+        else {}
+    )
     expected_source_layer_input = str(args.expected_source_layer or "").strip().lower()
     expected_source_layer_input_invalid = bool(
         expected_source_layer_input and expected_source_layer_input not in ALLOWED_SOURCE_LAYERS
@@ -344,7 +445,7 @@ def main() -> int:
     if expected_work_layer not in ALLOWED_WORK_LAYERS:
         expected_work_layer = "instance"
     if expected_source_layer not in ALLOWED_SOURCE_LAYERS:
-        expected_source_layer = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
+        expected_source_layer = str(ctx.source_domain or "").strip().lower() or "unknown"
     if expected_source_layer_input_invalid and expected_source_layer != expected_source_layer_input:
         source_layer_downgrade_applied = True
 
@@ -399,14 +500,22 @@ def main() -> int:
             error_code = ERR_REPLY_FIRST_LINE
 
     actor_id_effective = str(ctx.actor_id or "").strip()
-    actor_bound_identity = ""
-    actor_binding = load_actor_binding(catalog_path, actor_id_effective)
+    actor_binding, actor_binding_store, actor_binding_selection_mode = _resolve_actor_binding_with_target(
+        catalog_path=catalog_path,
+        actor_id=actor_id_effective,
+        target_identity_id=ctx.identity_id,
+        session_id=str(args.session_id or "").strip(),
+    )
     actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
+    session_id_effective = str(args.session_id or "").strip()
+    if strict_format_enforced and session_id_effective and not actor_bound_identity and not error_code:
+        stale_reasons.append("session_scoped_actor_binding_missing")
+        error_code = ERR_RUNTIME_BINDING_MISMATCH
     if strict_format_enforced and actor_bound_identity and actor_bound_identity != ctx.identity_id and not error_code:
         stale_reasons.append("actor_bound_identity_mismatch")
         error_code = ERR_RUNTIME_BINDING_MISMATCH
 
-    lock_boundary_enforced = bool(args.enforce_first_line_gate and args.operation in STRICT_LOCK_OPERATIONS)
+    lock_boundary_enforced = bool(first_line_gate_enforced and strict_format_enforced)
     parsed_lock_state = ""
     parsed_actor_id = ""
     if not error_code and first_lines:
@@ -427,7 +536,13 @@ def main() -> int:
     receipt_path = (
         Path(args.blocker_receipt_out).expanduser().resolve()
         if args.blocker_receipt_out.strip()
-        else Path(f"/tmp/identity-reply-first-line-blocker-receipt-{args.identity_id}.json").resolve()
+        else runtime_temp_file(
+            channel="response-stamp",
+            operation=args.operation,
+            identity_id=args.identity_id,
+            stem=f"identity-reply-first-line-blocker-receipt-{args.identity_id}",
+            ext="json",
+        ).resolve()
     )
 
     payload = {
@@ -436,6 +551,14 @@ def main() -> int:
         "operation": args.operation,
         "required_contract": bool(force_required or contract_required(contract)),
         "reply_first_line_status": STATUS_PASS_REQUIRED if ok else STATUS_FAIL_REQUIRED,
+        "reply_first_line_gate_executed": first_line_gate_enforced,
+        "reply_first_line_gate_enforce_mode": (
+            "strict_default"
+            if strict_format_enforced and not args.enforce_first_line_gate
+            else ("explicit" if args.enforce_first_line_gate else "contract")
+        ),
+        "reply_first_line_surface_mode": first_surface_mode if first_lines else "",
+        "reply_first_line_allowed_surface_modes": accepted_surface_modes,
         "error_code": error_code,
         "layer_intent_resolution_status": STATUS_PASS_REQUIRED if not error_code else STATUS_FAIL_REQUIRED,
         "resolved_work_layer": expected_work_layer,
@@ -462,6 +585,10 @@ def main() -> int:
         "expected_actor_id": actor_id_effective,
         "reply_first_line_actor_id": parsed_actor_id,
         "actor_bound_identity_id": actor_bound_identity,
+        "actor_binding_selection_mode": actor_binding_selection_mode,
+        "actor_binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
+        "actor_binding_compare_token": str(actor_binding_store.get("compare_token", "")),
+        "actor_binding_session_id": str(actor_binding.get("session_id", "")),
         "expected_lock_state": ctx.lock_state,
         "reply_first_line_lock_state": parsed_lock_state,
         "reply_first_line_missing_count": len(missing_refs),
@@ -469,9 +596,30 @@ def main() -> int:
         "reply_sample_count": len(first_lines),
         "reply_evidence_ref": evidence_ref,
         "expected_identity_id": ctx.identity_id,
+        "reply_first_line_identity_id": str(parsed_first.get("identity_id", "")).strip() if parsed_first else "",
+        "identity_authority_status": str(authority.get("identity_authority_status", "")).strip(),
+        "identity_authority_error_code": str(authority.get("identity_authority_error_code", "")).strip(),
+        "identity_authority_selected_identity_id": str(
+            authority.get("identity_authority_selected_identity_id", "")
+        ).strip(),
+        "identity_authority_authoritative_identity_id": str(
+            authority.get("identity_authority_authoritative_identity_id", "")
+        ).strip(),
+        "identity_authority_resolution_mode": str(authority.get("identity_authority_resolution_mode", "")).strip(),
+        "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
+        "identity_authority_stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
         "blocker_receipt_path": str(receipt_path) if not ok else "",
         "stale_reasons": stale_reasons,
     }
+    payload.update(
+        build_headstamp_consistency_projection(
+            display_identity_id=payload.get("reply_first_line_identity_id", ""),
+            authoritative_identity_id=str(
+                authority.get("identity_authority_authoritative_identity_id", "")
+            ).strip()
+            or ctx.identity_id,
+        )
+    )
 
     if not ok:
         first_line_identity = ""
@@ -479,9 +627,11 @@ def main() -> int:
             first_line_identity = str(parsed_first.get("identity_id", "")).strip()
         next_action = "emit_identity_context_first_line_then_retry"
         if error_code == ERR_INVALID_EXPECTED_SOURCE_LAYER:
-            next_action = "use_valid_expected_source_layer(project|global|env|auto)_then_retry"
+            next_action = "use_valid_expected_source_layer(project|global)_then_retry"
         elif error_code == ERR_RUNTIME_BINDING_MISMATCH:
             next_action = "activate_actor_bound_identity_then_retry"
+        elif error_code == str(authority.get("identity_authority_error_code", "")).strip():
+            next_action = str(authority.get("identity_authority_next_action", "")).strip() or next_action
         receipt = blocker_receipt(
             error_code=error_code or ERR_REPLY_FIRST_LINE,
             expected_identity_id=ctx.identity_id,

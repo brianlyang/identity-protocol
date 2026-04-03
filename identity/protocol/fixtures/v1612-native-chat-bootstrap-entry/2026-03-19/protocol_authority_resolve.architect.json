@@ -1,0 +1,7 @@
+{
+  "identity_id": "base-repo-architect",
+  "status": "PASS_REQUIRED",
+  "resolution_mode": "actor_binding_session_scoped",
+  "source_layer": "project",
+  "verification_source": "canonical_fixture_snapshot"
+}

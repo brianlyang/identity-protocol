@@ -9,6 +9,7 @@ from typing import Any
 
 import yaml
 
+from resolve_identity_context import default_local_catalog_path, resolve_local_catalog_path
 
 REQUIRED_PACK_FILES = [
     "IDENTITY_PROMPT.md",
@@ -16,6 +17,7 @@ REQUIRED_PACK_FILES = [
     "TASK_HISTORY.md",
     "META.yaml",
 ]
+PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -36,7 +38,7 @@ def _resolve_identity(catalog_path: Path, identity_id: str) -> dict[str, Any]:
 
 
 def _run_check(cmd: list[str]) -> dict[str, Any]:
-    p = subprocess.run(cmd, capture_output=True, text=True)
+    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROTOCOL_ROOT))
     return {
         "cmd": " ".join(cmd),
         "code": p.returncode,
@@ -47,13 +49,14 @@ def _run_check(cmd: list[str]) -> dict[str, Any]:
 
 
 def main() -> int:
+    script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(description="Show identity status with contract validator health")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default=str(default_local_catalog_path(start=script_ref)))
     ap.add_argument("--identity-id", default="")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
-    catalog_path = Path(args.catalog)
+    catalog_path = resolve_local_catalog_path(args.catalog, start=script_ref)
     if not catalog_path.exists():
         print(f"[FAIL] missing catalog: {catalog_path}")
         return 1
@@ -66,7 +69,12 @@ def main() -> int:
 
     identity = ctx["identity"]
     identity_id = str(ctx["identity_id"])
-    pack_path = Path(str(identity.get("pack_path", "")).strip())
+    pack_raw = str(identity.get("pack_path", "")).strip()
+    pack_path = Path(pack_raw).expanduser()
+    if not pack_path.is_absolute():
+        pack_path = (catalog_path.parent / pack_path).resolve()
+    else:
+        pack_path = pack_path.resolve()
 
     files = []
     for fn in REQUIRED_PACK_FILES:
@@ -75,8 +83,8 @@ def main() -> int:
 
     checks = [
         _run_check(["python3", "scripts/validate_identity_runtime_contract.py", "--current-task", str(pack_path / "CURRENT_TASK.json")]),
-        _run_check(["python3", "scripts/validate_identity_upgrade_prereq.py", "--identity-id", identity_id]),
-        _run_check(["python3", "scripts/validate_identity_update_lifecycle.py", "--identity-id", identity_id]),
+        _run_check(["python3", "scripts/validate_identity_upgrade_prereq.py", "--catalog", str(catalog_path), "--identity-id", identity_id]),
+        _run_check(["python3", "scripts/validate_identity_update_lifecycle.py", "--catalog", str(catalog_path), "--identity-id", identity_id]),
     ]
 
     report = {

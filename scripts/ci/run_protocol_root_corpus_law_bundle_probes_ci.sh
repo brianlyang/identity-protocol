@@ -1,0 +1,4846 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=./protocol_root_probe_shadow_common.sh
+source "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"
+protocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-law-bundle-ci"
+protocol_root_probe_define_full_mirror
+export PROBE_FIXTURE_REPO_ROOT="${ROOT}"
+# shellcheck source=../probe_fixture_shell_common.sh
+source "${ROOT}/scripts/probe_fixture_shell_common.sh"
+
+LAW_BUNDLE_COMPLETENESS_NONCONTIG_ID="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_law_bundle" \
+    "tuple(EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS.keys())[1]"
+)"
+LAW_BUNDLE_COMPLETENESS_SURFACE_SECTION_MARKER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_law_bundle" \
+    "next(marker for marker in EXPECTED_ROOT_DOC_ANCHOR_CHECKS['identity/protocol/README.md'] if marker == '## Root law-bundle component-row completeness discipline')"
+)"
+LAW_BUNDLE_COMPLETENESS_SURFACE_FIRST_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_law_bundle" \
+    "list(EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS.values())[0]['order']"
+)"
+LAW_BUNDLE_COMPLETENESS_SURFACE_FIRST_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_law_bundle" \
+    "list(EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS.values())[0]['contract_phrase']"
+)"
+LAW_BUNDLE_COMPLETENESS_SURFACE_SECOND_ORDER="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_law_bundle" \
+    "list(EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS.values())[1]['order']"
+)"
+LAW_BUNDLE_COMPLETENESS_SURFACE_SECOND_PHRASE="$(
+  resolve_python_module_expression \
+    "validate_protocol_root_corpus_law_bundle" \
+    "list(EXPECTED_LAW_BUNDLE_COMPONENT_ROW_COMPLETENESS_ROWS.values())[1]['contract_phrase']"
+)"
+
+write_minimal_root_precedence_validator() {
+  local target_path="$1"
+  local component_status="$2"
+  local exit_code="${3:-0}"
+  python3 - <<'PY' "${target_path}" "${component_status}" "${exit_code}"
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+component_status = sys.argv[2]
+exit_code = int(sys.argv[3])
+payload = {
+    "protocol_root_corpus_precedence_status": component_status,
+    "root_doc_anchor_status": "PASS_REQUIRED",
+    "root_doc_anchor_check_count": 4,
+    "precedence_row_coverage_status": "PASS_REQUIRED",
+    "precedence_row_identity_projection_status": "PASS_REQUIRED",
+    "row_family_projection_rows": [
+        {
+            "family_id": "precedence_profiles",
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED",
+        }
+    ],
+}
+script_lines = [
+    "#!/usr/bin/env python3",
+    "import json",
+    f"payload = {json.dumps(payload, ensure_ascii=False)}",
+    "print(json.dumps(payload))",
+]
+if exit_code:
+    script_lines.append(f"raise SystemExit({exit_code})")
+path.write_text("\n".join(script_lines) + "\n", encoding="utf-8")
+PY
+}
+
+PASS_JSON="${TMP_ROOT}/pass.json"
+python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${ROOT}" \
+  --json-only >"${PASS_JSON}"
+
+python3 - <<'PY' "${PASS_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "PASS_REQUIRED", payload
+assert payload["root_doc_anchor_check_count"] == 4, payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
+assert payload["component_count"] == 10, payload
+assert payload["machine_registry_completeness_current_file"] == "identity/protocol/mappings/root-machine-registry-completeness.current.yaml", payload
+assert payload["descriptor_schema_source_component_id"] == "root_machine_registry_completeness", payload
+assert payload["descriptor_schema_source_binding_mode"] == "canonical_source_component_current_only", payload
+assert payload["descriptor_schema_source_substitution_policy"] == "forbidden", payload
+assert payload["descriptor_schema_fallback_policy"] == "fail_closed", payload
+assert payload["descriptor_schema_local_reauthoring_policy"] == "forbidden", payload
+assert payload["descriptor_schema_local_reconstruction_policy"] == "forbidden", payload
+assert payload["component_self_describing_family_requirement_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
+assert payload["component_self_describing_family_requirement_local_override_policy"] == "forbidden", payload
+assert payload["component_self_describing_family_requirement_local_redeclaration_policy"] == "forbidden", payload
+assert payload["component_self_describing_family_requirement_fallback_policy"] == "fail_closed", payload
+assert payload["descriptor_family_surface_binding_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
+assert payload["descriptor_family_surface_binding_local_override_policy"] == "forbidden", payload
+assert payload["descriptor_family_surface_binding_local_redeclaration_policy"] == "forbidden", payload
+assert payload["descriptor_family_surface_binding_fallback_policy"] == "fail_closed", payload
+assert payload["descriptor_repo_rel_path_pattern_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
+assert payload["descriptor_repo_rel_path_pattern_local_redeclaration_policy"] == "forbidden", payload
+assert payload["descriptor_repo_rel_path_pattern_fallback_policy"] == "fail_closed", payload
+assert payload["descriptor_repo_rel_path_discipline_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
+assert payload["descriptor_repo_rel_path_discipline_local_override_policy"] == "forbidden", payload
+assert payload["descriptor_repo_rel_path_discipline_local_redeclaration_policy"] == "forbidden", payload
+assert payload["descriptor_repo_rel_path_discipline_fallback_policy"] == "fail_closed", payload
+assert payload["component_current_version_naming_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
+assert payload["component_current_version_naming_local_override_policy"] == "forbidden", payload
+assert payload["component_current_version_naming_local_redeclaration_policy"] == "forbidden", payload
+assert payload["component_current_version_naming_fallback_policy"] == "fail_closed", payload
+assert payload["component_registry_child_membership_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
+assert payload["component_registry_child_membership_local_override_policy"] == "forbidden", payload
+assert payload["component_registry_child_membership_local_redeclaration_policy"] == "forbidden", payload
+assert payload["component_registry_child_membership_fallback_policy"] == "fail_closed", payload
+assert payload["component_descriptor_resolution_mode"] == "current_alias_only", payload
+assert payload["component_descriptor_version_pinning_policy"] == "forbidden", payload
+assert payload["component_descriptor_concordance_local_waiver_policy"] == "forbidden", payload
+assert payload["component_validator_status_requirement"] == "PASS_REQUIRED", payload
+assert payload["component_validator_execution_failure_policy"] == "fail_closed", payload
+assert payload["component_validator_returncode_observation_contract"] == "nonzero_returncode_observed_without_host_exception_overlay", payload
+assert payload["component_validator_output_contract"] == "json_object_with_disclosed_status_key", payload
+assert payload["component_validator_root_doc_anchor_contract"] == "root_doc_anchor_status_pass_required_with_positive_anchor_check_count", payload
+assert payload["component_validator_row_projection_contract"] == "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses", payload
+assert payload["component_probe_shadow_bootstrap_contract"] == "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings", payload
+assert payload["component_validator_invocation_contract"] == "python3_repo_root_json_only", payload
+assert payload["component_validator_output_channel_contract"] == "stdout_only", payload
+assert payload["component_validator_stderr_isolation_contract"] == "stderr_captured_separate_from_stdout", payload
+assert payload["component_validator_stdio_text_decoding_contract"] == "utf8_strict_text_decode_no_locale_overlay", payload
+assert payload["component_validator_stdout_normalization_contract"] == "outer_whitespace_trim_only_before_json_decode", payload
+assert payload["component_validator_stdout_presence_contract"] == "nonempty_after_outer_whitespace_trim_required", payload
+assert payload["component_validator_stdout_framing_contract"] == "whole_stdout_single_json_object", payload
+assert payload["component_validator_status_key_resolution_contract"] == "top_level_direct_member_only", payload
+assert payload["component_validator_status_literal_contract"] == "exact_canonical_string_literal", payload
+assert payload["component_validator_execution_input_contract"] == "stdin_devnull_noninteractive", payload
+assert payload["component_validator_verdict_admission_timing_contract"] == "completed_process_post_exit_only", payload
+assert payload["component_validator_execution_timeout_contract"] == "no_local_timeout_overlay", payload
+assert payload["component_validator_working_directory_contract"] == "repo_root", payload
+assert payload["component_validator_execution_environment_contract"] == "inherited_parent_process_env_no_local_overlay", payload
+assert payload["component_validator_execution_transport_contract"] == "local_direct_subprocess_vector", payload
+assert payload["component_validator_contract_drift_execution_policy"] == "execute_under_canonical_contract_and_fail_closed_on_drift", payload
+assert payload["component_validator_contract_surface_projection_policy"] == "bundle_summary_disclosed_component_rows_effective_execution_surface", payload
+assert payload["component_validator_observation_continuity_policy"] == "continue_bound_component_observation_under_canonical_surface_before_final_fail_close", payload
+assert payload["component_status_row_coverage_policy"] == "all_bound_components_must_emit_status_rows_before_final_status", payload
+assert payload["violation_projection_policy"] == "all_structure_bundle_anchor_violations_projected_into_stale_reasons_before_final_status", payload
+assert payload["final_status_derivation_policy"] == "pass_required_if_and_only_if_stale_reasons_empty_after_violation_projection_else_fail_required", payload
+assert payload["error_code_precedence_policy"] == "registry_preempts_structure_preempts_bundle_else_empty_when_pass_required", payload
+assert payload["failure_classification_policy"] == "registry_from_direct_stale_reasons_structure_from_structure_violations_bundle_from_bundle_and_anchor_violations_else_pass", payload
+assert payload["registry_class_admission_policy"] == "only_direct_stale_reasons_present_before_violation_projection_admit_registry_failure_class", payload
+assert payload["registry_direct_stale_reason_origin_policy"] == "alias_document_contract_row_required_surface_only_before_violation_projection", payload
+assert payload["registry_direct_stale_reason_alias_origin_policy"] == "alias_error_marker_rows_only_before_document_required_surface_contract_row_classification_and_violation_projection", payload
+assert payload["registry_direct_stale_reason_document_origin_policy"] == "empty_or_invalid_document_rows_only_after_alias_exclusion_before_required_surface_contract_row_classification_and_violation_projection", payload
+assert payload["registry_direct_stale_reason_required_surface_origin_policy"] == "required_component_descriptor_fields_missing_surface_missing_anchor_checks_missing_components_missing_only_before_violation_projection", payload
+assert payload["registry_direct_stale_reason_contract_row_origin_policy"] == "root_corpus_law_bundle_or_root_machine_registry_completeness_prefixed_rows_only_after_alias_document_required_surface_exclusion_before_violation_projection", payload
+assert payload["registry_direct_stale_reason_source_policy"] == "local_stale_reasons_only_before_violation_projection", payload
+assert payload["registry_direct_stale_reason_partition_policy"] == "local_stale_reasons_partitioned_into_alias_document_contract_row_required_surface_or_unknown_exactly_once_before_violation_projection", payload
+assert payload["registry_direct_stale_reason_origin_classifier_precedence_policy"] == "alias_preempts_document_preempts_required_surface_preempts_contract_row_else_unknown", payload
+assert payload["registry_direct_stale_reason_residual_unknown_policy"] == "only_nonalias_nondocument_nonrequired_surface_noncontract_row_local_stale_reasons_after_alias_document_required_surface_and_contract_row_resolution_before_violation_projection_remain_unknown", payload
+assert payload["registry_direct_stale_reason_unclassified_policy"] == "fail_closed", payload
+assert payload["component_validator_observation_reason_admission_policy"] == "parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_parse_status_origin_policy"] == "validator_output_missing_invalid_json_not_json_object_status_key_missing_status_literal_not_string_only_before_nonzero_rc_nonpass_status_exclusion_and_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_nonzero_rc_origin_policy"] == "component_validator_nonzero_rc_only_after_admitted_parse_status_resolution_before_nonpass_status_exclusion_and_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_nonpass_status_origin_policy"] == "component_status_not_pass_required_only_after_admitted_parse_status_and_nonzero_rc_resolution_before_explicit_non_execution_exclusion_and_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_prefixed_ontology_drift_origin_policy"] == "validator_output_validator_status_component_status_component_validator_prefixed_rows_only_after_admitted_parse_status_nonzero_rc_nonpass_status_and_exclusion_origin_resolution_before_not_applicable", payload
+assert payload["component_validator_observation_reason_residual_not_applicable_policy"] == "only_nonprefixed_nonadmitted_nonexcluded_rows_after_parse_status_nonzero_rc_nonpass_status_exclusion_origin_and_prefixed_ontology_drift_resolution_remain_not_applicable", payload
+assert payload["component_validator_observation_reason_classifier_precedence_policy"] == "parse_status_preempts_nonzero_rc_preempts_nonpass_status_preempts_explicit_non_execution_exclusion_preempts_prefixed_observation_family_ontology_drift_else_not_applicable", payload
+assert payload["component_validator_observation_reason_exclusion_origin_policy"] == "component_validator_missing_or_component_status_row_coverage_incomplete_or_component_validator_contract_surface_or_component_probe_surface_contract_reasons_only_before_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_exclusion_policy"] == "non_execution_bundle_rows_remain_outside_observation_reason_ontology", payload
+assert payload["component_validator_observation_reason_source_policy"] == "bundle_violation_rows_only_before_violation_projection", payload
+assert payload["component_validator_observation_reason_partition_policy"] == "bundle_violation_rows_partitioned_into_admitted_excluded_or_unknown_exactly_once_before_violation_projection", payload
+assert payload["component_validator_observation_reason_unclassified_policy"] == "fail_closed", payload
+assert payload["derived_status_from_stale_reasons"] == "PASS_REQUIRED", payload
+assert payload["derived_failure_class"] == "pass", payload
+assert payload["derived_error_code_from_precedence"] == "", payload
+assert payload["error_code"] == "", payload
+assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
+assert payload["bundle_local_required_repo_rel_path_patterns"] == {}, payload
+assert payload["bundle_redeclares_family_surface_binding_governance"] is False, payload
+assert payload["bundle_local_family_surface_binding_governance"] == {}, payload
+assert payload["bundle_redeclares_repo_rel_path_governance"] is False, payload
+assert payload["bundle_local_repo_rel_path_governance"] == {}, payload
+assert payload["bundle_redeclares_component_naming_governance"] is False, payload
+assert payload["bundle_local_component_naming_governance"] == {}, payload
+assert payload["bundle_redeclares_self_describing_family_requirement_governance"] is False, payload
+assert payload["bundle_local_self_describing_family_requirement_governance"] == {}, payload
+assert payload["bundle_redeclares_registry_child_membership_governance"] is False, payload
+assert payload["bundle_local_registry_child_membership_governance"] == {}, payload
+assert payload["required_component_descriptor_fields"] == [
+    "validator_script",
+    "probe_script",
+    "common_script",
+    "status_key",
+    "error_codes",
+], payload
+assert payload["required_component_descriptor_field_modes"] == {
+    "validator_script": "repo_rel_path",
+    "probe_script": "repo_rel_path",
+    "common_script": "repo_rel_path",
+    "status_key": "validator_status_key",
+    "error_codes": "validator_error_code_list",
+}, payload
+assert payload["source_required_descriptor_fields"] == payload["required_component_descriptor_fields"], payload
+assert payload["source_required_descriptor_field_modes"] == payload["required_component_descriptor_field_modes"], payload
+assert payload["source_family_surface_stem_binding_policy"] == "family_id_surface_stem_congruent_or_explicit_override", payload
+assert payload["source_family_surface_stem_overrides"] == {
+    "root-corpus-registry": "root_corpus_governance",
+}, payload
+assert payload["source_repo_rel_path_scope_policy"] == "repo_root_relative_only", payload
+assert payload["source_repo_rel_path_escape_policy"] == "fail_closed", payload
+assert payload["source_repo_rel_path_role_typing_policy"] == "root_protocol_surface_patterns_required", payload
+assert payload["source_repo_rel_path_surface_stem_policy"] == "cross_role_stem_coherent", payload
+assert payload["source_root_family_prefix"] == "root-", payload
+assert payload["source_current_suffix"] == ".current.yaml", payload
+assert payload["source_version_regex"] == "^root-[a-z0-9-]+\\.v[0-9]+\\.yaml$", payload
+assert payload["source_require_current_version_pairs"] is True, payload
+assert payload["source_require_self_describing_families"] is True, payload
+assert payload["source_registry_directory_rel_path"] == "identity/protocol/mappings", payload
+assert payload["source_registry_current_file"] == "identity/protocol/mappings/root-corpus-registry.current.yaml", payload
+assert payload["source_registered_mapping_children_count"] > 0, payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
+assert payload["expected_component_status_row_count"] == payload["component_count"] == 10, payload
+assert payload["component_status_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["component_status_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_count"] == 5, payload
+assert payload["law_bundle_component_row_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_row_family_count"] == 4, payload
+assert payload["law_bundle_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface"]["entry_count"] == 5, payload
+assert payload["law_bundle_component_row_completeness_surface"]["extraction_violations"] == [], payload
+assert payload["structure_violation_count"] == 0, payload
+assert payload["bundle_violation_count"] == 0, payload
+assert payload["anchor_violation_count"] == 0, payload
+assert payload["direct_stale_reason_count_before_violation_projection"] == 0, payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"] == {
+    "alias": 0,
+    "document": 0,
+    "contract_row": 0,
+    "required_surface": 0,
+}, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["expected_registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["expected_registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_source_total_count_before_fail_close"] == payload["expected_registry_direct_stale_reason_source_total_count"], payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count_before_fail_close"] == payload["expected_registry_direct_stale_reason_partition_total_count"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_counts"] == {
+    "parse_status": 0,
+    "nonzero_rc": 0,
+    "nonpass_status": 0,
+}, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+assert payload["component_validator_observation_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["expected_component_validator_observation_reason_source_total_count"] == payload["bundle_violation_count"], payload
+assert payload["expected_component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+assert payload["component_validator_observation_reason_source_total_count_before_fail_close"] == payload["expected_component_validator_observation_reason_source_total_count"], payload
+assert payload["component_validator_observation_reason_source_total_count"] == payload["bundle_violation_count"], payload
+assert payload["component_validator_observation_reason_partition_total_count_before_fail_close"] == payload["expected_component_validator_observation_reason_partition_total_count"], payload
+assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+assert payload["registry_class_reason_count"] == 0, payload
+assert payload["registry_precedence_reason_count"] == 0, payload
+assert payload["projected_violation_reason_count"] == 0, payload
+assert payload["expected_projected_violation_reason_count"] == 0, payload
+assert payload["violation_projection_status"] == "PASS_REQUIRED", payload
+assert payload["stale_reason_count"] == 0, payload
+assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
+assert all(row["root_doc_anchor_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
+assert all(isinstance(row["root_doc_anchor_check_count"], int) and row["root_doc_anchor_check_count"] > 0 for row in payload["component_status_rows"]), payload
+assert all(row["row_family_projection_row_count"] > 0 for row in payload["component_status_rows"]), payload
+assert all(row["row_coverage_status_keys"] for row in payload["component_status_rows"]), payload
+assert all(row["row_identity_projection_status_keys"] for row in payload["component_status_rows"]), payload
+assert all(row["validator_root_doc_anchor_contract"] == "root_doc_anchor_status_pass_required_with_positive_anchor_check_count" for row in payload["component_status_rows"]), payload
+assert all(row["validator_row_projection_contract"] == "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses" for row in payload["component_status_rows"]), payload
+assert all(
+    row["probe_shadow_bootstrap_contract"] == "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["active_probe_shadow_bootstrap_contract"] == "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["probe_shadow_bootstrap_contract_status"] == "PASS_REQUIRED"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_status_requirement"] == "PASS_REQUIRED"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_execution_failure_policy"] == "fail_closed"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_returncode_observation_contract"] == "nonzero_returncode_observed_without_host_exception_overlay"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_execution_environment_contract"] == "inherited_parent_process_env_no_local_overlay"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_execution_timeout_contract"] == "no_local_timeout_overlay"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_stdio_text_decoding_contract"] == "utf8_strict_text_decode_no_locale_overlay"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_stdout_normalization_contract"] == "outer_whitespace_trim_only_before_json_decode"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_stdout_presence_contract"] == "nonempty_after_outer_whitespace_trim_required"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_stdout_framing_contract"] == "whole_stdout_single_json_object"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_contract_drift_execution_policy"] == "execute_under_canonical_contract_and_fail_closed_on_drift"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_contract_surface_projection_policy"] == "bundle_summary_disclosed_component_rows_effective_execution_surface"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
+    for row in payload["component_status_rows"]
+), payload
+assert any(
+    cell["field"] == "error_codes" and cell["descriptor_mode"] == "validator_error_code_list"
+    for row in payload["component_status_rows"]
+    for cell in row.get("descriptor_field_rows", [])
+), payload
+assert any(
+    cell["field"] == "error_codes" and cell["status"] == "PASS_REQUIRED"
+    for row in payload["component_status_rows"]
+    for cell in row.get("descriptor_field_rows", [])
+), payload
+assert any(
+    row["component_id"] == "root_corpus_governance"
+    and row["component_mapping_family_id"] == "root-corpus-registry"
+    and row["expected_component_surface_stem"] == "root_corpus_governance"
+    and row["expected_component_surface_stem_source"] == "machine_registry_explicit_override"
+    for row in payload["component_status_rows"]
+), payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert any(
+    row["family_id"] == "law_bundle_component_row_completeness_rows"
+    for row in payload["row_family_projection_rows"]
+), payload
+assert any(
+    row["family_id"] == "law_bundle_component_row_completeness_surface"
+    for row in payload["row_family_projection_rows"]
+), payload
+PY
+
+COMPLETENESS_ROW_REPO="${TMP_ROOT}/missing-law-bundle-completeness-row-repo"
+mirror_repo "${COMPLETENESS_ROW_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["law_bundle_component_row_completeness_rows"] = [
+    row
+    for row in doc["law_bundle_component_row_completeness_rows"]
+    if row.get("completeness_id") != "explicit_law_bundle_component_row_families"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_JSON="${TMP_ROOT}/missing-law-bundle-completeness-row.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPLETENESS_ROW_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing completeness row"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-002", payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_rows"
+    and row["reason"] == "missing_law_bundle_component_row_completeness_rows"
+    and "explicit_law_bundle_component_row_families" in row.get("completeness_ids", [])
+    for row in payload["structure_violations"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "law_bundle_component_row_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 4, payload
+assert completeness_row["missing_ids"] == ["explicit_law_bundle_component_row_families"], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+COMPLETENESS_ROW_ORDER_REPO="${TMP_ROOT}/law-bundle-completeness-row-order-noncontiguous-repo"
+mirror_repo "${COMPLETENESS_ROW_ORDER_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml" "${LAW_BUNDLE_COMPLETENESS_NONCONTIG_ID}"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+target_id = sys.argv[2]
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["law_bundle_component_row_completeness_rows"]:
+    if row.get("completeness_id") == target_id:
+        row["order"] = 1
+        break
+else:
+    raise SystemExit("expected law-bundle completeness row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_ORDER_JSON="${TMP_ROOT}/law-bundle-completeness-row-order-noncontiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPLETENESS_ROW_ORDER_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_ORDER_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed completeness row order non-contiguous"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-002", payload
+assert payload["law_bundle_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_rows"
+    and row["reason"] == "law_bundle_component_row_completeness_row_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_rows"
+    and row["reason"] == "law_bundle_component_row_completeness_row_order_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "law_bundle_component_row_completeness_rows"
+)
+assert row["expected_count"] == 5, payload
+assert row["actual_count"] == 5, payload
+assert row["missing_ids"] == [], payload
+assert row["unexpected_ids"] == [], payload
+assert row["coverage_status"] == "PASS_REQUIRED", payload
+assert row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/law-bundle-completeness-surface-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "1. required component-row and component-status-row rows must remain explicit as separate machine-readable row families;"
+new = "1. required component-row rows must remain explicit as separate machine-readable row families;"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_JSON="${TMP_ROOT}/law-bundle-completeness-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPLETENESS_SURFACE_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed completeness surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-002", payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_surface"
+    and row["reason"] == "missing_law_bundle_component_row_completeness_surface_rows"
+    and "required component-row and component-status-row rows must remain explicit as separate machine-readable row families;" in row.get("contract_phrases", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_surface"
+    and row["reason"] == "extra_law_bundle_component_row_completeness_surface_rows"
+    and "required component-row rows must remain explicit as separate machine-readable row families;" in row.get("contract_phrases", [])
+    for row in payload["structure_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "law_bundle_component_row_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == ["required component-row and component-status-row rows must remain explicit as separate machine-readable row families;"], payload
+assert surface_row["unexpected_ids"] == ["required component-row rows must remain explicit as separate machine-readable row families;"], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_ORDER_REPO="${TMP_ROOT}/law-bundle-completeness-surface-order-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_ORDER_REPO}"
+protocol_root_probe_swap_numbered_surface_order_rows_in_section \
+  "${COMPLETENESS_SURFACE_ORDER_REPO}/identity/protocol/README.md" \
+  "${LAW_BUNDLE_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${LAW_BUNDLE_COMPLETENESS_SURFACE_FIRST_PHRASE}" \
+  "${LAW_BUNDLE_COMPLETENESS_SURFACE_SECOND_PHRASE}"
+
+COMPLETENESS_SURFACE_ORDER_JSON="${TMP_ROOT}/law-bundle-completeness-surface-order-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPLETENESS_SURFACE_ORDER_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_ORDER_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed completeness surface order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["law_bundle_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_surface"
+    and row["reason"] == "law_bundle_component_row_completeness_surface_phrase_order_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_surface"
+    and row["reason"] == "law_bundle_component_row_completeness_surface_order_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "law_bundle_component_row_completeness_surface"
+)
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO="${TMP_ROOT}/law-bundle-completeness-surface-order-noncontiguous-repo"
+mirror_repo "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}"
+protocol_root_probe_set_numbered_surface_row_order_in_section \
+  "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}/identity/protocol/README.md" \
+  "${LAW_BUNDLE_COMPLETENESS_SURFACE_SECTION_MARKER}" \
+  "${LAW_BUNDLE_COMPLETENESS_SURFACE_SECOND_ORDER}" \
+  "${LAW_BUNDLE_COMPLETENESS_SURFACE_SECOND_PHRASE}" \
+  "${LAW_BUNDLE_COMPLETENESS_SURFACE_FIRST_ORDER}"
+
+COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON="${TMP_ROOT}/law-bundle-completeness-surface-order-noncontiguous.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed completeness surface order non-contiguous"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_ORDER_NONCONTIG_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-002", payload
+assert payload["law_bundle_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_surface"
+    and row["reason"] == "law_bundle_component_row_completeness_surface_order_non_contiguous"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "law_bundle_component_row_completeness_surface"
+    and row["reason"] == "law_bundle_component_row_completeness_surface_order_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+assert not any(
+    row["field"] == "law_bundle_component_row_completeness_surface"
+    and row["reason"] == "law_bundle_component_row_completeness_surface_phrase_order_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "law_bundle_component_row_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [], payload
+assert surface_row["unexpected_ids"] == [], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+COMPONENT_VALIDATOR_STATUS_REQUIREMENT_REPO="${TMP_ROOT}/component-validator-status-requirement-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_STATUS_REQUIREMENT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STATUS_REQUIREMENT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_status_requirement"] = "SKIPPED_NOT_REQUIRED"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_STATUS_REQUIREMENT_JSON="${TMP_ROOT}/component-validator-status-requirement-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_STATUS_REQUIREMENT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_STATUS_REQUIREMENT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator status requirement drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STATUS_REQUIREMENT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_status_requirement_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_status_requirement"] == "SKIPPED_NOT_REQUIRED", payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
+assert all(row["validator_status_requirement"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
+PY
+
+COMPONENT_VALIDATOR_EXECUTION_FAILURE_POLICY_REPO="${TMP_ROOT}/component-validator-execution-failure-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_EXECUTION_FAILURE_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_EXECUTION_FAILURE_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_execution_failure_policy"] = "advisory_only"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_EXECUTION_FAILURE_POLICY_JSON="${TMP_ROOT}/component-validator-execution-failure-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_EXECUTION_FAILURE_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_EXECUTION_FAILURE_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator execution-failure policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_EXECUTION_FAILURE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_execution_failure_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_execution_failure_policy"] == "advisory_only", payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
+assert all(
+    row["validator_execution_failure_policy"] == "fail_closed"
+    for row in payload["component_status_rows"]
+), payload
+PY
+
+COMPONENT_VALIDATOR_RETURNCODE_OBSERVATION_CONTRACT_REPO="${TMP_ROOT}/component-validator-returncode-observation-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_RETURNCODE_OBSERVATION_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_RETURNCODE_OBSERVATION_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_returncode_observation_contract"] = "host_exception_overlay_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_RETURNCODE_OBSERVATION_CONTRACT_JSON="${TMP_ROOT}/component-validator-returncode-observation-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_RETURNCODE_OBSERVATION_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_RETURNCODE_OBSERVATION_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator returncode-observation contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_RETURNCODE_OBSERVATION_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_returncode_observation_contract_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_returncode_observation_contract"] == "host_exception_overlay_allowed", payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
+assert all(
+    row["validator_returncode_observation_contract"] == "nonzero_returncode_observed_without_host_exception_overlay"
+    for row in payload["component_status_rows"]
+), payload
+PY
+
+COMPONENT_VALIDATOR_OUTPUT_CONTRACT_REPO="${TMP_ROOT}/component-validator-output-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OUTPUT_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OUTPUT_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_output_contract"] = "human_log_scrape_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OUTPUT_CONTRACT_JSON="${TMP_ROOT}/component-validator-output-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OUTPUT_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OUTPUT_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator output-contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OUTPUT_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_output_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_STDOUT_NORMALIZATION_CONTRACT_REPO="${TMP_ROOT}/component-validator-stdout-normalization-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_STDOUT_NORMALIZATION_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STDOUT_NORMALIZATION_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_stdout_normalization_contract"] = "preferred_line_selection_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_STDOUT_NORMALIZATION_CONTRACT_JSON="${TMP_ROOT}/component-validator-stdout-normalization-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_STDOUT_NORMALIZATION_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_STDOUT_NORMALIZATION_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator stdout-normalization contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STDOUT_NORMALIZATION_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_stdout_normalization_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT_REPO="${TMP_ROOT}/component-validator-stdout-presence-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_stdout_presence_contract"] = "empty_stdout_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT_JSON="${TMP_ROOT}/component-validator-stdout-presence-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator stdout-presence contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_stdout_presence_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_INVOCATION_CONTRACT_REPO="${TMP_ROOT}/component-validator-invocation-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_INVOCATION_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_INVOCATION_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_invocation_contract"] = "shell_without_repo_root_or_json_only"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_INVOCATION_CONTRACT_JSON="${TMP_ROOT}/component-validator-invocation-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_INVOCATION_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_INVOCATION_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator invocation-contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_INVOCATION_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_invocation_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY_REPO="${TMP_ROOT}/component-validator-contract-drift-execution-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_contract_drift_execution_policy"] = "execute_under_drifted_contract_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY_JSON="${TMP_ROOT}/component-validator-contract-drift-execution-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator contract-drift execution policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_contract_drift_execution_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_contract_drift_execution_policy"] == "execute_under_drifted_contract_allowed", payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
+assert all(
+    row["validator_contract_drift_execution_policy"] == "execute_under_canonical_contract_and_fail_closed_on_drift"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_contract_surface_projection_policy"] == "bundle_summary_disclosed_component_rows_effective_execution_surface"
+    for row in payload["component_status_rows"]
+), payload
+PY
+
+COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY_REPO="${TMP_ROOT}/component-validator-contract-surface-projection-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_contract_surface_projection_policy"] = "bundle_summary_and_component_rows_follow_declared_drift"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY_JSON="${TMP_ROOT}/component-validator-contract-surface-projection-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator contract-surface projection policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_contract_surface_projection_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_contract_surface_projection_policy"] == "bundle_summary_and_component_rows_follow_declared_drift", payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
+assert all(
+    row["validator_contract_surface_projection_policy"] == "bundle_summary_disclosed_component_rows_effective_execution_surface"
+    for row in payload["component_status_rows"]
+), payload
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY_REPO="${TMP_ROOT}/component-validator-observation-continuity-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_continuity_policy"] = "abort_component_observation_on_bundle_drift"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY_JSON="${TMP_ROOT}/component-validator-observation-continuity-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator observation-continuity policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_continuity_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_continuity_policy"] == "abort_component_observation_on_bundle_drift", payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
+PY
+
+COMPONENT_STATUS_ROW_COVERAGE_POLICY_REPO="${TMP_ROOT}/component-status-row-coverage-policy-drift-repo"
+mirror_repo "${COMPONENT_STATUS_ROW_COVERAGE_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_STATUS_ROW_COVERAGE_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_status_row_coverage_policy"] = "partial_component_rows_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_STATUS_ROW_COVERAGE_POLICY_JSON="${TMP_ROOT}/component-status-row-coverage-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_STATUS_ROW_COVERAGE_POLICY_REPO}" \
+  --json-only >"${COMPONENT_STATUS_ROW_COVERAGE_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component status-row coverage policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_STATUS_ROW_COVERAGE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_status_row_coverage_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_status_row_coverage_policy"] == "partial_component_rows_allowed", payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
+PY
+
+VIOLATION_PROJECTION_POLICY_REPO="${TMP_ROOT}/violation-projection-policy-drift-repo"
+mirror_repo "${VIOLATION_PROJECTION_POLICY_REPO}"
+python3 - <<'PY' "${VIOLATION_PROJECTION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["violation_projection_policy"] = "local_violation_rows_may_remain_unprojected"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+VIOLATION_PROJECTION_POLICY_JSON="${TMP_ROOT}/violation-projection-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${VIOLATION_PROJECTION_POLICY_REPO}" \
+  --json-only >"${VIOLATION_PROJECTION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed violation projection policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${VIOLATION_PROJECTION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_violation_projection_policy_invalid" in payload["stale_reasons"], payload
+assert payload["violation_projection_policy"] == "local_violation_rows_may_remain_unprojected", payload
+assert payload["projected_violation_reason_count"] == 0, payload
+assert payload["expected_projected_violation_reason_count"] == 0, payload
+assert payload["violation_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+VIOLATION_PROJECTION_INCOMPLETE_REPO="${TMP_ROOT}/violation-projection-incomplete-repo"
+mirror_repo "${VIOLATION_PROJECTION_INCOMPLETE_REPO}"
+python3 - <<'PY' "${VIOLATION_PROJECTION_INCOMPLETE_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+needle = "    expected_projected_violation_reason_count = (\n        len(structure_violations) + len(bundle_violations) + len(anchor_violations)\n    )\n"
+replacement = (
+    "    expected_projected_violation_reason_count = (\n"
+    "        len(structure_violations) + len(bundle_violations) + len(anchor_violations)\n"
+    "    ) + 1\n"
+)
+if needle not in text:
+    raise SystemExit("expected violation projection count block not found")
+path.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+PY
+
+VIOLATION_PROJECTION_INCOMPLETE_JSON="${TMP_ROOT}/violation-projection-incomplete.json"
+if python3 "${VIOLATION_PROJECTION_INCOMPLETE_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${VIOLATION_PROJECTION_INCOMPLETE_REPO}" \
+  --json-only >"${VIOLATION_PROJECTION_INCOMPLETE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed violation projection completeness case"
+  exit 1
+fi
+
+python3 - <<'PY' "${VIOLATION_PROJECTION_INCOMPLETE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert payload["violation_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["projected_violation_reason_count"] + 1 == payload["expected_projected_violation_reason_count"], payload
+assert "root_corpus_law_bundle_violation_projection_incomplete" in payload["stale_reasons"], payload
+PY
+
+FINAL_STATUS_DERIVATION_POLICY_REPO="${TMP_ROOT}/final-status-derivation-policy-drift-repo"
+mirror_repo "${FINAL_STATUS_DERIVATION_POLICY_REPO}"
+python3 - <<'PY' "${FINAL_STATUS_DERIVATION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["final_status_derivation_policy"] = "local_verdict_path_may_bypass_stale_reasons"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+FINAL_STATUS_DERIVATION_POLICY_JSON="${TMP_ROOT}/final-status-derivation-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${FINAL_STATUS_DERIVATION_POLICY_REPO}" \
+  --json-only >"${FINAL_STATUS_DERIVATION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed final status derivation policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${FINAL_STATUS_DERIVATION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_final_status_derivation_policy_invalid" in payload["stale_reasons"], payload
+assert payload["final_status_derivation_policy"] == "local_verdict_path_may_bypass_stale_reasons", payload
+assert payload["derived_status_from_stale_reasons"] == "FAIL_REQUIRED", payload
+assert payload["derived_error_code_from_precedence"] == "IP-RCLB-001", payload
+assert payload["stale_reason_count"] >= 1, payload
+PY
+
+ERROR_CODE_PRECEDENCE_POLICY_REPO="${TMP_ROOT}/error-code-precedence-policy-drift-repo"
+mirror_repo "${ERROR_CODE_PRECEDENCE_POLICY_REPO}"
+python3 - <<'PY' "${ERROR_CODE_PRECEDENCE_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["error_code_precedence_policy"] = "bundle_preempts_structure_preempts_registry"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ERROR_CODE_PRECEDENCE_POLICY_JSON="${TMP_ROOT}/error-code-precedence-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${ERROR_CODE_PRECEDENCE_POLICY_REPO}" \
+  --json-only >"${ERROR_CODE_PRECEDENCE_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed error-code precedence policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ERROR_CODE_PRECEDENCE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_error_code_from_precedence"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_error_code_precedence_policy_invalid" in payload["stale_reasons"], payload
+assert payload["error_code_precedence_policy"] == "bundle_preempts_structure_preempts_registry", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["registry_precedence_reason_count"] >= 1, payload
+PY
+
+FAILURE_CLASSIFICATION_POLICY_REPO="${TMP_ROOT}/failure-classification-policy-drift-repo"
+mirror_repo "${FAILURE_CLASSIFICATION_POLICY_REPO}"
+python3 - <<'PY' "${FAILURE_CLASSIFICATION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["failure_classification_policy"] = "anchor_may_form_separate_failure_class"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+FAILURE_CLASSIFICATION_POLICY_JSON="${TMP_ROOT}/failure-classification-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${FAILURE_CLASSIFICATION_POLICY_REPO}" \
+  --json-only >"${FAILURE_CLASSIFICATION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed failure classification policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${FAILURE_CLASSIFICATION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["derived_error_code_from_precedence"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_failure_classification_policy_invalid" in payload["stale_reasons"], payload
+assert payload["failure_classification_policy"] == "anchor_may_form_separate_failure_class", payload
+assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
+assert payload["registry_class_reason_count"] >= 1, payload
+PY
+
+REGISTRY_CLASS_ADMISSION_POLICY_REPO="${TMP_ROOT}/registry-class-admission-policy-drift-repo"
+mirror_repo "${REGISTRY_CLASS_ADMISSION_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_CLASS_ADMISSION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_class_admission_policy"] = "projected_violation_reasons_may_upgrade_registry_class"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_CLASS_ADMISSION_POLICY_JSON="${TMP_ROOT}/registry-class-admission-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_CLASS_ADMISSION_POLICY_REPO}" \
+  --json-only >"${REGISTRY_CLASS_ADMISSION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry-class admission policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_CLASS_ADMISSION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["derived_error_code_from_precedence"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_class_admission_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_class_admission_policy"] == "projected_violation_reasons_may_upgrade_registry_class", payload
+assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
+PY
+
+REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-origin-policy-drift-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_direct_stale_reason_origin_policy"] = "expanded_local_direct_reason_ontology"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY_JSON="${TMP_ROOT}/registry-direct-stale-reason-origin-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason origin policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_origin_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_direct_stale_reason_origin_policy"] == "expanded_local_direct_reason_ontology", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+PY
+
+REGISTRY_DIRECT_STALE_REASON_DOCUMENT_ORIGIN_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-document-origin-policy-drift-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_DOCUMENT_ORIGIN_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_DOCUMENT_ORIGIN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_direct_stale_reason_document_origin_policy"] = "empty_or_invalid_rows_only_before_violation_projection"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_DOCUMENT_ORIGIN_POLICY_JSON="${TMP_ROOT}/registry-direct-stale-reason-document-origin-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_DOCUMENT_ORIGIN_POLICY_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_DOCUMENT_ORIGIN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason document origin policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_DOCUMENT_ORIGIN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_document_origin_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_direct_stale_reason_document_origin_policy"] == "empty_or_invalid_rows_only_before_violation_projection", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+PY
+
+REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-alias-origin-policy-drift-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_direct_stale_reason_alias_origin_policy"] = "alias_error_rows_only_before_violation_projection"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY_JSON="${TMP_ROOT}/registry-direct-stale-reason-alias-origin-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason alias origin policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_alias_origin_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_direct_stale_reason_alias_origin_policy"] == "alias_error_rows_only_before_violation_projection", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+PY
+
+REGISTRY_DIRECT_STALE_REASON_REQUIRED_SURFACE_ORIGIN_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-required-surface-origin-policy-drift-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_REQUIRED_SURFACE_ORIGIN_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_REQUIRED_SURFACE_ORIGIN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_direct_stale_reason_required_surface_origin_policy"] = "surface_missing_only_before_violation_projection"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_REQUIRED_SURFACE_ORIGIN_POLICY_JSON="${TMP_ROOT}/registry-direct-stale-reason-required-surface-origin-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_REQUIRED_SURFACE_ORIGIN_POLICY_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_REQUIRED_SURFACE_ORIGIN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason required-surface origin policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_REQUIRED_SURFACE_ORIGIN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_required_surface_origin_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_direct_stale_reason_required_surface_origin_policy"] == "surface_missing_only_before_violation_projection", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+PY
+
+REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-contract-row-origin-policy-drift-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_direct_stale_reason_contract_row_origin_policy"] = "root_corpus_law_bundle_prefixed_rows_only_before_violation_projection"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY_JSON="${TMP_ROOT}/registry-direct-stale-reason-contract-row-origin-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason contract-row origin policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_contract_row_origin_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_direct_stale_reason_contract_row_origin_policy"] == "root_corpus_law_bundle_prefixed_rows_only_before_violation_projection", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+PY
+
+REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-source-policy-drift-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_direct_stale_reason_source_policy"] = "projected_violation_reasons_may_supply_direct_reason_source"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY_JSON="${TMP_ROOT}/registry-direct-stale-reason-source-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason source policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_source_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_direct_stale_reason_source_policy"] == "projected_violation_reasons_may_supply_direct_reason_source", payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+PY
+
+REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_REPO="${TMP_ROOT}/registry-direct-stale-reason-source-incomplete-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+needle = "    direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (\n"
+replacement = (
+    "    direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (\n"
+)
+if needle not in text:
+    raise SystemExit("expected direct stale reason classification block not found for source completeness probe")
+needle2 = "    registry_direct_stale_reason_source_total_count = (\n"
+replacement2 = (
+    "    stale_reasons.append(\"future_local_reason_without_counted_source\")\n"
+    "    registry_direct_stale_reason_source_total_count = (\n"
+)
+if needle2 not in text:
+    raise SystemExit("expected direct stale reason source total block not found for source completeness probe")
+path.write_text(text.replace(needle2, replacement2, 1), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_JSON="${TMP_ROOT}/registry-direct-stale-reason-source-incomplete.json"
+if python3 "${REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason source completeness case"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_status"] == "FAIL_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "FAIL_REQUIRED", payload
+assert payload["registry_direct_stale_reason_unknown_count"] >= 1, payload
+assert payload["expected_registry_direct_stale_reason_source_total_count"] == payload["expected_registry_direct_stale_reason_partition_total_count"], payload
+assert payload["registry_direct_stale_reason_source_total_count_before_fail_close"] < payload["expected_registry_direct_stale_reason_source_total_count"], payload
+assert payload["registry_direct_stale_reason_partition_total_count_before_fail_close"] < payload["expected_registry_direct_stale_reason_partition_total_count"], payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_source_incomplete" in payload["stale_reasons"], payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_partition_incomplete" in payload["stale_reasons"], payload
+assert "future_local_reason_without_counted_source" in payload["stale_reasons"], payload
+PY
+
+REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-partition-policy-drift-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_direct_stale_reason_partition_policy"] = "local_stale_reasons_may_remain_unpartitioned"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY_JSON="${TMP_ROOT}/registry-direct-stale-reason-partition-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason partition policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_partition_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_direct_stale_reason_partition_policy"] == "local_stale_reasons_may_remain_unpartitioned", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+PY
+
+REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-origin-classifier-precedence-policy-drift-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_direct_stale_reason_origin_classifier_precedence_policy"] = "contract_row_preempts_required_surface_document_and_alias_else_unknown"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY_JSON="${TMP_ROOT}/registry-direct-stale-reason-origin-classifier-precedence-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason origin classifier precedence policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_origin_classifier_precedence_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_direct_stale_reason_origin_classifier_precedence_policy"] == "contract_row_preempts_required_surface_document_and_alias_else_unknown", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+PY
+
+REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-residual-unknown-policy-drift-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_direct_stale_reason_residual_unknown_policy"] = "any_unmatched_local_stale_reason_may_fall_through_to_unknown"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY_JSON="${TMP_ROOT}/registry-direct-stale-reason-residual-unknown-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason residual unknown policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_residual_unknown_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_direct_stale_reason_residual_unknown_policy"] == "any_unmatched_local_stale_reason_may_fall_through_to_unknown", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+PY
+
+REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-unclassified-policy-drift-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_direct_stale_reason_unclassified_policy"] = "advisory_only"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY_JSON="${TMP_ROOT}/registry-direct-stale-reason-unclassified-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason unclassified policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_unclassified_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_direct_stale_reason_unclassified_policy"] == "advisory_only", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+PY
+
+ALIAS_DIRECT_REASON_ORIGIN_REPO="${TMP_ROOT}/alias-direct-reason-origin-repo"
+mirror_repo "${ALIAS_DIRECT_REASON_ORIGIN_REPO}"
+python3 - <<'PY' "${ALIAS_DIRECT_REASON_ORIGIN_REPO}/identity/protocol/mappings/root-corpus-law-bundle.current.yaml"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+path.write_text(
+    "active_file: identity/protocol/mappings/root-corpus-law-bundle.missing.yaml\n",
+    encoding="utf-8",
+)
+PY
+
+ALIAS_DIRECT_REASON_ORIGIN_JSON="${TMP_ROOT}/alias-direct-reason-origin.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${ALIAS_DIRECT_REASON_ORIGIN_REPO}" \
+  --json-only >"${ALIAS_DIRECT_REASON_ORIGIN_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed alias direct stale-reason origin case"
+  exit 1
+fi
+
+python3 - <<'PY' "${ALIAS_DIRECT_REASON_ORIGIN_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"]["alias"] >= 1, payload
+assert payload["direct_stale_reason_origin_counts"]["contract_row"] == 0, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
+PY
+
+DOCUMENT_DIRECT_REASON_ORIGIN_REPO="${TMP_ROOT}/document-direct-reason-origin-repo"
+mirror_repo "${DOCUMENT_DIRECT_REASON_ORIGIN_REPO}"
+python3 - <<'PY' "${DOCUMENT_DIRECT_REASON_ORIGIN_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+path.write_text("[\n", encoding="utf-8")
+PY
+
+DOCUMENT_DIRECT_REASON_ORIGIN_JSON="${TMP_ROOT}/document-direct-reason-origin.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${DOCUMENT_DIRECT_REASON_ORIGIN_REPO}" \
+  --json-only >"${DOCUMENT_DIRECT_REASON_ORIGIN_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed document direct stale-reason origin case"
+  exit 1
+fi
+
+python3 - <<'PY' "${DOCUMENT_DIRECT_REASON_ORIGIN_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"]["document"] >= 1, payload
+assert payload["direct_stale_reason_origin_counts"]["contract_row"] == 0, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
+PY
+
+REQUIRED_SURFACE_DIRECT_REASON_ORIGIN_REPO="${TMP_ROOT}/required-surface-direct-reason-origin-repo"
+mirror_repo "${REQUIRED_SURFACE_DIRECT_REASON_ORIGIN_REPO}"
+rm -f "${REQUIRED_SURFACE_DIRECT_REASON_ORIGIN_REPO}/scripts/root_corpus_law_bundle_common.py"
+
+REQUIRED_SURFACE_DIRECT_REASON_ORIGIN_JSON="${TMP_ROOT}/required-surface-direct-reason-origin.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REQUIRED_SURFACE_DIRECT_REASON_ORIGIN_REPO}" \
+  --json-only >"${REQUIRED_SURFACE_DIRECT_REASON_ORIGIN_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed required-surface direct stale-reason origin case"
+  exit 1
+fi
+
+python3 - <<'PY' "${REQUIRED_SURFACE_DIRECT_REASON_ORIGIN_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"]["required_surface"] >= 1, payload
+assert payload["direct_stale_reason_origin_counts"]["contract_row"] == 0, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
+assert "root_corpus_law_bundle_surface_missing:common_script:scripts/root_corpus_law_bundle_common.py" in payload["stale_reasons"], payload
+PY
+
+ANCHOR_CHECKS_DIRECT_REASON_ORIGIN_REPO="${TMP_ROOT}/anchor-checks-direct-reason-origin-repo"
+mirror_repo "${ANCHOR_CHECKS_DIRECT_REASON_ORIGIN_REPO}"
+python3 - <<'PY' "${ANCHOR_CHECKS_DIRECT_REASON_ORIGIN_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc.pop("bundle_anchor_checks", None)
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ANCHOR_CHECKS_DIRECT_REASON_ORIGIN_JSON="${TMP_ROOT}/anchor-checks-direct-reason-origin.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${ANCHOR_CHECKS_DIRECT_REASON_ORIGIN_REPO}" \
+  --json-only >"${ANCHOR_CHECKS_DIRECT_REASON_ORIGIN_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed anchor-checks direct stale-reason origin case"
+  exit 1
+fi
+
+python3 - <<'PY' "${ANCHOR_CHECKS_DIRECT_REASON_ORIGIN_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"]["required_surface"] >= 1, payload
+assert payload["direct_stale_reason_origin_counts"]["contract_row"] == 0, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
+assert "root_corpus_law_bundle_anchor_checks_missing" in payload["stale_reasons"], payload
+PY
+
+REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_REPO="${TMP_ROOT}/registry-direct-stale-reason-residual-unknown-observation-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+needle = "    direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (\n"
+replacement = (
+    "    stale_reasons.append(\"future_local_reason_without_admitted_origin\")\n\n"
+    "    direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (\n"
+)
+if needle not in text:
+    raise SystemExit("expected direct stale reason classification block not found")
+path.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_JSON="${TMP_ROOT}/registry-direct-stale-reason-residual-unknown-observation.json"
+if python3 "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason residual unknown observation case"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "FAIL_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_residual_unknown_policy"] == "only_nonalias_nondocument_nonrequired_surface_noncontract_row_local_stale_reasons_after_alias_document_required_surface_and_contract_row_resolution_before_violation_projection_remain_unknown", payload
+assert payload["registry_direct_stale_reason_unknown_count"] >= 1, payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_origin_unclassified" in payload["stale_reasons"], payload
+assert "future_local_reason_without_admitted_origin" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_POLICY_REPO="${TMP_ROOT}/component-validator-observation-reason-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_admission_policy"] = "local_component_validator_reason_bucket_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_POLICY_JSON="${TMP_ROOT}/component-validator-observation-reason-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_REASON_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_REASON_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator observation reason policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_admission_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_admission_policy"] == "local_component_validator_reason_bucket_allowed", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+PY
+
+COMPONENT_VALIDATOR_PARSE_STATUS_ORIGIN_POLICY_REPO="${TMP_ROOT}/component-validator-parse-status-origin-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_PARSE_STATUS_ORIGIN_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_PARSE_STATUS_ORIGIN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_parse_status_origin_policy"] = "validator_output_missing_or_invalid_only_before_bundle_violation_projection"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_PARSE_STATUS_ORIGIN_POLICY_JSON="${TMP_ROOT}/component-validator-parse-status-origin-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_PARSE_STATUS_ORIGIN_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_PARSE_STATUS_ORIGIN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator parse-status origin policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_PARSE_STATUS_ORIGIN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_parse_status_origin_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_parse_status_origin_policy"] == "validator_output_missing_or_invalid_only_before_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+PY
+
+COMPONENT_VALIDATOR_NONZERO_RC_ORIGIN_POLICY_REPO="${TMP_ROOT}/component-validator-nonzero-rc-origin-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_NONZERO_RC_ORIGIN_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_NONZERO_RC_ORIGIN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_nonzero_rc_origin_policy"] = "any_component_validator_runtime_failure_only_before_bundle_violation_projection"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_NONZERO_RC_ORIGIN_POLICY_JSON="${TMP_ROOT}/component-validator-nonzero-rc-origin-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_NONZERO_RC_ORIGIN_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_NONZERO_RC_ORIGIN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator nonzero-rc origin policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_NONZERO_RC_ORIGIN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_nonzero_rc_origin_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_nonzero_rc_origin_policy"] == "any_component_validator_runtime_failure_only_before_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+PY
+
+COMPONENT_VALIDATOR_NONPASS_STATUS_ORIGIN_POLICY_REPO="${TMP_ROOT}/component-validator-nonpass-status-origin-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_NONPASS_STATUS_ORIGIN_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_NONPASS_STATUS_ORIGIN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_nonpass_status_origin_policy"] = "any_component_status_failure_only_before_bundle_violation_projection"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_NONPASS_STATUS_ORIGIN_POLICY_JSON="${TMP_ROOT}/component-validator-nonpass-status-origin-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_NONPASS_STATUS_ORIGIN_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_NONPASS_STATUS_ORIGIN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator nonpass-status origin policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_NONPASS_STATUS_ORIGIN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_nonpass_status_origin_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_nonpass_status_origin_policy"] == "any_component_status_failure_only_before_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_REPO="${TMP_ROOT}/component-validator-observation-reason-exclusion-origin-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_exclusion_origin_policy"] = "any_component_validator_family_reason_may_be_rebucketed_as_non_execution_exclusion"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_JSON="${TMP_ROOT}/component-validator-observation-reason-exclusion-origin-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator observation reason exclusion-origin drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_exclusion_origin_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_exclusion_origin_policy"] == "any_component_validator_family_reason_may_be_rebucketed_as_non_execution_exclusion", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+PY
+
+COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY_REPO="${TMP_ROOT}/component-validator-prefixed-ontology-drift-origin-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_prefixed_ontology_drift_origin_policy"] = "any_prefixed_component_runtime_reason_may_drift_into_unknown_without_origin_constraints"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY_JSON="${TMP_ROOT}/component-validator-prefixed-ontology-drift-origin-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator prefixed-ontology-drift origin policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_prefixed_ontology_drift_origin_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_prefixed_ontology_drift_origin_policy"] == "any_prefixed_component_runtime_reason_may_drift_into_unknown_without_origin_constraints", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+PY
+
+COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_POLICY_REPO="${TMP_ROOT}/component-validator-residual-not-applicable-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_residual_not_applicable_policy"] = "any_leftover_bundle_violation_may_fall_through_to_not_applicable"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_POLICY_JSON="${TMP_ROOT}/component-validator-residual-not-applicable-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator residual not-applicable policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_residual_not_applicable_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_residual_not_applicable_policy"] == "any_leftover_bundle_violation_may_fall_through_to_not_applicable", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_REPO="${TMP_ROOT}/component-validator-observation-reason-classifier-precedence-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_classifier_precedence_policy"] = "prefixed_observation_family_unknown_preempts_all_other_component_validator_reason_buckets"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_JSON="${TMP_ROOT}/component-validator-observation-reason-classifier-precedence-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator observation reason classifier precedence drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_classifier_precedence_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_classifier_precedence_policy"] == "prefixed_observation_family_unknown_preempts_all_other_component_validator_reason_buckets", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY_REPO="${TMP_ROOT}/component-validator-observation-reason-source-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_source_policy"] = "projected_stale_reason_strings_may_supply_observation_source"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY_JSON="${TMP_ROOT}/component-validator-observation-reason-source-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator observation reason source policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_source_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_source_policy"] == "projected_stale_reason_strings_may_supply_observation_source", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+assert payload["component_validator_observation_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_source_total_count"] == payload["bundle_violation_count"], payload
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_REPO="${TMP_ROOT}/component-validator-observation-reason-source-incomplete-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+needle = "    (\n        component_validator_observation_reason_counts,\n"
+replacement = (
+    "    bundle_violations.append({\n"
+    "        \"component_id\": \"root_corpus_law_bundle\",\n"
+    "        \"reason\": \"synthetic_source_gap_probe\",\n"
+    "    })\n\n"
+    "    (\n        component_validator_observation_reason_counts,\n"
+)
+if needle not in text:
+    raise SystemExit("expected observation count block not found for source completeness probe")
+text = text.replace(needle, replacement, 1)
+needle = "    ) = _component_validator_observation_reason_counts(\n        bundle_violations,\n"
+replacement = "    ) = _component_validator_observation_reason_counts(\n        bundle_violations[:-1],\n"
+if needle not in text:
+    raise SystemExit("expected observation source call not found for source completeness probe")
+path.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_JSON="${TMP_ROOT}/component-validator-observation-reason-source-incomplete.json"
+if python3 "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator observation reason source completeness case"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_source_status"] == "FAIL_REQUIRED", payload
+assert payload["component_validator_observation_reason_partition_status"] == "FAIL_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+assert payload["component_validator_observation_reason_source_total_count_before_fail_close"] < payload["expected_component_validator_observation_reason_source_total_count"], payload
+assert payload["component_validator_observation_reason_partition_total_count_before_fail_close"] < payload["expected_component_validator_observation_reason_partition_total_count"], payload
+assert payload["component_validator_observation_reason_source_total_count"] < payload["bundle_violation_count"], payload
+assert payload["component_validator_observation_reason_partition_total_count"] < payload["bundle_violation_count"], payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_source_incomplete" in payload["stale_reasons"], payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_partition_incomplete" in payload["stale_reasons"], payload
+assert "bundle_violation:root_corpus_law_bundle:synthetic_source_gap_probe" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY_REPO="${TMP_ROOT}/component-validator-observation-reason-partition-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_partition_policy"] = "bundle_violation_rows_may_remain_unpartitioned"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY_JSON="${TMP_ROOT}/component-validator-observation-reason-partition-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator observation reason partition policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_partition_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_partition_policy"] == "bundle_violation_rows_may_remain_unpartitioned", payload
+assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY_REPO="${TMP_ROOT}/component-validator-observation-reason-unclassified-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_unclassified_policy"] = "advisory_only"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY_JSON="${TMP_ROOT}/component-validator-observation-reason-unclassified-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator observation reason unclassified policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_unclassified_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_unclassified_policy"] == "advisory_only", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_REPO="${TMP_ROOT}/component-validator-observation-reason-exclusion-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_exclusion_policy"] = "local_non_execution_bundle_rows_may_enter_observation_ontology"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_JSON="${TMP_ROOT}/component-validator-observation-reason-exclusion-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator observation reason exclusion policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_exclusion_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_exclusion_policy"] == "local_non_execution_bundle_rows_may_enter_observation_ontology", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+PY
+
+COMPONENT_VALIDATOR_PARSE_STATUS_OBSERVATION_REPO="${TMP_ROOT}/component-validator-parse-status-observation-repo"
+mirror_repo "${COMPONENT_VALIDATOR_PARSE_STATUS_OBSERVATION_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_PARSE_STATUS_OBSERVATION_REPO}/scripts/validate_protocol_root_corpus_precedence.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+path.write_text(
+    "#!/usr/bin/env python3\n"
+    "print('[')\n",
+    encoding="utf-8",
+)
+PY
+
+COMPONENT_VALIDATOR_PARSE_STATUS_OBSERVATION_JSON="${TMP_ROOT}/component-validator-parse-status-observation.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_PARSE_STATUS_OBSERVATION_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_PARSE_STATUS_OBSERVATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator parse/status observation case"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_PARSE_STATUS_OBSERVATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_parse_status_origin_policy"] == "validator_output_missing_invalid_json_not_json_object_status_key_missing_status_literal_not_string_only_before_nonzero_rc_nonpass_status_exclusion_and_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_counts"]["parse_status"] >= 1, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+assert "bundle_violation:root_corpus_precedence:validator_output_invalid_json" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_NONZERO_RC_OBSERVATION_REPO="${TMP_ROOT}/component-validator-nonzero-rc-observation-repo"
+mirror_repo "${COMPONENT_VALIDATOR_NONZERO_RC_OBSERVATION_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_NONZERO_RC_OBSERVATION_REPO}/scripts/validate_protocol_root_corpus_precedence.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "if __name__ == \"__main__\":\n    raise SystemExit(main())\n"
+new = "if __name__ == \"__main__\":\n    _exit_code = main()\n    raise SystemExit(9 if _exit_code == 0 else _exit_code)\n"
+assert old in text, text[-4000:]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_NONZERO_RC_OBSERVATION_JSON="${TMP_ROOT}/component-validator-nonzero-rc-observation.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_NONZERO_RC_OBSERVATION_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_NONZERO_RC_OBSERVATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator nonzero-rc observation case"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_NONZERO_RC_OBSERVATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_nonzero_rc_origin_policy"] == "component_validator_nonzero_rc_only_after_admitted_parse_status_resolution_before_nonpass_status_exclusion_and_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_counts"]["nonzero_rc"] >= 1, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+assert "bundle_violation:root_corpus_precedence:component_validator_nonzero_rc" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_NONPASS_STATUS_OBSERVATION_REPO="${TMP_ROOT}/component-validator-nonpass-status-observation-repo"
+mirror_repo "${COMPONENT_VALIDATOR_NONPASS_STATUS_OBSERVATION_REPO}"
+write_minimal_root_precedence_validator \
+  "${COMPONENT_VALIDATOR_NONPASS_STATUS_OBSERVATION_REPO}/scripts/validate_protocol_root_corpus_precedence.py" \
+  "FAIL_REQUIRED"
+
+COMPONENT_VALIDATOR_NONPASS_STATUS_OBSERVATION_JSON="${TMP_ROOT}/component-validator-nonpass-status-observation.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_NONPASS_STATUS_OBSERVATION_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_NONPASS_STATUS_OBSERVATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator nonpass-status observation case"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_NONPASS_STATUS_OBSERVATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_nonpass_status_origin_policy"] == "component_status_not_pass_required_only_after_admitted_parse_status_and_nonzero_rc_resolution_before_explicit_non_execution_exclusion_and_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_counts"]["nonpass_status"] >= 1, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+assert "bundle_violation:root_corpus_precedence:component_status_not_pass_required" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_OBSERVATION_REPO="${TMP_ROOT}/component-validator-prefixed-ontology-drift-observation-repo"
+mirror_repo "${COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_OBSERVATION_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_OBSERVATION_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = 'bundle_violations.append({"component_id": row.component_id, "reason": "component_validator_missing"})'
+new = 'bundle_violations.append({"component_id": row.component_id, "reason": "component_validator_future_runtime_bucket"})'
+if old not in text:
+    raise SystemExit("expected component_validator_missing append not found")
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+rm -f "${COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_OBSERVATION_REPO}/scripts/validate_protocol_root_corpus_precedence.py"
+
+COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_OBSERVATION_JSON="${TMP_ROOT}/component-validator-prefixed-ontology-drift-observation.json"
+if python3 "${COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_OBSERVATION_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_OBSERVATION_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_OBSERVATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator prefixed-ontology-drift observation case"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_PREFIXED_ONTOLOGY_DRIFT_OBSERVATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["component_validator_observation_reason_status"] == "FAIL_REQUIRED", payload
+assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_prefixed_ontology_drift_origin_policy"] == "validator_output_validator_status_component_status_component_validator_prefixed_rows_only_after_admitted_parse_status_nonzero_rc_nonpass_status_and_exclusion_origin_resolution_before_not_applicable", payload
+assert payload["component_validator_observation_reason_unknown_count"] >= 1, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] >= 1, payload
+assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_unclassified" in payload["stale_reasons"], payload
+assert "bundle_violation:root_corpus_precedence:component_validator_future_runtime_bucket" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_OBSERVATION_REPO="${TMP_ROOT}/component-validator-residual-not-applicable-observation-repo"
+mirror_repo "${COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_OBSERVATION_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_OBSERVATION_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+needle = "    (\n        component_validator_observation_reason_counts,\n"
+replacement = (
+    "    bundle_violations.append({\n"
+    "        \"component_id\": \"root_corpus_precedence\",\n"
+    "        \"reason\": \"future_runtime_bucket_without_prefix\",\n"
+    "    })\n\n"
+    "    (\n        component_validator_observation_reason_counts,\n"
+)
+if needle not in text:
+    raise SystemExit("expected observation count block not found")
+path.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_OBSERVATION_JSON="${TMP_ROOT}/component-validator-residual-not-applicable-observation.json"
+if python3 "${COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_OBSERVATION_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_OBSERVATION_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_OBSERVATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator residual not-applicable observation case"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_RESIDUAL_NOT_APPLICABLE_OBSERVATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_residual_not_applicable_policy"] == "only_nonprefixed_nonadmitted_nonexcluded_rows_after_parse_status_nonzero_rc_nonpass_status_exclusion_origin_and_prefixed_ontology_drift_resolution_remain_not_applicable", payload
+assert payload["component_validator_observation_reason_counts"]["parse_status"] == 0, payload
+assert payload["component_validator_observation_reason_counts"]["nonzero_rc"] == 0, payload
+assert payload["component_validator_observation_reason_counts"]["nonpass_status"] == 0, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] >= 1, payload
+assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+assert "bundle_violation:root_corpus_precedence:future_runtime_bucket_without_prefix" in payload["stale_reasons"], payload
+PY
+
+MISSING_COMPONENT_VALIDATOR_REPO="${TMP_ROOT}/missing-component-validator-repo"
+mirror_repo "${MISSING_COMPONENT_VALIDATOR_REPO}"
+rm -f "${MISSING_COMPONENT_VALIDATOR_REPO}/scripts/validate_protocol_root_corpus_precedence.py"
+
+MISSING_COMPONENT_VALIDATOR_JSON="${TMP_ROOT}/missing-component-validator.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${MISSING_COMPONENT_VALIDATOR_REPO}" \
+  --json-only >"${MISSING_COMPONENT_VALIDATOR_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing component validator coverage case"
+  exit 1
+fi
+
+python3 - <<'PY' "${MISSING_COMPONENT_VALIDATOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_status_from_stale_reasons"] == payload["protocol_root_corpus_law_bundle_status"], payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert payload["derived_error_code_from_precedence"] == payload["error_code"] == "IP-RCLB-003", payload
+assert payload["direct_stale_reason_count_before_violation_projection"] == 0, payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"] == {
+    "alias": 0,
+    "document": 0,
+    "contract_row": 0,
+    "required_surface": 0,
+}, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_counts"]["parse_status"] == 0, payload
+assert payload["component_validator_observation_reason_counts"]["nonzero_rc"] >= 1, payload
+assert payload["component_validator_observation_reason_counts"]["nonpass_status"] == 0, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 2, payload
+assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+assert payload["component_status_row_count"] == payload["component_count"] - 1, payload
+assert payload["expected_component_status_row_count"] == payload["component_count"], payload
+assert payload["component_status_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["bundle_violation_count"] >= 2, payload
+assert payload["registry_precedence_reason_count"] == 0, payload
+assert payload["projected_violation_reason_count"] == (
+    payload["structure_violation_count"] + payload["bundle_violation_count"] + payload["anchor_violation_count"]
+), payload
+assert payload["stale_reason_count"] == payload["projected_violation_reason_count"], payload
+assert "bundle_violation:root_corpus_law_bundle:component_status_row_coverage_incomplete" in payload["stale_reasons"], payload
+assert "bundle_violation:root_corpus_precedence:component_validator_missing" in payload["stale_reasons"], payload
+PY
+
+STRUCTURE_PRECEDENCE_OVER_BUNDLE_REPO="${TMP_ROOT}/structure-precedence-over-bundle-repo"
+mirror_repo "${STRUCTURE_PRECEDENCE_OVER_BUNDLE_REPO}"
+python3 - <<'PY' "${STRUCTURE_PRECEDENCE_OVER_BUNDLE_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+rows = doc["component_rows"]
+rows[1]["component_id"] = rows[0]["component_id"]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+rm -f "${STRUCTURE_PRECEDENCE_OVER_BUNDLE_REPO}/scripts/validate_protocol_root_corpus_precedence.py"
+
+STRUCTURE_PRECEDENCE_OVER_BUNDLE_JSON="${TMP_ROOT}/structure-precedence-over-bundle.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${STRUCTURE_PRECEDENCE_OVER_BUNDLE_REPO}" \
+  --json-only >"${STRUCTURE_PRECEDENCE_OVER_BUNDLE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed structure-precedence-over-bundle case"
+  exit 1
+fi
+
+python3 - <<'PY' "${STRUCTURE_PRECEDENCE_OVER_BUNDLE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-002", payload
+assert payload["derived_failure_class"] == "structure", payload
+assert payload["derived_error_code_from_precedence"] == "IP-RCLB-002", payload
+assert payload["direct_stale_reason_count_before_violation_projection"] == 0, payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"] == {
+    "alias": 0,
+    "document": 0,
+    "contract_row": 0,
+    "required_surface": 0,
+}, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_counts"]["parse_status"] == 0, payload
+assert payload["component_validator_observation_reason_counts"]["nonzero_rc"] >= 1, payload
+assert payload["component_validator_observation_reason_counts"]["nonpass_status"] == 0, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] >= 1, payload
+assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+assert payload["structure_violation_count"] >= 1, payload
+assert payload["bundle_violation_count"] >= 1, payload
+assert payload["registry_precedence_reason_count"] == 0, payload
+assert "structure_violation:component_rows:duplicate_component_id" in payload["stale_reasons"], payload
+assert "bundle_violation:root_corpus_precedence:component_validator_missing" in payload["stale_reasons"], payload
+PY
+
+REGISTRY_PRECEDENCE_OVER_BUNDLE_REPO="${TMP_ROOT}/registry-precedence-over-bundle-repo"
+mirror_repo "${REGISTRY_PRECEDENCE_OVER_BUNDLE_REPO}"
+python3 - <<'PY' "${REGISTRY_PRECEDENCE_OVER_BUNDLE_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_status_row_coverage_policy"] = "partial_component_rows_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+rm -f "${REGISTRY_PRECEDENCE_OVER_BUNDLE_REPO}/scripts/validate_protocol_root_corpus_precedence.py"
+
+REGISTRY_PRECEDENCE_OVER_BUNDLE_JSON="${TMP_ROOT}/registry-precedence-over-bundle.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_PRECEDENCE_OVER_BUNDLE_REPO}" \
+  --json-only >"${REGISTRY_PRECEDENCE_OVER_BUNDLE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry-precedence-over-bundle case"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_PRECEDENCE_OVER_BUNDLE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["derived_error_code_from_precedence"] == "IP-RCLB-001", payload
+assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"]["contract_row"] >= 1, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_counts"]["parse_status"] == 0, payload
+assert payload["component_validator_observation_reason_counts"]["nonzero_rc"] >= 1, payload
+assert payload["component_validator_observation_reason_counts"]["nonpass_status"] == 0, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] >= 1, payload
+assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+assert payload["registry_precedence_reason_count"] >= 1, payload
+assert payload["bundle_violation_count"] >= 1, payload
+assert "root_corpus_law_bundle_component_status_row_coverage_policy_invalid" in payload["stale_reasons"], payload
+assert "bundle_violation:root_corpus_precedence:component_validator_missing" in payload["stale_reasons"], payload
+PY
+
+ANCHOR_FAILURE_CLASS_REPO="${TMP_ROOT}/anchor-failure-class-repo"
+mirror_repo "${ANCHOR_FAILURE_CLASS_REPO}"
+python3 - <<'PY' "${ANCHOR_FAILURE_CLASS_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "Bundle failure-classification policy must also stay explicit."
+new = "Bundle failure-classification policy local drift."
+if old not in text:
+    raise SystemExit("expected anchor marker not found")
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+ANCHOR_FAILURE_CLASS_JSON="${TMP_ROOT}/anchor-failure-class.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${ANCHOR_FAILURE_CLASS_REPO}" \
+  --json-only >"${ANCHOR_FAILURE_CLASS_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed anchor failure class case"
+  exit 1
+fi
+
+python3 - <<'PY' "${ANCHOR_FAILURE_CLASS_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert payload["derived_error_code_from_precedence"] == payload["error_code"] == "IP-RCLB-003", payload
+assert payload["anchor_violation_count"] >= 1, payload
+assert payload["direct_stale_reason_count_before_violation_projection"] == 0, payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"] == {
+    "alias": 0,
+    "document": 0,
+    "contract_row": 0,
+    "required_surface": 0,
+}, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_counts"] == {
+    "parse_status": 0,
+    "nonzero_rc": 0,
+    "nonpass_status": 0,
+}, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+assert payload["registry_class_reason_count"] == 0, payload
+assert "anchor_violation:identity/protocol/README.md:required_marker_missing" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT_REPO="${TMP_ROOT}/component-validator-output-channel-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_output_channel_contract"] = "stderr_allowed_as_verdict_channel"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT_JSON="${TMP_ROOT}/component-validator-output-channel-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator output-channel contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_output_channel_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT_REPO="${TMP_ROOT}/component-validator-stderr-isolation-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_stderr_isolation_contract"] = "stderr_merged_into_stdout_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT_JSON="${TMP_ROOT}/component-validator-stderr-isolation-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator stderr-isolation contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_stderr_isolation_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT_REPO="${TMP_ROOT}/component-validator-stdio-text-decoding-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_stdio_text_decoding_contract"] = "ambient_locale_decode_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT_JSON="${TMP_ROOT}/component-validator-stdio-text-decoding-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator stdio text-decoding contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_stdio_text_decoding_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT_REPO="${TMP_ROOT}/component-validator-stdout-framing-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_stdout_framing_contract"] = "mixed_stdout_fragment_extraction_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT_JSON="${TMP_ROOT}/component-validator-stdout-framing-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator stdout-framing contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_stdout_framing_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT_REPO="${TMP_ROOT}/component-validator-status-key-resolution-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_status_key_resolution_contract"] = "nested_alias_pointer_search_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT_JSON="${TMP_ROOT}/component-validator-status-key-resolution-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator status-key resolution contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_status_key_resolution_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT_REPO="${TMP_ROOT}/component-validator-status-literal-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_status_literal_contract"] = "trimmed_casefolded_alias_literals_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT_JSON="${TMP_ROOT}/component-validator-status-literal-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator status-literal contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_status_literal_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT_REPO="${TMP_ROOT}/component-validator-execution-input-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_execution_input_contract"] = "ambient_stdin_inheritance_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT_JSON="${TMP_ROOT}/component-validator-execution-input-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator execution-input contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_execution_input_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT_REPO="${TMP_ROOT}/component-validator-verdict-admission-timing-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_verdict_admission_timing_contract"] = "partial_stream_preexit_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT_JSON="${TMP_ROOT}/component-validator-verdict-admission-timing-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator verdict-admission timing contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_verdict_admission_timing_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_EXECUTION_TIMEOUT_CONTRACT_REPO="${TMP_ROOT}/component-validator-execution-timeout-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_EXECUTION_TIMEOUT_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_EXECUTION_TIMEOUT_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_execution_timeout_contract"] = "bundle_local_deadline_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_EXECUTION_TIMEOUT_CONTRACT_JSON="${TMP_ROOT}/component-validator-execution-timeout-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_EXECUTION_TIMEOUT_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_EXECUTION_TIMEOUT_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator execution-timeout contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_EXECUTION_TIMEOUT_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_execution_timeout_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT_REPO="${TMP_ROOT}/component-validator-working-directory-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_working_directory_contract"] = "ambient_cwd_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT_JSON="${TMP_ROOT}/component-validator-working-directory-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator working-directory contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_working_directory_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT_REPO="${TMP_ROOT}/component-validator-execution-environment-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_execution_environment_contract"] = "local_env_overlay_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT_JSON="${TMP_ROOT}/component-validator-execution-environment-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator execution-environment contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_execution_environment_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT_REPO="${TMP_ROOT}/component-validator-execution-transport-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_execution_transport_contract"] = "shell_wrapped_or_remote_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT_JSON="${TMP_ROOT}/component-validator-execution-transport-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator execution-transport contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_execution_transport_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+SELF_DESCRIBING_POLICY_REPO="${TMP_ROOT}/component-self-describing-family-requirement-policy-drift-repo"
+mirror_repo "${SELF_DESCRIBING_POLICY_REPO}"
+python3 - <<'PY' "${SELF_DESCRIBING_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_self_describing_family_requirement_local_override_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SELF_DESCRIBING_POLICY_JSON="${TMP_ROOT}/component-self-describing-family-requirement-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SELF_DESCRIBING_POLICY_REPO}" \
+  --json-only >"${SELF_DESCRIBING_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component self-describing-family requirement policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SELF_DESCRIBING_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_self_describing_family_requirement_local_override_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+SELF_DESCRIBING_LOCAL_REDECLARATION_POLICY_REPO="${TMP_ROOT}/component-self-describing-family-requirement-local-redeclaration-policy-drift-repo"
+mirror_repo "${SELF_DESCRIBING_LOCAL_REDECLARATION_POLICY_REPO}"
+python3 - <<'PY' "${SELF_DESCRIBING_LOCAL_REDECLARATION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_self_describing_family_requirement_local_redeclaration_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SELF_DESCRIBING_LOCAL_REDECLARATION_POLICY_JSON="${TMP_ROOT}/component-self-describing-family-requirement-local-redeclaration-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SELF_DESCRIBING_LOCAL_REDECLARATION_POLICY_REPO}" \
+  --json-only >"${SELF_DESCRIBING_LOCAL_REDECLARATION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component self-describing-family requirement local-redeclaration-policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SELF_DESCRIBING_LOCAL_REDECLARATION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_self_describing_family_requirement_local_redeclaration_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+SELF_DESCRIBING_LOCAL_REDECLARATION_REPO="${TMP_ROOT}/component-self-describing-family-requirement-local-redeclaration-repo"
+mirror_repo "${SELF_DESCRIBING_LOCAL_REDECLARATION_REPO}"
+python3 - <<'PY' "${SELF_DESCRIBING_LOCAL_REDECLARATION_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["require_self_describing_families"] = False
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SELF_DESCRIBING_LOCAL_REDECLARATION_JSON="${TMP_ROOT}/component-self-describing-family-requirement-local-redeclaration.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SELF_DESCRIBING_LOCAL_REDECLARATION_REPO}" \
+  --json-only >"${SELF_DESCRIBING_LOCAL_REDECLARATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed local self-describing-family requirement redeclaration"
+  exit 1
+fi
+
+python3 - <<'PY' "${SELF_DESCRIBING_LOCAL_REDECLARATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "component_self_describing_family_requirement_governance_local_redeclaration_forbidden"
+    for row in payload["bundle_violations"]
+), payload
+assert payload["bundle_redeclares_self_describing_family_requirement_governance"] is True, payload
+PY
+
+SELF_DESCRIBING_SOURCE_REPO="${TMP_ROOT}/component-self-describing-family-requirement-source-drift-repo"
+mirror_repo "${SELF_DESCRIBING_SOURCE_REPO}"
+python3 - <<'PY' "${SELF_DESCRIBING_SOURCE_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["require_self_describing_families"] = False
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SELF_DESCRIBING_SOURCE_JSON="${TMP_ROOT}/component-self-describing-family-requirement-source-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SELF_DESCRIBING_SOURCE_REPO}" \
+  --json-only >"${SELF_DESCRIBING_SOURCE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed inherited self-describing-family requirement drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SELF_DESCRIBING_SOURCE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_self_describing_family_requirement_not_inherited_from_machine_registry_completeness"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+REGISTRY_CHILD_POLICY_REPO="${TMP_ROOT}/component-registry-child-membership-policy-drift-repo"
+mirror_repo "${REGISTRY_CHILD_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_CHILD_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_registry_child_membership_local_override_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_CHILD_POLICY_JSON="${TMP_ROOT}/component-registry-child-membership-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_CHILD_POLICY_REPO}" \
+  --json-only >"${REGISTRY_CHILD_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component registry-child membership policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_CHILD_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_registry_child_membership_local_override_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+REGISTRY_CHILD_LOCAL_REDECLARATION_POLICY_REPO="${TMP_ROOT}/component-registry-child-membership-local-redeclaration-policy-drift-repo"
+mirror_repo "${REGISTRY_CHILD_LOCAL_REDECLARATION_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_CHILD_LOCAL_REDECLARATION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_registry_child_membership_local_redeclaration_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_CHILD_LOCAL_REDECLARATION_POLICY_JSON="${TMP_ROOT}/component-registry-child-membership-local-redeclaration-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_CHILD_LOCAL_REDECLARATION_POLICY_REPO}" \
+  --json-only >"${REGISTRY_CHILD_LOCAL_REDECLARATION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component registry-child membership local-redeclaration-policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_CHILD_LOCAL_REDECLARATION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_registry_child_membership_local_redeclaration_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+REGISTRY_CHILD_LOCAL_REDECLARATION_REPO="${TMP_ROOT}/component-registry-child-membership-local-redeclaration-repo"
+mirror_repo "${REGISTRY_CHILD_LOCAL_REDECLARATION_REPO}"
+python3 - <<'PY' "${REGISTRY_CHILD_LOCAL_REDECLARATION_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_directory_rel_path"] = "identity/protocol/shadow-mappings"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_CHILD_LOCAL_REDECLARATION_JSON="${TMP_ROOT}/component-registry-child-membership-local-redeclaration.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_CHILD_LOCAL_REDECLARATION_REPO}" \
+  --json-only >"${REGISTRY_CHILD_LOCAL_REDECLARATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed local registry-child admission redeclaration"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_CHILD_LOCAL_REDECLARATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "component_registry_child_membership_governance_local_redeclaration_forbidden"
+    for row in payload["bundle_violations"]
+), payload
+assert payload["bundle_redeclares_registry_child_membership_governance"] is True, payload
+PY
+
+SOURCE_REGISTRY_CHILD_REPO="${TMP_ROOT}/component-registry-child-membership-source-drift-repo"
+mirror_repo "${SOURCE_REGISTRY_CHILD_REPO}"
+python3 - <<'PY' "${SOURCE_REGISTRY_CHILD_REPO}/identity/protocol/mappings/root-corpus-registry.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["registered_top_level_entries"]:
+    if row.get("rel_path") == "identity/protocol/mappings":
+        row["required_children"] = [
+            child for child in row.get("required_children", [])
+            if child != "root-corpus-ordering.current.yaml"
+        ]
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SOURCE_REGISTRY_CHILD_JSON="${TMP_ROOT}/component-registry-child-membership-source-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SOURCE_REGISTRY_CHILD_REPO}" \
+  --json-only >"${SOURCE_REGISTRY_CHILD_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed inherited registry-child admission drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SOURCE_REGISTRY_CHILD_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_counts"] == {
+    "parse_status": 0,
+    "nonzero_rc": 1,
+    "nonpass_status": 0,
+}, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 3, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "component_current_file_not_admitted_by_inherited_registry_child_set"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "component_validator_row_coverage_status_not_pass_required"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "component_validator_row_identity_projection_status_not_pass_required"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "component_validator_nonzero_rc"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+REPO_REL_PATTERN_POLICY_REPO="${TMP_ROOT}/descriptor-repo-rel-path-pattern-policy-drift-repo"
+mirror_repo "${REPO_REL_PATTERN_POLICY_REPO}"
+python3 - <<'PY' "${REPO_REL_PATTERN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["descriptor_repo_rel_path_pattern_local_redeclaration_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REPO_REL_PATTERN_POLICY_JSON="${TMP_ROOT}/descriptor-repo-rel-path-pattern-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REPO_REL_PATTERN_POLICY_REPO}" \
+  --json-only >"${REPO_REL_PATTERN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor repo-rel path pattern policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REPO_REL_PATTERN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_descriptor_repo_rel_path_pattern_local_redeclaration_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+REPO_REL_PATTERN_LOCAL_REDECLARATION_REPO="${TMP_ROOT}/descriptor-repo-rel-path-pattern-local-redeclaration-repo"
+mirror_repo "${REPO_REL_PATTERN_LOCAL_REDECLARATION_REPO}"
+python3 - <<'PY' "${REPO_REL_PATTERN_LOCAL_REDECLARATION_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_repo_rel_path_patterns"] = {
+    "validator_script": "^scripts/validate_protocol_(?P<surface_stem>shadow_[a-z0-9_]+)\\.py$",
+    "probe_script": "^scripts/ci/run_protocol_(?P<surface_stem>shadow_[a-z0-9_]+)_probes_ci\\.sh$",
+    "common_script": "^scripts/(?P<surface_stem>shadow_[a-z0-9_]+)_common\\.py$",
+}
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REPO_REL_PATTERN_LOCAL_REDECLARATION_JSON="${TMP_ROOT}/descriptor-repo-rel-path-pattern-local-redeclaration.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REPO_REL_PATTERN_LOCAL_REDECLARATION_REPO}" \
+  --json-only >"${REPO_REL_PATTERN_LOCAL_REDECLARATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed local repo-rel path pattern redeclaration"
+  exit 1
+fi
+
+python3 - <<'PY' "${REPO_REL_PATTERN_LOCAL_REDECLARATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_repo_rel_path_patterns_local_redeclaration_forbidden"
+    for row in payload["bundle_violations"]
+), payload
+assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is True, payload
+PY
+
+SOURCE_REPO_REL_PATTERN_REPO="${TMP_ROOT}/descriptor-repo-rel-path-pattern-source-missing-repo"
+mirror_repo "${SOURCE_REPO_REL_PATTERN_REPO}"
+python3 - <<'PY' "${SOURCE_REPO_REL_PATTERN_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_repo_rel_path_patterns"] = {}
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SOURCE_REPO_REL_PATTERN_JSON="${TMP_ROOT}/descriptor-repo-rel-path-pattern-source-missing.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SOURCE_REPO_REL_PATTERN_REPO}" \
+  --json-only >"${SOURCE_REPO_REL_PATTERN_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing source repo-rel path patterns"
+  exit 1
+fi
+
+python3 - <<'PY' "${SOURCE_REPO_REL_PATTERN_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_repo_rel_path_patterns_missing_from_machine_registry_completeness"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+REPO_REL_DISCIPLINE_POLICY_REPO="${TMP_ROOT}/descriptor-repo-rel-discipline-policy-drift-repo"
+mirror_repo "${REPO_REL_DISCIPLINE_POLICY_REPO}"
+python3 - <<'PY' "${REPO_REL_DISCIPLINE_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["descriptor_repo_rel_path_discipline_local_override_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REPO_REL_DISCIPLINE_POLICY_JSON="${TMP_ROOT}/descriptor-repo-rel-discipline-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REPO_REL_DISCIPLINE_POLICY_REPO}" \
+  --json-only >"${REPO_REL_DISCIPLINE_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor repo-rel discipline policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REPO_REL_DISCIPLINE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_descriptor_repo_rel_path_discipline_local_override_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_POLICY_REPO="${TMP_ROOT}/descriptor-repo-rel-discipline-local-redeclaration-policy-drift-repo"
+mirror_repo "${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_POLICY_REPO}"
+python3 - <<'PY' "${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["descriptor_repo_rel_path_discipline_local_redeclaration_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_POLICY_JSON="${TMP_ROOT}/descriptor-repo-rel-discipline-local-redeclaration-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_POLICY_REPO}" \
+  --json-only >"${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor repo-rel discipline local-redeclaration-policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_descriptor_repo_rel_path_discipline_local_redeclaration_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_REPO="${TMP_ROOT}/descriptor-repo-rel-discipline-local-redeclaration-repo"
+mirror_repo "${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_REPO}"
+python3 - <<'PY' "${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["repo_rel_path_scope_policy"] = "workspace_relative_allowed"
+doc["repo_rel_path_escape_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_JSON="${TMP_ROOT}/descriptor-repo-rel-discipline-local-redeclaration.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_REPO}" \
+  --json-only >"${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed local repo-rel discipline redeclaration"
+  exit 1
+fi
+
+python3 - <<'PY' "${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_repo_rel_path_governance_local_redeclaration_forbidden"
+    for row in payload["bundle_violations"]
+), payload
+assert payload["bundle_redeclares_repo_rel_path_governance"] is True, payload
+PY
+
+SOURCE_REPO_REL_DISCIPLINE_REPO="${TMP_ROOT}/descriptor-repo-rel-discipline-source-missing-repo"
+mirror_repo "${SOURCE_REPO_REL_DISCIPLINE_REPO}"
+python3 - <<'PY' "${SOURCE_REPO_REL_DISCIPLINE_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["repo_rel_path_scope_policy"] = ""
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SOURCE_REPO_REL_DISCIPLINE_JSON="${TMP_ROOT}/descriptor-repo-rel-discipline-source-missing.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SOURCE_REPO_REL_DISCIPLINE_REPO}" \
+  --json-only >"${SOURCE_REPO_REL_DISCIPLINE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing source repo-rel discipline"
+  exit 1
+fi
+
+python3 - <<'PY' "${SOURCE_REPO_REL_DISCIPLINE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_repo_rel_path_governance_missing_from_machine_registry_completeness"
+    and "repo_rel_path_scope_policy" in row["missing_policy_fields"]
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+COMPONENT_NAMING_POLICY_REPO="${TMP_ROOT}/component-current-version-naming-policy-drift-repo"
+mirror_repo "${COMPONENT_NAMING_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_NAMING_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_current_version_naming_local_override_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_NAMING_POLICY_JSON="${TMP_ROOT}/component-current-version-naming-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_NAMING_POLICY_REPO}" \
+  --json-only >"${COMPONENT_NAMING_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component current/version naming policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_NAMING_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_current_version_naming_local_override_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_NAMING_LOCAL_REDECLARATION_POLICY_REPO="${TMP_ROOT}/component-current-version-naming-local-redeclaration-policy-drift-repo"
+mirror_repo "${COMPONENT_NAMING_LOCAL_REDECLARATION_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_NAMING_LOCAL_REDECLARATION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_current_version_naming_local_redeclaration_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_NAMING_LOCAL_REDECLARATION_POLICY_JSON="${TMP_ROOT}/component-current-version-naming-local-redeclaration-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_NAMING_LOCAL_REDECLARATION_POLICY_REPO}" \
+  --json-only >"${COMPONENT_NAMING_LOCAL_REDECLARATION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component current/version naming local-redeclaration-policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_NAMING_LOCAL_REDECLARATION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_current_version_naming_local_redeclaration_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_NAMING_LOCAL_REDECLARATION_REPO="${TMP_ROOT}/component-current-version-naming-local-redeclaration-repo"
+mirror_repo "${COMPONENT_NAMING_LOCAL_REDECLARATION_REPO}"
+python3 - <<'PY' "${COMPONENT_NAMING_LOCAL_REDECLARATION_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["current_suffix"] = ".shadow.yaml"
+doc["version_regex"] = "^shadow-[a-z0-9-]+\\.v[0-9]+\\.yaml$"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_NAMING_LOCAL_REDECLARATION_JSON="${TMP_ROOT}/component-current-version-naming-local-redeclaration.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_NAMING_LOCAL_REDECLARATION_REPO}" \
+  --json-only >"${COMPONENT_NAMING_LOCAL_REDECLARATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed local component current/version naming redeclaration"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_NAMING_LOCAL_REDECLARATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "component_current_version_naming_governance_local_redeclaration_forbidden"
+    for row in payload["bundle_violations"]
+), payload
+assert payload["bundle_redeclares_component_naming_governance"] is True, payload
+PY
+
+SOURCE_COMPONENT_NAMING_REPO="${TMP_ROOT}/component-current-version-naming-source-missing-repo"
+mirror_repo "${SOURCE_COMPONENT_NAMING_REPO}"
+python3 - <<'PY' "${SOURCE_COMPONENT_NAMING_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["current_suffix"] = ""
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SOURCE_COMPONENT_NAMING_JSON="${TMP_ROOT}/component-current-version-naming-source-missing.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SOURCE_COMPONENT_NAMING_REPO}" \
+  --json-only >"${SOURCE_COMPONENT_NAMING_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing source current/version naming law"
+  exit 1
+fi
+
+python3 - <<'PY' "${SOURCE_COMPONENT_NAMING_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "component_current_version_naming_governance_missing_from_machine_registry_completeness"
+    and "current_suffix" in row["missing_policy_fields"]
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+SOURCE_FIELDS_REPO="${TMP_ROOT}/descriptor-schema-source-fields-missing-repo"
+mirror_repo "${SOURCE_FIELDS_REPO}"
+python3 - <<'PY' "${SOURCE_FIELDS_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_descriptor_fields"] = []
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SOURCE_FIELDS_JSON="${TMP_ROOT}/descriptor-schema-source-fields-missing.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SOURCE_FIELDS_REPO}" \
+  --json-only >"${SOURCE_FIELDS_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing descriptor-source fields"
+  exit 1
+fi
+
+python3 - <<'PY' "${SOURCE_FIELDS_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_schema_source_required_descriptor_fields_missing"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_fields_not_aligned_to_machine_registry_completeness"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+SUBSTITUTION_POLICY_REPO="${TMP_ROOT}/descriptor-schema-substitution-policy-drift-repo"
+mirror_repo "${SUBSTITUTION_POLICY_REPO}"
+python3 - <<'PY' "${SUBSTITUTION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["descriptor_schema_source_substitution_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SUBSTITUTION_POLICY_JSON="${TMP_ROOT}/descriptor-schema-substitution-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SUBSTITUTION_POLICY_REPO}" \
+  --json-only >"${SUBSTITUTION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor-source substitution drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SUBSTITUTION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_descriptor_schema_source_substitution_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+SCHEMA_LOCAL_REAUTHORING_POLICY_REPO="${TMP_ROOT}/descriptor-schema-local-reauthoring-policy-drift-repo"
+mirror_repo "${SCHEMA_LOCAL_REAUTHORING_POLICY_REPO}"
+python3 - <<'PY' "${SCHEMA_LOCAL_REAUTHORING_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["descriptor_schema_local_reauthoring_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SCHEMA_LOCAL_REAUTHORING_POLICY_JSON="${TMP_ROOT}/descriptor-schema-local-reauthoring-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SCHEMA_LOCAL_REAUTHORING_POLICY_REPO}" \
+  --json-only >"${SCHEMA_LOCAL_REAUTHORING_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor schema local-reauthoring-policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SCHEMA_LOCAL_REAUTHORING_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_descriptor_schema_local_reauthoring_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+FAMILY_BINDING_POLICY_REPO="${TMP_ROOT}/descriptor-family-binding-policy-drift-repo"
+mirror_repo "${FAMILY_BINDING_POLICY_REPO}"
+python3 - <<'PY' "${FAMILY_BINDING_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["descriptor_family_surface_binding_local_override_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+FAMILY_BINDING_POLICY_JSON="${TMP_ROOT}/descriptor-family-binding-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${FAMILY_BINDING_POLICY_REPO}" \
+  --json-only >"${FAMILY_BINDING_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor-family binding local-override drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${FAMILY_BINDING_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_descriptor_family_surface_binding_local_override_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+FAMILY_BINDING_LOCAL_REDECLARATION_POLICY_REPO="${TMP_ROOT}/descriptor-family-binding-local-redeclaration-policy-drift-repo"
+mirror_repo "${FAMILY_BINDING_LOCAL_REDECLARATION_POLICY_REPO}"
+python3 - <<'PY' "${FAMILY_BINDING_LOCAL_REDECLARATION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["descriptor_family_surface_binding_local_redeclaration_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+FAMILY_BINDING_LOCAL_REDECLARATION_POLICY_JSON="${TMP_ROOT}/descriptor-family-binding-local-redeclaration-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${FAMILY_BINDING_LOCAL_REDECLARATION_POLICY_REPO}" \
+  --json-only >"${FAMILY_BINDING_LOCAL_REDECLARATION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor-family binding local-redeclaration-policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${FAMILY_BINDING_LOCAL_REDECLARATION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_descriptor_family_surface_binding_local_redeclaration_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+FAMILY_BINDING_FALLBACK_REPO="${TMP_ROOT}/descriptor-family-binding-fallback-policy-drift-repo"
+mirror_repo "${FAMILY_BINDING_FALLBACK_REPO}"
+python3 - <<'PY' "${FAMILY_BINDING_FALLBACK_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["descriptor_family_surface_binding_fallback_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+FAMILY_BINDING_FALLBACK_JSON="${TMP_ROOT}/descriptor-family-binding-fallback-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${FAMILY_BINDING_FALLBACK_REPO}" \
+  --json-only >"${FAMILY_BINDING_FALLBACK_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor-family binding fallback-policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${FAMILY_BINDING_FALLBACK_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_descriptor_family_surface_binding_fallback_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+FAMILY_BINDING_LOCAL_REDECLARATION_REPO="${TMP_ROOT}/descriptor-family-binding-local-redeclaration-repo"
+mirror_repo "${FAMILY_BINDING_LOCAL_REDECLARATION_REPO}"
+python3 - <<'PY' "${FAMILY_BINDING_LOCAL_REDECLARATION_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["family_surface_stem_overrides"] = {"root-corpus-registry": "shadow_surface"}
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+FAMILY_BINDING_LOCAL_REDECLARATION_JSON="${TMP_ROOT}/descriptor-family-binding-local-redeclaration.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${FAMILY_BINDING_LOCAL_REDECLARATION_REPO}" \
+  --json-only >"${FAMILY_BINDING_LOCAL_REDECLARATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed local family-surface binding governance redeclaration"
+  exit 1
+fi
+
+python3 - <<'PY' "${FAMILY_BINDING_LOCAL_REDECLARATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_family_surface_binding_governance_local_redeclaration_forbidden"
+    for row in payload["bundle_violations"]
+), payload
+assert payload["bundle_redeclares_family_surface_binding_governance"] is True, payload
+PY
+
+COMPONENT_RESOLUTION_POLICY_REPO="${TMP_ROOT}/component-descriptor-resolution-policy-drift-repo"
+mirror_repo "${COMPONENT_RESOLUTION_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_RESOLUTION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_descriptor_resolution_mode"] = "direct_version_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_RESOLUTION_POLICY_JSON="${TMP_ROOT}/component-descriptor-resolution-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_RESOLUTION_POLICY_REPO}" \
+  --json-only >"${COMPONENT_RESOLUTION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component descriptor resolution drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_RESOLUTION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_descriptor_resolution_mode_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_CURRENT_ENTRY_REPO="${TMP_ROOT}/component-current-entry-drift-repo"
+mirror_repo "${COMPONENT_CURRENT_ENTRY_REPO}"
+python3 - <<'PY' "${COMPONENT_CURRENT_ENTRY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["component_rows"]:
+    if row.get("component_id") == "root_corpus_ordering":
+        row["current_file"] = "identity/protocol/mappings/root-corpus-ordering.v1.yaml"
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_CURRENT_ENTRY_JSON="${TMP_ROOT}/component-current-entry-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_CURRENT_ENTRY_REPO}" \
+  --json-only >"${COMPONENT_CURRENT_ENTRY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component current-entry bypass drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_CURRENT_ENTRY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "component_descriptor_not_current_entry"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+SCHEMA_SOURCE_REPO="${TMP_ROOT}/descriptor-schema-source-drift-repo"
+mirror_repo "${SCHEMA_SOURCE_REPO}"
+python3 - <<'PY' "${SCHEMA_SOURCE_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_descriptor_field_modes"]["error_codes"] = "repo_rel_path"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SCHEMA_SOURCE_JSON="${TMP_ROOT}/descriptor-schema-source-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SCHEMA_SOURCE_REPO}" \
+  --json-only >"${SCHEMA_SOURCE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed machine-registry descriptor schema drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SCHEMA_SOURCE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_field_modes_not_aligned_to_machine_registry_completeness"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+SOURCE_FAMILY_OVERRIDE_REPO="${TMP_ROOT}/source-family-override-drift-repo"
+mirror_repo "${SOURCE_FAMILY_OVERRIDE_REPO}"
+python3 - <<'PY' "${SOURCE_FAMILY_OVERRIDE_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["family_surface_stem_overrides"] = {}
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SOURCE_FAMILY_OVERRIDE_JSON="${TMP_ROOT}/source-family-override-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SOURCE_FAMILY_OVERRIDE_REPO}" \
+  --json-only >"${SOURCE_FAMILY_OVERRIDE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing source family-surface override drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SOURCE_FAMILY_OVERRIDE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_family_surface_stem_overrides_missing_from_machine_registry_completeness"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_corpus_governance"
+    and row["reason"] == "component_family_surface_binding_not_inherited"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+MODE_REPO="${TMP_ROOT}/descriptor-mode-drift-repo"
+mirror_repo "${MODE_REPO}"
+python3 - <<'PY' "${MODE_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_component_descriptor_field_modes"]["error_codes"] = "repo_rel_path"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+MODE_JSON="${TMP_ROOT}/descriptor-mode-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${MODE_REPO}" \
+  --json-only >"${MODE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor-field mode drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${MODE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_field_modes_not_aligned_to_machine_registry_completeness"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+CONCORDANCE_WAIVER_POLICY_REPO="${TMP_ROOT}/descriptor-concordance-waiver-policy-drift-repo"
+mirror_repo "${CONCORDANCE_WAIVER_POLICY_REPO}"
+python3 - <<'PY' "${CONCORDANCE_WAIVER_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_descriptor_concordance_local_waiver_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+CONCORDANCE_WAIVER_POLICY_JSON="${TMP_ROOT}/descriptor-concordance-waiver-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${CONCORDANCE_WAIVER_POLICY_REPO}" \
+  --json-only >"${CONCORDANCE_WAIVER_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor concordance waiver-policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${CONCORDANCE_WAIVER_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_descriptor_concordance_local_waiver_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+DESCRIPTOR_REPO="${TMP_ROOT}/descriptor-drift-repo"
+mirror_repo "${DESCRIPTOR_REPO}"
+python3 - <<'PY' "${DESCRIPTOR_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["component_rows"]:
+    if row.get("component_id") == "root_corpus_ordering":
+        row["common_script"] = "scripts/root_corpus_governance_common.py"
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+DESCRIPTOR_JSON="${TMP_ROOT}/descriptor-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${DESCRIPTOR_REPO}" \
+  --json-only >"${DESCRIPTOR_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor concordance drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${DESCRIPTOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "common_script_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "component_descriptor_concordance_failure"
+    and row.get("descriptor_field") == "common_script"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+STATUS_KEY_REPO="${TMP_ROOT}/status-key-drift-repo"
+mirror_repo "${STATUS_KEY_REPO}"
+python3 - <<'PY' "${STATUS_KEY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["component_rows"]:
+    if row.get("component_id") == "root_corpus_ordering":
+        row["status_key"] = "protocol_root_corpus_governance_status"
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+STATUS_KEY_JSON="${TMP_ROOT}/status-key-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${STATUS_KEY_REPO}" \
+  --json-only >"${STATUS_KEY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed status-key concordance drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${STATUS_KEY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "status_key_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "component_descriptor_concordance_failure"
+    and row.get("descriptor_field") == "status_key"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+COMPONENT_PROBE_SURFACE_REPO="${TMP_ROOT}/component-probe-surface-contract-repo"
+mirror_repo "${COMPONENT_PROBE_SURFACE_REPO}"
+python3 - <<'PY' "${COMPONENT_PROBE_SURFACE_REPO}/identity/protocol/mappings/root-corpus-ordering.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["probe_shadow_bootstrap_contract"] = "advisory_only"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_PROBE_SURFACE_JSON="${TMP_ROOT}/component-probe-surface-contract.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_PROBE_SURFACE_REPO}" \
+  --json-only >"${COMPONENT_PROBE_SURFACE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component probe shadow-bootstrap contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_PROBE_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "component_probe_shadow_bootstrap_contract_not_inherited"
+    and row.get("actual_probe_shadow_bootstrap_contract") == "advisory_only"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["probe_shadow_bootstrap_contract_status"] == "FAIL_REQUIRED"
+    and row["active_probe_shadow_bootstrap_contract"] == "advisory_only"
+    for row in payload["component_status_rows"]
+), payload
+assert "bundle_violation:root_corpus_ordering:component_probe_shadow_bootstrap_contract_not_inherited" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_REPO="${TMP_ROOT}/component-drift-repo"
+mirror_repo "${COMPONENT_REPO}"
+python3 - <<'PY' "${COMPONENT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_rows"] = [row for row in doc["component_rows"] if row.get("component_id") != "root_constitutional_spine"]
+for idx, row in enumerate(doc["component_rows"], start=1):
+    row["order"] = idx
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_JSON="${TMP_ROOT}/component-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_REPO}" \
+  --json-only >"${COMPONENT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing-component drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-002", payload
+assert any(
+    row["reason"] == "missing_expected_components" and "root_constitutional_spine" in row.get("component_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert payload["law_bundle_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+component_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "component_rows"
+)
+status_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "component_status_rows"
+)
+assert component_row["expected_count"] == 10, payload
+assert component_row["actual_count"] == 9, payload
+assert component_row["missing_ids"] == ["root_constitutional_spine"], payload
+assert component_row["unexpected_ids"] == [], payload
+assert component_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert component_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert status_row["expected_count"] == 10, payload
+assert status_row["actual_count"] == 9, payload
+assert status_row["missing_ids"] == ["root_constitutional_spine"], payload
+assert status_row["unexpected_ids"] == [], payload
+assert status_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert status_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+COMPONENT_IDENTITY_DRIFT_REPO="${TMP_ROOT}/component-identity-drift-repo"
+mirror_repo "${COMPONENT_IDENTITY_DRIFT_REPO}"
+python3 - <<'PY' "${COMPONENT_IDENTITY_DRIFT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["component_rows"]:
+    if row.get("component_id") == "root_constitutional_spine":
+        row["component_id"] = "root_constitutional_spine_alias"
+        break
+else:
+    raise SystemExit("expected root_constitutional_spine row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_IDENTITY_DRIFT_JSON="${TMP_ROOT}/component-identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_IDENTITY_DRIFT_REPO}" \
+  --json-only >"${COMPONENT_IDENTITY_DRIFT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_IDENTITY_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-002", payload
+assert any(
+    row["reason"] == "missing_expected_components" and "root_constitutional_spine" in row.get("component_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["reason"] == "extra_components" and "root_constitutional_spine_alias" in row.get("component_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert payload["law_bundle_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+component_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "component_rows"
+)
+status_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "component_status_rows"
+)
+assert component_row["expected_count"] == 10, payload
+assert component_row["actual_count"] == 10, payload
+assert component_row["missing_ids"] == ["root_constitutional_spine"], payload
+assert component_row["unexpected_ids"] == ["root_constitutional_spine_alias"], payload
+assert component_row["coverage_status"] == "PASS_REQUIRED", payload
+assert component_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert status_row["expected_count"] == 10, payload
+assert status_row["actual_count"] == 9, payload
+assert status_row["missing_ids"] == ["root_constitutional_spine"], payload
+assert status_row["unexpected_ids"] == [], payload
+assert status_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert status_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["component_status_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["law_bundle_component_row_completeness_surface_identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+ANCHOR_REPO="${TMP_ROOT}/anchor-drift-repo"
+mirror_repo "${ANCHOR_REPO}"
+python3 - <<'PY' "${ANCHOR_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "## Root-law bundle discipline"
+new = "## Root law bundle discipline"
+assert old in text, text[:2200]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+ANCHOR_JSON="${TMP_ROOT}/anchor-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${ANCHOR_REPO}" \
+  --json-only >"${ANCHOR_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed anchor drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ANCHOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md" and row["reason"] == "required_marker_missing"
+    for row in payload["anchor_violations"]
+), payload
+PY
+
+COMPONENT_ROW_ANCHOR_REPO="${TMP_ROOT}/component-row-anchor-drift-repo"
+mirror_repo "${COMPONENT_ROW_ANCHOR_REPO}"
+python3 - <<'PY' "${COMPONENT_ROW_ANCHOR_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "These law-bundle-component-row-completeness rules must remain bound to canonical law-bundle-component-row-completeness rows rather than drifting into soft summary prose."
+new = "These law-bundle-component-row rules may be summarized directly in README prose."
+assert old in text, text[:2600]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPONENT_ROW_ANCHOR_JSON="${TMP_ROOT}/component-row-anchor-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_ROW_ANCHOR_REPO}" \
+  --json-only >"${COMPONENT_ROW_ANCHOR_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-row anchor drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_ROW_ANCHOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md"
+    and row["reason"] == "required_marker_missing"
+    and row["marker"] == "These law-bundle-component-row-completeness rules must remain bound to canonical law-bundle-component-row-completeness rows rather than drifting into soft summary prose."
+    for row in payload["anchor_violations"]
+), payload
+PY
+
+ERROR_CODE_REPO="${TMP_ROOT}/error-code-drift-repo"
+mirror_repo "${ERROR_CODE_REPO}"
+python3 - <<'PY' "${ERROR_CODE_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["component_rows"]:
+    if row.get("component_id") == "root_corpus_ordering":
+        row["error_codes"] = ["IP-RCO-001", "IP-RCO-002", "IP-RCO-099"]
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ERROR_CODE_JSON="${TMP_ROOT}/error-code-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${ERROR_CODE_REPO}" \
+  --json-only >"${ERROR_CODE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed error-code drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ERROR_CODE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_corpus_ordering" and row["reason"] == "error_codes_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "component_descriptor_concordance_failure"
+    and row.get("descriptor_field") == "error_codes"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+COMPONENT_ANCHOR_REPO="${TMP_ROOT}/component-anchor-contract-repo"
+mirror_repo "${COMPONENT_ANCHOR_REPO}"
+python3 - <<'PY' "${COMPONENT_ANCHOR_REPO}/scripts/validate_protocol_root_corpus_authority.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = '    _emit(payload, json_only=args.json_only)'
+new = '    payload["root_doc_anchor_status_alias"] = payload.pop("root_doc_anchor_status", "")\n    _emit(payload, json_only=args.json_only)'
+assert old in text, text[-4000:]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPONENT_ANCHOR_JSON="${TMP_ROOT}/component-anchor-contract.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_ANCHOR_REPO}" \
+  --json-only >"${COMPONENT_ANCHOR_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component anchor contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_ANCHOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_counts"] == {
+    "parse_status": 0,
+    "nonzero_rc": 0,
+    "nonpass_status": 0,
+}, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 1, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert any(
+    row["component_id"] == "root_corpus_authority"
+    and row["reason"] == "component_validator_root_doc_anchor_status_not_pass_required"
+    for row in payload["bundle_violations"]
+), payload
+assert "bundle_violation:root_corpus_authority:component_validator_root_doc_anchor_status_not_pass_required" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_PROJECTION_REPO="${TMP_ROOT}/component-row-projection-contract-repo"
+mirror_repo "${COMPONENT_PROJECTION_REPO}"
+python3 - <<'PY' "${COMPONENT_PROJECTION_REPO}/scripts/validate_protocol_root_corpus_ordering.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = '"row_family_projection_rows": row_family_projection_rows,'
+new = '"row_family_projection_rows_alias": row_family_projection_rows,'
+assert old in text, text[:5000]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPONENT_PROJECTION_JSON="${TMP_ROOT}/component-row-projection-contract.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_PROJECTION_REPO}" \
+  --json-only >"${COMPONENT_PROJECTION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component row-projection contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_PROJECTION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_counts"] == {
+    "parse_status": 0,
+    "nonzero_rc": 0,
+    "nonpass_status": 0,
+}, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 1, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "component_validator_row_family_projection_rows_missing_or_invalid"
+    for row in payload["bundle_violations"]
+), payload
+assert "bundle_violation:root_corpus_ordering:component_validator_row_family_projection_rows_missing_or_invalid" in payload["stale_reasons"], payload
+PY
+
+echo "[PASS] protocol root-corpus law bundle probes passed"

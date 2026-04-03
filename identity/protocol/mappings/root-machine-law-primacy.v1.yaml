@@ -1,0 +1,157 @@
+schema_version: 1
+machine_law_family: protocol_root_machine_law_primacy
+machine_law_version: v1
+contract_file: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_machine_law_primacy.py
+probe_script: scripts/ci/run_protocol_root_machine_law_primacy_probes_ci.sh
+common_script: scripts/root_machine_law_primacy_common.py
+status_key: protocol_root_machine_law_primacy_status
+error_codes:
+- IP-RMLP-001
+- IP-RMLP-002
+- IP-RMLP-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Machine-law primacy law'
+  - '## Four primacy commitments'
+  - '## Required primacy anchors'
+  - '## Machine-law primacy proof discipline'
+  - '## Machine-law primacy proof limits'
+  - '## Non-compliant compatibility collapses'
+  - 'The identity protocol must remain machine law first rather than a compatibility shelter or historical backstop.'
+  - 'Machine-law primacy law must also remain machine-readable as separate commitment, anchor, primacy-proof, primacy-limit, and collapse row families rather than one narrative anti-compatibility claim.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Machine-law primacy row-family completeness must stay explicit'
+      - 'Required commitment, anchor, primacy-proof, primacy-limit, and collapse families must remain explicit as separate machine-readable row families.'
+      - 'The machine world must not finalize machine-law primacy legality while required row identity drift remains known only internally.'
+      - README root machine-law primacy completeness discipline must therefore stay
+        congruent with admitted machine-law-primacy-completeness rows rather
+        than becoming a freehand completeness summary.
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root machine-law primacy completeness discipline'
+      - 'Machine-law primacy law is not a soft prose bundle.'
+      - These machine-law-primacy-completeness rules must remain bound to canonical
+        machine-law-primacy-completeness rows rather than drifting into soft
+        summary prose.
+      - '1. required commitment, anchor, primacy-proof, primacy-limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root machine-law primacy completeness boundary'
+      - '1. Machine-law primacy law must remain machine-readable as separate commitment, anchor, primacy-proof, primacy-limit, and collapse row families.'
+      - '4. Protocol legality must not finalize machine-law primacy legality while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root machine-law primacy completeness discipline rendered at protocol root must remain congruent with admitted machine-law-primacy-completeness rows rather than silently authoring an alternate completeness summary.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime machine-law primacy consumption boundary'
+      - '1. Runtime consumes machine-law primacy law as separate commitment, anchor, primacy-proof, primacy-limit, and collapse row families rather than as undifferentiated anti-compatibility prose.'
+      - '4. Runtime must not finalize machine-law primacy legality while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root machine-law primacy completeness discipline as a governed completeness projection bound to admitted machine-law-primacy-completeness rows rather than as a freehand completeness summary.'
+machine_law_primacy_completeness_rows:
+  - order: 1
+    completeness_id: explicit_machine_law_primacy_row_families
+    contract_phrase: 'required commitment, anchor, primacy-proof, primacy-limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - order: 2
+    completeness_id: congruent_machine_law_primacy_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_machine_law_primacy_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_machine_law_primacy_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize machine-law primacy legality while missing or unexpected row identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_machine_law_primacy_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'
+required_commitment_rows:
+  - order: 1
+    commitment_id: law_before_compatibility_shelter
+    contract_heading: '### 1. Law before compatibility shelter'
+    commitment_role: machine_law_first
+  - order: 2
+    commitment_id: governed_success_path_before_convenience
+    contract_heading: '### 2. Governed success path before convenience permissiveness'
+    commitment_role: success_path_admissibility_first
+  - order: 3
+    commitment_id: fail_close_before_silent_swallowing
+    contract_heading: '### 3. Fail-close exposure before silent swallowing'
+    commitment_role: fail_close_before_shelter
+  - order: 4
+    commitment_id: governed_convergence_before_downgrade
+    contract_heading: '### 4. Governed convergence before downgrade laundering'
+    commitment_role: governed_convergence_over_downgrade
+required_anchor_rows:
+  - order: 1
+    anchor_id: machine_law_first
+    contract_phrase: 'machine law first rather than a compatibility shelter or historical backstop;'
+  - order: 2
+    anchor_id: governed_success_path
+    contract_phrase: 'governed current-turn success path rather than convenience-path permissiveness;'
+  - order: 3
+    anchor_id: fail_close_over_projection
+    contract_phrase: 'fail-close exposure of missing or ambiguous truth rather than silent swallowing through compatibility projection;'
+  - order: 4
+    anchor_id: governed_convergence_over_downgrade
+    contract_phrase: 'governed convergence and refreezing rather than residue laundering or protocol downgrade.'
+required_primacy_proof_rows:
+  - order: 1
+    proof_id: frozen_law_primacy_proof
+    contract_heading: '### 1. Frozen-law primacy proof'
+    proof_role: frozen_law_primacy_proof
+  - order: 2
+    proof_id: success_path_demotion_boundary_primacy_proof
+    contract_heading: '### 2. Success-path demotion-boundary proof'
+    proof_role: success_path_demotion_boundary_primacy_proof
+  - order: 3
+    proof_id: fail_close_exposure_primacy_proof
+    contract_heading: '### 3. Fail-close exposure proof'
+    proof_role: fail_close_exposure_primacy_proof
+  - order: 4
+    proof_id: governed_convergence_primacy_proof
+    contract_heading: '### 4. Governed-convergence proof'
+    proof_role: governed_convergence_primacy_proof
+  - order: 5
+    proof_id: runtime_adjudication_non_bypass_primacy_proof
+    contract_heading: '### 5. Runtime-adjudication non-bypass proof'
+    proof_role: runtime_adjudication_non_bypass_primacy_proof
+required_primacy_limit_rows:
+  - order: 1
+    limit_id: frozen_law_not_success_path_demotion_boundary
+    contract_phrase: 'frozen-law primacy proof is not proof of success-path demotion boundary;'
+  - order: 2
+    limit_id: success_path_demotion_not_fail_close_exposure
+    contract_phrase: 'success-path demotion-boundary proof is not proof of fail-close exposure;'
+  - order: 3
+    limit_id: fail_close_not_governed_convergence
+    contract_phrase: 'fail-close exposure proof is not proof of governed convergence;'
+  - order: 4
+    limit_id: governed_convergence_not_runtime_non_bypass
+    contract_phrase: 'governed-convergence proof is not proof of runtime-adjudication non-bypass;'
+  - order: 5
+    limit_id: runtime_non_bypass_not_success_path_reentry
+    contract_phrase: 'runtime-adjudication non-bypass proof is not proof that compatibility or recovery surfaces may re-enter active success-path legality.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: compatibility_shelter_substitution
+    contract_phrase: 'the active protocol is treated as a shelter for lagging residue instead of as the upgrade target.'
+  - order: 2
+    collapse_id: silent_truth_reconstruction
+    contract_phrase: 'missing or ambiguous current-turn truth is rebuilt through compatibility projection, alias bridges, or local familiarity.'
+  - order: 3
+    collapse_id: demoted_surface_reentry
+    contract_phrase: 'migration, import, fixture, diagnostic, or fallback surfaces re-enter active defaults as if demotion did not exist.'
+  - order: 4
+    collapse_id: protocol_downgrade_for_residue
+    contract_phrase: 'shared law is weakened or reopened merely to keep local residue alive.'
+  - order: 5
+    collapse_id: convenience_claims_legality
+    contract_phrase: 'convenience, vividness, or historical familiarity is treated as if it proved active-path legality.'

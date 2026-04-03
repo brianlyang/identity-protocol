@@ -1,0 +1,329 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+from release_cloud_evidence_projection_common import build_release_cloud_evidence_adapter_projection
+from resolve_release_plane_cloud_evidence import resolve_release_plane_runtime_inputs
+from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
+
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+
+ERR_EVIDENCE_MISSING = "IP-RCLOUD-001"
+ERR_VALIDATOR_EXEC_FAILED = "IP-RCLOUD-002"
+ERR_CONDITION_FAILED = "IP-RCLOUD-003"
+SKIP_REASON_MISSING_RELEASE_EVIDENCE = "required_contract_not_applicable_missing_release_evidence"
+
+STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate"}
+SCRIPT_DIR = Path(__file__).resolve().parent
+CLOSURE_VALIDATOR = SCRIPT_DIR / "validate_release_plane_cloud_closure.py"
+
+
+def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    if json_only:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
+    for key in (
+        "release_plane_cloud_evidence_contract_v1",
+        "release_plane_cloud_evidence_contract",
+        "rq_006_release_plane_cloud_evidence_contract_v1",
+    ):
+        node = task.get(key)
+        if isinstance(node, dict):
+            return node
+    return {}
+
+
+def _parse_json(raw: str) -> dict[str, Any]:
+    text = str(raw or "").strip()
+    if not text:
+        return {}
+    try:
+        data = json.loads(text)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        pass
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end <= start:
+        return {}
+    try:
+        data = json.loads(text[start : end + 1])
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _has_release_baseline(
+    *,
+    target_branch: str,
+    release_head_sha: str,
+    workflow_file_sha: str,
+    run_head_sha: str,
+    run_workflow_file_sha: str,
+    run_url: str,
+    checks_json: str,
+) -> bool:
+    return any(
+        (
+            bool(target_branch),
+            bool(release_head_sha),
+            bool(workflow_file_sha),
+            bool(run_head_sha),
+            bool(run_workflow_file_sha),
+            bool(run_url),
+            bool(checks_json),
+        )
+    )
+
+
+def _classify_failure(detail: dict[str, Any]) -> tuple[str, list[str]]:
+    conditions = detail.get("conditions", {})
+    if not isinstance(conditions, dict):
+        return ERR_VALIDATOR_EXEC_FAILED, ["release_plane_validator_result_unparseable"]
+
+    stale_reasons: list[str] = []
+    if not bool(conditions.get("required_gates_run_id_present", False)):
+        stale_reasons.append("release_plane_required_gates_run_id_missing")
+    if not bool(conditions.get("run_url_present", False)):
+        stale_reasons.append("release_plane_run_url_missing")
+
+    required_checks_status = str(conditions.get("required_checks_status", "")).strip().upper()
+    if required_checks_status == "EVIDENCE_MISSING":
+        stale_reasons.append("release_plane_checks_evidence_missing")
+    elif required_checks_status == "EMPTY_SET":
+        stale_reasons.append("release_plane_checks_set_empty")
+    elif required_checks_status == "FAILED":
+        stale_reasons.append("release_plane_checks_failed")
+
+    if not bool(conditions.get("run_head_matches_release_head", False)):
+        stale_reasons.append("release_plane_run_head_mismatch")
+    if not bool(conditions.get("workflow_file_sha_matches", False)):
+        stale_reasons.append("release_plane_workflow_sha_mismatch")
+
+    error_code = (
+        ERR_EVIDENCE_MISSING
+        if any(
+            reason
+            in {
+                "release_plane_required_gates_run_id_missing",
+                "release_plane_run_url_missing",
+                "release_plane_checks_evidence_missing",
+            }
+            for reason in stale_reasons
+        )
+        else ERR_CONDITION_FAILED
+    )
+    return error_code, stale_reasons or ["release_plane_condition_failed"]
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Validate release-plane cloud evidence contract (RQ-006).")
+    ap.add_argument("--catalog", required=True)
+    ap.add_argument("--identity-id", required=True)
+    ap.add_argument("--target-branch", default="")
+    ap.add_argument("--release-head-sha", default="")
+    ap.add_argument("--required-gates-run-id", default="")
+    ap.add_argument("--run-url", default="")
+    ap.add_argument("--workflow-file-sha", default="")
+    ap.add_argument("--run-head-sha", default="")
+    ap.add_argument("--run-workflow-file-sha", default="")
+    ap.add_argument("--checks-json", default="")
+    ap.add_argument("--jobs-json", default="")
+    ap.add_argument("--gh-runs-json", default="")
+    ap.add_argument("--force-required", action="store_true")
+    ap.add_argument(
+        "--operation",
+        choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
+        default="validate",
+    )
+    ap.add_argument("--json-only", action="store_true")
+    args = ap.parse_args()
+
+    catalog_path = Path(args.catalog).expanduser().resolve()
+    if not catalog_path.exists():
+        print(f"[FAIL] catalog not found: {catalog_path}")
+        return 2
+
+    try:
+        pack_path, task_path = resolve_pack_and_task(catalog_path, args.identity_id)
+        task = load_json(task_path)
+    except Exception as exc:
+        print(f"[FAIL] {exc}")
+        return 1
+
+    contract = _select_contract(task)
+    required = contract_required(contract)
+    if args.force_required:
+        required = True
+
+    target_branch = str(args.target_branch or contract.get("target_branch", "")).strip()
+    release_head_sha = str(args.release_head_sha or contract.get("release_head_sha", "")).strip()
+    required_gates_run_id = str(args.required_gates_run_id or contract.get("required_gates_run_id", "")).strip()
+    run_url = str(args.run_url or contract.get("run_url", "")).strip()
+    workflow_file_sha = str(args.workflow_file_sha or contract.get("workflow_file_sha", "")).strip()
+    run_head_sha = str(args.run_head_sha or contract.get("run_head_sha", "")).strip()
+    run_workflow_file_sha = str(args.run_workflow_file_sha or contract.get("run_workflow_file_sha", "")).strip()
+    checks_json = str(args.checks_json or contract.get("checks_json", "")).strip()
+    jobs_json = str(args.jobs_json or contract.get("jobs_json", "")).strip()
+    gh_runs_json = str(args.gh_runs_json or contract.get("gh_runs_json", "")).strip()
+    release_runtime_inputs = resolve_release_plane_runtime_inputs(
+        identity_id=args.identity_id,
+        operation=args.operation,
+        explicit_target_branch=target_branch,
+        explicit_release_head_sha=release_head_sha,
+        explicit_required_gates_run_id=required_gates_run_id,
+        explicit_run_url=run_url,
+        explicit_workflow_file_sha=workflow_file_sha,
+        explicit_run_head_sha=run_head_sha,
+        explicit_run_workflow_file_sha=run_workflow_file_sha,
+        explicit_checks_json=checks_json,
+        explicit_jobs_json=jobs_json,
+        explicit_gh_runs_json=gh_runs_json,
+    )
+    adapter_payload = dict(release_runtime_inputs.get("release_adapter_payload") or {})
+    target_branch = str(release_runtime_inputs.get("target_branch", "") or target_branch).strip()
+    release_head_sha = str(release_runtime_inputs.get("release_head_sha", "") or release_head_sha).strip()
+    required_gates_run_id = str(release_runtime_inputs.get("required_gates_run_id", "") or required_gates_run_id).strip()
+    run_url = str(release_runtime_inputs.get("run_url", "") or run_url).strip()
+    workflow_file_sha = str(release_runtime_inputs.get("workflow_file_sha", "") or workflow_file_sha).strip()
+    run_head_sha = str(release_runtime_inputs.get("run_head_sha", "") or run_head_sha).strip()
+    run_workflow_file_sha = str(
+        release_runtime_inputs.get("run_workflow_file_sha", "") or run_workflow_file_sha
+    ).strip()
+    checks_json = str(release_runtime_inputs.get("checks_json", "") or checks_json).strip()
+    jobs_json = str(release_runtime_inputs.get("jobs_json", "") or jobs_json).strip()
+    gh_runs_json = str(release_runtime_inputs.get("gh_runs_json", "") or gh_runs_json).strip()
+    has_release_baseline = _has_release_baseline(
+        target_branch=target_branch,
+        release_head_sha=release_head_sha,
+        workflow_file_sha=workflow_file_sha,
+        run_head_sha=run_head_sha,
+        run_workflow_file_sha=run_workflow_file_sha,
+        run_url=run_url,
+        checks_json=checks_json,
+    )
+
+    payload: dict[str, Any] = {
+        "identity_id": args.identity_id,
+        "catalog_path": str(catalog_path),
+        "resolved_pack_path": str(pack_path),
+        "task_path": str(task_path),
+        "operation": args.operation,
+        "required_contract": required,
+        "auto_required_signal": bool(required and args.operation in STRICT_OPERATIONS),
+        "producer_readiness": False,
+        "requiredization_current_round_linked": False,
+        "release_plane_cloud_evidence_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "error_code": "",
+        "release_plane_status": "",
+        "conditions": {},
+        "target_branch": target_branch,
+        "release_head_sha": release_head_sha,
+        "required_gates_run_id": required_gates_run_id,
+        "run_url": run_url,
+        "workflow_file_sha": workflow_file_sha,
+        "run_head_sha": run_head_sha,
+        "run_workflow_file_sha": run_workflow_file_sha,
+        "checks_json": checks_json,
+        "jobs_json": jobs_json,
+        "gh_runs_json": gh_runs_json,
+        "evidence_ref": "",
+        "stale_reasons": [],
+    }
+    adapter_projection = build_release_cloud_evidence_adapter_projection(adapter_payload)
+    payload.update(
+        {
+            "release_cloud_evidence_adapter_status": adapter_projection.get("release_cloud_evidence_adapter_status", ""),
+            "release_cloud_evidence_adapter_source_kind": adapter_projection.get("adapter_source_kind", ""),
+            "release_cloud_evidence_adapter_acquisition_mode": adapter_projection.get("adapter_acquisition_mode", ""),
+            "release_cloud_evidence_adapter_fetch_transport": adapter_projection.get("adapter_fetch_transport", ""),
+            "release_cloud_evidence_adapter_local_dev_canonical": adapter_projection.get(
+                "adapter_local_dev_canonical", False
+            ),
+            "release_cloud_evidence_adapter_best_effort_fetch": adapter_projection.get(
+                "adapter_best_effort_fetch", False
+            ),
+            "release_cloud_evidence_adapter_semantic_consumption_mode": adapter_projection.get(
+                "semantic_consumption_mode", ""
+            ),
+            "release_cloud_evidence_adapter_stale_reasons": adapter_projection.get("stale_reasons", []),
+            "adapter_http_status": adapter_projection.get("adapter_http_status", ""),
+            "github_rate_limit_remaining": adapter_projection.get("github_rate_limit_remaining", ""),
+            "github_rate_limit_reset_epoch": adapter_projection.get("github_rate_limit_reset_epoch", ""),
+        }
+    )
+
+    if not required:
+        payload["stale_reasons"] = ["required_contract_disabled_or_missing"]
+        _emit(payload, json_only=args.json_only)
+        return 0
+
+    linked = bool(target_branch and release_head_sha and required_gates_run_id and run_url and workflow_file_sha and run_head_sha and run_workflow_file_sha)
+    payload["requiredization_current_round_linked"] = linked
+    if not has_release_baseline:
+        payload["stale_reasons"] = [SKIP_REASON_MISSING_RELEASE_EVIDENCE]
+        _emit(payload, json_only=args.json_only)
+        return 0
+
+    cmd = [
+        sys.executable,
+        str(CLOSURE_VALIDATOR),
+        "--target-branch",
+        target_branch,
+        "--release-head-sha",
+        release_head_sha,
+        "--required-gates-run-id",
+        required_gates_run_id,
+        "--run-url",
+        run_url,
+        "--workflow-file-sha",
+        workflow_file_sha,
+        "--run-head-sha",
+        run_head_sha,
+        "--run-workflow-file-sha",
+        run_workflow_file_sha,
+    ]
+    if checks_json:
+        cmd += ["--checks-json", checks_json]
+
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    detail = _parse_json(proc.stdout)
+    payload["producer_readiness"] = bool(detail)
+    payload["evidence_ref"] = checks_json or run_url
+    payload["conditions"] = detail.get("conditions", {}) if isinstance(detail.get("conditions"), dict) else {}
+    payload["release_plane_status"] = str(detail.get("release_plane_status", "")).strip()
+    if isinstance(detail.get("required_checks_set"), list):
+        payload["required_checks_set"] = detail.get("required_checks_set")
+
+    if proc.returncode != 0:
+        payload["release_plane_cloud_evidence_status"] = STATUS_FAIL_REQUIRED
+        if not detail:
+            payload["error_code"] = ERR_VALIDATOR_EXEC_FAILED
+            payload["stale_reasons"] = ["release_plane_validator_exec_failed"]
+        else:
+            payload["error_code"], payload["stale_reasons"] = _classify_failure(detail)
+        for reason in payload.get("release_cloud_evidence_adapter_stale_reasons", []):
+            if reason not in payload["stale_reasons"]:
+                payload["stale_reasons"].append(reason)
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    payload["release_plane_cloud_evidence_status"] = STATUS_PASS_REQUIRED
+    _emit(payload, json_only=args.json_only)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

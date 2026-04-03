@@ -39,8 +39,18 @@ python3 scripts/test_identity_discovery_contract.py
 ## 4) Compile runtime brief
 
 ```bash
-python3 scripts/compile_identity_runtime.py
+python3 scripts/identity_creator.py compile \
+  --catalog /path/to/.identity/catalog.local.yaml \
+  --actor-id assistant:codex
 ```
+
+Notes:
+- compile now resolves the active runtime identity from the local runtime catalog plus actor binding / compatibility projection, not from repo fixture defaults
+- generated `identity/runtime/IDENTITY_COMPILED.md` includes the frozen native-chat contract:
+  - `Identity-Context`
+  - `Machine-Verification`
+  - body
+- native chat ordering is human-first (`Identity-Context`) then machine-proof (`Machine-Verification`)
 
 ## 5) Run e2e smoke
 
@@ -53,7 +63,7 @@ bash scripts/e2e_smoke_test.sh
 In consumer repo:
 
 ```bash
-bash scripts/identity/upgrade_and_verify_v1.sh
+bash scripts/protocol_consumer/upgrade_and_verify_v1.sh
 ```
 
 ## 7) Publish protocol changes
@@ -66,3 +76,6 @@ git push origin main
 
 If workflow file push is blocked by OAuth workflow scope, use GitHub MCP write as fallback.
 
+## 8) Activation side effect
+
+`python3 scripts/identity_creator.py activate ...` now recompiles `identity/runtime/IDENTITY_COMPILED.md` at the end of a successful activation so the default Codex `model_instructions_file` stays aligned with the active runtime identity.

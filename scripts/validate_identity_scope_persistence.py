@@ -4,13 +4,14 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from resolve_identity_context import resolve_identity
+from resolve_identity_context import default_local_catalog_path, resolve_identity, resolve_local_catalog_path, resolve_repo_catalog_path
 
 
 RUNTIME_SCOPES = {"REPO", "USER", "ADMIN", "UNKNOWN"}
 
 
 def main() -> int:
+    script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(description="Validate scope persistence policy (runtime vs fixture).")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", default="")
@@ -18,8 +19,9 @@ def main() -> int:
     ap.add_argument("--scope", default="")
     args = ap.parse_args()
 
-    local_catalog = Path(args.catalog).expanduser().resolve() if args.catalog else (Path.home() / ".codex" / "identity" / "catalog.local.yaml")
-    repo_catalog = Path(args.repo_catalog).expanduser().resolve()
+    default_catalog = default_local_catalog_path(start=script_ref)
+    local_catalog = resolve_local_catalog_path(args.catalog, start=script_ref) if args.catalog else default_catalog
+    repo_catalog = resolve_repo_catalog_path(args.repo_catalog, start=script_ref)
 
     try:
         ctx = resolve_identity(

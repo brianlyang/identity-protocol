@@ -1,0 +1,325 @@
+schema_version: 1
+answer_surface_family: protocol_root_operator_answer_surface
+answer_surface_version: v1
+contract_file: identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_operator_answer_surface.py
+probe_script: scripts/ci/run_protocol_root_operator_answer_surface_probes_ci.sh
+common_script: scripts/root_operator_answer_surface_common.py
+status_key: protocol_root_operator_answer_surface_status
+error_codes:
+- IP-ROAS-001
+- IP-ROAS-002
+- IP-ROAS-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+decision_evidence_current_file: identity/protocol/mappings/root-decision-evidence-admissibility.current.yaml
+current_truth_current_file: identity/protocol/mappings/root-current-truth-epistemology.current.yaml
+contract_required_markers:
+- This file remains the authoritative root-domain contract for operator answer-surface
+  law.
+- '## Operator answer-surface law'
+- '## Four answer-surface strata'
+- Operator answer-surface law must also remain machine-readable as separate
+  surface, support-memory, support-limit, answer-claim-alignment,
+  answer-claim-epistemic-alignment, answer-surface-proof,
+  answer-surface-limit, boundary, and collapse row families rather than one
+  narrative answer claim.
+- '## Compression boundary'
+- '## Non-compliant answer-surface collapses'
+- The protocol must not confuse support material, machine terminals, or internal artifacts
+  with the answer surface actually delivered to the operator.
+- '## Lifecycle-aware support-memory discipline'
+- '## Support-memory limits'
+- '## Answer-claim backing alignment'
+- law-grounded answer claim requires law-memory support plus frozen-law decision-evidence
+  proof;
+- realized-effect answer claim requires consumption-memory support plus adjudicated-verdict-closure
+  decision-evidence proof.
+- '## Answer-claim epistemic alignment'
+- law-grounded answer claim requires canonical-source current-truth proof;
+- realized-effect answer claim requires provenance-preserving-derivation current-truth
+  proof.
+- '## Answer-surface proof discipline'
+- '## Answer-surface proof limits'
+anchor_checks:
+- rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+  required_markers:
+  - '### Operator answer-surface row-family completeness must stay explicit'
+  - "Required surface, support-memory, support-limit, answer-claim-alignment,\nanswer-surface-stage, answer-surface-stage-surface,\nanswer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit,\nboundary, and collapse families must remain explicit as separate\nmachine-readable row families."
+  - README root operator answer-surface discipline must therefore stay congruent
+    with admitted answer-surface-stage rows rather than becoming a freehand
+    delivery ladder.
+  - "README root operator answer-surface completeness discipline must therefore stay\ncongruent with admitted operator-answer-surface-completeness rows rather than\nbecoming a freehand completeness summary."
+  - The machine world must not finalize operator answer-surface legality while
+    required row identity drift remains known only internally.
+- rel_path: identity/protocol/README.md
+  required_markers:
+  - '## Root operator answer-surface discipline'
+  - This root operator answer-surface discipline must remain bound to canonical
+    answer-surface-stage rows rather than becoming a freehand delivery ladder.
+  - '`natural_language_collaboration_entry`'
+  - '`current_turn_legality_terminal`'
+  - '## Root operator answer-surface completeness discipline'
+  - Operator answer-surface law is not a soft prose bundle.
+  - 'These operator-answer-surface-completeness rules must remain bound to canonical operator-answer-surface-completeness rows rather than drifting into soft summary prose.'
+  - '1. required surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse rows must remain explicit as separate machine-readable families;'
+- rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+  required_markers:
+  - '## Root operator answer-surface completeness boundary'
+  - '1. Operator answer-surface law must remain machine-readable as separate surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families.'
+  - '4. Protocol legality must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator logic.'
+  - README root operator answer-surface discipline rendered at protocol root must
+    remain congruent with admitted answer-surface-stage rows rather than silently
+    authoring an alternate delivery ladder.
+  - '7. README root operator answer-surface completeness discipline rendered at protocol root must remain congruent with admitted operator-answer-surface-completeness rows rather than silently authoring an alternate completeness summary.'
+- rel_path: identity/protocol/IDENTITY_RUNTIME.md
+  required_markers:
+  - '## Runtime operator answer-surface consumption boundary'
+  - '1. Runtime consumes operator answer-surface law as separate surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families rather than as undifferentiated answer prose.'
+  - '4. Runtime must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator machinery.'
+  - Runtime consumes README root operator answer-surface discipline as a governed
+    stage projection bound to admitted answer-surface-stage rows rather than as
+    a freehand delivery ladder.
+  - '7. Runtime consumes README root operator answer-surface completeness discipline as a governed completeness projection bound to admitted operator-answer-surface-completeness rows rather than as a freehand completeness summary.'
+required_surface_rows:
+- order: 1
+  surface_id: operator_entry
+  contract_heading: '### 1. Operator entry surface'
+  surface_role: natural_language_collaboration_entry
+- order: 2
+  surface_id: stable_instance_answer
+  contract_heading: '### 2. Stable instance answer surface'
+  surface_role: law_compressed_operator_answer
+- order: 3
+  surface_id: supporting_machine_truth
+  contract_heading: '### 3. Supporting machine-truth surface'
+  surface_role: supporting_machine_truth_surface
+- order: 4
+  surface_id: terminal_machine_enforcement
+  contract_heading: '### 4. Terminal machine-enforcement surface'
+  surface_role: current_turn_legality_terminal
+answer_surface_stage_rows:
+- order: 1
+  stage_label: operator entry surface
+  bound_surface_ids:
+  - operator_entry
+  required_markers:
+  - '`natural_language_collaboration_entry`'
+  - natural-language collaboration entry.
+- order: 2
+  stage_label: stable instance answer surface
+  bound_surface_ids:
+  - stable_instance_answer
+  required_markers:
+  - '`law_compressed_operator_answer`'
+  - law-compressed operator answer.
+- order: 3
+  stage_label: supporting machine-truth surface
+  bound_surface_ids:
+  - supporting_machine_truth
+  required_markers:
+  - '`supporting_machine_truth_surface`'
+  - supporting machine-truth surface that may back the answer without replacing
+    it.
+- order: 4
+  stage_label: terminal machine-enforcement surface
+  bound_surface_ids:
+  - terminal_machine_enforcement
+  required_markers:
+  - '`current_turn_legality_terminal`'
+  - current-turn legality terminal that constrains the answer without becoming
+    answer prose itself.
+required_support_memory_rows:
+- order: 1
+  support_id: law_memory_support
+  contract_heading: '### 1. Law-memory support'
+  support_role: law_grounding_support
+- order: 2
+  support_id: discovery_memory_support
+  contract_heading: '### 2. Discovery-memory support'
+  support_role: discovery_grounding_support
+- order: 3
+  support_id: admissibility_memory_support
+  contract_heading: '### 3. Admissibility-memory support'
+  support_role: admissibility_grounding_support
+- order: 4
+  support_id: run_binding_memory_support
+  contract_heading: '### 4. Run-binding-memory support'
+  support_role: run_binding_grounding_support
+- order: 5
+  support_id: consumption_memory_support
+  contract_heading: '### 5. Consumption-memory support'
+  support_role: consumption_grounding_support
+required_support_limit_rows:
+- order: 1
+  limit_id: law_memory_not_legality
+  contract_phrase: law-memory support is not proof of current-turn legality;
+- order: 2
+  limit_id: discovery_memory_not_admissibility
+  contract_phrase: discovery-memory support is not proof of admissibility;
+- order: 3
+  limit_id: admissibility_memory_not_run_binding
+  contract_phrase: admissibility-memory support is not proof of run binding;
+- order: 4
+  limit_id: run_binding_memory_not_consumption
+  contract_phrase: run-binding-memory support is not proof of next-hop consumption;
+- order: 5
+  limit_id: consumption_memory_realized_effect_only
+  contract_phrase: only consumption-memory support may back claims of realized operational
+    effect.
+required_answer_claim_alignment_rows:
+- order: 1
+  claim_id: law_grounded_answer_claim
+  support_id: law_memory_support
+  decision_evidence_proof_id: frozen_law_decision_evidence_proof
+  answer_claim_role: law_grounded_operator_answer_claim
+- order: 2
+  claim_id: canonical_source_answer_claim
+  support_id: discovery_memory_support
+  decision_evidence_proof_id: registry_resolution_decision_evidence_proof
+  answer_claim_role: canonical_source_operator_answer_claim
+- order: 3
+  claim_id: admissibility_answer_claim
+  support_id: admissibility_memory_support
+  decision_evidence_proof_id: validator_verdict_decision_evidence_proof
+  answer_claim_role: admissibility_operator_answer_claim
+- order: 4
+  claim_id: live_bound_status_answer_claim
+  support_id: run_binding_memory_support
+  decision_evidence_proof_id: bound_runtime_decision_evidence_proof
+  answer_claim_role: live_bound_status_operator_answer_claim
+- order: 5
+  claim_id: realized_effect_answer_claim
+  support_id: consumption_memory_support
+  decision_evidence_proof_id: adjudicated_verdict_closure_decision_evidence_proof
+  answer_claim_role: realized_effect_operator_answer_claim
+required_answer_claim_epistemic_alignment_rows:
+- order: 1
+  claim_id: law_grounded_answer_claim
+  current_truth_proof_id: canonical_source_proof
+  claim_epistemic_role: law_grounded_answer_claim_epistemic_alignment
+- order: 2
+  claim_id: canonical_source_answer_claim
+  current_truth_proof_id: governed_resolution_proof
+  claim_epistemic_role: canonical_source_answer_claim_epistemic_alignment
+- order: 3
+  claim_id: admissibility_answer_claim
+  current_truth_proof_id: fail_close_justification_proof
+  claim_epistemic_role: admissibility_answer_claim_epistemic_alignment
+- order: 4
+  claim_id: live_bound_status_answer_claim
+  current_truth_proof_id: present_turn_authority_proof
+  claim_epistemic_role: live_bound_status_answer_claim_epistemic_alignment
+- order: 5
+  claim_id: realized_effect_answer_claim
+  current_truth_proof_id: provenance_preserving_derivation_proof
+  claim_epistemic_role: realized_effect_answer_claim_epistemic_alignment
+required_answer_surface_proof_rows:
+- order: 1
+  proof_id: operator_entry_boundary_proof
+  contract_heading: '### 1. Operator-entry boundary proof'
+  proof_role: operator_entry_boundary_answer_surface_proof
+- order: 2
+  proof_id: law_preserving_compression_proof
+  contract_heading: '### 2. Law-preserving compression proof'
+  proof_role: law_preserving_compression_answer_surface_proof
+- order: 3
+  proof_id: support_surface_confinement_proof
+  contract_heading: '### 3. Support-surface confinement proof'
+  proof_role: support_surface_confinement_answer_surface_proof
+- order: 4
+  proof_id: legality_terminal_preservation_proof
+  contract_heading: '### 4. Legality-terminal preservation proof'
+  proof_role: legality_terminal_preservation_answer_surface_proof
+- order: 5
+  proof_id: realized_effect_answer_backing_proof
+  contract_heading: '### 5. Realized-effect answer-backing proof'
+  proof_role: realized_effect_answer_backing_proof
+required_answer_surface_limit_rows:
+- order: 1
+  limit_id: entry_boundary_not_law_preserving_compression
+  contract_phrase: operator-entry boundary proof is not proof of law-preserving compression;
+- order: 2
+  limit_id: law_preserving_compression_not_support_confinement
+  contract_phrase: law-preserving compression proof is not proof of support-surface confinement;
+- order: 3
+  limit_id: support_confinement_not_legality_terminal_preservation
+  contract_phrase: support-surface confinement proof is not proof of legality-terminal preservation;
+- order: 4
+  limit_id: legality_terminal_not_realized_effect_backing
+  contract_phrase: legality-terminal preservation proof is not proof of realized-effect answer backing;
+- order: 5
+  limit_id: realized_effect_backing_not_runtime_bypass
+  contract_phrase: realized-effect answer-backing proof is not proof that answer prose may bypass current-turn machine adjudication.
+- order: 6
+  limit_id: realized_effect_backing_not_live_bound_status_backing
+  contract_phrase: realized-effect answer-backing proof is not proof of live-bound status backing.
+required_boundary_rows:
+- order: 1
+  boundary_id: operator_memory_burden
+  contract_phrase: the operator should not bear the memory burden of low-level protocol
+    law;
+- order: 2
+  boundary_id: support_not_answer
+  contract_phrase: lower-layer proof may support the answer without replacing the
+    answer surface itself;
+- order: 3
+  boundary_id: compression_without_bypass
+  contract_phrase: operator simplicity must be achieved by law-preserving compression
+    rather than by bypassing machine-law boundaries;
+- order: 4
+  boundary_id: terminality_not_answer_prose
+  contract_phrase: current-turn legality must still terminate in machine-consumed
+    enforcement surfaces rather than in answer prose alone.
+required_collapse_rows:
+- order: 1
+  collapse_id: support_proof_equals_answer
+  contract_phrase: supporting proof is treated as the operator answer itself.
+- order: 2
+  collapse_id: raw_internal_artifact_dumping
+  contract_phrase: internal artifacts or raw protocol burden are dumped directly onto
+    the operator as if dumping were an answer surface.
+- order: 3
+  collapse_id: convenience_overrides_law_compression
+  contract_phrase: operator comfort or local convenience is used to bypass law-preserving
+    compression and enforcement boundaries.
+- order: 4
+  collapse_id: answer_surface_seized_by_terminality
+  contract_phrase: a machine terminal or receipt blob is treated as if it were the
+    operator collaboration surface.
+- order: 5
+  collapse_id: prose_without_machine_truth
+  contract_phrase: fluent answer prose is treated as sufficient despite missing machine-truth
+    backing when such backing is required.
+- order: 6
+  collapse_id: realized_effect_claim_backed_by_earlier_strata
+  contract_phrase: a realized-effect answer claim is treated as sufficiently backed
+    by law-memory, discovery-memory, admissibility-memory, or run-binding-memory
+    support alone.
+- order: 7
+  collapse_id: answer_claim_epistemic_flattening
+  contract_phrase: law-grounded, canonical-source, admissibility, live-bound,
+    and realized-effect answer claims are treated as if one current-truth proof
+    stratum were sufficient for all of them.
+operator_answer_surface_completeness_rows:
+- order: 1
+  completeness_id: explicit_operator_answer_surface_row_families
+  contract_phrase: required surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse rows must remain explicit as separate machine-readable families;
+- order: 2
+  completeness_id: congruent_operator_answer_surface_row_family_totals
+  contract_phrase: expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+- order: 3
+  completeness_id: explicit_operator_answer_surface_row_identity_sets
+  contract_phrase: expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+- order: 4
+  completeness_id: hidden_operator_answer_surface_identity_drift_forbidden
+  contract_phrase: runtime or validator code must not finalize operator answer-surface legality while missing or unexpected row identities remain known only internally;
+- order: 5
+  completeness_id: fail_close_preserves_operator_answer_surface_identity_projection
+  contract_phrase: fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.

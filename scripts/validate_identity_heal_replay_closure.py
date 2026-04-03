@@ -6,9 +6,16 @@ import json
 from pathlib import Path
 from typing import Any
 
+from experience_writeback_closure_projection_common import build_experience_writeback_closure_projection
+from health_report_experience_writeback_projection_common import (
+    HEALTH_REPORT_EXPERIENCE_WRITEBACK_BOUNDARY_COMPANION_FIELDS,
+)
+from runtime_temp_path_common import runtime_temp_root
+
 ERR_MISSING = "IP-HEAL-001"
 ERR_REF_MISMATCH = "IP-HEAL-002"
 ERR_POST_VALIDATE = "IP-HEAL-003"
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 
 
 def _latest_for_identity(report_dir: Path, identity_id: str) -> Path | None:
@@ -32,11 +39,37 @@ def _read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _clean_str(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _closure_projection(
+    doc: dict[str, Any],
+    *,
+    execution_report: str | Path = "",
+) -> dict[str, Any]:
+    return build_experience_writeback_closure_projection(doc, execution_report=execution_report)
+
+
+def _missing_boundary_companion_fields(projection: dict[str, Any]) -> bool:
+    return any(
+        not _clean_str(projection.get(field_name))
+        for field_name in HEALTH_REPORT_EXPERIENCE_WRITEBACK_BOUNDARY_COMPANION_FIELDS
+    )
+
+
+def _boundary_companion_fields_all_pass(projection: dict[str, Any]) -> bool:
+    return all(
+        _clean_str(projection.get(field_name)).upper() == STATUS_PASS_REQUIRED
+        for field_name in HEALTH_REPORT_EXPERIENCE_WRITEBACK_BOUNDARY_COMPANION_FIELDS
+    )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate health->heal->post-validate replay closure refs.")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--heal-report", default="")
-    ap.add_argument("--report-dir", default="/tmp/identity-heal-reports")
+    ap.add_argument("--report-dir", default=str(runtime_temp_root() / "identity-heal-reports"))
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
@@ -105,6 +138,76 @@ def main() -> int:
             error_code = error_code or ERR_MISSING
 
     post_doc: dict[str, Any] = {}
+    health_projection: dict[str, Any] = {}
+    post_projection: dict[str, Any] = {}
+    health_execution_report_ref = ""
+    if health_path and health_path.exists():
+        try:
+            health_doc = _read_json(health_path)
+        except Exception:
+            stale_reasons.append("health_report_json_invalid")
+            error_code = error_code or ERR_MISSING
+            health_doc = {}
+        if health_doc:
+            health_execution_report_ref = _clean_str(health_doc.get("execution_report_ref"))
+            health_projection = _closure_projection(
+                health_doc,
+                execution_report=health_execution_report_ref,
+            )
+            if not health_projection["status"] or not health_projection["validation_status"]:
+                stale_reasons.append("health_report_experience_writeback_projection_missing")
+                error_code = error_code or ERR_REF_MISMATCH
+            if (
+                health_projection.get("validation_status") == "PASS_REQUIRED"
+                and not health_projection.get("report_selected_path")
+            ):
+                stale_reasons.append("health_report_experience_writeback_report_selected_path_missing")
+                error_code = error_code or ERR_REF_MISMATCH
+            if (
+                health_projection.get("validation_status") == "PASS_REQUIRED"
+                and health_execution_report_ref
+                and not bool(
+                    health_projection.get("report_selected_path_matches_execution_report")
+                )
+            ):
+                stale_reasons.append(
+                    "health_report_experience_writeback_selected_path_execution_report_ref_mismatch"
+                )
+                error_code = error_code or ERR_REF_MISMATCH
+            if (
+                health_projection.get("validation_status") == "PASS_REQUIRED"
+                and health_execution_report_ref
+                and not bool(
+                    health_projection.get("report_logical_identity_key_matches_execution_report")
+                )
+            ):
+                stale_reasons.append(
+                    "health_report_experience_writeback_logical_identity_execution_report_ref_mismatch"
+                )
+                error_code = error_code or ERR_REF_MISMATCH
+            if (
+                health_projection.get("validation_status") == "PASS_REQUIRED"
+                and (
+                    not _clean_str(health_projection.get("report_logical_identity_key"))
+                    or not _clean_str(health_projection.get("report_selection_mode"))
+                    or not _clean_str(health_projection.get("report_selected_authority_class"))
+                    or not _clean_str(health_projection.get("report_pointer_resolution_mode"))
+                )
+            ):
+                stale_reasons.append("health_report_experience_writeback_authority_projection_missing")
+                error_code = error_code or ERR_REF_MISMATCH
+            if (
+                health_projection.get("validation_status") == STATUS_PASS_REQUIRED
+                and _missing_boundary_companion_fields(health_projection)
+            ):
+                stale_reasons.append("health_report_experience_writeback_boundary_projection_missing")
+                error_code = error_code or ERR_REF_MISMATCH
+            if (
+                health_projection.get("validation_status") == STATUS_PASS_REQUIRED
+                and not _boundary_companion_fields_all_pass(health_projection)
+            ):
+                stale_reasons.append("health_report_experience_writeback_boundary_bridge_not_green")
+                error_code = error_code or ERR_REF_MISMATCH
     if post_path and post_path.exists():
         try:
             post_doc = _read_json(post_path)
@@ -113,8 +216,44 @@ def main() -> int:
             error_code = error_code or ERR_POST_VALIDATE
     if post_doc:
         post_status = str(post_doc.get("overall_status", "")).strip().upper()
+        post_projection = _closure_projection(post_doc)
+        if not post_projection["status"] or not post_projection["validation_status"]:
+            stale_reasons.append("post_validate_experience_writeback_projection_missing")
+            error_code = error_code or ERR_POST_VALIDATE
+        if (
+            post_projection.get("validation_status") == "PASS_REQUIRED"
+            and not _clean_str(post_projection.get("report_selected_path"))
+        ):
+            stale_reasons.append("post_validate_experience_writeback_report_selected_path_missing")
+            error_code = error_code or ERR_POST_VALIDATE
+        if (
+            post_projection.get("validation_status") == "PASS_REQUIRED"
+            and (
+                not _clean_str(post_projection.get("report_logical_identity_key"))
+                or not _clean_str(post_projection.get("report_selection_mode"))
+                or not _clean_str(post_projection.get("report_selected_authority_class"))
+                or not _clean_str(post_projection.get("report_pointer_resolution_mode"))
+            )
+        ):
+            stale_reasons.append("post_validate_experience_writeback_authority_projection_missing")
+            error_code = error_code or ERR_POST_VALIDATE
+        if (
+            post_projection.get("validation_status") == STATUS_PASS_REQUIRED
+            and _missing_boundary_companion_fields(post_projection)
+        ):
+            stale_reasons.append("post_validate_experience_writeback_boundary_projection_missing")
+            error_code = error_code or ERR_POST_VALIDATE
+        if (
+            post_projection.get("validation_status") == STATUS_PASS_REQUIRED
+            and not _boundary_companion_fields_all_pass(post_projection)
+        ):
+            stale_reasons.append("post_validate_experience_writeback_boundary_bridge_not_green")
+            error_code = error_code or ERR_POST_VALIDATE
         if post_status == "FAIL":
             stale_reasons.append("post_validate_health_still_fail")
+            error_code = error_code or ERR_POST_VALIDATE
+        if post_projection.get("status") == "FAIL" or post_projection.get("validation_status") == "FAIL_REQUIRED":
+            stale_reasons.append("post_validate_experience_writeback_still_fail")
             error_code = error_code or ERR_POST_VALIDATE
         # actor-risk closure requires no FAIL rows in actor-risk quartet
         for field in (
@@ -135,6 +274,83 @@ def main() -> int:
         "health_report_ref": health_ref,
         "heal_report_ref": heal_ref,
         "post_validate_ref": post_ref,
+        "health_report_experience_writeback_closure_status": health_projection.get("status", ""),
+        "health_report_experience_writeback_validation_status": health_projection.get("validation_status", ""),
+        "health_report_execution_report_ref": health_execution_report_ref,
+        "health_report_experience_writeback_report_selected_path": health_projection.get(
+            "report_selected_path", ""
+        ),
+        "health_report_experience_writeback_report_logical_identity_key": health_projection.get(
+            "report_logical_identity_key", ""
+        ),
+        "health_report_experience_writeback_selected_path_matches_execution_report_ref": bool(
+            health_projection.get("report_selected_path_matches_execution_report")
+        ),
+        "health_report_experience_writeback_logical_identity_matches_execution_report_ref": bool(
+            health_projection.get("report_logical_identity_key_matches_execution_report")
+        ),
+        "health_report_experience_writeback_report_selection_mode": health_projection.get(
+            "report_selection_mode", ""
+        ),
+        "health_report_experience_writeback_report_selected_authority_class": health_projection.get(
+            "report_selected_authority_class", ""
+        ),
+        "health_report_experience_writeback_report_pointer_resolution_mode": health_projection.get(
+            "report_pointer_resolution_mode", ""
+        ),
+        "health_report_experience_writeback_writeback_status": health_projection.get(
+            "writeback_status", ""
+        ),
+        "health_report_experience_writeback_writeback_rule_id": health_projection.get(
+            "writeback_rule_id", ""
+        ),
+        "health_report_experience_writeback_boundary_repair_lane_status": health_projection.get(
+            "boundary_repair_lane_status", ""
+        ),
+        "health_report_experience_writeback_boundary_post_execution_obligation_status": health_projection.get(
+            "boundary_post_execution_obligation_status", ""
+        ),
+        "health_report_experience_writeback_boundary_writeback_continuity_status": health_projection.get(
+            "boundary_writeback_continuity_status", ""
+        ),
+        "health_report_experience_writeback_boundary_bridge_status": health_projection.get(
+            "boundary_bridge_status", ""
+        ),
+        "post_validate_experience_writeback_closure_status": post_projection.get("status", ""),
+        "post_validate_experience_writeback_validation_status": post_projection.get("validation_status", ""),
+        "post_validate_experience_writeback_report_selected_path": post_projection.get(
+            "report_selected_path", ""
+        ),
+        "post_validate_experience_writeback_report_logical_identity_key": post_projection.get(
+            "report_logical_identity_key", ""
+        ),
+        "post_validate_experience_writeback_report_selection_mode": post_projection.get(
+            "report_selection_mode", ""
+        ),
+        "post_validate_experience_writeback_report_selected_authority_class": post_projection.get(
+            "report_selected_authority_class", ""
+        ),
+        "post_validate_experience_writeback_report_pointer_resolution_mode": post_projection.get(
+            "report_pointer_resolution_mode", ""
+        ),
+        "post_validate_experience_writeback_writeback_status": post_projection.get(
+            "writeback_status", ""
+        ),
+        "post_validate_experience_writeback_writeback_rule_id": post_projection.get(
+            "writeback_rule_id", ""
+        ),
+        "post_validate_experience_writeback_boundary_repair_lane_status": post_projection.get(
+            "boundary_repair_lane_status", ""
+        ),
+        "post_validate_experience_writeback_boundary_post_execution_obligation_status": post_projection.get(
+            "boundary_post_execution_obligation_status", ""
+        ),
+        "post_validate_experience_writeback_boundary_writeback_continuity_status": post_projection.get(
+            "boundary_writeback_continuity_status", ""
+        ),
+        "post_validate_experience_writeback_boundary_bridge_status": post_projection.get(
+            "boundary_bridge_status", ""
+        ),
         "heal_replay_closure_status": "PASS_REQUIRED" if ok else "FAIL_REQUIRED",
         "error_code": "" if ok else error_code,
         "stale_reasons": stale_reasons,
@@ -144,4 +360,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

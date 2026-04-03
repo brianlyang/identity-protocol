@@ -1,0 +1,284 @@
+schema_version: 1
+invariants_version: "v1.6"
+last_updated_utc: "2026-03-12T00:45:00Z"
+invariants:
+  bundle_mapping_parity:
+    mode: freeze
+    baseline_missing_rows: 0
+    reduction_plan_file: identity/protocol/mappings/bundle-parity-reduction-plan.v1.6.2.yaml
+  contract_binding_alias:
+    current_file: identity/protocol/mappings/contract-binding.current.yaml
+    required_fields:
+      - _meta
+    required_row_fields:
+      - requirement_id
+      - validator_ids
+      - gate_surfaces
+      - governance_anchor
+      - review_anchor
+    forbid_versioned_reference:
+      regex: contract-binding\\.v[0-9]+\\.[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  github_control_plane_offload_alias:
+    current_file: identity/protocol/mappings/github-control-plane-offload.current.yaml
+    required_fields:
+      - offload_plan_version
+      - platform_offload_controls
+      - repo_retained_semantic_contracts
+    required_control_ids:
+      - cp-gh-001
+      - cp-gh-002
+      - cp-gh-003
+      - cp-gh-004
+      - cp-gh-005
+      - cp-gh-006
+    required_retained_requirement_keys:
+      - asb16-rq-019
+      - asb16-rq-034
+      - asb16-rq-035
+    forbid_versioned_reference:
+      regex: github-control-plane-offload\\.v[0-9]+\\.[0-9]+\\.[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  plugin_control_plane_alias:
+    plugin_registry_current_file: identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
+    provider_profiles_current_file: identity/protocol/plugins/PROVIDER_PROFILES.current.yaml
+    failclose_governance_current_file: identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+    plugin_doc_control_current_file: identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml
+    forbid_versioned_reference:
+      regex: (PLUGIN_REGISTRY|PROVIDER_PROFILES|FAILCLOSE_PLUGIN_GOVERNANCE|PLUGIN_DOC_CONTROL)\\.v[0-9]+\\.[0-9]+\\.[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  layer_targeted_gate_profile_alias:
+    current_file: identity/protocol/mappings/layer-targeted-gate-profile.current.yaml
+    required_fields:
+      - profile_version
+      - default_profile
+      - strict_no_trim_operations
+      - profiles
+    forbid_versioned_reference:
+      regex: layer-targeted-gate-profile\\.v[0-9]+\\.[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  stream_doc_registry_alias:
+    current_file: identity/protocol/mappings/stream-doc-registry.current.yaml
+    required_fields:
+      - stream_docs
+      - mandatory_static_docs
+      - stream_doc_required_alias_refs
+    forbid_versioned_reference:
+      regex: stream-doc-registry\\.v[0-9]+\\.[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  doc_evidence_allowlist_alias:
+    current_file: identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+    required_fields:
+      - version
+      - strict_docs
+    forbid_versioned_reference:
+      regex: doc-evidence-allowlist\\.v[0-9]+\\.[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  control_plane_budget_alias:
+    current_file: identity/protocol/mappings/control-plane-budget.current.yaml
+    required_fields:
+      - budgets
+    forbid_versioned_reference:
+      regex: control-plane-budget\\.v[0-9]+\\.[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  control_plane_status_alias:
+    current_file: identity/protocol/mappings/control-plane-status.current.yaml
+    required_fields:
+      - schema_version
+      - status_version
+      - checks
+      - control_plane_status
+      - promotion_ready
+    forbid_versioned_reference:
+      regex: control-plane-status\\.v[0-9]+\\.[0-9]+\\.json
+      surfaces:
+        - scripts
+        - .github/workflows
+  root_corpus_registry_alias:
+    current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+    required_fields:
+      - registry_family
+      - registry_version
+      - root_dir
+      - validator_script
+      - probe_script
+      - registered_top_level_entries
+    forbid_versioned_reference:
+      regex: root-corpus-registry\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  root_corpus_ordering_alias:
+    current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+    required_fields:
+      - ordering_family
+      - ordering_version
+      - root_dir
+      - registry_current_file
+      - root_index_entry
+      - source_order
+      - reading_order
+    forbid_versioned_reference:
+      regex: root-corpus-ordering\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  root_corpus_authority_alias:
+    current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+    required_fields:
+      - authority_family
+      - authority_version
+      - root_dir
+      - registry_current_file
+      - ordering_current_file
+      - authority_class_profiles
+      - entry_authority_projection
+    forbid_versioned_reference:
+      regex: root-corpus-authority\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  root_constitutional_spine_alias:
+    current_file: identity/protocol/mappings/root-constitutional-spine.current.yaml
+    required_fields:
+      - spine_family
+      - spine_version
+      - root_dir
+      - registry_current_file
+      - ordering_current_file
+      - authority_current_file
+      - question_routing_current_file
+      - required_constitutional_entry_rows
+      - required_spine_bridge_rows
+    forbid_versioned_reference:
+      regex: root-constitutional-spine\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  root_corpus_question_routing_alias:
+    current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+    required_fields:
+      - routing_family
+      - routing_version
+      - root_dir
+      - registry_current_file
+      - ordering_current_file
+      - authority_current_file
+      - question_class_profiles
+      - entry_question_projection
+      - adjudication_redirect
+    forbid_versioned_reference:
+      regex: root-corpus-question-routing\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  root_corpus_derivation_alias:
+    current_file: identity/protocol/mappings/root-corpus-derivation.current.yaml
+    required_fields:
+      - derivation_family
+      - derivation_version
+      - root_dir
+      - registry_current_file
+      - ordering_current_file
+      - authority_current_file
+      - question_routing_current_file
+      - derivation_class_profiles
+    forbid_versioned_reference:
+      regex: root-corpus-derivation\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  root_corpus_transition_alias:
+    current_file: identity/protocol/mappings/root-corpus-transition.current.yaml
+    required_fields:
+      - transition_family
+      - transition_version
+      - root_dir
+      - registry_current_file
+      - derivation_current_file
+      - question_routing_current_file
+      - surface_class_profiles
+    forbid_versioned_reference:
+      regex: root-corpus-transition\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  root_corpus_gateway_admissibility_alias:
+    current_file: identity/protocol/mappings/root-corpus-gateway-admissibility.current.yaml
+    required_fields:
+      - admissibility_family
+      - admissibility_version
+      - root_dir
+      - registry_current_file
+      - transition_current_file
+      - authority_current_file
+      - question_routing_current_file
+      - gateway_profiles
+    forbid_versioned_reference:
+      regex: root-corpus-gateway-admissibility\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  root_machine_registry_completeness_alias:
+    current_file: identity/protocol/mappings/root-machine-registry-completeness.current.yaml
+    required_fields:
+      - completeness_family
+      - completeness_version
+      - registry_directory_rel_path
+      - registry_current_file
+      - validator_script
+      - probe_script
+      - common_script
+      - status_key
+      - required_descriptor_fields
+      - required_descriptor_field_modes
+      - required_repo_rel_path_patterns
+      - anchor_checks
+    forbid_versioned_reference:
+      regex: root-machine-registry-completeness\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  root_corpus_precedence_alias:
+    current_file: identity/protocol/mappings/root-corpus-precedence.current.yaml
+    required_fields:
+      - precedence_family
+      - precedence_version
+      - root_dir
+      - ordering_current_file
+      - authority_current_file
+      - question_routing_current_file
+      - transition_current_file
+      - gateway_admissibility_current_file
+      - precedence_profiles
+    forbid_versioned_reference:
+      regex: root-corpus-precedence\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  governed_subdomain_doc_control_registry_alias:
+    current_file: identity/protocol/mappings/governed-subdomain-doc-control.current.yaml
+    required_fields:
+      - registry_family
+      - registry_version
+      - last_updated_utc
+      - subdomains
+    forbid_versioned_reference:
+      regex: governed-subdomain-doc-control\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows

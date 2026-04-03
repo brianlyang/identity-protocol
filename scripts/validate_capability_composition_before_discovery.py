@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import argparse
-import glob
 import json
 from pathlib import Path
 from typing import Any
 
+from capability_fit_roundtable_common import resolve_fit_matrix_artifact_path
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -34,33 +34,6 @@ def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
         if isinstance(c, dict):
             return c
     return {}
-
-
-def _resolve_fit_matrix(pack_path: Path, report: str, pattern: str) -> Path | None:
-    if report.strip():
-        p = Path(report).expanduser().resolve()
-        return p if p.exists() and p.is_file() else None
-
-    raw = str(pattern or "").strip() or "runtime/protocol-feedback/optimization/capability-fit-matrix-*.json"
-    p = Path(raw).expanduser()
-    has_magic = any(ch in raw for ch in ["*", "?", "["])
-    hits: list[Path] = []
-    if p.is_absolute():
-        if has_magic:
-            hits = [Path(x).expanduser().resolve() for x in glob.glob(str(p))]
-        elif p.exists():
-            hits = [p.resolve()]
-    else:
-        preferred = sorted(pack_path.glob(raw))
-        if preferred:
-            hits = [x.resolve() for x in preferred]
-        else:
-            hits = [x.resolve() for x in Path(".").glob(raw)]
-    hits = [x for x in hits if x.exists() and x.is_file()]
-    if not hits:
-        return None
-    hits.sort(key=lambda x: x.stat().st_mtime)
-    return hits[-1]
 
 
 def main() -> int:
@@ -112,7 +85,11 @@ def main() -> int:
         return 0
 
     pattern = str(contract.get("fit_matrix_path_pattern", "")).strip()
-    fit_path = _resolve_fit_matrix(pack_path, args.fit_matrix, pattern)
+    fit_path = resolve_fit_matrix_artifact_path(
+        pack_root=pack_path,
+        explicit=args.fit_matrix,
+        pattern=pattern,
+    )
     if fit_path is None:
         payload["compose_before_discovery_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_DECISION_MISSING

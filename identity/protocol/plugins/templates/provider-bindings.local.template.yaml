@@ -1,0 +1,15 @@
+version: v1.6.2
+contract_id: provider_bindings_template_contract_v1
+description: >
+  Instance-side minimal binding template. Keep only non-secret pointers.
+  Secrets must stay in env/vault and must not be written into repo/runtime files.
+
+bindings:
+  - plugin_id: multimodal-vision-enforcement
+    provider_profile_id: glm46v_vision_prod
+    credential_ref: env:GLM_API_KEY
+    enabled: false
+  - plugin_id: multimodal-vision-enforcement
+    provider_profile_id: openai_vision_prod
+    credential_ref: env:OPENAI_API_KEY
+    enabled: false

@@ -12,7 +12,7 @@ import yaml
 
 
 def _repo_runtime_metrics_path(repo_root: Path, identity_id: str) -> Path:
-    return repo_root / ".codex" / "identity" / "runtime" / identity_id / "metrics" / f"{identity_id}-route-quality.json"
+    return repo_root / ".codex" / ".identity" / "runtime" / identity_id / "metrics" / f"{identity_id}-route-quality.json"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -35,6 +35,14 @@ def _is_within(path: Path, root: Path) -> bool:
         return True
     except Exception:
         return False
+
+
+def _is_project_identity_runtime_path(path: Path, repo_root: Path) -> bool:
+    try:
+        rel = path.resolve().relative_to(repo_root.resolve())
+    except Exception:
+        return False
+    return bool(rel.parts) and rel.parts[0] == ".identity"
 
 
 def _resolve_pack_and_task(catalog_path: Path, identity_id: str) -> tuple[Path, Path]:
@@ -64,22 +72,44 @@ def _pct(n: int, d: int) -> float:
     return round((n / d) * 100.0, 2)
 
 
-def _resolve_log_files(pattern: str) -> list[Path]:
+def _resolve_log_files(pattern: str, *, pack_root: Path, identity_id: str) -> list[Path]:
     expanded = os.path.expanduser(pattern)
     if os.path.isabs(expanded):
         return [Path(p).expanduser().resolve() for p in sorted(glob(expanded))]
-    return [p.resolve() for p in sorted(Path(".").glob(expanded))]
+
+    raw = str(pattern or "").strip()
+    candidates: list[str] = [raw]
+    local_prefix = f"identity/runtime/local/{identity_id}/"
+    mapped = ""
+    if raw.startswith(local_prefix):
+        mapped = str((pack_root / "runtime" / raw[len(local_prefix) :]).as_posix())
+    elif raw.startswith("identity/runtime/"):
+        mapped = str((pack_root / "runtime" / raw[len("identity/runtime/") :]).as_posix())
+    elif raw.startswith("runtime/"):
+        mapped = str((pack_root / raw).as_posix())
+    if mapped and mapped not in candidates:
+        candidates.insert(0, mapped)
+
+    for candidate in candidates:
+        c = os.path.expanduser(candidate)
+        if os.path.isabs(c):
+            rows = [Path(p).expanduser().resolve() for p in sorted(glob(c))]
+        else:
+            rows = [p.resolve() for p in sorted(Path(".").glob(c))]
+        if rows:
+            return rows
+    return []
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Export route quality metrics from handoff production logs")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--out", default="")
     ap.add_argument(
         "--allow-repo-runtime-fallback",
         action="store_true",
-        help="explicitly allow fallback output under <repo>/.codex/identity/runtime for fixture/debug only",
+        help="explicitly allow fallback output under <repo>/.codex/.identity/runtime for fixture/debug only",
     )
     args = ap.parse_args()
 
@@ -92,7 +122,7 @@ def main() -> int:
         print("[FAIL] agent_handoff_contract.handoff_log_path_pattern missing")
         return 1
 
-    files = _resolve_log_files(pattern)
+    files = _resolve_log_files(pattern, pack_root=pack_path, identity_id=args.identity_id)
     if not files:
         print(f"[FAIL] no handoff logs for metrics: pattern={pattern}")
         return 1
@@ -169,7 +199,9 @@ def main() -> int:
         else:
             pack_runtime_out = pack_path / "runtime" / "metrics" / f"{args.identity_id}-route-quality.json"
             if _is_within(pack_runtime_out, repo_root):
-                if args.allow_repo_runtime_fallback:
+                if _is_project_identity_runtime_path(pack_runtime_out, repo_root):
+                    out = pack_runtime_out
+                elif args.allow_repo_runtime_fallback:
                     out = _repo_runtime_metrics_path(repo_root, args.identity_id)
                 else:
                     print(
@@ -181,7 +213,12 @@ def main() -> int:
                     return 1
             else:
                 out = pack_runtime_out
-    if _is_within(out, Path.cwd().resolve()) and not args.allow_repo_runtime_fallback:
+    repo_root = Path.cwd().resolve()
+    if (
+        _is_within(out, repo_root)
+        and not args.allow_repo_runtime_fallback
+        and not _is_project_identity_runtime_path(out, repo_root)
+    ):
         print(
             "[FAIL] IP-PATH-001 metrics output inside repository is blocked by default; "
             "use IDENTITY_RUNTIME_OUTPUT_ROOT / --out, or explicit --allow-repo-runtime-fallback for debug only."

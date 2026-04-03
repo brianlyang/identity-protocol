@@ -2,12 +2,23 @@
 from __future__ import annotations
 
 import argparse
-import glob
 import json
 from pathlib import Path
 from typing import Any
 
-import yaml
+from strict_live_evidence_resolution_common import (
+    STATUS_FAIL_REQUIRED,
+    STATUS_PASS_REQUIRED,
+    apply_strict_live_required_gate,
+    canonicalize_strict_live_contract_paths,
+    derive_strict_live_evidence_projection,
+    derive_strict_live_operational_projection,
+    emit_payload,
+    resolve_preferred_strict_live_report,
+    resolve_strict_live_contract_path,
+    resolve_strict_live_glob_paths,
+    resolve_strict_live_pack_task,
+)
 
 REQ_KEYS = [
     "required",
@@ -18,17 +29,13 @@ REQ_KEYS = [
     "promote_requires_replay_pass",
     "sample_report_path_pattern",
 ]
+STATUS_FIELD = "experience_feedback_status"
+ERR_TASK = "IP-EXPFB-001"
+ERR_REPORT = "IP-EXPFB-002"
 
 
 def _protocol_root() -> Path:
     return Path(__file__).resolve().parents[1]
-
-
-def _load_yaml(path: Path) -> dict[str, Any]:
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(data, dict):
-        raise ValueError(f"YAML root must be object: {path}")
-    return data
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -36,30 +43,8 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
-    catalog = _load_yaml(catalog_path)
-    identities = catalog.get("identities") or []
-    target = next((x for x in identities if str((x or {}).get("id", "")).strip() == identity_id), None)
-    if not target:
-        raise FileNotFoundError(f"identity id not found in catalog: {identity_id}")
-    catalog_dir = catalog_path.expanduser().resolve().parent
-    protocol_root = _protocol_root().resolve()
-    pack_path = str((target or {}).get("pack_path", "")).strip()
-    if pack_path:
-        raw_pack = Path(pack_path).expanduser()
-        candidate_packs: list[Path] = []
-        if raw_pack.is_absolute():
-            candidate_packs.append(raw_pack.resolve())
-        else:
-            candidate_packs.append((catalog_dir / raw_pack).resolve())
-            candidate_packs.append((protocol_root / raw_pack).resolve())
-        for pack in candidate_packs:
-            p = (pack / "CURRENT_TASK.json").resolve()
-            if p.exists():
-                return p
-    legacy = _protocol_root() / "identity" / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
-    raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
+    _, task_path = resolve_strict_live_pack_task(catalog_path, identity_id)
+    return task_path
 
 
 def _validate_rulebook(path: Path, req_fields: list[str], label: str) -> int:
@@ -88,50 +73,122 @@ def _validate_rulebook(path: Path, req_fields: list[str], label: str) -> int:
 
 
 def _resolve_contract_path(raw: str, *, pack_root: Path, protocol_root: Path) -> Path:
-    text = str(raw or "").strip()
-    if not text:
-        return Path()
-    p = Path(text).expanduser()
-    if p.is_absolute():
-        return p.resolve()
-    pack_candidate = (pack_root / p).resolve()
-    if pack_candidate.exists():
-        return pack_candidate
-    protocol_candidate = (protocol_root / p).resolve()
-    if protocol_candidate.exists():
-        return protocol_candidate
-    # deterministic fail-path: prefer pack-root anchored interpretation
-    return pack_candidate
+    del protocol_root
+    return resolve_strict_live_contract_path(
+        raw,
+        pack_root=pack_root,
+        identity_id=pack_root.name,
+    )
 
 
 def _glob_paths(pattern: str, *, pack_root: Path, protocol_root: Path) -> list[Path]:
-    raw = str(pattern or "").strip()
-    if not raw:
-        return []
-    p = Path(raw).expanduser()
-    has_magic = any(ch in raw for ch in ["*", "?", "["])
-    if p.is_absolute():
-        if has_magic:
-            return sorted(Path(x).resolve() for x in glob.glob(str(p)))
-        return [p.resolve()] if p.exists() else []
-    preferred = sorted(pack_root.glob(raw))
-    if preferred:
-        return preferred
-    return sorted(protocol_root.glob(raw))
+    del protocol_root
+    return resolve_strict_live_glob_paths(
+        pattern,
+        pack_root=pack_root,
+        identity_id=pack_root.name,
+    )
+
+
+def _build_payload(
+    *,
+    identity_id: str,
+    task_path: Path | None,
+    pack_root: Path | None,
+    contract_doc: dict[str, Any] | None,
+    report_path: Path | None,
+    report_doc: dict[str, Any] | None,
+    selection_meta: dict[str, Any] | None,
+    status: str,
+    stale_reasons: list[str],
+    error_code: str,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "identity_id": identity_id,
+        "task_path": str(task_path) if task_path is not None else "",
+        STATUS_FIELD: status,
+        "error_code": error_code,
+    }
+    if pack_root is not None:
+        if isinstance(selection_meta, dict):
+            payload.update(
+                {
+                    "report_selection_mode": str(selection_meta.get("report_selection_mode", "")).strip() or "missing",
+                    "live_candidate_paths": list(selection_meta.get("live_candidate_paths") or []),
+                    "live_candidate_selected_path": str(selection_meta.get("live_candidate_selected_path", "")).strip(),
+                }
+            )
+        evidence_projection = derive_strict_live_evidence_projection(
+            pack_root=pack_root,
+            contract_doc=contract_doc if isinstance(contract_doc, dict) else {},
+            selected_report_path=report_path,
+            report_doc=report_doc if isinstance(report_doc, dict) else {},
+        )
+        payload.update(evidence_projection)
+        payload.update(
+            derive_strict_live_operational_projection(
+                semantic_status=status,
+                evidence_projection=payload,
+            )
+        )
+    else:
+        payload.update(
+            {
+                "selected_report_path": str(report_path) if report_path is not None else "",
+                "current_run_pointer": "",
+                "current_run_report_path": "",
+                "current_run_id": "",
+                "report_selection_mode": "missing",
+                "live_candidate_paths": [],
+                "live_candidate_selected_path": "",
+                "evidence_origin": "missing",
+                "report_freshness_status": STATUS_FAIL_REQUIRED,
+                "run_id_binding_status": STATUS_FAIL_REQUIRED,
+                "strict_live_proof_status": STATUS_FAIL_REQUIRED,
+                "selected_report_run_ids": [],
+                "selected_report_age_seconds": None,
+            }
+        )
+        payload.update(
+            derive_strict_live_operational_projection(
+                semantic_status=status,
+                evidence_projection=payload,
+            )
+        )
+    payload["stale_reasons"] = sorted(
+        set([str(item).strip() for item in stale_reasons if str(item).strip()] + list(payload.pop("stale_reasons", [])))
+    )
+    return payload
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate experience feedback contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
     try:
         task_path = _resolve_current_task(Path(args.catalog), args.identity_id)
     except Exception as e:
-        print(f"[FAIL] {e}")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=None,
+            pack_root=None,
+            contract_doc=None,
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=[str(e)],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print(f"[FAIL] {e}")
         return 1
 
     print(f"[INFO] validate experience feedback for identity: {args.identity_id}")
@@ -141,17 +198,68 @@ def main() -> int:
 
     task = _load_json(task_path)
     c = task.get("experience_feedback_contract") or {}
+    if isinstance(c, dict):
+        c = canonicalize_strict_live_contract_paths(
+            c,
+            pack_root=pack_root,
+            identity_id=args.identity_id,
+        )
     if not isinstance(c, dict) or not c:
-        print("[FAIL] missing experience_feedback_contract")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc={},
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["missing_experience_feedback_contract"],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] missing experience_feedback_contract")
         return 1
 
     missing = [k for k in REQ_KEYS if k not in c]
     if missing:
-        print(f"[FAIL] experience_feedback_contract missing fields: {missing}")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=[f"experience_feedback_contract_missing_fields:{','.join(missing)}"],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print(f"[FAIL] experience_feedback_contract missing fields: {missing}")
         return 1
 
     if c.get("required") is not True:
-        print("[FAIL] experience_feedback_contract.required must be true")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["experience_feedback_contract_not_required"],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] experience_feedback_contract.required must be true")
         return 1
 
     req_fields = c.get("required_fields") or []
@@ -195,14 +303,53 @@ def main() -> int:
         )
         if files:
             report_path = files[-1]
+    selection_meta = resolve_preferred_strict_live_report(
+        pack_root=pack_root,
+        contract_doc=c,
+        fallback_report_path=report_path,
+        explicit_report_path=Path(args.report).expanduser().resolve() if args.report else None,
+    )
+    selected_report_path = selection_meta.get("selected_report_path")
+    if isinstance(selected_report_path, Path):
+        report_path = selected_report_path
     if not report_path.exists():
-        print(f"[FAIL] missing experience feedback sample report: {report_path}")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=report_path,
+            report_doc=None,
+            selection_meta=selection_meta,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["experience_feedback_report_missing"],
+            error_code=ERR_REPORT,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print(f"[FAIL] missing experience feedback sample report: {report_path}")
         return 1
 
     report = _load_json(report_path)
     all_updates = (report.get("positive_updates") or []) + (report.get("negative_updates") or [])
     if not all_updates:
-        print("[FAIL] sample report requires positive_updates or negative_updates")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=report_path,
+            report_doc=report,
+            selection_meta=selection_meta,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["experience_feedback_updates_missing"],
+            error_code=ERR_REPORT,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] sample report requires positive_updates or negative_updates")
         return 1
 
     for i, u in enumerate(all_updates):
@@ -254,6 +401,48 @@ def main() -> int:
                 return 1
         print("[OK] experience self-test passed")
 
+    status = STATUS_PASS_REQUIRED if rc == 0 else STATUS_FAIL_REQUIRED
+    payload = _build_payload(
+        identity_id=args.identity_id,
+        task_path=task_path,
+        pack_root=pack_root,
+        contract_doc=c,
+        report_path=report_path,
+        report_doc=report,
+        selection_meta=selection_meta,
+        status=status,
+        stale_reasons=[] if rc == 0 else ["experience_feedback_contract_validation_failed"],
+        error_code="" if rc == 0 else ERR_TASK,
+    )
+    payload = apply_strict_live_required_gate(
+        payload,
+        contract_doc=c,
+        status_field=STATUS_FIELD,
+        strict_live_error_code=ERR_REPORT,
+    )
+    if rc:
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        return 1
+
+    if str(payload.get(STATUS_FIELD, "")).strip().upper() != STATUS_PASS_REQUIRED:
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] strict-live current-run evidence required but unproven for experience feedback")
+        return 1
+
+    if args.json_only:
+        emit_payload(payload, json_only=True)
+        return 0
+
+    print(
+        "[INFO] strict-live projection: "
+        f"evidence_origin={payload['evidence_origin']} "
+        f"report_freshness_status={payload['report_freshness_status']} "
+        f"run_id_binding_status={payload['run_id_binding_status']} "
+        f"strict_live_proof_status={payload['strict_live_proof_status']}"
+    )
     print("Experience feedback contract validation PASSED")
     return 0
 

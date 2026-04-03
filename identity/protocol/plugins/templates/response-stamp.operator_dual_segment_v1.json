@@ -1,0 +1,38 @@
+{
+  "template_id": "operator_dual_segment_v1",
+  "version": "v1",
+  "format": "structured_block",
+  "description": "Shared operator envelope for visible display headstamp plus machine-verification projection.",
+  "display_segment": {
+    "label": "Display-Headstamp",
+    "source": "external_stamp",
+    "required_prefix": "Identity-Context: "
+  },
+  "machine_segment": {
+    "label": "Machine-Verification",
+    "required_fields": [
+      "verification_source",
+      "display_headstamp_identity_id",
+      "authoritative_identity_id",
+      "headstamp_consistency_status"
+    ],
+    "recommended_field_order": [
+      "verification_source",
+      "display_headstamp_identity_id",
+      "authoritative_identity_id",
+      "headstamp_consistency_status",
+      "headstamp_consistency_mode",
+      "headstamp_consistency_reason",
+      "surface_class",
+      "native_attestation_wiring_capability",
+      "closure_blocker_scope",
+      "current_chat_surface_native_machine_attested",
+      "current_surface_native_machine_attested",
+      "output_governance_mode",
+      "control_lane_attestation_status",
+      "post_check_blocker_status",
+      "next_hop_admission_status",
+      "next_hop_admission_reason"
+    ]
+  }
+}

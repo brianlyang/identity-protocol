@@ -1,0 +1,202 @@
+schema_version: 1
+error_family: protocol_root_error_terminality
+error_version: v1
+contract_file: identity/protocol/ERROR_TERMINALITY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_error_terminality.py
+probe_script: scripts/ci/run_protocol_root_error_terminality_probes_ci.sh
+common_script: scripts/root_error_terminality_common.py
+status_key: protocol_root_error_terminality_status
+error_codes:
+- IP-ERT-001
+- IP-ERT-002
+- IP-ERT-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Error terminality law'
+  - Error-terminality law must also remain machine-readable as separate error-class,
+    differentiation, proof, limit, and collapse row families rather than one
+    narrative terminality claim.
+  - '## Seven error classes'
+  - '## Required error differentiations'
+  - '## Error-terminality proof discipline'
+  - '## Error-terminality proof limits'
+  - '## Non-compliant error collapses'
+  - 'Only lawfully classified errors may fail-close, redirect, or remain non-blocking in current-turn execution.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Error-terminality row-family completeness must stay explicit'
+      - Required error-class, differentiation, proof, limit, and collapse families
+        must remain explicit as separate machine-readable row families.
+      - README root error-terminality completeness discipline must therefore stay
+        congruent with admitted error-terminality-completeness rows rather than
+        becoming a freehand completeness summary.
+      - The machine world must not finalize error-terminality legality while required
+        row identity drift remains known only internally.
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root error-terminality completeness discipline'
+      - Error-terminality law is not a soft prose bundle.
+      - These error-terminality-completeness rules must remain bound to canonical
+        error-terminality-completeness rows rather than drifting into soft
+        summary prose.
+      - '1. required error-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root error-terminality completeness boundary'
+      - '1. Error-terminality law must remain machine-readable as separate error-class, differentiation, proof, limit, and collapse row families.'
+      - '4. Protocol legality must not finalize error-terminality truth while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root error-terminality completeness discipline rendered at protocol root must remain congruent with admitted error-terminality-completeness rows rather than silently authoring an alternate completeness summary.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime error-terminality consumption boundary'
+      - '1. Runtime consumes error-terminality law as separate error-class, differentiation, proof, limit, and collapse row families rather than as undifferentiated terminality prose.'
+      - '4. Runtime must not finalize error-terminality legality while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root error-terminality completeness discipline as a governed completeness projection bound to admitted error-terminality-completeness rows rather than as a freehand completeness summary.'
+error_terminality_completeness_rows:
+  - order: 1
+    completeness_id: explicit_error_terminality_row_families
+    contract_phrase: required error-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;
+  - order: 2
+    completeness_id: congruent_error_terminality_row_family_totals
+    contract_phrase: expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+  - order: 3
+    completeness_id: explicit_error_terminality_row_identity_sets
+    contract_phrase: expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+  - order: 4
+    completeness_id: hidden_error_terminality_identity_drift_forbidden
+    contract_phrase: runtime or validator code must not finalize error-terminality truth while missing or unexpected row identities remain known only internally;
+  - order: 5
+    completeness_id: fail_close_preserves_error_terminality_identity_projection
+    contract_phrase: fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+required_error_class_rows:
+  - order: 1
+    error_class_id: frozen_error_definition
+    contract_heading: '### 1. Frozen error definition'
+    error_role: frozen_error_definition
+  - order: 2
+    error_class_id: fail_close_legality_error
+    contract_heading: '### 2. Fail-close legality error'
+    error_role: fail_close_legality_error
+  - order: 3
+    error_class_id: binding_integrity_error
+    contract_heading: '### 3. Binding-integrity error'
+    error_role: binding_integrity_error
+  - order: 4
+    error_class_id: active_path_contamination_error
+    contract_heading: '### 4. Active-path contamination error'
+    error_role: active_path_contamination_error
+  - order: 5
+    error_class_id: governed_recovery_redirect_error
+    contract_heading: '### 5. Governed recovery-redirect error'
+    error_role: governed_recovery_redirect_error
+  - order: 6
+    error_class_id: non_blocking_observation_error
+    contract_heading: '### 6. Non-blocking observation error'
+    error_role: non_blocking_observation_error
+  - order: 7
+    error_class_id: demoted_support_or_explanatory_error_material
+    contract_heading: '### 7. Demoted support or explanatory error material'
+    error_role: demoted_support_or_explanatory_error_material
+required_differentiation_rows:
+  - order: 1
+    differentiation_id: frozen_vs_live_legality_error
+    contract_phrase: 'frozen law-defined error is separated from live fail-close legality error;'
+  - order: 2
+    differentiation_id: legality_vs_binding_error
+    contract_phrase: 'fail-close legality error is separated from binding-integrity error;'
+  - order: 3
+    differentiation_id: binding_vs_contamination_error
+    contract_phrase: 'binding-integrity error is separated from active-path contamination error;'
+  - order: 4
+    differentiation_id: contamination_vs_recovery_redirect_error
+    contract_phrase: 'active-path contamination error is separated from governed recovery-redirect error;'
+  - order: 5
+    differentiation_id: recovery_redirect_vs_non_blocking_observation
+    contract_phrase: 'governed recovery-redirect error is separated from non-blocking observation error;'
+  - order: 6
+    differentiation_id: observation_vs_explanatory_material
+    contract_phrase: 'non-blocking observation error is separated from demoted support or explanatory error material;'
+  - order: 7
+    differentiation_id: warning_tone_vs_terminality_classification
+    contract_phrase: 'visible warning tone or local urgency is separated from lawful error terminality classification.'
+required_error_terminality_proof_rows:
+  - order: 1
+    proof_id: frozen_definition_error_terminality_proof
+    contract_heading: '### 1. Frozen-definition error-terminality proof'
+    proof_role: frozen_definition_error_terminality_proof
+  - order: 2
+    proof_id: fail_close_legality_error_terminality_proof
+    contract_heading: '### 2. Fail-close-legality error-terminality proof'
+    proof_role: fail_close_legality_error_terminality_proof
+  - order: 3
+    proof_id: binding_integrity_error_terminality_proof
+    contract_heading: '### 3. Binding-integrity error-terminality proof'
+    proof_role: binding_integrity_error_terminality_proof
+  - order: 4
+    proof_id: active_path_contamination_error_terminality_proof
+    contract_heading: '### 4. Active-path-contamination error-terminality proof'
+    proof_role: active_path_contamination_error_terminality_proof
+  - order: 5
+    proof_id: recovery_redirect_error_terminality_proof
+    contract_heading: '### 5. Recovery-redirect error-terminality proof'
+    proof_role: recovery_redirect_error_terminality_proof
+  - order: 6
+    proof_id: non_blocking_observation_error_terminality_proof
+    contract_heading: '### 6. Non-blocking-observation error-terminality proof'
+    proof_role: non_blocking_observation_error_terminality_proof
+  - order: 7
+    proof_id: support_explanatory_demotion_error_terminality_proof
+    contract_heading: '### 7. Support/explanatory-demotion error-terminality proof'
+    proof_role: support_explanatory_demotion_error_terminality_proof
+required_error_terminality_limit_rows:
+  - order: 1
+    limit_id: frozen_definition_not_fail_close_legality
+    contract_phrase: 'frozen-definition error-terminality proof is not proof of fail-close legality;'
+  - order: 2
+    limit_id: fail_close_legality_not_binding_integrity
+    contract_phrase: 'fail-close-legality error-terminality proof is not proof of binding integrity failure;'
+  - order: 3
+    limit_id: binding_integrity_not_active_path_contamination
+    contract_phrase: 'binding-integrity error-terminality proof is not proof of active-path contamination;'
+  - order: 4
+    limit_id: active_path_contamination_not_recovery_redirect
+    contract_phrase: 'active-path-contamination error-terminality proof is not proof of governed recovery redirect;'
+  - order: 5
+    limit_id: recovery_redirect_not_non_blocking_observation
+    contract_phrase: 'recovery-redirect error-terminality proof is not proof of non-blocking observation scope;'
+  - order: 6
+    limit_id: non_blocking_observation_not_support_explanatory_demotion
+    contract_phrase: 'non-blocking-observation error-terminality proof is not proof of support or explanatory demotion;'
+  - order: 7
+    limit_id: support_explanatory_demotion_not_lawful_active_turn
+    contract_phrase: 'support/explanatory-demotion error-terminality proof is not proof that the present turn remained lawfully active.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: defined_error_as_live_terminal_error
+    contract_phrase: 'a law-defined or declared error class is treated as if it were already a live current-turn terminal error.'
+  - order: 2
+    collapse_id: legality_blocker_as_warning
+    contract_phrase: 'a contradiction, missing canonical truth, or admissibility blocker is treated as if it were only a warning or soft suggestion.'
+  - order: 3
+    collapse_id: binding_mismatch_as_active_progress
+    contract_phrase: 'a run, thread, identity, path, or receipt mismatch is treated as if active execution may continue unchanged.'
+  - order: 4
+    collapse_id: contamination_blocker_as_normal_execution
+    contract_phrase: 'contamination of the active path by support, compatibility, recovery, replay, diagnostics, sample, or demoted material is treated as normal active execution.'
+  - order: 5
+    collapse_id: recovery_redirect_as_success_continuation
+    contract_phrase: 'a governed recovery or redirect condition is treated as if the active success path may continue or complete.'
+  - order: 6
+    collapse_id: observation_or_explanatory_material_as_terminal_authority
+    contract_phrase: 'a non-blocking observation or explanatory artifact is treated as if it were terminal machine error authority.'
+  - order: 7
+    collapse_id: local_convenience_as_error_demotion
+    contract_phrase: 'convenience, impatience, or local familiarity is treated as if it could lawfully demote a fail-close error.'

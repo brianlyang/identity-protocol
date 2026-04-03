@@ -1,0 +1,199 @@
+schema_version: 1
+ontology_family: protocol_root_machine_world_ontology
+ontology_version: v1
+contract_file: identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_machine_world_ontology.py
+probe_script: scripts/ci/run_protocol_root_machine_world_ontology_probes_ci.sh
+common_script: scripts/root_machine_world_ontology_common.py
+status_key: protocol_root_machine_world_ontology_status
+error_codes:
+- IP-RMWO-001
+- IP-RMWO-002
+- IP-RMWO-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Machine-world ontology law'
+  - '## Four ontology strata'
+  - '## Required ontology objects'
+  - '## Machine-world ontology proof discipline'
+  - '## Machine-world ontology proof limits'
+  - '## Non-compliant ontology collapses'
+  - 'The protocol must first define what objects are allowed to exist in the machine world, what each object is, and what it is not.'
+  - 'Machine-world ontology law must also remain machine-readable as separate strata, object, ontology-proof, ontology-limit, and collapse row families rather than one narrative naming claim.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Machine-world ontology row-family completeness must stay explicit'
+      - 'Required strata, object, ontology-proof, ontology-limit, and collapse families must remain explicit as separate machine-readable row families.'
+      - 'The machine world must not finalize machine-world ontology legality while required row identity drift remains known only internally.'
+      - README root machine-world ontology completeness discipline must therefore
+        stay congruent with admitted machine-world-ontology-completeness rows
+        rather than becoming a freehand completeness summary.
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root machine-world ontology completeness discipline'
+      - 'Machine-world ontology law is not a soft prose bundle.'
+      - These machine-world-ontology-completeness rules must remain bound to
+        canonical machine-world-ontology-completeness rows rather than drifting
+        into soft summary prose.
+      - '1. required strata, object, ontology-proof, ontology-limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root machine-world ontology completeness boundary'
+      - '1. Machine-world ontology law must remain machine-readable as separate strata, object, ontology-proof, ontology-limit, and collapse row families.'
+      - '4. Protocol legality must not finalize machine-world ontology legality while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root machine-world ontology completeness discipline rendered at protocol root must remain congruent with admitted machine-world-ontology-completeness rows rather than silently authoring an alternate completeness summary.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime machine-world ontology consumption boundary'
+      - '1. Runtime consumes machine-world ontology law as separate strata, object, ontology-proof, ontology-limit, and collapse row families rather than as undifferentiated naming prose.'
+      - '4. Runtime must not finalize machine-world ontology legality while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root machine-world ontology completeness discipline as a governed completeness projection bound to admitted machine-world-ontology-completeness rows rather than as a freehand completeness summary.'
+machine_world_ontology_completeness_rows:
+  - order: 1
+    completeness_id: explicit_machine_world_ontology_row_families
+    contract_phrase: 'required strata, object, ontology-proof, ontology-limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - order: 2
+    completeness_id: congruent_machine_world_ontology_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_machine_world_ontology_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_machine_world_ontology_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize machine-world ontology legality while missing or unexpected row identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_machine_world_ontology_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'
+required_strata_rows:
+  - order: 1
+    stratum_id: identity_resolution_objects
+    contract_heading: '### 1. Identity-resolution objects'
+    stratum_role: identity_resolution_object_stratum
+  - order: 2
+    stratum_id: authority_execution_objects
+    contract_heading: '### 2. Authority and execution-boundary objects'
+    stratum_role: authority_execution_object_stratum
+  - order: 3
+    stratum_id: continuity_retention_objects
+    contract_heading: '### 3. Continuity and retention objects'
+    stratum_role: continuity_retention_object_stratum
+  - order: 4
+    stratum_id: feedback_gate_verdict_objects
+    contract_heading: '### 4. Feedback, gate, and verdict objects'
+    stratum_role: feedback_gate_verdict_object_stratum
+required_object_rows:
+  - order: 1
+    object_id: identity_id
+    contract_phrase: '`identity_id` is the stable identity-resolution key rather than a prompt nickname or narrative persona label.'
+  - order: 2
+    object_id: scope
+    contract_phrase: '`scope` is the resolved operating scope rather than a free-form situational impression.'
+  - order: 3
+    object_id: work_layer
+    contract_phrase: '`work_layer` is the active execution layer rather than a vague locality intuition.'
+  - order: 4
+    object_id: source_layer
+    contract_phrase: '`source_layer` is the authority-bearing source layer rather than a convenience alias.'
+  - order: 5
+    object_id: catalog_path
+    contract_phrase: '`catalog_path` is the canonical identity catalog source rather than a guessed filesystem memory.'
+  - order: 6
+    object_id: pack_path
+    contract_phrase: '`pack_path` is the canonical resolved pack location rather than a repo fixture substitute.'
+  - order: 7
+    object_id: actor_session_tuple
+    contract_phrase: 'actor / session tuple is the machine-attested speaking/runtime tuple rather than a narrative self-claim.'
+  - order: 8
+    object_id: launcher_surface
+    contract_phrase: 'launcher surface is the governed execution-entry surface rather than filename discovery by habit.'
+  - order: 9
+    object_id: current_turn_authoritative_truth
+    contract_phrase: 'current-turn authoritative truth is the present-turn admissible authority rather than the latest visible artifact.'
+  - order: 10
+    object_id: canonical_state
+    contract_phrase: 'canonical state is the governed state object rather than an arbitrary local snapshot.'
+  - order: 11
+    object_id: canonical_receipt
+    contract_phrase: 'canonical receipt is the governed execution/admission receipt rather than any artifact that merely looks recent.'
+  - order: 12
+    object_id: canonical_artifact_family
+    contract_phrase: 'canonical artifact family is the governed output family rather than an undifferentiated memory bucket.'
+  - order: 13
+    object_id: continuity_brief
+    contract_phrase: 'continuity brief is the governed re-entry object rather than raw transcript persistence.'
+  - order: 14
+    object_id: dialogue_retention_current_thread
+    contract_phrase: 'dialogue-retention current-thread is the thread-scoped continuity object rather than global memory.'
+  - order: 15
+    object_id: protocol_feedback_lane
+    contract_phrase: 'protocol-feedback lane is the governed feedback object rather than free-form commentary.'
+  - order: 16
+    object_id: required_gate_bundle
+    contract_phrase: 'required gate bundle is the machine admission bundle rather than an informal checklist.'
+  - order: 17
+    object_id: three_plane_verdict
+    contract_phrase: 'three-plane verdict is the governed cross-plane verdict object rather than a prose summary.'
+required_ontology_proof_rows:
+  - order: 1
+    proof_id: canonical_object_definition_proof
+    contract_heading: '### 1. Canonical-object-definition proof'
+    proof_role: canonical_object_definition_ontology_proof
+  - order: 2
+    proof_id: stratum_boundary_preservation_proof
+    contract_heading: '### 2. Stratum-boundary preservation proof'
+    proof_role: stratum_boundary_preservation_ontology_proof
+  - order: 3
+    proof_id: authority_location_proof
+    contract_heading: '### 3. Authority-location proof'
+    proof_role: authority_location_ontology_proof
+  - order: 4
+    proof_id: lifecycle_position_proof
+    contract_heading: '### 4. Lifecycle-position proof'
+    proof_role: lifecycle_position_ontology_proof
+  - order: 5
+    proof_id: memory_family_non_collapse_proof
+    contract_heading: '### 5. Memory-family non-collapse proof'
+    proof_role: memory_family_non_collapse_ontology_proof
+required_ontology_limit_rows:
+  - order: 1
+    limit_id: canonical_definition_not_stratum_boundary
+    contract_phrase: 'canonical-object-definition proof is not proof of stratum-boundary preservation;'
+  - order: 2
+    limit_id: stratum_boundary_not_authority_location
+    contract_phrase: 'stratum-boundary preservation proof is not proof of authority location;'
+  - order: 3
+    limit_id: authority_location_not_lifecycle_position
+    contract_phrase: 'authority-location proof is not proof of lifecycle position;'
+  - order: 4
+    limit_id: lifecycle_position_not_memory_family_non_collapse
+    contract_phrase: 'lifecycle-position proof is not proof of memory-family non-collapse;'
+  - order: 5
+    limit_id: memory_family_non_collapse_not_runtime_bypass
+    contract_phrase: 'memory-family non-collapse proof is not proof that an object may bypass current-turn runtime adjudication.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: term_meaning_borrowing
+    contract_phrase: 'terms borrow meaning from each other as if object boundaries were optional.'
+  - order: 2
+    collapse_id: arbitrary_path_drift
+    contract_phrase: 'paths drift arbitrarily and are treated as if path-bearing objects did not need canonical meaning.'
+  - order: 3
+    collapse_id: latest_as_current
+    contract_phrase: 'the latest visible artifact is treated as if it were automatically current-turn authority.'
+  - order: 4
+    collapse_id: summary_as_truth
+    contract_phrase: 'summary or projection is treated as if it were truth itself.'
+  - order: 5
+    collapse_id: history_as_authority
+    contract_phrase: 'history is treated as if it were present authority.'
+  - order: 6
+    collapse_id: memory_as_vague_bucket
+    contract_phrase: '`memory` becomes a vague bucket that swallows multiple distinct object families and boundaries.'

@@ -1,0 +1,215 @@
+schema_version: control_plane_lane_registry.v1
+contract_id: control_plane_role_binding_overlay_hardening
+classification: existing_surface_alignment
+receipt_schema_version: control_plane_receipt.v1
+active_lane_id: control_plane_role_binding_overlay_hardening
+owner_binding_file: identity/protocol/mappings/control-plane-owner-binding.current.yaml
+authoritative_checkout:
+  binding_mode: cwd_must_equal_repo_root
+  git_top_level_mode: must_equal_repo_root
+  active_registry_pointer: identity/protocol/mappings/control-plane-lane-registry.v1.yaml
+  execution_workspace_policy: fail_close_before_success_if_unbound
+canonical_runtime_tuple_policy:
+  concrete_tuple_literals_allowed: false
+  forbidden_literals:
+    - concrete session_id
+    - concrete run:* token
+    - concrete actor_id in reusable execution templates
+    - concrete executor identity in runtime-resolved command templates
+  allowed_literal_exception_surfaces:
+    - runtime_evidence_surfaces
+    - actor_session_store
+    - runtime_reports
+    - ci_probe_fixtures
+    - docs_examples
+lanes:
+  - lane_id: control_plane_lane_registration_transaction_bootstrap
+    classification: existing_surface_alignment
+    status: closure_done
+    active: false
+    execution_mode: split_roles
+    writer_role: executor
+    read_only_roles:
+      - architect
+      - auditor
+      - office
+    exact_fixed_write_set:
+      - identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md
+      - identity/protocol/mappings/control-plane-lane-registry.current.yaml
+      - identity/protocol/mappings/control-plane-lane-registry.v1.yaml
+      - scripts/control_plane_lane_registry_common.py
+      - scripts/control_plane_lane_render.py
+      - scripts/validate_identity_control_plane_bootstrap_mvp.py
+      - scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh
+    read_only_input_surfaces: []
+    validator_command: TMPDIR=$PWD/.tmp python3 scripts/validate_identity_control_plane_bootstrap_mvp.py --json-only
+    probe_command: TMPDIR=$PWD/.tmp bash scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh
+    validator_expected_status: PASS_REQUIRED
+    probe_expected_status: PASS
+    warn_preservation_policy: none_required
+    expected_terminal_status: closure_done
+    admitted_delta_only:
+      - control_plane_lane_registration_transaction_only
+    fail_close_token: control_plane_lane_registration_transaction_bootstrap_not_machine_authoritative
+    blocker_id: registration_transaction_execution_context
+    next_role: auditor
+    handoff_required: true
+    post_commit_acceptance_mode: authoritative_checkout_commit_resolution
+    forbidden_rewrite_markers:
+      - runtime_tuple_literal_pollution
+      - divergent_execution_workspace_success
+      - stage_outside_fixed_write_set
+    scope_lock_allowed_actions:
+      - run_validator
+      - run_probe
+      - stage_and_commit
+      - emit_blocker_receipt
+      - emit_fail_close_token
+    receipt_schema_version: control_plane_receipt.v1
+  - lane_id: control_plane_lane_registration_transaction_only
+    classification: existing_surface_alignment
+    status: closure_done
+    active: false
+    execution_mode: split_roles
+    writer_role: executor
+    read_only_roles:
+      - architect
+      - auditor
+      - office
+    exact_fixed_write_set:
+      - identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md
+      - identity/protocol/mappings/control-plane-lane-registry.current.yaml
+      - identity/protocol/mappings/control-plane-lane-registry.v1.yaml
+      - scripts/control_plane_lane_registry_common.py
+      - scripts/control_plane_lane_render.py
+      - scripts/validate_identity_control_plane_bootstrap_mvp.py
+      - scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh
+    read_only_input_surfaces: []
+    validator_command: TMPDIR=$PWD/.tmp python3 scripts/validate_identity_control_plane_bootstrap_mvp.py --json-only
+    probe_command: TMPDIR=$PWD/.tmp bash scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh
+    validator_expected_status: PASS_REQUIRED
+    probe_expected_status: PASS
+    warn_preservation_policy: none_required
+    expected_terminal_status: closure_done
+    admitted_delta_only:
+      - control_plane_protocol_feedback_instance_state_runner_hardening
+    fail_close_token: control_plane_lane_registration_transaction_only_not_machine_authoritative
+    blocker_id: target_lane_machine_registration
+    next_role: auditor
+    handoff_required: true
+    post_commit_acceptance_mode: authoritative_checkout_commit_resolution
+    forbidden_rewrite_markers:
+      - runtime_tuple_literal_pollution
+      - divergent_execution_workspace_success
+      - stage_outside_fixed_write_set
+    scope_lock_allowed_actions:
+      - run_validator
+      - run_probe
+      - stage_and_commit
+      - emit_blocker_receipt
+      - emit_fail_close_token
+    receipt_schema_version: control_plane_receipt.v1
+  - lane_id: control_plane_protocol_feedback_instance_state_runner_hardening
+    classification: existing_surface_alignment
+    status: closure_done
+    active: false
+    execution_mode: split_roles
+    writer_role: executor
+    read_only_roles:
+      - architect
+      - auditor
+      - office
+    exact_fixed_write_set:
+      - identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md
+      - identity/protocol/mappings/control-plane-lane-registry.v1.yaml
+      - scripts/control_plane_lane_registry_common.py
+      - scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py
+      - scripts/ci/run_control_plane_protocol_feedback_instance_state_runner_hardening_probes_ci.sh
+    read_only_input_surfaces: []
+    validator_command: TMPDIR=$PWD/.tmp python3 scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py --json-only
+    probe_command: TMPDIR=$PWD/.tmp bash scripts/ci/run_control_plane_protocol_feedback_instance_state_runner_hardening_probes_ci.sh
+    validator_expected_status: PASS_REQUIRED
+    probe_expected_status: PASS
+    warn_preservation_policy: none_required
+    expected_terminal_status: closure_done
+    admitted_delta_only:
+      - protocol_feedback_instance_state_runner_contract_only
+      - protocol_feedback_validator_probe_surface_reuse_only
+      - protocol_feedback_live_closure_state_admissibility_only
+      - stage_equality_target_redefined_to_machine_authoritative_necessity_subset_only
+      - no_absolute_host_path_literals_in_target_executable_surfaces
+      - no_reopen_of_control_plane_lane_registration_transaction_only
+    fail_close_token: control_plane_protocol_feedback_instance_state_runner_hardening_execution_contract_not_machine_authoritative
+    blocker_id: protocol_feedback_instance_state_runner_execution_contract
+    next_role: auditor
+    handoff_required: true
+    post_commit_acceptance_mode: authoritative_checkout_commit_resolution
+    forbidden_rewrite_markers:
+      - runtime_tuple_literal_pollution
+      - divergent_execution_workspace_success
+      - stage_outside_fixed_write_set
+    scope_lock_allowed_actions:
+      - run_validator
+      - run_probe
+      - stage_and_commit
+      - emit_blocker_receipt
+      - emit_fail_close_token
+    receipt_schema_version: control_plane_receipt.v1
+  - lane_id: control_plane_role_binding_overlay_hardening
+    classification: existing_surface_alignment
+    status: closure_done
+    active: true
+    execution_mode: split_roles
+    writer_role: executor
+    read_only_roles:
+      - architect
+      - auditor
+      - office
+    exact_fixed_write_set:
+      - identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md
+      - identity/protocol/mappings/control-plane-lane-registry.current.yaml
+      - identity/protocol/mappings/control-plane-lane-registry.v1.yaml
+      - identity/protocol/mappings/control-plane-owner-binding.current.yaml
+      - identity/protocol/mappings/control-plane-owner-binding.v1.yaml
+      - docs/review/protocol-remediation-audit-ledger-v1.6.x-post-closure-handoff-projection-drift.md
+      - scripts/control_plane_lane_registry_common.py
+      - scripts/control_plane_lane_render.py
+      - scripts/control_plane_lane_next.py
+      - scripts/control_plane_lane_ingest.py
+      - scripts/control_plane_lane_stream_guard.py
+      - scripts/validate_identity_control_plane_bootstrap_mvp.py
+      - scripts/ci/run_identity_control_plane_bootstrap_mvp_probes_ci.sh
+      - scripts/validate_control_plane_protocol_feedback_instance_state_runner_hardening.py
+      - scripts/ci/run_control_plane_protocol_feedback_instance_state_runner_hardening_probes_ci.sh
+      - scripts/validate_control_plane_role_binding_overlay_hardening.py
+      - scripts/ci/run_control_plane_role_binding_overlay_hardening_probes_ci.sh
+    read_only_input_surfaces: []
+    validator_command: TMPDIR=$PWD/.tmp python3 scripts/validate_control_plane_role_binding_overlay_hardening.py --json-only
+    probe_command: TMPDIR=$PWD/.tmp bash scripts/ci/run_control_plane_role_binding_overlay_hardening_probes_ci.sh
+    validator_expected_status: PASS_REQUIRED
+    probe_expected_status: PASS
+    warn_preservation_policy: none_required
+    expected_terminal_status: closure_done
+    admitted_delta_only:
+      - canonical_role_law_owner_binding_overlay_split_only
+      - owner_binding_overlay_current_and_versioned_surface_only
+      - route_next_role_semantics_identity_resolution_split_only
+      - historical_control_plane_lane_compatibility_probe_only
+      - canonical_registry_deconcretizes_role_bindings_only
+      - no_reopen_of_control_plane_protocol_feedback_instance_state_runner_hardening
+    fail_close_token: control_plane_role_binding_overlay_hardening_not_machine_authoritative
+    blocker_id: control_plane_role_law_owner_binding_split_contract
+    next_role: auditor
+    handoff_required: true
+    post_commit_acceptance_mode: authoritative_checkout_commit_resolution
+    forbidden_rewrite_markers:
+      - runtime_tuple_literal_pollution
+      - divergent_execution_workspace_success
+      - stage_outside_fixed_write_set
+    scope_lock_allowed_actions:
+      - run_validator
+      - run_probe
+      - stage_and_commit
+      - emit_blocker_receipt
+      - emit_fail_close_token
+    receipt_schema_version: control_plane_receipt.v1

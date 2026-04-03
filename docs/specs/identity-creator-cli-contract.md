@@ -67,7 +67,8 @@ Compile concise runtime brief from active identity.
 
 ```bash
 identity-creator compile \
-  --catalog identity/catalog/identities.yaml \
+  --catalog .identity/catalog.local.yaml \
+  --actor-id assistant:codex \
   --output identity/runtime/IDENTITY_COMPILED.md
 ```
 
@@ -75,18 +76,24 @@ Output constraints:
 - concise
 - includes hard guardrails
 - includes current objective and state
+- resolves identity from runtime local catalog + actor binding / compatibility projection rather than repo fixture default
+- includes the native-chat headstamp freeze:
+  - `Identity-Context`
+  - `Machine-Verification`
+  - body
+- preserves fail-close wording for withheld/conflict states
 
 ### 5) `activate`
 
 Switch active identity and recompile runtime brief.
 
 ```bash
-identity-creator activate --id store-manager
+identity-creator activate --identity-id base-repo-closure-orchestrator --actor-id assistant:codex --session-id run:<stable-session-id>
 ```
 
 Effects:
-- update `default_identity` (or runtime active pointer)
-- compile runtime brief
+- update runtime active pointer / actor session binding
+- compile runtime brief using the resolved active runtime identity
 - append activation log (optional)
 
 ## Exit codes

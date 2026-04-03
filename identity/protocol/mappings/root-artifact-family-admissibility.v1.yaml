@@ -1,0 +1,186 @@
+schema_version: 1
+artifact_family_admissibility_family: protocol_root_artifact_family_admissibility
+artifact_family_admissibility_version: v1
+contract_file: identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_artifact_family_admissibility.py
+probe_script: scripts/ci/run_protocol_root_artifact_family_admissibility_probes_ci.sh
+common_script: scripts/root_artifact_family_admissibility_common.py
+status_key: protocol_root_artifact_family_admissibility_status
+error_codes:
+- IP-AFA-001
+- IP-AFA-002
+- IP-AFA-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Artifact-family admissibility law'
+  - Artifact-family admissibility law must also remain machine-readable as separate
+    family-admission-class, differentiation, proof, limit, and collapse row
+    families rather than one narrative admissibility claim.
+  - '## Six family-admission classes'
+  - '## Required family-admission differentiations'
+  - '## Family-admission proof discipline'
+  - '## Family-admission proof limits'
+  - '## Non-compliant family-admission collapses'
+  - 'Only lawfully matched artifacts may be admitted into governed canonical family sinks.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Artifact-family admissibility row-family completeness must stay explicit'
+      - Required family-admission-class, differentiation, proof, limit, and collapse
+        families must remain explicit as separate machine-readable row families.
+      - README root artifact-family admissibility completeness discipline must
+        therefore stay congruent with admitted
+        artifact-family-admissibility-completeness rows rather than becoming a
+        freehand completeness summary.
+      - The machine world must not finalize artifact-family admissibility while
+        required row identity drift remains known only internally.
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root artifact-family admissibility completeness discipline'
+      - Artifact-family admissibility law is not a soft prose bundle.
+      - These artifact-family-admissibility-completeness rules must remain bound
+        to canonical artifact-family-admissibility-completeness rows rather than
+        drifting into soft summary prose.
+      - '1. required family-admission-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root artifact-family admissibility completeness boundary'
+      - '1. Artifact-family admissibility law must remain machine-readable as separate family-admission-class, differentiation, proof, limit, and collapse row families.'
+      - '4. Protocol legality must not finalize artifact-family admissibility while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root artifact-family admissibility completeness discipline rendered at protocol root must remain congruent with admitted artifact-family-admissibility-completeness rows rather than silently authoring an alternate completeness summary.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime artifact-family admissibility consumption boundary'
+      - '1. Runtime consumes artifact-family admissibility law as separate family-admission-class, differentiation, proof, limit, and collapse row families rather than as undifferentiated admissibility prose.'
+      - '4. Runtime must not finalize artifact-family admissibility while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root artifact-family admissibility completeness discipline as a governed completeness projection bound to admitted artifact-family-admissibility-completeness rows rather than as a freehand completeness summary.'
+artifact_family_admissibility_completeness_rows:
+  - order: 1
+    completeness_id: explicit_artifact_family_admissibility_row_families
+    contract_phrase: required family-admission-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;
+  - order: 2
+    completeness_id: congruent_artifact_family_admissibility_row_family_totals
+    contract_phrase: expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+  - order: 3
+    completeness_id: explicit_artifact_family_admissibility_row_identity_sets
+    contract_phrase: expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+  - order: 4
+    completeness_id: hidden_artifact_family_admissibility_identity_drift_forbidden
+    contract_phrase: runtime or validator code must not finalize artifact-family admissibility while missing or unexpected row identities remain known only internally;
+  - order: 5
+    completeness_id: fail_close_preserves_artifact_family_admissibility_identity_projection
+    contract_phrase: fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+required_family_admission_class_rows:
+  - order: 1
+    family_admission_class_id: frozen_artifact_family_definition
+    contract_heading: '### 1. Frozen artifact-family definition'
+    admission_role: frozen_artifact_family_definition
+  - order: 2
+    family_admission_class_id: canonical_family_sink
+    contract_heading: '### 2. Canonical family sink'
+    admission_role: canonical_family_sink
+  - order: 3
+    family_admission_class_id: family_compatible_artifact
+    contract_heading: '### 3. Family-compatible artifact'
+    admission_role: family_compatible_artifact
+  - order: 4
+    family_admission_class_id: bound_family_admitted_artifact
+    contract_heading: '### 4. Bound family-admitted artifact'
+    admission_role: bound_family_admitted_artifact
+  - order: 5
+    family_admission_class_id: governed_recovery_or_redirect_sink
+    contract_heading: '### 5. Governed recovery or redirect sink'
+    admission_role: governed_recovery_or_redirect_sink
+  - order: 6
+    family_admission_class_id: demoted_support_or_quarantine_sink
+    contract_heading: '### 6. Demoted support or quarantine sink'
+    admission_role: demoted_support_or_quarantine_sink
+required_differentiation_rows:
+  - order: 1
+    differentiation_id: frozen_definition_vs_canonical_sink
+    contract_phrase: 'frozen artifact-family definition is separated from canonical family sink;'
+  - order: 2
+    differentiation_id: canonical_sink_vs_compatible_artifact
+    contract_phrase: 'canonical family sink is separated from family-compatible artifact;'
+  - order: 3
+    differentiation_id: compatible_artifact_vs_bound_admission
+    contract_phrase: 'family-compatible artifact is separated from bound family-admitted artifact;'
+  - order: 4
+    differentiation_id: bound_admission_vs_redirect_sink
+    contract_phrase: 'bound family-admitted artifact is separated from governed recovery or redirect sink;'
+  - order: 5
+    differentiation_id: redirect_sink_vs_demoted_sink
+    contract_phrase: 'governed recovery or redirect sink is separated from demoted support or quarantine sink;'
+  - order: 6
+    differentiation_id: visible_presence_vs_family_admission
+    contract_phrase: 'visible path, filename similarity, or artifact presence is separated from lawful family admission.'
+required_family_admission_proof_rows:
+  - order: 1
+    proof_id: frozen_definition_family_admission_proof
+    contract_heading: '### 1. Frozen-definition family-admission proof'
+    proof_role: frozen_definition_family_admission_proof
+  - order: 2
+    proof_id: canonical_sink_family_admission_proof
+    contract_heading: '### 2. Canonical-sink family-admission proof'
+    proof_role: canonical_sink_family_admission_proof
+  - order: 3
+    proof_id: compatibility_family_admission_proof
+    contract_heading: '### 3. Compatibility family-admission proof'
+    proof_role: compatibility_family_admission_proof
+  - order: 4
+    proof_id: bound_admission_family_admission_proof
+    contract_heading: '### 4. Bound-admission family-admission proof'
+    proof_role: bound_admission_family_admission_proof
+  - order: 5
+    proof_id: redirect_recovery_family_admission_proof
+    contract_heading: '### 5. Redirect-recovery family-admission proof'
+    proof_role: redirect_recovery_family_admission_proof
+  - order: 6
+    proof_id: demotion_quarantine_family_admission_proof
+    contract_heading: '### 6. Demotion-quarantine family-admission proof'
+    proof_role: demotion_quarantine_family_admission_proof
+required_family_admission_limit_rows:
+  - order: 1
+    limit_id: frozen_definition_not_canonical_sink
+    contract_phrase: 'frozen-definition family-admission proof is not proof of canonical sink resolution;'
+  - order: 2
+    limit_id: canonical_sink_not_compatibility
+    contract_phrase: 'canonical-sink family-admission proof is not proof of artifact compatibility;'
+  - order: 3
+    limit_id: compatibility_not_bound_admission
+    contract_phrase: 'compatibility family-admission proof is not proof of bound family admission;'
+  - order: 4
+    limit_id: bound_admission_not_redirect_recovery
+    contract_phrase: 'bound-admission family-admission proof is not proof of governed redirect or recovery classification;'
+  - order: 5
+    limit_id: redirect_recovery_not_demotion_quarantine
+    contract_phrase: 'redirect-recovery family-admission proof is not proof of demotion or quarantine confinement;'
+  - order: 6
+    limit_id: demotion_quarantine_not_canonical_admission
+    contract_phrase: 'demotion-quarantine family-admission proof is not proof of lawful canonical family admission.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: defined_family_as_live_sink
+    contract_phrase: 'a law-defined artifact family is treated as if it were already a live canonical family sink.'
+  - order: 2
+    collapse_id: artifact_resemblance_as_family_compatibility
+    contract_phrase: 'filename resemblance, path similarity, or local habit is treated as if it proved family compatibility.'
+  - order: 3
+    collapse_id: compatible_artifact_as_admitted_artifact
+    contract_phrase: 'a merely compatible artifact is treated as if it were already canonically admitted.'
+  - order: 4
+    collapse_id: redirect_sink_as_canonical_admission
+    contract_phrase: 'a governed recovery, replay, repair, or redirect sink is treated as if it were canonical family admission.'
+  - order: 5
+    collapse_id: demoted_sink_as_canonical_family_sink
+    contract_phrase: 'sample, fixture, diagnostics, archive, compatibility, explanatory, or quarantine material is treated as if it were canonical family admission.'
+  - order: 6
+    collapse_id: path_presence_as_family_admissibility_proof
+    contract_phrase: 'visible path presence, filename visibility, or artifact existence is treated as if it proved lawful family admission.'

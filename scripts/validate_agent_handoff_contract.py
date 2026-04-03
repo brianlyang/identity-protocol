@@ -141,6 +141,38 @@ def _identity_scoped_files(files: list[Path], identity_id: str) -> list[Path]:
     return scoped or files
 
 
+def _select_recent_files(files: list[Path], *, keep: int) -> list[Path]:
+    if not files:
+        return files
+    limit = max(1, int(keep))
+
+    def _score(path: Path) -> tuple[float, str]:
+        ts = 0.0
+        try:
+            rec = _load_json(path)
+            raw = str(rec.get("generated_at") or "").strip()
+            if raw:
+                try:
+                    ts = _parse_iso_dt(raw).timestamp()
+                except Exception:
+                    ts = 0.0
+        except Exception:
+            ts = 0.0
+        if ts <= 0.0 and path.exists():
+            try:
+                ts = float(path.stat().st_mtime)
+            except Exception:
+                ts = 0.0
+        return ts, str(path)
+
+    ranked = sorted(
+        files,
+        key=_score,
+        reverse=True,
+    )
+    return ranked[:limit]
+
+
 def _bad_placeholder(value: str) -> bool:
     v = value.strip().lower()
     return v in {"todo", "tbd", "n/a", "none", "pending", "later"}
@@ -355,7 +387,7 @@ def _run_self_test(
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate master/sub handoff contract evidence")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--file", default="", help="validate one explicit handoff file")
     ap.add_argument("--self-test", action="store_true", help="run positive/negative sample self-test")
@@ -406,9 +438,13 @@ def main() -> int:
     if len(files) < minimum_logs_required:
         print(f"[FAIL] handoff logs insufficient: found={len(files)}, required={minimum_logs_required}")
         return 1
+    validation_max_logs = int(contract.get("validation_max_logs") or minimum_logs_required)
+    files = _select_recent_files(files, keep=max(minimum_logs_required, validation_max_logs))
 
     current_task_id = str(task.get("task_id") or "").strip()
     if fixture_mode:
+        max_log_age_days = 0
+    if args.self_test:
         max_log_age_days = 0
 
     rc = 0
@@ -433,9 +469,23 @@ def main() -> int:
         sample_pattern = str(contract.get("sample_log_path_pattern") or "identity/runtime/examples/handoff")
         sample_root = Path(sample_pattern).expanduser()
         if not sample_root.is_absolute():
+            protocol_root = Path(__file__).resolve().parent.parent
+            sample_text = sample_pattern.replace("\\", "/").strip()
             candidate_pack = (task_path.parent.resolve() / sample_root).resolve()
-            candidate_protocol = (Path(__file__).resolve().parent.parent / sample_root).resolve()
-            sample_root = candidate_pack if candidate_pack.exists() else candidate_protocol
+            candidate_protocol = (protocol_root / sample_root).resolve()
+            candidate_protocol_identity = (
+                (protocol_root / "identity" / sample_text).resolve()
+                if sample_text.startswith("runtime/")
+                else (protocol_root / "identity" / sample_root).resolve()
+            )
+            sample_root = next(
+                (
+                    candidate
+                    for candidate in (candidate_pack, candidate_protocol, candidate_protocol_identity)
+                    if candidate.exists()
+                ),
+                candidate_pack,
+            )
         else:
             sample_root = sample_root.resolve()
         rc = max(

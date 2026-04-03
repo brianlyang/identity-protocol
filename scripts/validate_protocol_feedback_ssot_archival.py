@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from protocol_feedback_contract_common import DEFAULT_ACTIVITY_DIRS, resolve_feedback_contract_path, resolve_feedback_root
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -18,17 +19,6 @@ ERR_MIRROR_ONLY = "IP-GOV-FEEDBACK-003"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate", "mutation"}
 INSPECTION_OPERATIONS = {"scan", "three-plane", "inspection"}
-
-DEFAULT_ACTIVITY_DIRS = (
-    "issues",
-    "roundtables",
-    "upgrade-proposals",
-    "protocol-vendor-intel",
-    "business-partner-intel",
-    "vendor-intel",
-    "review-notes",
-)
-
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
@@ -109,14 +99,13 @@ def main() -> int:
     required = contract_required(contract) if contract else False
     auto_required_signal = False
 
-    feedback_root = Path(args.feedback_root).expanduser() if args.feedback_root.strip() else (pack_path / "runtime" / "protocol-feedback")
-    feedback_root = feedback_root.resolve()
+    feedback_root = resolve_feedback_root(pack_path, args.feedback_root)
 
     outbox_rel = str(contract.get("outbox_dir", "outbox-to-protocol")).strip() or "outbox-to-protocol"
-    outbox_dir = (feedback_root / outbox_rel).resolve()
+    outbox_dir = resolve_feedback_contract_path(pack_path, feedback_root, outbox_rel, default_leaf="outbox-to-protocol")
     batch_pattern = str(contract.get("feedback_batch_pattern", "FEEDBACK_BATCH_*.md")).strip() or "FEEDBACK_BATCH_*.md"
     index_rel = str(contract.get("evidence_index_path", "evidence-index/INDEX.md")).strip() or "evidence-index/INDEX.md"
-    index_path = (feedback_root / index_rel).resolve()
+    index_path = resolve_feedback_contract_path(pack_path, feedback_root, index_rel, default_leaf="evidence-index/INDEX.md")
     activity_dirs_raw = contract.get("activity_dirs")
     activity_dirs = [str(x).strip() for x in activity_dirs_raw] if isinstance(activity_dirs_raw, list) and activity_dirs_raw else list(DEFAULT_ACTIVITY_DIRS)
 

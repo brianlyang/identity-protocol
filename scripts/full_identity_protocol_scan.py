@@ -4,14 +4,191 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import yaml
-from actor_session_common import resolve_actor_id
+from actor_session_common import load_actor_binding, resolve_actor_id
+from capability_activation_policy_common import (
+    CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY,
+    capability_env_auth_fallback_eligible,
+    replace_capability_activation_policy,
+)
+from full_identity_protocol_scan_projection_profile_common import (
+    DEFAULT_FULL_IDENTITY_PROTOCOL_SCAN_PROJECTION_PROFILE,
+    FullIdentityProtocolScanProjectionProfile,
+    full_identity_protocol_scan_projection_profile_choices,
+    resolve_full_identity_protocol_scan_projection_profile,
+)
+from full_scan_required_gate_bundle_projection_common import (
+    apply_full_scan_required_gate_bundle_three_plane_projection,
+    build_full_scan_required_gate_bundle_projection_summary_skeleton,
+)
+from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
+from health_report_experience_writeback_projection_common import (
+    HEALTH_REPORT_EXPERIENCE_WRITEBACK_CLOSURE_EXCLUDED_AREA,
+    build_health_report_experience_writeback_closure_summary_skeleton,
+)
+from primary_execution_report_common import latest_prompt_bound_primary_execution_report_from_roots
+from projection_profile_exclusion_scope_common import build_projection_profile_exclusion_payload
+from protocol_infra_contract import (
+    CANONICAL_FINAL_EMIT_SCRIPT,
+    CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+    CTX_TOOL_TIMEOUT_MARKER,
+    GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT,
+    HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_CONTRACT_ID,
+    HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_REQUIRED_RATE,
+    HOST_VISIBLE_NEXT_HOP_HEADSTAMP_REQUIRED_RATE,
+    HOST_VISIBLE_POST_GATE_COVERAGE_REQUIRED_RATE,
+    HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
+    HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE,
+    HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE,
+    HOST_VISIBLE_NEXT_HOP_BLOCK_REQUIRED_RATE,
+    HOST_VISIBLE_FALSE_GREEN_MAX_RATE,
+    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+)
+from release_cloud_evidence_projection_common import (
+    build_projection_profile_excluded_release_cloud_evidence_adapter,
+    build_release_cloud_evidence_adapter_projection,
+)
+from required_contract_coverage_projection_common import build_required_contract_coverage_projection
+from required_gate_report_authority_common import REQUIRED_GATE_REPORT_AUTHORITY_FIELDS
+from required_gate_bundle_projection_common import (
+    build_projection_profile_excluded_required_gate_bundle_target_projection,
+    build_required_gate_bundle_target_projection,
+    required_gate_bundle_target_projection_is_scope_excluded,
+)
+from resolve_release_plane_cloud_evidence import resolve_release_plane_runtime_inputs
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
+from runtime_temp_path_common import named_temp_root, runtime_temp_file
+from terminal_truth_boundary_projection_common import build_terminal_truth_boundary_projection_summary_skeleton
+
+LOCK_PROTOCOL_PREFIX = "SESSION_LANE_LOCK_PROTOCOL_"
+LOCK_EXIT_PREFIX = "SESSION_LANE_LOCK_EXIT_"
+IP_ERROR_CODE_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
+TUPLE_CONTEXT_PRIMARY_MARKERS: set[str] = {
+    "entry_receipt_operation_mismatch",
+    "entry_receipt_run_id_mismatch",
+    "entry_receipt_actor_id_mismatch",
+    "entry_receipt_session_id_mismatch",
+}
+TUPLE_CONTEXT_ALLOWED_MARKERS: set[str] = {
+    *TUPLE_CONTEXT_PRIMARY_MARKERS,
+    "entry_receipt_bundle_status_not_pass",
+}
+PROJECTION_PROFILE_EXCLUSION_SCOPE_CLASS = "bounded_projection_profile_exclusion"
+PROJECTION_PROFILE_EXCLUSION_SCOPE_REASON = "projection_profile_out_of_scope"
+
+M2M_CHECK_NAMES: set[str] = {
+    "requested_session_binding",
+    "actor_session_binding",
+    "actor_session_multibinding_concurrency",
+    "no_implicit_switch",
+    "cross_actor_isolation",
+    "response_stamp_validation",
+    "reply_identity_context_first_line",
+    "send_time_reply_gate",
+    "protocol_lane_headstamp_continuity",
+    "host_transport_wiring_attestation",
+    "headstamp_recurrence_closure",
+    "execution_reply_identity_coherence",
+    "required_gate_tuple_parity",
+    "execution_target_tuple_isolation",
+}
+BUNDLE_GATE_CHECK_NAMES: set[str] = {
+    "required_gate_bundle_runner",
+    "required_gate_bundle_runner_shadow",
+}
+CAPABILITY_CHECK_NAMES: set[str] = {
+    "capability_activation_preflight",
+    "capability_activation_report",
+    "prompt_bootstrap_capability",
+    "prompt_capability_matrix",
+    "prompt_kernel_executable_coupling",
+}
+RELEASE_ENV_CHECK_NAMES: set[str] = {
+    "release_plane_cloud_evidence",
+    "run_id_report_selection",
+    "outlet_regression_matrix",
+}
+BASELINE_CHECK_NAMES: set[str] = {
+    "session_refresh_status",
+    "execution_report_freshness",
+    "protocol_baseline_freshness",
+    "protocol_version_alignment",
+}
+REQUIRED_GATE_BUNDLE_RUNNER_CAPTURE_FIELDS: tuple[str, ...] = (
+    "bundle_contract_id",
+    "bundle_key",
+    "bundle_status",
+    "error_code",
+    "identity_id",
+    "catalog_path",
+    "operation",
+    "contract_mapping",
+    "mapping_errors",
+    "missing_targets",
+    "surface_label",
+    "actor_id",
+    "resolved_work_layer",
+    "resolved_source_layer",
+    "lock_state",
+    "run_id_binding",
+    *REQUIRED_GATE_REPORT_AUTHORITY_FIELDS,
+    "gate_profile",
+    "gate_profile_mode",
+    "gate_profile_file",
+    "gate_profile_resolved_file",
+    "gate_profile_requirement_count",
+    "gate_profile_requirement_keys",
+    "required_contract",
+    "failed_required_contract_count",
+    "row_contract_error_count",
+    "send_time_gate_status",
+    "outlet_bypass_detected",
+    "final_emit_contract_status",
+    "final_emit_policy_mode",
+    "final_emit_schema_status",
+    "results",
+)
+PROTOCOL_FEEDBACK_OBS_CHECK_NAMES: set[str] = {
+    "protocol_feedback_sidecar",
+    "protocol_feedback_reply_channel",
+    "protocol_feedback_bootstrap_ready",
+}
+DOWNSINK_PATH_GOVERNANCE_CHECK_NAMES: set[str] = {
+    "downsink_path_immutability",
+    "downsink_path_write_guard",
+    "downsink_path_literal_lock",
+}
+CHECK_ERROR_CODE_KEYS: tuple[str, ...] = (
+    "error_code",
+    "sidecar_error_code",
+    "capability_activation_error_code",
+    "pin_error_code",
+    "baseline_error_code",
+    "freshness_error_code",
+    "normalization_error_code",
+    "semantic_convergence_error_code",
+)
+DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
+DEFAULT_GATE_PROFILE_NAME = "strict_full"
+SCRIPT_PATH = Path(__file__).resolve()
+DEFAULT_REPO_ROOT = SCRIPT_PATH.parent.parent
+HOST_VISIBLE_SURFACE_PROBE_MANIFEST_NAME = "manifest.host_visible_surface_live.json"
+HOST_VISIBLE_SURFACE_PROBE_SUITE = "host_visible_surface_live_probes"
+FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
+REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
+SESSION_ID_FALLBACK = ""
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
+CONTEXT_TIMEOUT_ENV = "IDENTITY_PROTOCOL_GATEWAY_CONTEXT_TIMEOUT_SECONDS"
+ERR_SESSION_MAP_REQUIRED = "IP-ASB-SESSION-MAP-001"
 
 
 @dataclass
@@ -29,7 +206,7 @@ def _resolve_applied_gate_set(*, layer_intent_text: str, expected_work_layer: st
         explicit_source_layer=str(expected_source_layer or "").strip(),
         intent_text=str(layer_intent_text or "").strip(),
         default_work_layer=DEFAULT_WORK_LAYER,
-        default_source_layer="global",
+        default_source_layer="project",
     )
     work_layer = str(resolved.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
     if work_layer == "protocol":
@@ -39,12 +216,194 @@ def _resolve_applied_gate_set(*, layer_intent_text: str, expected_work_layer: st
     return "dual_unroutable"
 
 
+def _safe_json_file(path: Path) -> dict[str, Any]:
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _git_rev(repo_root: Path, ref: str) -> str:
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", ref],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        return ""
+    return proc.stdout.strip() if proc.returncode == 0 else ""
+
+
+def _parse_path_list_arg(*, raw_value: str, repo_root: Path) -> list[Path]:
+    out: list[Path] = []
+    for token in re.split(r"[\s,]+", str(raw_value or "").strip()):
+        entry = str(token or "").strip()
+        if not entry:
+            continue
+        path = Path(entry).expanduser()
+        if not path.is_absolute():
+            path = (repo_root / path).resolve()
+        else:
+            path = path.resolve()
+        out.append(path)
+    return out
+
+
+def _discover_host_visible_probe_manifest_paths(
+    *,
+    repo_root: Path,
+    catalog_list: list[tuple[str, Path]],
+    explicit_manifest_arg: str,
+) -> list[Path]:
+    candidates: list[Path] = []
+    candidates.extend(_parse_path_list_arg(raw_value=explicit_manifest_arg, repo_root=repo_root))
+
+    for _layer, catalog_path in catalog_list:
+        resolved_catalog = Path(catalog_path).expanduser().resolve()
+        for base_dir in (resolved_catalog.parent, resolved_catalog.parent.parent):
+            candidate = (base_dir / HOST_VISIBLE_SURFACE_PROBE_MANIFEST_NAME).resolve()
+            candidates.append(candidate)
+
+    candidates.extend(
+        [
+            (repo_root / ".identity" / "_probe" / "identity-host-visible-surface-probes" / HOST_VISIBLE_SURFACE_PROBE_MANIFEST_NAME).resolve(),
+            (repo_root.parent / ".identity" / "_probe" / "identity-host-visible-surface-probes" / HOST_VISIBLE_SURFACE_PROBE_MANIFEST_NAME).resolve(),
+        ]
+    )
+
+    resolved_existing: list[Path] = []
+    seen: set[Path] = set()
+    for candidate in candidates:
+        resolved_candidate = candidate.resolve()
+        if resolved_candidate in seen or not resolved_candidate.exists():
+            continue
+        seen.add(resolved_candidate)
+        resolved_existing.append(resolved_candidate)
+    return resolved_existing
+
+
+def _latest_lane_receipt(*, outbox_dir: Path, prefix: str, identity_id: str) -> Path | None:
+    if not outbox_dir.exists():
+        return None
+    rows = sorted(outbox_dir.glob(f"{prefix}*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for p in rows:
+        doc = _safe_json_file(p)
+        rid = str(doc.get("identity_id", "")).strip()
+        if rid and rid != identity_id:
+            continue
+        return p.resolve()
+    return None
+
+
+def _detect_session_lane_lock(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    actor_id: str,
+    session_id: str,
+    resolved_pack_path: Path | None,
+) -> str:
+    try:
+        binding = load_actor_binding(
+            catalog_path,
+            actor_id,
+            identity_id=identity_id,
+            session_id=session_id,
+        )
+    except Exception:
+        binding = {}
+    for key in ("session_lane_lock", "lane_lock", "work_layer_lock"):
+        token = str(binding.get(key, "")).strip().lower()
+        if token in {"protocol", "instance"}:
+            return token
+
+    if resolved_pack_path is None:
+        return ""
+    outbox_dir = (resolved_pack_path / "runtime" / "protocol-feedback" / "outbox-to-protocol").resolve()
+    lock_protocol = _latest_lane_receipt(outbox_dir=outbox_dir, prefix=LOCK_PROTOCOL_PREFIX, identity_id=identity_id)
+    lock_exit = _latest_lane_receipt(outbox_dir=outbox_dir, prefix=LOCK_EXIT_PREFIX, identity_id=identity_id)
+    if lock_protocol is None:
+        return ""
+    protocol_mtime = lock_protocol.stat().st_mtime
+    exit_mtime = lock_exit.stat().st_mtime if lock_exit is not None else -1.0
+    if exit_mtime > protocol_mtime:
+        return ""
+    return "protocol"
+
+
 def _run(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> CheckResult:
-    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(cwd), env=env)
-    out = (p.stdout or "").strip()
-    err = (p.stderr or "").strip()
-    tail = out.splitlines()[-1] if out else (err.splitlines()[-1] if err else "")
-    return CheckResult(rc=p.returncode, ok=p.returncode == 0, tail=tail, stdout=out, stderr=err)
+    def _contains_timeout_marker(*, stdout_text: str, stderr_text: str, tail_text: str) -> bool:
+        marker = str(CTX_TOOL_TIMEOUT_MARKER or "").strip()
+        if not marker:
+            return False
+        merged = "\n".join(
+            token for token in (stdout_text, stderr_text, tail_text) if str(token or "").strip()
+        )
+        return marker in merged
+
+    def _finalize(rc_value: int, out_value: str, err_value: str) -> CheckResult:
+        out_text_local = str(out_value or "").strip()
+        err_text_local = str(err_value or "").strip()
+        tail_local = out_text_local.splitlines()[-1] if out_text_local else (
+            err_text_local.splitlines()[-1] if err_text_local else ""
+        )
+        return CheckResult(
+            rc=rc_value,
+            ok=rc_value == 0,
+            tail=tail_local,
+            stdout=out_text_local,
+            stderr=err_text_local,
+        )
+
+    run_cmd = list(cmd)
+    script = str(run_cmd[1]).strip() if len(run_cmd) >= 2 else ""
+    original_script = script
+    if script.startswith("scripts/"):
+        run_cmd[1] = str((DEFAULT_REPO_ROOT / script).resolve())
+    if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
+        if original_script in {REQUIRED_GATE_BUNDLE_SCRIPT, FINAL_EMIT_SCRIPT}:
+            run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
+    first_env = dict(env or {})
+    rc, out, err = _run_gateway_wrapped_command(
+        cmd=run_cmd,
+        protocol_root=cwd,
+        passthrough_cwd=cwd,
+        passthrough_env=first_env or None,
+    )
+    first = _finalize(rc, out, err)
+    if original_script.endswith("resolve_identity_context.py") and _contains_timeout_marker(
+        stdout_text=first.stdout,
+        stderr_text=first.stderr,
+        tail_text=first.tail,
+    ):
+        retry_env = dict(first_env)
+        retry_timeout = str(max(int(GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT), 5) * 2)
+        retry_env[CONTEXT_TIMEOUT_ENV] = retry_timeout
+        rc_retry, out_retry, err_retry = _run_gateway_wrapped_command(
+            cmd=run_cmd,
+            protocol_root=cwd,
+            passthrough_cwd=cwd,
+            passthrough_env=retry_env,
+        )
+        retry = _finalize(rc_retry, out_retry, err_retry)
+        if retry.ok:
+            return retry
+        return retry
+    return first
+
+
+def _check_has_ctx_timeout_marker(check: CheckResult) -> bool:
+    marker = str(CTX_TOOL_TIMEOUT_MARKER or "").strip()
+    if not marker:
+        return False
+    merged = "\n".join(
+        token for token in (check.stdout, check.stderr, check.tail) if str(token or "").strip()
+    )
+    return marker in merged
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -64,17 +423,54 @@ def _catalog_rows(path: Path) -> list[dict[str, Any]]:
 def _parse_json_safely(raw: str) -> dict[str, Any] | None:
     if not raw:
         return None
-    try:
-        return json.loads(raw)
-    except Exception:
-        pass
-    lines = raw.splitlines()
+    text = str(raw).strip()
+    if not text:
+        return None
+    candidates: list[str] = [text]
+    lines = text.splitlines()
     if lines and lines[-1].startswith("overall_release_decision="):
+        trimmed = "\n".join(lines[:-1]).strip()
+        if trimmed:
+            candidates.append(trimmed)
+    decoder = json.JSONDecoder()
+    for candidate in candidates:
         try:
-            return json.loads("\n".join(lines[:-1]))
+            payload = json.loads(candidate)
         except Exception:
-            return None
+            payload = None
+        if isinstance(payload, dict):
+            return payload
+        for match in reversed(list(re.finditer(r"\{", candidate))):
+            try:
+                parsed, end = decoder.raw_decode(candidate[match.start() :])
+            except Exception:
+                continue
+            if not isinstance(parsed, dict):
+                continue
+            if candidate[match.start() + end :].strip():
+                continue
+            return parsed
     return None
+
+
+def _build_required_gate_scan_probe_projection(
+    *,
+    repo_root: Path,
+    check_payload: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if not isinstance(check_payload, dict):
+        return {}
+    bundle_payload = (
+        check_payload
+        if isinstance(check_payload.get("results"), list)
+        else _parse_json_safely(str(check_payload.get("tail", "") or "").strip())
+    )
+    if not isinstance(bundle_payload, dict) or not bundle_payload:
+        return {}
+    return build_required_gate_bundle_target_projection(
+        repo_root=repo_root,
+        bundle_payload=bundle_payload,
+    )
 
 
 def _extract_capability_signal(raw: str) -> tuple[str, str]:
@@ -101,29 +497,913 @@ def _extract_capability_signal(raw: str) -> tuple[str, str]:
     return status, code
 
 
-def _replace_activation_policy(cmd: list[str], policy: str) -> list[str]:
-    out = list(cmd)
-    if "--activation-policy" in out:
-        idx = out.index("--activation-policy")
-        if idx + 1 < len(out):
-            out[idx + 1] = policy
-            return out
-    out.extend(["--activation-policy", policy])
-    return out
+def _extract_check_error_code(entry: dict[str, Any]) -> str:
+    for key in CHECK_ERROR_CODE_KEYS:
+        token = str(entry.get(key, "")).strip()
+        if token:
+            return token
+    for blob_key in ("tail", "stdout", "stderr"):
+        blob = str(entry.get(blob_key, "") or "")
+        m = IP_ERROR_CODE_RE.search(blob)
+        if m:
+            return str(m.group(1) or "").strip()
+    return ""
 
 
-def _latest_runtime_report(identity_id: str, report_dir: Path) -> Path | None:
-    if not report_dir.exists():
-        return None
-    rows = [
-        p
-        for p in report_dir.glob(f"identity-upgrade-exec-{identity_id}-*.json")
-        if not p.name.endswith("-patch-plan.json")
+def _is_m2m_error_code(error_code: str) -> bool:
+    token = str(error_code or "").strip().upper()
+    if not token:
+        return False
+    return (
+        token.startswith("IP-ASB-")
+        or token.startswith("IP-ACTOR-")
+        or token.startswith("IP-FE-")
+        or token.startswith("IP-HDSTAMP-")
+    )
+
+
+def _is_m2m_failed_check(*, check_name: str, error_code: str) -> bool:
+    if check_name in BUNDLE_GATE_CHECK_NAMES and not _is_m2m_error_code(error_code):
+        return False
+    return check_name in M2M_CHECK_NAMES or _is_m2m_error_code(error_code)
+
+
+def _classify_m2m_projection(*, checks: dict[str, Any]) -> dict[str, Any]:
+    failed: list[dict[str, str]] = []
+    for name, raw in (checks or {}).items():
+        entry = raw if isinstance(raw, dict) else {}
+        if bool(entry.get("ok", False)):
+            continue
+        failed.append(
+            {
+                "check": str(name),
+                "error_code": _extract_check_error_code(entry),
+            }
+        )
+    m2m_failed = [
+        row
+        for row in failed
+        if _is_m2m_failed_check(
+            check_name=str(row.get("check", "")),
+            error_code=str(row.get("error_code", "")),
+        )
     ]
-    if not rows:
-        return None
-    rows.sort(key=lambda p: p.stat().st_mtime)
-    return rows[-1]
+    non_m2m_failed = [row for row in failed if row not in m2m_failed]
+
+    non_m2m_scope: list[str] = []
+    if any(
+        row["check"] in CAPABILITY_CHECK_NAMES or str(row.get("error_code", "")).upper().startswith("IP-CAP-")
+        for row in non_m2m_failed
+    ):
+        non_m2m_scope.append("instance_capability")
+    if any(row["check"] in RELEASE_ENV_CHECK_NAMES for row in non_m2m_failed):
+        non_m2m_scope.append("release_env")
+    if any(
+        row["check"] in BASELINE_CHECK_NAMES or str(row.get("error_code", "")).upper().startswith("IP-PBL-")
+        for row in non_m2m_failed
+    ):
+        non_m2m_scope.append("baseline_refresh")
+    if any(row["check"] in PROTOCOL_FEEDBACK_OBS_CHECK_NAMES for row in non_m2m_failed):
+        non_m2m_scope.append("protocol_feedback_observability")
+    if any(row["check"] in DOWNSINK_PATH_GOVERNANCE_CHECK_NAMES for row in non_m2m_failed):
+        non_m2m_scope.append("downsink_path_immutability")
+    if non_m2m_failed and not non_m2m_scope:
+        non_m2m_scope.append("other")
+
+    return {
+        "m2m_binding_closure_status": "PASS" if not m2m_failed else "FAIL",
+        "m2m_failure_scope": "protocol_m2m" if m2m_failed else "",
+        "m2m_failed_check_count": len(m2m_failed),
+        "m2m_failed_checks": m2m_failed,
+        "m2m_failure_reasons": [f"{row['check']}:{row.get('error_code') or 'UNKNOWN'}" for row in m2m_failed],
+        "non_m2m_failed_check_count": len(non_m2m_failed),
+        "non_m2m_failed_checks": non_m2m_failed,
+        "non_m2m_failure_scope": sorted(set(non_m2m_scope)),
+        "non_m2m_failure_reasons": [
+            f"{row['check']}:{row.get('error_code') or 'UNKNOWN'}"
+            for row in non_m2m_failed
+        ],
+        "failed_check_count_total": len(failed),
+    }
+
+
+def _is_tuple_context_only_stale_reasons(stale_reasons: list[str]) -> bool:
+    tokens = [str(x).strip() for x in stale_reasons if str(x).strip()]
+    if not tokens:
+        return False
+    primary_detected = False
+    for token in tokens:
+        if token in TUPLE_CONTEXT_PRIMARY_MARKERS:
+            primary_detected = True
+            continue
+        if token in TUPLE_CONTEXT_ALLOWED_MARKERS:
+            continue
+        if token.startswith("entry_receipt_required_fields_missing:"):
+            primary_detected = True
+            continue
+        return False
+    return primary_detected
+
+
+def _classify_tuple_context_projection(*, checks: dict[str, Any]) -> dict[str, Any]:
+    matches: list[dict[str, Any]] = []
+
+    def _append_if_match(check_name: str, entry: dict[str, Any], *, source: str) -> None:
+        tuple_only = bool(entry.get("protocol_unique_entry_receipt_tuple_context_only_failure", False))
+        if not tuple_only:
+            tuple_status = str(
+                entry.get("protocol_unique_entry_receipt_tuple_context_status", "")
+            ).strip().upper()
+            stale_reasons = [
+                str(x).strip()
+                for x in (entry.get("stale_reasons") or [])
+                if str(x).strip()
+            ]
+            if tuple_status == "FAIL_REQUIRED" and _is_tuple_context_only_stale_reasons(stale_reasons):
+                tuple_only = True
+        if not tuple_only:
+            return
+        mismatch_fields = [
+            str(x).strip()
+            for x in (entry.get("protocol_unique_entry_receipt_tuple_context_mismatch_fields") or [])
+            if str(x).strip()
+        ]
+        matches.append(
+            {
+                "check": str(check_name),
+                "source": source,
+                "error_code": _extract_check_error_code(entry),
+                "mismatch_fields": sorted(set(mismatch_fields)),
+            }
+        )
+
+    for check_name, raw in (checks or {}).items():
+        entry = raw if isinstance(raw, dict) else {}
+        _append_if_match(str(check_name), entry, source="check_payload")
+        for row in (entry.get("results") or []):
+            if not isinstance(row, dict):
+                continue
+            row_payload = row.get("payload")
+            if isinstance(row_payload, dict):
+                _append_if_match(str(check_name), row_payload, source="check_result_payload")
+            _append_if_match(str(check_name), row, source="check_result_row")
+
+    return {
+        "tuple_context_only_failure": bool(matches),
+        "tuple_context_only_failure_count": len(matches),
+        "tuple_context_only_failure_scope": "tuple_context_only" if matches else "",
+        "tuple_context_only_failure_checks": matches,
+    }
+
+
+def _build_current_chat_surface_projection_from_three_plane(
+    *, three_plane_payload: dict[str, Any]
+) -> dict[str, Any]:
+    payload = three_plane_payload if isinstance(three_plane_payload, dict) else {}
+    exclusion = payload.get("current_chat_surface_exclusion")
+    if not isinstance(exclusion, dict):
+        exclusion = {}
+    axes = payload.get("governance_closure_axes")
+    if not isinstance(axes, dict):
+        axes = {}
+    parsed_machine = exclusion.get("parsed_machine_verification")
+    if not isinstance(parsed_machine, dict):
+        parsed_machine = {}
+
+    effective_blocker_scope = str(
+        axes.get("current_chat_surface_effective_blocker_scope", "")
+    ).strip() or str(exclusion.get("effective_blocker_scope", "")).strip()
+    explanatory_exclusion_status = str(
+        axes.get("current_chat_surface_exclusion_status", "")
+    ).strip() or str(exclusion.get("explanatory_surface_exclusion_status", "")).strip()
+    excluded_from_blockers = axes.get("current_chat_surface_excluded_from_blocker_aggregation")
+    if not isinstance(excluded_from_blockers, bool):
+        excluded_from_blockers = bool(exclusion.get("excluded_from_blocker_aggregation", False))
+    control_state = str(exclusion.get("control_state", "")).strip()
+    display_headstamp_line = str(exclusion.get("display_headstamp_line", "")).strip()
+    machine_verification_line = str(exclusion.get("machine_verification_line", "")).strip()
+    projection_skip_status = str(exclusion.get("projection_skip_status", "")).strip()
+    projection_skip_reason = str(exclusion.get("projection_skip_reason", "")).strip()
+    projection_skip_scope_class = str(exclusion.get("projection_skip_scope_class", "")).strip()
+    projection_skip_scope_reason = str(exclusion.get("projection_skip_scope_reason", "")).strip()
+    projection_excluded_area = str(exclusion.get("projection_excluded_area", "")).strip()
+    non_blocking_exclusions = [
+        str(item).strip()
+        for item in (axes.get("non_blocking_exclusions") or [])
+        if str(item).strip()
+    ]
+    if not any(
+        (
+            effective_blocker_scope,
+            explanatory_exclusion_status,
+            control_state,
+            display_headstamp_line,
+            machine_verification_line,
+            parsed_machine,
+            projection_skip_status,
+            projection_skip_reason,
+            projection_skip_scope_class,
+            projection_skip_scope_reason,
+            projection_excluded_area,
+            non_blocking_exclusions,
+        )
+    ):
+        return {}
+
+    return {
+        "explanatory_exclusion_status": explanatory_exclusion_status,
+        "effective_blocker_scope": effective_blocker_scope,
+        "excluded_from_blocker_aggregation": excluded_from_blockers,
+        "control_state": control_state,
+        "display_headstamp_line": display_headstamp_line,
+        "machine_verification_line": machine_verification_line,
+        "parsed_machine_verification": parsed_machine,
+        "projection_skip_status": projection_skip_status,
+        "projection_skip_reason": projection_skip_reason,
+        "projection_skip_scope_class": projection_skip_scope_class,
+        "projection_skip_scope_reason": projection_skip_scope_reason,
+        "projection_excluded_area": projection_excluded_area,
+        "non_blocking_exclusions": sorted(set(non_blocking_exclusions)),
+    }
+
+
+def _safe_rate(*, passed: int, total: int) -> float:
+    if total <= 0:
+        return 1.0
+    return float(passed) / float(total)
+
+
+def _status_by_min_rate(*, rate: float, min_rate: float, total: int) -> str:
+    if total <= 0:
+        return STATUS_SKIPPED_NOT_REQUIRED
+    return STATUS_PASS_REQUIRED if rate >= min_rate else STATUS_FAIL_REQUIRED
+
+
+def _status_by_max_rate(*, rate: float, max_rate: float, total: int) -> str:
+    if total <= 0:
+        return STATUS_SKIPPED_NOT_REQUIRED
+    return STATUS_PASS_REQUIRED if rate <= max_rate else STATUS_FAIL_REQUIRED
+
+
+def _stale_reason_contains(stale_reasons: list[str], token: str) -> bool:
+    target = str(token or "").strip()
+    if not target:
+        return False
+    for reason in [str(item).strip() for item in (stale_reasons or []) if str(item).strip()]:
+        if reason == target or reason.startswith(f"{target}:"):
+            return True
+    return False
+
+
+def _is_external_next_hop_block_sample(send_doc: dict[str, Any]) -> bool:
+    next_hop_status = str(send_doc.get("next_hop_admission_status", "")).strip().upper()
+    if next_hop_status != STATUS_FAIL_REQUIRED:
+        return False
+
+    output_governance_mode = str(send_doc.get("output_governance_mode", "")).strip().lower()
+    if output_governance_mode in {"host_direct", "manual_headstamp", "non_governed"}:
+        return True
+
+    post_check_blocker_status = str(send_doc.get("post_check_blocker_status", "")).strip().upper()
+    if post_check_blocker_status == STATUS_FAIL_REQUIRED:
+        return True
+
+    next_hop_reason = str(send_doc.get("next_hop_admission_reason", "")).strip().lower()
+    if next_hop_reason.endswith("_not_next_hop_admissible"):
+        return True
+    if next_hop_reason in {"post_check_blocker_active", "post_check_state_unavailable"}:
+        return True
+
+    stale_reasons = [str(item).strip() for item in (send_doc.get("stale_reasons") or []) if str(item).strip()]
+    return _stale_reason_contains(stale_reasons, "host_transport_post_check_blocker_active") or _stale_reason_contains(
+        stale_reasons,
+        "host_transport_post_check_state_unavailable",
+    )
+
+
+def _load_external_next_hop_block_samples(
+    *,
+    manifest_paths: list[Path],
+    allowed_identity_ids: set[str],
+) -> dict[str, Any]:
+    samples: list[dict[str, Any]] = []
+    manifest_refs: list[str] = []
+    sample_refs: list[str] = []
+    seen_sample_keys: set[tuple[str, str, str]] = set()
+
+    for manifest_path in manifest_paths:
+        manifest_doc = _safe_json_file(manifest_path)
+        if str(manifest_doc.get("suite", "")).strip() != HOST_VISIBLE_SURFACE_PROBE_SUITE:
+            continue
+        manifest_refs.append(str(manifest_path))
+        results = manifest_doc.get("results")
+        if not isinstance(results, list):
+            continue
+        for result in results:
+            if not isinstance(result, dict):
+                continue
+            stdout_ref = str(result.get("stdout_path", "")).strip()
+            if not stdout_ref:
+                continue
+            stdout_path = Path(stdout_ref).expanduser()
+            if not stdout_path.is_absolute():
+                stdout_path = (manifest_path.parent / stdout_path).resolve()
+            else:
+                stdout_path = stdout_path.resolve()
+            send_doc = _safe_json_file(stdout_path)
+            if not send_doc:
+                continue
+            identity_id = str(send_doc.get("identity_id", "")).strip()
+            if allowed_identity_ids and identity_id not in allowed_identity_ids:
+                continue
+            if not _is_external_next_hop_block_sample(send_doc):
+                continue
+            probe_name = str(result.get("probe_name", "")).strip()
+            dedup_key = (identity_id, probe_name, str(stdout_path))
+            if dedup_key in seen_sample_keys:
+                continue
+            seen_sample_keys.add(dedup_key)
+            sample_refs.append(str(stdout_path))
+            samples.append(
+                {
+                    "identity_id": identity_id,
+                    "probe_name": probe_name,
+                    "manifest_path": str(manifest_path),
+                    "stdout_path": str(stdout_path),
+                    "next_hop_admission_reason": str(send_doc.get("next_hop_admission_reason", "")).strip(),
+                    "output_governance_mode": str(send_doc.get("output_governance_mode", "")).strip(),
+                    "blocked": str(send_doc.get("next_hop_admission_status", "")).strip().upper() == STATUS_FAIL_REQUIRED,
+                }
+            )
+
+    return {
+        "manifest_paths": sorted(set(manifest_refs)),
+        "sample_refs": sorted(set(sample_refs)),
+        "samples": samples,
+    }
+
+
+def _next_hop_admission_status_for_row(send_entry: dict[str, Any]) -> str:
+    explicit = str(send_entry.get("next_hop_admission_status", "")).strip().upper()
+    if explicit:
+        return explicit
+    send_status = str(send_entry.get("send_time_gate_status", "")).strip().upper()
+    first_line_status = str(send_entry.get("reply_first_line_status", "")).strip().upper()
+    uniqueness_status = str(send_entry.get("chat_egress_uniqueness_status", "")).strip().upper()
+    if (
+        send_status == STATUS_PASS_REQUIRED
+        and first_line_status == STATUS_PASS_REQUIRED
+        and uniqueness_status == STATUS_PASS_REQUIRED
+    ):
+        return STATUS_PASS_REQUIRED
+    if send_status == STATUS_SKIPPED_NOT_REQUIRED:
+        return STATUS_SKIPPED_NOT_REQUIRED
+    return STATUS_FAIL_REQUIRED
+
+
+def _build_host_visible_post_check_metrics(
+    *,
+    rows: list[dict[str, Any]],
+    external_next_hop_block_samples: list[dict[str, Any]] | None = None,
+    external_next_hop_block_manifest_paths: list[str] | None = None,
+    external_next_hop_block_sample_refs: list[str] | None = None,
+) -> dict[str, Any]:
+    runtime_rows = [row for row in rows if _summary_bucket_for_row(row) == "runtime_active"]
+    external_next_hop_block_samples = list(external_next_hop_block_samples or [])
+    external_next_hop_block_manifest_paths = [
+        str(item).strip() for item in (external_next_hop_block_manifest_paths or []) if str(item).strip()
+    ]
+    external_next_hop_block_sample_refs = [
+        str(item).strip() for item in (external_next_hop_block_sample_refs or []) if str(item).strip()
+    ]
+
+    pre_send_total = 0
+    pre_send_passed = 0
+    pre_send_not_reached = 0
+    post_check_total = 0
+    post_check_passed = 0
+    next_hop_total = 0
+    next_hop_blocked = 0
+    false_green_total = 0
+    false_green_count = 0
+    chat_egress_uniqueness_total = 0
+    chat_egress_uniqueness_passed = 0
+    post_gate_coverage_total = 0
+    post_gate_coverage_passed = 0
+    next_hop_headstamp_total = 0
+    next_hop_headstamp_passed = 0
+    next_hop_candidates: list[str] = []
+    next_hop_admission_fail_identities: list[str] = []
+    external_next_hop_block_total = 0
+    external_next_hop_blocked = 0
+    false_green_identities: list[str] = []
+    chat_egress_uniqueness_fail_identities: list[str] = []
+    next_hop_headstamp_fail_identities: list[str] = []
+
+    for row in runtime_rows:
+        identity_id = str(row.get("identity_id", "")).strip()
+        checks = row.get("checks") if isinstance(row.get("checks"), dict) else {}
+        send_entry = checks.get("send_time_reply_gate_validate")
+        if not isinstance(send_entry, dict):
+            send_entry = checks.get("send_time_reply_gate")
+        host_entry = checks.get("host_transport_wiring_attestation")
+
+        if isinstance(send_entry, dict):
+            pre_send_total += 1
+            send_status = str(send_entry.get("send_time_gate_status", "")).strip().upper()
+            first_line_gate_executed = bool(send_entry.get("reply_first_line_gate_executed", True))
+            block_stage = str(send_entry.get("send_time_block_stage", "")).strip()
+            first_line_status = str(send_entry.get("reply_first_line_status", "")).strip().upper()
+            if (not first_line_gate_executed) and block_stage.startswith("pre_first_line_post_check_"):
+                pre_send_not_reached += 1
+            if bool(send_entry.get("ok", False)) and send_status in {"", STATUS_PASS_REQUIRED}:
+                pre_send_passed += 1
+            post_gate_coverage_total += 1
+            chat_contract_id = str(send_entry.get("chat_egress_uniqueness_contract_id", "")).strip()
+            chat_status = str(send_entry.get("chat_egress_uniqueness_status", "")).strip().upper()
+            chat_reason = str(send_entry.get("chat_egress_uniqueness_reason", "")).strip()
+            chat_observed_status = str(
+                send_entry.get("chat_egress_uniqueness_observed_send_time_status", "")
+            ).strip().upper()
+            if (
+                chat_contract_id == HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_CONTRACT_ID
+                and chat_status
+                and chat_reason
+                and chat_observed_status
+            ):
+                post_gate_coverage_passed += 1
+            chat_egress_uniqueness_status = str(send_entry.get("chat_egress_uniqueness_status", "")).strip().upper()
+            if chat_egress_uniqueness_status:
+                chat_egress_uniqueness_total += 1
+                if chat_egress_uniqueness_status == STATUS_PASS_REQUIRED:
+                    chat_egress_uniqueness_passed += 1
+                elif identity_id:
+                    chat_egress_uniqueness_fail_identities.append(identity_id)
+            next_hop_admission_status = _next_hop_admission_status_for_row(send_entry)
+            output_governance_mode = str(send_entry.get("output_governance_mode", "")).strip()
+            if next_hop_admission_status == STATUS_FAIL_REQUIRED and identity_id:
+                next_hop_admission_fail_identities.append(identity_id)
+            if next_hop_admission_status == STATUS_PASS_REQUIRED:
+                next_hop_headstamp_total += 1
+                if (
+                    first_line_status == STATUS_PASS_REQUIRED
+                    and first_line_gate_executed
+                    and output_governance_mode in {"", "governed"}
+                ):
+                    next_hop_headstamp_passed += 1
+                elif identity_id:
+                    next_hop_headstamp_fail_identities.append(identity_id)
+            post_check_state_status = str(send_entry.get("host_transport_post_check_state_status", "")).strip()
+            post_check_state_unavailable = post_check_state_status in {
+                "STATE_UNCHECKED",
+                "STATE_MISSING",
+                "STATE_INVALID",
+                "STATE_RESOLVE_FAILED",
+                "STATE_CONTRACT_MISSING",
+            }
+            post_check_guard_expected = bool(send_entry.get("host_transport_post_check_block_on_active", False)) and (
+                bool(send_entry.get("host_transport_post_check_blocker_active", False))
+                or post_check_state_unavailable
+            )
+            if post_check_guard_expected:
+                next_hop_total += 1
+                if identity_id:
+                    next_hop_candidates.append(identity_id)
+                stale_reasons = [
+                    str(item).strip() for item in (send_entry.get("stale_reasons") or []) if str(item).strip()
+                ]
+                if send_status == STATUS_FAIL_REQUIRED and (
+                    _stale_reason_contains(stale_reasons, "host_transport_post_check_blocker_active")
+                    or _stale_reason_contains(stale_reasons, "host_transport_post_check_state_unavailable")
+                ):
+                    next_hop_blocked += 1
+
+        if isinstance(host_entry, dict):
+            post_check_total += 1
+            false_green_total += 1
+            write_status = str(host_entry.get("host_transport_post_check_state_write_status", "")).strip().upper()
+            state_path = str(host_entry.get("host_transport_post_check_closure_state_path", "")).strip()
+            if write_status == STATUS_PASS_REQUIRED and state_path:
+                post_check_passed += 1
+
+            host_status = str(host_entry.get("host_transport_wiring_attestation_status", "")).strip().upper()
+            strict_binding_required = bool(
+                host_entry.get("host_transport_wiring_attestation_strict_live_run_binding_required", False)
+            )
+            live_receipts_required = bool(host_entry.get("host_transport_wiring_attestation_live_receipt_required", False))
+            required_run_id = str(host_entry.get("host_transport_wiring_attestation_required_run_id", "")).strip()
+            is_false_green = (
+                host_status == STATUS_PASS_REQUIRED
+                and (
+                    not strict_binding_required
+                    or (live_receipts_required and not required_run_id)
+                )
+            )
+            if is_false_green:
+                false_green_count += 1
+                if identity_id:
+                    false_green_identities.append(identity_id)
+
+    for sample in external_next_hop_block_samples:
+        if not isinstance(sample, dict):
+            continue
+        external_next_hop_block_total += 1
+        next_hop_total += 1
+        identity_id = str(sample.get("identity_id", "")).strip()
+        if identity_id:
+            next_hop_candidates.append(identity_id)
+            next_hop_admission_fail_identities.append(identity_id)
+        if bool(sample.get("blocked", False)):
+            external_next_hop_blocked += 1
+            next_hop_blocked += 1
+
+    pre_send_rate = _safe_rate(passed=pre_send_passed, total=pre_send_total)
+    post_check_rate = _safe_rate(passed=post_check_passed, total=post_check_total)
+    next_hop_rate = _safe_rate(passed=next_hop_blocked, total=next_hop_total)
+    false_green_rate = _safe_rate(passed=false_green_count, total=false_green_total)
+    chat_egress_uniqueness_rate = _safe_rate(
+        passed=chat_egress_uniqueness_passed,
+        total=chat_egress_uniqueness_total,
+    )
+    post_gate_coverage_rate = _safe_rate(
+        passed=post_gate_coverage_passed,
+        total=post_gate_coverage_total,
+    )
+    next_hop_headstamp_rate = _safe_rate(
+        passed=next_hop_headstamp_passed,
+        total=next_hop_headstamp_total,
+    )
+
+    pre_send_status = _status_by_min_rate(
+        rate=pre_send_rate,
+        min_rate=float(HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE),
+        total=pre_send_total,
+    )
+    post_check_status = _status_by_min_rate(
+        rate=post_check_rate,
+        min_rate=float(HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE),
+        total=post_check_total,
+    )
+    next_hop_status = _status_by_min_rate(
+        rate=next_hop_rate,
+        min_rate=float(HOST_VISIBLE_NEXT_HOP_BLOCK_REQUIRED_RATE),
+        total=next_hop_total,
+    )
+    false_green_status = _status_by_max_rate(
+        rate=false_green_rate,
+        max_rate=float(HOST_VISIBLE_FALSE_GREEN_MAX_RATE),
+        total=false_green_total,
+    )
+    chat_egress_uniqueness_status = _status_by_min_rate(
+        rate=chat_egress_uniqueness_rate,
+        min_rate=float(HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_REQUIRED_RATE),
+        total=chat_egress_uniqueness_total,
+    )
+    post_gate_coverage_status = _status_by_min_rate(
+        rate=post_gate_coverage_rate,
+        min_rate=float(HOST_VISIBLE_POST_GATE_COVERAGE_REQUIRED_RATE),
+        total=post_gate_coverage_total,
+    )
+    next_hop_headstamp_status = _status_by_min_rate(
+        rate=next_hop_headstamp_rate,
+        min_rate=float(HOST_VISIBLE_NEXT_HOP_HEADSTAMP_REQUIRED_RATE),
+        total=next_hop_headstamp_total,
+    )
+
+    metric_statuses = (
+        pre_send_status,
+        post_check_status,
+        next_hop_status,
+        false_green_status,
+        chat_egress_uniqueness_status,
+        post_gate_coverage_status,
+        next_hop_headstamp_status,
+    )
+    strict_skip_fail_reasons: list[str] = []
+    if next_hop_status == STATUS_SKIPPED_NOT_REQUIRED:
+        strict_skip_fail_reasons.append("next_hop_block_samples_missing")
+    if chat_egress_uniqueness_status == STATUS_SKIPPED_NOT_REQUIRED:
+        strict_skip_fail_reasons.append("chat_egress_uniqueness_samples_missing")
+    if post_gate_coverage_status == STATUS_SKIPPED_NOT_REQUIRED:
+        strict_skip_fail_reasons.append("post_gate_coverage_samples_missing")
+    if next_hop_headstamp_status == STATUS_SKIPPED_NOT_REQUIRED:
+        strict_skip_fail_reasons.append("next_hop_headstamp_samples_missing")
+    overall_status = STATUS_PASS_REQUIRED
+    if any(status == STATUS_FAIL_REQUIRED for status in metric_statuses):
+        overall_status = STATUS_FAIL_REQUIRED
+    elif strict_skip_fail_reasons:
+        overall_status = STATUS_FAIL_REQUIRED
+    elif any(status == STATUS_SKIPPED_NOT_REQUIRED for status in metric_statuses):
+        overall_status = STATUS_SKIPPED_NOT_REQUIRED
+
+    closure_claim_ready = (
+        pre_send_status == STATUS_PASS_REQUIRED
+        and post_check_status == STATUS_PASS_REQUIRED
+        and next_hop_status == STATUS_PASS_REQUIRED
+        and false_green_status == STATUS_PASS_REQUIRED
+        and chat_egress_uniqueness_status == STATUS_PASS_REQUIRED
+        and post_gate_coverage_status == STATUS_PASS_REQUIRED
+        and next_hop_headstamp_status == STATUS_PASS_REQUIRED
+    )
+
+    stale_reasons: list[str] = []
+    if pre_send_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("metric_pre_send_gate_pass_rate_below_threshold")
+    if pre_send_not_reached > 0:
+        stale_reasons.append("metric_pre_send_gate_not_reached_due_post_check_blocker")
+    if post_check_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("metric_post_check_detectability_rate_below_threshold")
+    if next_hop_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("metric_next_hop_block_rate_below_threshold")
+    if next_hop_status == STATUS_SKIPPED_NOT_REQUIRED:
+        stale_reasons.append("metric_next_hop_block_rate_insufficient_blocker_samples")
+    if false_green_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("metric_false_green_rate_above_threshold")
+    if chat_egress_uniqueness_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("metric_chat_egress_uniqueness_rate_below_threshold")
+    if chat_egress_uniqueness_status == STATUS_SKIPPED_NOT_REQUIRED:
+        stale_reasons.append("metric_chat_egress_uniqueness_samples_missing")
+    if post_gate_coverage_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("metric_post_gate_coverage_rate_below_threshold")
+    if post_gate_coverage_status == STATUS_SKIPPED_NOT_REQUIRED:
+        stale_reasons.append("metric_post_gate_coverage_samples_missing")
+    if next_hop_headstamp_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("metric_next_hop_headstamp_rate_below_threshold")
+    if next_hop_headstamp_status == STATUS_SKIPPED_NOT_REQUIRED:
+        stale_reasons.append("metric_next_hop_headstamp_samples_missing")
+    if strict_skip_fail_reasons:
+        stale_reasons.append(
+            "metric_strict_skip_fail_close:" + ",".join(sorted(set(strict_skip_fail_reasons)))
+        )
+
+    return {
+        "contract_id": "rq_036_host_visible_post_check_next_hop_block_contract_v1",
+        "chat_egress_uniqueness_contract_id": HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_CONTRACT_ID,
+        "host_visible_post_check_metrics_status": overall_status,
+        "chat_egress_uniqueness_status": chat_egress_uniqueness_status,
+        "closure_claim_ready": bool(closure_claim_ready),
+        "thresholds": {
+            "pre_send_gate_pass_rate_min": float(HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE),
+            "post_check_detectability_rate_min": float(HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE),
+            "next_hop_block_rate_min": float(HOST_VISIBLE_NEXT_HOP_BLOCK_REQUIRED_RATE),
+            "false_green_rate_max": float(HOST_VISIBLE_FALSE_GREEN_MAX_RATE),
+            "chat_egress_uniqueness_rate_min": float(HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_REQUIRED_RATE),
+            "post_gate_coverage_rate_min": float(HOST_VISIBLE_POST_GATE_COVERAGE_REQUIRED_RATE),
+            "next_hop_headstamp_rate_min": float(HOST_VISIBLE_NEXT_HOP_HEADSTAMP_REQUIRED_RATE),
+        },
+        "samples": {
+            "runtime_active_total": len(runtime_rows),
+            "pre_send_gate_total": pre_send_total,
+            "pre_send_gate_not_reached_total": pre_send_not_reached,
+            "post_check_detectability_total": post_check_total,
+            "next_hop_block_total": next_hop_total,
+            "next_hop_block_probe_total": external_next_hop_block_total,
+            "next_hop_block_probe_blocked_total": external_next_hop_blocked,
+            "false_green_total": false_green_total,
+            "chat_egress_uniqueness_total": chat_egress_uniqueness_total,
+            "post_gate_coverage_total": post_gate_coverage_total,
+            "next_hop_headstamp_total": next_hop_headstamp_total,
+        },
+        "metrics": {
+            "pre_send_gate_pass_rate": pre_send_rate,
+            "post_check_detectability_rate": post_check_rate,
+            "next_hop_block_rate": next_hop_rate,
+            "false_green_rate": false_green_rate,
+            "chat_egress_uniqueness_rate": chat_egress_uniqueness_rate,
+            "post_gate_coverage_rate": post_gate_coverage_rate,
+            "next_hop_headstamp_rate": next_hop_headstamp_rate,
+        },
+        "metric_statuses": {
+            "pre_send_gate_pass_rate_status": pre_send_status,
+            "post_check_detectability_rate_status": post_check_status,
+            "next_hop_block_rate_status": next_hop_status,
+            "false_green_rate_status": false_green_status,
+            "chat_egress_uniqueness_rate_status": chat_egress_uniqueness_status,
+            "post_gate_coverage_rate_status": post_gate_coverage_status,
+            "next_hop_headstamp_rate_status": next_hop_headstamp_status,
+        },
+        "next_hop_block_probe_manifest_paths": sorted(set(external_next_hop_block_manifest_paths)),
+        "next_hop_block_probe_sample_refs": sorted(set(external_next_hop_block_sample_refs)),
+        "next_hop_block_identity_ids": sorted(set(next_hop_candidates)),
+        "next_hop_admission_fail_identity_ids": sorted(set(next_hop_admission_fail_identities)),
+        "false_green_identity_ids": sorted(set(false_green_identities)),
+        "chat_egress_uniqueness_fail_identity_ids": sorted(set(chat_egress_uniqueness_fail_identities)),
+        "next_hop_headstamp_fail_identity_ids": sorted(set(next_hop_headstamp_fail_identities)),
+        "strict_skip_fail_close_reasons": sorted(set(strict_skip_fail_reasons)),
+        "stale_reasons": stale_reasons,
+    }
+
+
+def _latest_runtime_report(
+    identity_id: str,
+    report_dir: Path,
+    *,
+    explicit_pack_root: Path | None = None,
+) -> Path | None:
+    return latest_prompt_bound_primary_execution_report_from_roots(
+        [report_dir],
+        identity_id,
+        explicit_pack_root=explicit_pack_root,
+    )
+
+
+def _within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except Exception:
+        return False
+
+
+def _infer_target_source_layer_from_env(*, project_catalog: Path, global_catalog: Path) -> str:
+    token = os.environ.get("IDENTITY_CATALOG", "").strip()
+    if not token:
+        return ""
+    try:
+        env_catalog = Path(token).expanduser().resolve()
+    except Exception:
+        return ""
+    if env_catalog == project_catalog.resolve() or _within(env_catalog, project_catalog.parent):
+        return "project"
+    if env_catalog == global_catalog.resolve() or _within(env_catalog, global_catalog.parent):
+        return "global"
+    return ""
+
+
+def _parse_session_id_map_literal(raw: str) -> tuple[dict[str, str], list[str]]:
+    mapping: dict[str, str] = {}
+    errors: list[str] = []
+    token = str(raw or "").strip()
+    if not token:
+        return mapping, errors
+    for part in re.split(r"[,\n]+", token):
+        entry = str(part or "").strip()
+        if not entry:
+            continue
+        if "=" not in entry:
+            errors.append(f"session_id_map_invalid_entry_missing_equals:{entry}")
+            continue
+        identity_id, session_id = [x.strip() for x in entry.split("=", 1)]
+        if not identity_id or not session_id:
+            errors.append(f"session_id_map_invalid_entry_empty_field:{entry}")
+            continue
+        mapping[identity_id] = session_id
+    return mapping, errors
+
+
+def _load_session_id_map(*, map_file: str, map_inline: str, repo_root: Path) -> tuple[dict[str, str], list[str], str]:
+    mapping: dict[str, str] = {}
+    errors: list[str] = []
+    source = ""
+    inline = str(map_inline or "").strip()
+    file_token = str(map_file or "").strip()
+    if inline and file_token:
+        return {}, ["session_id_map_conflict_inline_and_file"], source
+    if inline:
+        parsed, parse_errors = _parse_session_id_map_literal(inline)
+        mapping.update(parsed)
+        errors.extend(parse_errors)
+        source = "inline"
+        return mapping, errors, source
+    if not file_token:
+        return mapping, errors, source
+
+    path = Path(file_token).expanduser()
+    if not path.is_absolute():
+        path = (repo_root / file_token).resolve()
+    else:
+        path = path.resolve()
+    source = str(path)
+    if not path.exists():
+        return {}, [f"session_id_map_file_not_found:{path}"], source
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except Exception as exc:
+        return {}, [f"session_id_map_file_read_failed:{exc}"], source
+
+    parsed_doc: Any = None
+    try:
+        parsed_doc = json.loads(raw)
+    except Exception:
+        try:
+            parsed_doc = yaml.safe_load(raw)
+        except Exception:
+            parsed_doc = None
+
+    if not isinstance(parsed_doc, dict):
+        return {}, [f"session_id_map_file_invalid_root:{path}"], source
+    for key, value in parsed_doc.items():
+        identity_id = str(key or "").strip()
+        session_id = str(value or "").strip()
+        if not identity_id or not session_id:
+            errors.append(f"session_id_map_file_invalid_entry:{key}")
+            continue
+        mapping[identity_id] = session_id
+    return mapping, errors, source
+
+
+def _collect_runtime_active_identity_ids(
+    *,
+    catalog_list: list[tuple[str, Path]],
+    scan_mode: str,
+    target_set: set[str],
+) -> list[str]:
+    out: set[str] = set()
+    for _layer, catalog in catalog_list:
+        rows = _catalog_rows(catalog) if catalog.exists() else []
+        for row in rows:
+            identity_id = str(row.get("id", "")).strip()
+            if not identity_id:
+                continue
+            if scan_mode == "target" and identity_id not in target_set:
+                continue
+            profile = str(row.get("profile", "")).strip().lower()
+            runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+            status = str(row.get("status", "")).strip().lower()
+            if status == "active" and profile == "runtime" and runtime_mode != "demo_only":
+                out.add(identity_id)
+    return sorted(out)
+
+
+def _is_session_bound_for_identity(
+    *,
+    catalog_list: list[tuple[str, Path]],
+    actor_id: str,
+    identity_id: str,
+    session_id: str,
+) -> bool:
+    token = str(session_id or "").strip()
+    if not token:
+        return False
+    for _layer, catalog in catalog_list:
+        if not catalog.exists():
+            continue
+        rows = _catalog_rows(catalog)
+        present = any(str(row.get("id", "")).strip() == identity_id for row in rows)
+        if not present:
+            continue
+        try:
+            binding = load_actor_binding(
+                catalog,
+                actor_id,
+                identity_id=identity_id,
+                session_id=token,
+            )
+        except Exception:
+            binding = {}
+        if binding:
+            return True
+    return False
+
+
+def _resolve_effective_scan_session_id(
+    *,
+    catalog_path: Path,
+    actor_id: str,
+    identity_id: str,
+    requested_session_id: str,
+) -> tuple[str, str, bool]:
+    requested = str(requested_session_id or "").strip()
+    if requested:
+        exact = load_actor_binding(
+            catalog_path,
+            actor_id,
+            identity_id=identity_id,
+            session_id=requested,
+        )
+        if exact:
+            return requested, "requested_bound", True
+        # strict scan semantics: when a caller supplies an explicit session selector,
+        # never silently fallback to identity-scoped latest binding.
+        return requested, "requested_unbound_no_fallback", False
+
+    identity_scoped = load_actor_binding(
+        catalog_path,
+        actor_id,
+        identity_id=identity_id,
+        session_id="",
+    )
+    fallback_session_id = str(identity_scoped.get("session_id", "")).strip()
+    if fallback_session_id:
+        if requested:
+            return fallback_session_id, "requested_unbound_fallback_identity_scoped", False
+        return fallback_session_id, "identity_scoped_latest", True
+
+    if requested:
+        return requested, "requested_unbound_no_fallback", False
+    return "", "missing", False
+
+
+def _derive_run_id_from_session_id(session_id: str) -> str:
+    token = str(session_id or "").strip()
+    if not token:
+        return ""
+    if ":" not in token:
+        return ""
+    prefix, value = token.split(":", 1)
+    if str(prefix or "").strip().lower() != "run":
+        return ""
+    return str(value or "").strip()
 
 
 def _scope_hint_for_row(layer: str, row: dict[str, Any]) -> str:
@@ -131,7 +1411,7 @@ def _scope_hint_for_row(layer: str, row: dict[str, Any]) -> str:
     runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
     if profile == "fixture" or runtime_mode == "demo_only":
         return "SYSTEM"
-    if layer == "repo":
+    if layer == "repo_metadata":
         return "SYSTEM"
     return "USER"
 
@@ -140,12 +1420,21 @@ def _severity_for_row(row: dict[str, Any]) -> str:
     active = str(row.get("status", "")).lower() == "active"
     profile = str(row.get("profile", "")).lower()
     runtime_mode = str(row.get("runtime_mode", "")).lower()
+    projection_profile = str(row.get("scan_projection_profile", "")).strip().lower()
     is_fixture = profile == "fixture" or runtime_mode == "demo_only"
     # Fixture/demo identities and inactive rows are visibility-only in scan output.
     # Keep their detailed check payloads for audit, but do not let them block
     # release readiness summary (prevents false non-green caused by demo lanes).
     if (not active) or is_fixture:
         return "OK"
+    if projection_profile == "terminal_truth_boundary_projection":
+        terminal_truth_boundary_projection = row.get("three_plane_terminal_truth_boundary_projection") or {}
+        terminal_truth_boundary_projection_status = str(
+            terminal_truth_boundary_projection.get("terminal_truth_boundary_projection_status", "")
+        ).strip().upper()
+        if terminal_truth_boundary_projection_status in {STATUS_PASS_REQUIRED, STATUS_SKIPPED_NOT_REQUIRED}:
+            return "OK"
+        return "P0"
     checks = row.get("checks", {})
     core_fail = any(
         not checks.get(name, {}).get("ok", False)
@@ -153,6 +1442,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "scope_resolution",
             "scope_isolation",
             "scope_persistence",
+            "runtime_mode_guard",
             "runtime_contract",
             "identity_home_catalog_alignment",
             "fixture_runtime_boundary",
@@ -166,8 +1456,11 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "reply_identity_context_first_line",
             "layer_intent_resolution",
             "send_time_reply_gate",
+            "protocol_lane_headstamp_continuity",
+            "host_transport_wiring_attestation",
             "headstamp_recurrence_closure",
             "execution_reply_identity_coherence",
+            "experience_writeback",
             "writeback_continuity",
             "post_execution_mandatory",
             "semantic_routing_guard",
@@ -193,8 +1486,26 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "protocol_feedback_sidecar",
             "instance_base_repo_write_boundary",
             "protocol_feedback_ssot_archival",
+            "downsink_path_immutability",
+            "downsink_path_write_guard",
+            "downsink_path_literal_lock",
             "protocol_version_alignment",
+            "required_gate_bundle_runner",
+            "required_gate_bundle_runner_shadow",
+            "required_gate_recurrence_escalator",
+            "required_gate_tuple_parity",
+            "cross_verification_tracks",
+            "intake_evidence_quorum",
+            "route_version_pinning",
+            "fallback_taxonomy_normalization",
+            "dedup_monotonicity",
+            "cross_workflow_schema",
+            "skill_path_integrity",
+            "execution_target_tuple_isolation",
+            "multimodal_plugin_enforcement",
+            "reasoning_loop_failclose_enforcement",
             "e2e_hermetic_runtime_import",
+            "three_plane",
         )
     )
     prompt_fail = (not is_fixture) and any(
@@ -272,14 +1583,420 @@ def _severity_for_row(row: dict[str, Any]) -> str:
     return "OK"
 
 
+def _summary_bucket_for_row(row: dict[str, Any]) -> str:
+    profile = str(row.get("profile", "")).strip().lower()
+    runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+    status = str(row.get("status", "")).strip().lower()
+    is_fixture = profile == "fixture" or runtime_mode == "demo_only"
+    if is_fixture:
+        return "fixture_or_demo"
+    if status == "active" and profile == "runtime":
+        return "runtime_active"
+    return "non_active_or_non_runtime"
+
+
+def _bump_summary(summary: dict[str, int], severity: str) -> None:
+    summary["total_identities"] = int(summary.get("total_identities", 0)) + 1
+    normalized = str(severity or "OK").strip().upper()
+    if normalized == "P0":
+        summary["p0"] = int(summary.get("p0", 0)) + 1
+    elif normalized == "P1":
+        summary["p1"] = int(summary.get("p1", 0)) + 1
+    else:
+        summary["ok"] = int(summary.get("ok", 0)) + 1
+
+
+def _build_projection_profile_host_visible_post_check_metrics(
+    *,
+    projection_profile: FullIdentityProtocolScanProjectionProfile,
+) -> dict[str, Any]:
+    threshold_payload = {
+        "pre_send_gate_pass_rate_min": float(HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE),
+        "post_check_detectability_rate_min": float(HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE),
+        "next_hop_block_rate_min": float(HOST_VISIBLE_NEXT_HOP_BLOCK_REQUIRED_RATE),
+        "false_green_rate_max": float(HOST_VISIBLE_FALSE_GREEN_MAX_RATE),
+        "chat_egress_uniqueness_rate_min": float(HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_REQUIRED_RATE),
+        "post_gate_coverage_rate_min": float(HOST_VISIBLE_POST_GATE_COVERAGE_REQUIRED_RATE),
+        "next_hop_headstamp_rate_min": float(HOST_VISIBLE_NEXT_HOP_HEADSTAMP_REQUIRED_RATE),
+    }
+    sample_payload = {
+        "runtime_active_total": 0,
+        "pre_send_gate_total": 0,
+        "pre_send_gate_not_reached_total": 0,
+        "post_check_detectability_total": 0,
+        "next_hop_block_total": 0,
+        "next_hop_block_probe_total": 0,
+        "next_hop_block_probe_blocked_total": 0,
+        "false_green_total": 0,
+        "chat_egress_uniqueness_total": 0,
+        "post_gate_coverage_total": 0,
+        "next_hop_headstamp_total": 0,
+    }
+    metric_payload = {
+        "pre_send_gate_pass_rate": 0.0,
+        "post_check_detectability_rate": 0.0,
+        "next_hop_block_rate": 0.0,
+        "false_green_rate": 0.0,
+        "chat_egress_uniqueness_rate": 0.0,
+        "post_gate_coverage_rate": 0.0,
+        "next_hop_headstamp_rate": 0.0,
+    }
+    metric_statuses = {
+        "pre_send_gate_pass_rate_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "post_check_detectability_rate_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "next_hop_block_rate_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "false_green_rate_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "chat_egress_uniqueness_rate_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "post_gate_coverage_rate_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "next_hop_headstamp_rate_status": STATUS_SKIPPED_NOT_REQUIRED,
+    }
+    return build_projection_profile_exclusion_payload(
+        profile_id=projection_profile.profile_id,
+        execution_mode=projection_profile.execution_mode,
+        description=projection_profile.description,
+        excluded_area="host_visible_post_check_metrics",
+        owner_surface="full_identity_protocol_scan_summary",
+        extra_fields={
+            "contract_id": "rq_036_host_visible_post_check_next_hop_block_contract_v1",
+            "chat_egress_uniqueness_contract_id": HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_CONTRACT_ID,
+            "host_visible_post_check_metrics_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "chat_egress_uniqueness_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "closure_claim_ready": False,
+            "thresholds": threshold_payload,
+            "samples": sample_payload,
+            "metrics": metric_payload,
+            "metric_statuses": metric_statuses,
+            "next_hop_block_probe_manifest_paths": [],
+            "next_hop_block_probe_sample_refs": [],
+            "next_hop_block_identity_ids": [],
+            "next_hop_admission_fail_identity_ids": [],
+            "false_green_identity_ids": [],
+            "chat_egress_uniqueness_fail_identity_ids": [],
+            "next_hop_headstamp_fail_identity_ids": [],
+            "strict_skip_fail_close_reasons": [],
+        },
+    )
+
+
+def _health_report_projection_is_scope_excluded(projection: dict[str, Any] | None) -> bool:
+    if not isinstance(projection, dict) or not projection:
+        return False
+    return (
+        str(projection.get("projection_skip_scope_class", "")).strip()
+        == PROJECTION_PROFILE_EXCLUSION_SCOPE_CLASS
+        and str(projection.get("projection_skip_scope_reason", "")).strip()
+        == PROJECTION_PROFILE_EXCLUSION_SCOPE_REASON
+        and str(projection.get("projection_excluded_area", "")).strip()
+        == HEALTH_REPORT_EXPERIENCE_WRITEBACK_CLOSURE_EXCLUDED_AREA
+    )
+
+
+def _record_summary_health_report_experience_writeback_closure(
+    summary: dict[str, Any],
+    *,
+    identity_id: str,
+    projection: dict[str, Any] | None,
+) -> None:
+    if not isinstance(summary, dict) or not isinstance(projection, dict) or not projection:
+        return
+    summary["total_identities"] = int(summary.get("total_identities", 0)) + 1
+    identity_token = str(identity_id or "").strip()
+    projection_status = str(projection.get("projection_status", "")).strip().upper()
+    if projection_status == STATUS_PASS_REQUIRED:
+        summary["projection_pass"] = int(summary.get("projection_pass", 0)) + 1
+    elif _health_report_projection_is_scope_excluded(projection):
+        summary["projection_skipped_not_required"] = int(
+            summary.get("projection_skipped_not_required", 0)
+        ) + 1
+        if identity_token and identity_token not in summary["projection_scope_excluded_identity_ids"]:
+            summary["projection_scope_excluded_identity_ids"].append(identity_token)
+        scope_class = str(projection.get("projection_skip_scope_class", "")).strip()
+        scope_reason = str(projection.get("projection_skip_scope_reason", "")).strip()
+        if scope_class and scope_class not in summary["projection_scope_classes"]:
+            summary["projection_scope_classes"].append(scope_class)
+        if scope_reason and scope_reason not in summary["projection_scope_reasons"]:
+            summary["projection_scope_reasons"].append(scope_reason)
+    else:
+        summary["projection_fail"] = int(summary.get("projection_fail", 0)) + 1
+        if identity_token and identity_token not in summary["projection_fail_identity_ids"]:
+            summary["projection_fail_identity_ids"].append(identity_token)
+
+    if str(projection.get("health_report_collection_status", "")).strip().upper() == STATUS_FAIL_REQUIRED:
+        summary["health_report_collection_fail"] = int(summary.get("health_report_collection_fail", 0)) + 1
+    if str(projection.get("health_report_contract_status", "")).strip().upper() == STATUS_FAIL_REQUIRED:
+        summary["health_report_contract_fail"] = int(summary.get("health_report_contract_fail", 0)) + 1
+    if str(projection.get("validation_status", "")).strip().upper() == STATUS_FAIL_REQUIRED:
+        summary["health_report_validation_fail"] = int(summary.get("health_report_validation_fail", 0)) + 1
+
+    stale_reasons = {
+        str(reason or "").strip()
+        for reason in projection.get("stale_reasons", [])
+        if str(reason or "").strip()
+    }
+    for stale_reason in sorted(stale_reasons):
+        if stale_reason not in summary["projection_stale_reasons"]:
+            summary["projection_stale_reasons"].append(stale_reason)
+    if "health_report_selected_path_execution_report_mismatch" in stale_reasons:
+        summary["selected_path_mismatch"] = int(summary.get("selected_path_mismatch", 0)) + 1
+    if "health_report_execution_report_ref_mismatch" in stale_reasons:
+        summary["execution_report_ref_mismatch"] = int(summary.get("execution_report_ref_mismatch", 0)) + 1
+    if "health_report_boundary_validation_status_mismatch" in stale_reasons:
+        summary["boundary_validation_mismatch"] = int(summary.get("boundary_validation_mismatch", 0)) + 1
+    if str(projection.get("boundary_bridge_status", "")).strip().upper() == STATUS_FAIL_REQUIRED:
+        summary["boundary_bridge_fail"] = int(summary.get("boundary_bridge_fail", 0)) + 1
+        if identity_token and identity_token not in summary["boundary_bridge_fail_identity_ids"]:
+            summary["boundary_bridge_fail_identity_ids"].append(identity_token)
+
+
+def _apply_three_plane_projection(
+    *,
+    repo_root: Path,
+    catalog: Path,
+    repo_catalog: Path,
+    item: dict[str, Any],
+    payload: dict[str, Any],
+    identity_id: str,
+    actor_id: str,
+    session_id: str,
+    scope_hint: str,
+    target_branch: str,
+    release_head_sha: str,
+    required_gates_run_id: str,
+    run_url: str,
+    workflow_file_sha: str,
+    run_head_sha: str,
+    run_workflow_file_sha: str,
+    checks_json: str,
+    jobs_json: str,
+    gh_runs_json: str,
+    layer_intent_text: str,
+    effective_work_layer: str,
+    effective_source_layer: str,
+    with_docs_contract: bool,
+    record_required_gate_projection: Callable[[str, dict[str, Any]], None],
+    three_plane_projection_profile_id: str = "",
+) -> None:
+    env = os.environ.copy()
+    env["IDENTITY_CATALOG"] = str(catalog)
+    three_plane = _run(
+        [
+            "python3",
+            "scripts/report_three_plane_status.py",
+            "--identity-id",
+            identity_id,
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            session_id,
+            *(["--projection-profile", three_plane_projection_profile_id] if three_plane_projection_profile_id else []),
+            "--scope",
+            scope_hint,
+            "--target-branch",
+            target_branch,
+            "--release-head-sha",
+            release_head_sha,
+            "--required-gates-run-id",
+            required_gates_run_id,
+            "--run-url",
+            run_url,
+            "--workflow-file-sha",
+            workflow_file_sha,
+            "--run-head-sha",
+            run_head_sha,
+            "--run-workflow-file-sha",
+            run_workflow_file_sha,
+            *(["--checks-json", checks_json] if checks_json else []),
+            *(["--jobs-json", jobs_json] if jobs_json and not checks_json else []),
+            *(["--gh-runs-json", gh_runs_json] if gh_runs_json and not checks_json and not jobs_json else []),
+            *(["--layer-intent-text", layer_intent_text] if layer_intent_text else []),
+            *(["--expected-work-layer", effective_work_layer] if effective_work_layer else []),
+            *(["--expected-source-layer", effective_source_layer] if effective_source_layer else []),
+            *(["--with-docs-contract"] if with_docs_contract else []),
+        ],
+        cwd=repo_root,
+        env=env,
+    )
+    item["checks"]["three_plane"] = {"rc": three_plane.rc, "ok": three_plane.ok, "tail": three_plane.tail}
+    tp = _parse_json_safely(three_plane.stdout)
+    if not tp:
+        return
+
+    current_chat_surface_projection = _build_current_chat_surface_projection_from_three_plane(
+        three_plane_payload=tp
+    )
+    item["three_plane"] = {
+        "instance": tp.get("instance_plane_status"),
+        "repo": tp.get("repo_plane_status"),
+        "release": tp.get("release_plane_status"),
+        "overall": tp.get("overall_release_decision"),
+    }
+    if isinstance(tp.get("m2m_projection"), dict):
+        item["three_plane_m2m_projection"] = tp.get("m2m_projection")
+    terminal_truth_boundary_projection = tp.get("terminal_truth_boundary_projection")
+    if isinstance(terminal_truth_boundary_projection, dict):
+        item["three_plane_terminal_truth_boundary_projection"] = terminal_truth_boundary_projection
+        item["three_plane"]["terminal_truth_boundary_projection_status"] = (
+            terminal_truth_boundary_projection.get("terminal_truth_boundary_projection_status", "")
+        )
+        item["three_plane"]["terminal_truth_boundary_health_class"] = (
+            terminal_truth_boundary_projection.get("boundary_health_class", "")
+        )
+        item["three_plane"]["admission_lane_projection"] = (
+            terminal_truth_boundary_projection.get("admission_lane_projection", "")
+        )
+        payload["summary_terminal_truth_boundary"]["total_identities"] += 1
+        boundary_status = str(
+            terminal_truth_boundary_projection.get("terminal_truth_boundary_projection_status", "")
+        ).strip().upper()
+        boundary_health = str(
+            terminal_truth_boundary_projection.get("boundary_health_class", "")
+        ).strip()
+        admission_projection = str(
+            terminal_truth_boundary_projection.get("admission_lane_projection", "")
+        ).strip()
+        if boundary_status == STATUS_PASS_REQUIRED:
+            payload["summary_terminal_truth_boundary"]["projection_pass"] += 1
+        elif boundary_status == STATUS_SKIPPED_NOT_REQUIRED:
+            payload["summary_terminal_truth_boundary"]["not_applicable"] += 1
+        else:
+            payload["summary_terminal_truth_boundary"]["projection_fail"] += 1
+        if admission_projection == "BLOCKED_BY_TERMINAL_TRUTH":
+            payload["summary_terminal_truth_boundary"]["blocked_by_terminal_truth"] += 1
+            payload["summary_terminal_truth_boundary"]["blocked_identity_ids"].append(
+                item.get("identity_id", "")
+            )
+        if boundary_health == "repair_green_terminal_truth_blocked":
+            payload["summary_terminal_truth_boundary"]["repair_green_terminal_truth_blocked"] += 1
+        elif boundary_health == "repair_green_terminal_truth_clean":
+            payload["summary_terminal_truth_boundary"]["repair_green_terminal_truth_clean"] += 1
+    health_report_projection = tp.get("health_report_experience_writeback_closure")
+    if isinstance(health_report_projection, dict):
+        item["three_plane_health_report_experience_writeback_closure"] = health_report_projection
+        item["three_plane"]["health_report_experience_writeback_projection_status"] = (
+            health_report_projection.get("projection_status", "")
+        )
+        item["three_plane"]["health_report_contract_status"] = (
+            health_report_projection.get("health_report_contract_status", "")
+        )
+        item["three_plane"]["health_report_experience_writeback_validation_status"] = (
+            health_report_projection.get("validation_status", "")
+        )
+        item["three_plane"]["health_report_selected_path_matches_execution_report"] = bool(
+            health_report_projection.get("report_selected_path_matches_execution_report")
+        )
+        _record_summary_health_report_experience_writeback_closure(
+            payload["summary_health_report_experience_writeback_closure"],
+            identity_id=identity_id,
+            projection=health_report_projection,
+        )
+    required_gate_projection = tp.get("required_gate_bundle_target_projection")
+    if isinstance(required_gate_projection, dict):
+        item["three_plane_required_gate_bundle_target_projection"] = required_gate_projection
+        apply_full_scan_required_gate_bundle_three_plane_projection(
+            item["three_plane"],
+            required_gate_projection,
+            prefix="required_gate_bundle",
+        )
+        record_required_gate_projection(identity_id, required_gate_projection)
+    required_gate_shadow_projection = tp.get("required_gate_bundle_shadow_target_projection")
+    if isinstance(required_gate_shadow_projection, dict):
+        item["three_plane_required_gate_bundle_target_projection_shadow"] = required_gate_shadow_projection
+        apply_full_scan_required_gate_bundle_three_plane_projection(
+            item["three_plane"],
+            required_gate_shadow_projection,
+            prefix="required_gate_bundle_shadow",
+        )
+        record_required_gate_projection(
+            identity_id,
+            required_gate_shadow_projection,
+            summary_key="summary_required_gate_bundle_shadow_projection",
+        )
+    required_gate_scan_probe_projection = _build_required_gate_scan_probe_projection(
+        repo_root=repo_root,
+        check_payload=item.get("checks", {}).get("required_gate_bundle_runner"),
+    )
+    if not required_gate_scan_probe_projection and three_plane_projection_profile_id:
+        active_projection_profile = resolve_full_identity_protocol_scan_projection_profile(
+            three_plane_projection_profile_id
+        )
+        if active_projection_profile.projection_only:
+            required_gate_scan_probe_projection = (
+                build_projection_profile_excluded_required_gate_bundle_target_projection(
+                    profile_id=active_projection_profile.profile_id,
+                    execution_mode=active_projection_profile.execution_mode,
+                    description=active_projection_profile.description,
+                    excluded_area="required_gate_bundle_projection",
+                    owner_surface="full_identity_protocol_scan_summary",
+                )
+            )
+    if isinstance(required_gate_scan_probe_projection, dict) and required_gate_scan_probe_projection:
+        item["three_plane_required_gate_bundle_scan_probe_projection"] = required_gate_scan_probe_projection
+        apply_full_scan_required_gate_bundle_three_plane_projection(
+            item["three_plane"],
+            required_gate_scan_probe_projection,
+            prefix="required_gate_bundle_scan_probe",
+        )
+        record_required_gate_projection(
+            identity_id,
+            required_gate_scan_probe_projection,
+            summary_key="summary_required_gate_bundle_scan_probe_projection",
+        )
+    if current_chat_surface_projection:
+        item["current_chat_surface_projection"] = current_chat_surface_projection
+        item["current_chat_surface_explanatory_exclusion_status"] = current_chat_surface_projection.get(
+            "explanatory_exclusion_status", ""
+        )
+        item["current_chat_surface_effective_blocker_scope"] = current_chat_surface_projection.get(
+            "effective_blocker_scope", ""
+        )
+        item["current_chat_surface_excluded_from_blocker_aggregation"] = current_chat_surface_projection.get(
+            "excluded_from_blocker_aggregation", False
+        )
+        item["current_chat_surface_control_state"] = current_chat_surface_projection.get(
+            "control_state", ""
+        )
+        item["current_chat_surface_display_headstamp_line"] = current_chat_surface_projection.get(
+            "display_headstamp_line", ""
+        )
+        item["current_chat_surface_machine_verification_line"] = current_chat_surface_projection.get(
+            "machine_verification_line", ""
+        )
+        item["three_plane"]["current_chat_surface_explanatory_exclusion_status"] = (
+            current_chat_surface_projection.get("explanatory_exclusion_status", "")
+        )
+        item["three_plane"]["current_chat_surface_effective_blocker_scope"] = (
+            current_chat_surface_projection.get("effective_blocker_scope", "")
+        )
+        item["three_plane"]["current_chat_surface_excluded_from_blocker_aggregation"] = (
+            current_chat_surface_projection.get("excluded_from_blocker_aggregation", False)
+        )
+        item["three_plane"]["current_chat_surface_control_state"] = (
+            current_chat_surface_projection.get("control_state", "")
+        )
+
+
 def main() -> int:
+    global SESSION_ID_FALLBACK
     ap = argparse.ArgumentParser(description="Scan all configured identities and emit cross-catalog governance status.")
-    ap.add_argument("--repo-root", default=".")
-    ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--repo-root", default=str(DEFAULT_REPO_ROOT))
+    ap.add_argument("--repo-catalog", default="")
     ap.add_argument("--project-catalog", default="")
     ap.add_argument("--global-catalog", default="")
     ap.add_argument("--include-repo-catalog", action="store_true")
     ap.add_argument("--with-docs-contract", action="store_true")
+    ap.add_argument(
+        "--projection-profile",
+        choices=full_identity_protocol_scan_projection_profile_choices(),
+        default=os.environ.get(
+            "FULL_SCAN_PROJECTION_PROFILE",
+            DEFAULT_FULL_IDENTITY_PROTOCOL_SCAN_PROJECTION_PROFILE,
+        ),
+        help=(
+            "governed scan projection profile; full=complete validator/check matrix, "
+            "terminal_truth_boundary_projection=projection-only profile for outer-surface "
+            "terminal-truth boundary consumers"
+        ),
+    )
     ap.add_argument(
         "--scan-mode",
         choices=["full", "target"],
@@ -291,53 +2008,454 @@ def main() -> int:
         default=os.environ.get("IDENTITY_IDS", ""),
         help="target identities for --scan-mode target (space/comma separated)",
     )
+    ap.add_argument(
+        "--target-source-layer",
+        choices=["auto", "project", "global", "both"],
+        default="auto",
+        help=(
+            "target-mode catalog scope: auto=prefer expected-source-layer/env-bound runtime layer; "
+            "project/global=single layer only; both=scan both project+global."
+        ),
+    )
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passed to stamp render/reply gates")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
     ap.add_argument(
         "--actor-id",
-        default=os.environ.get("CODEX_ACTOR_ID", "assistant:codex"),
+        default="",
         help=(
             "explicit actor id for strict governed-outlet/headstamp recurrence closure checks. "
-            "Defaults to CODEX_ACTOR_ID; falls back to assistant:codex."
+            "required for strict full-scan execution (no implicit fallback)."
         ),
     )
+    ap.add_argument(
+        "--session-id",
+        default="",
+        help="explicit actor session id for strict full-scan execution (e.g., run:<run_id>)",
+    )
+    ap.add_argument(
+        "--session-id-map",
+        default="",
+        help=(
+            "optional per-identity strict session map (identity=session,identity=session). "
+            "when provided, each identity uses its mapped session instead of global --session-id."
+        ),
+    )
+    ap.add_argument(
+        "--session-id-map-file",
+        default="",
+        help=(
+            "optional JSON/YAML mapping file: {\"identity_id\": \"run:<id>\"}. "
+            "used for multi-active strict scans to avoid shared-session noise."
+        ),
+    )
+    ap.add_argument(
+        "--gate-profile",
+        default=os.environ.get("FULL_SCAN_GATE_PROFILE", DEFAULT_GATE_PROFILE_NAME),
+        help="required-gate bundle profile for scan mode (default strict_full)",
+    )
+    ap.add_argument(
+        "--gate-profile-file",
+        default=DEFAULT_GATE_PROFILE_FILE,
+        help="layer-targeted gate profile mapping file passed to required gate bundle runner",
+    )
+    ap.add_argument(
+        "--host-visible-probe-manifest",
+        default=os.environ.get("HOST_VISIBLE_PROBE_MANIFEST", ""),
+        help=(
+            "optional host-visible surface probe manifest path(s) (space/comma separated). "
+            "when omitted, scan auto-discovers canonical manifest paths near selected catalogs and base-repo .identity/_probe."
+        ),
+    )
+    ap.add_argument("--target-branch", default="")
+    ap.add_argument("--release-head-sha", default="")
+    ap.add_argument("--required-gates-run-id", default="")
+    ap.add_argument("--run-url", default="")
+    ap.add_argument("--workflow-file-sha", default="")
+    ap.add_argument("--run-head-sha", default="")
+    ap.add_argument("--run-workflow-file-sha", default="")
+    ap.add_argument("--checks-json", default="")
+    ap.add_argument("--jobs-json", default="")
+    ap.add_argument("--gh-runs-json", default="")
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 
     repo_root = Path(args.repo_root).expanduser().resolve()
-    repo_catalog = (repo_root / args.repo_catalog).resolve() if not Path(args.repo_catalog).is_absolute() else Path(args.repo_catalog)
+    repo_catalog_arg = str(args.repo_catalog or "").strip()
+    if repo_catalog_arg:
+        repo_catalog = (
+            (repo_root / repo_catalog_arg).resolve()
+            if not Path(repo_catalog_arg).is_absolute()
+            else Path(repo_catalog_arg).expanduser().resolve()
+        )
+    else:
+        repo_catalog_fallback = str(
+            args.project_catalog or os.environ.get("IDENTITY_CATALOG") or "identity/catalog/identities.yaml"
+        ).strip()
+        repo_catalog = (
+            (repo_root / repo_catalog_fallback).resolve()
+            if not Path(repo_catalog_fallback).is_absolute()
+            else Path(repo_catalog_fallback).expanduser().resolve()
+        )
     if not repo_catalog.exists():
         print(f"[FAIL] repo catalog not found: {repo_catalog}")
         return 2
 
-    project_catalog = Path(args.project_catalog).expanduser().resolve() if args.project_catalog else (repo_root.parent / ".agents/identity/catalog.local.yaml").resolve()
-    global_catalog = Path(args.global_catalog).expanduser().resolve() if args.global_catalog else (Path.home() / ".codex/identity/catalog.local.yaml").resolve()
-
-    catalog_list: list[tuple[str, Path]] = []
-    if args.include_repo_catalog:
-        catalog_list.append(("repo", repo_catalog))
-    catalog_list.extend([("project", project_catalog), ("global", global_catalog)])
+    if args.project_catalog:
+        project_catalog = Path(args.project_catalog).expanduser().resolve()
+    else:
+        project_catalog = (
+            (repo_root.parent / ".identity" / "catalog.local.yaml").resolve()
+            if repo_root.name == "identity-protocol-local"
+            else (repo_root / ".identity" / "catalog.local.yaml").resolve()
+        )
+    codex_home = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))).expanduser().resolve()
+    global_catalog = (
+        Path(args.global_catalog).expanduser().resolve()
+        if args.global_catalog
+        else (codex_home / ".identity" / "catalog.local.yaml").resolve()
+    )
 
     target_ids = [x.strip() for x in args.identity_ids.replace(",", " ").split() if x.strip()]
     target_set = set(target_ids)
     layer_intent_text = args.layer_intent_text.strip()
     expected_work_layer = args.expected_work_layer.strip().lower()
     expected_source_layer = args.expected_source_layer.strip().lower()
-    actor_id = resolve_actor_id(str(args.actor_id or "").strip())
+    projection_profile = resolve_full_identity_protocol_scan_projection_profile(str(args.projection_profile or "").strip())
+    gate_profile = str(args.gate_profile or "").strip() or DEFAULT_GATE_PROFILE_NAME
+    gate_profile_file = str(args.gate_profile_file or "").strip() or DEFAULT_GATE_PROFILE_FILE
+    target_source_layer_mode = str(args.target_source_layer or "auto").strip().lower() or "auto"
+    release_runtime_inputs = resolve_release_plane_runtime_inputs(
+        identity_id="full-scan",
+        operation="scan",
+        explicit_target_branch=str(args.target_branch or "").strip(),
+        explicit_release_head_sha=str(args.release_head_sha or "").strip(),
+        explicit_required_gates_run_id=str(args.required_gates_run_id or "").strip(),
+        explicit_run_url=str(args.run_url or "").strip(),
+        explicit_workflow_file_sha=str(args.workflow_file_sha or "").strip(),
+        explicit_run_head_sha=str(args.run_head_sha or "").strip(),
+        explicit_run_workflow_file_sha=str(args.run_workflow_file_sha or "").strip(),
+        explicit_checks_json=str(args.checks_json or "").strip(),
+        explicit_jobs_json=str(args.jobs_json or "").strip(),
+        explicit_gh_runs_json=str(args.gh_runs_json or "").strip(),
+        default_target_branch="main",
+        default_release_head_sha=_git_rev(repo_root, "HEAD"),
+    )
+    target_branch = str(release_runtime_inputs.get("target_branch", "")).strip()
+    release_head_sha = str(release_runtime_inputs.get("release_head_sha", "")).strip()
+    required_gates_run_id = str(release_runtime_inputs.get("required_gates_run_id", "")).strip()
+    run_url = str(release_runtime_inputs.get("run_url", "")).strip()
+    workflow_file_sha = str(release_runtime_inputs.get("workflow_file_sha", "")).strip()
+    run_head_sha = str(release_runtime_inputs.get("run_head_sha", "")).strip()
+    run_workflow_file_sha = str(release_runtime_inputs.get("run_workflow_file_sha", "")).strip()
+    checks_json = str(release_runtime_inputs.get("checks_json", "")).strip()
+    jobs_json = str(release_runtime_inputs.get("jobs_json", "")).strip()
+    gh_runs_json = str(release_runtime_inputs.get("gh_runs_json", "")).strip()
+    release_adapter_payload = dict(release_runtime_inputs.get("release_adapter_payload") or {})
+    actor_id_input = str(args.actor_id or "").strip()
+    if not actor_id_input:
+        print("[FAIL] IP-ACTOR-ENTRY-001 explicit --actor-id is required for strict full-scan execution")
+        return 1
+    session_id_input = str(args.session_id or "").strip()
+    actor_id = resolve_actor_id(actor_id_input)
+    (
+        session_id_map,
+        session_id_map_errors,
+        session_id_map_source,
+    ) = _load_session_id_map(
+        map_file=str(args.session_id_map_file or "").strip(),
+        map_inline=str(args.session_id_map or "").strip(),
+        repo_root=repo_root,
+    )
+    if session_id_map_errors:
+        print(
+            "[FAIL] "
+            + "; ".join(
+                [f"{ERR_SESSION_MAP_REQUIRED} {reason}" for reason in session_id_map_errors]
+            )
+        )
+        return 1
+    if not session_id_input and not session_id_map:
+        print(
+            "[FAIL] IP-ASB-SESSION-ENTRY-001 explicit --session-id (or --session-id-map/--session-id-map-file) "
+            "is required for strict full-scan execution"
+        )
+        return 1
+    SESSION_ID_FALLBACK = session_id_input or next(iter(session_id_map.values()), "")
     if args.scan_mode == "target" and not target_set:
         print("[FAIL] --scan-mode target requires --identity-ids (or IDENTITY_IDS env).")
         return 2
     matched_targets: set[str] = set()
+
+    runtime_catalogs: list[tuple[str, Path]] = [("project", project_catalog), ("global", global_catalog)]
+    effective_target_source_layer = ""
+    if target_source_layer_mode in {"project", "global"}:
+        effective_target_source_layer = target_source_layer_mode
+    elif target_source_layer_mode == "both":
+        effective_target_source_layer = "both"
+    else:
+        if expected_source_layer in {"project", "global"}:
+            effective_target_source_layer = expected_source_layer
+        else:
+            inferred = _infer_target_source_layer_from_env(
+                project_catalog=project_catalog,
+                global_catalog=global_catalog,
+            )
+            effective_target_source_layer = inferred or "project"
+    if effective_target_source_layer in {"project", "global"}:
+        runtime_catalogs = [(layer, path) for layer, path in runtime_catalogs if layer == effective_target_source_layer]
+
+    raw_catalog_list: list[tuple[str, Path]] = []
+    if args.include_repo_catalog:
+        raw_catalog_list.append(("repo_metadata", repo_catalog))
+    raw_catalog_list.extend(runtime_catalogs)
+    catalog_list: list[tuple[str, Path]] = []
+    catalog_layer_by_resolved_path: dict[Path, str] = {}
+    catalog_dedup_skips: list[dict[str, str]] = []
+    for layer, catalog in raw_catalog_list:
+        resolved_catalog = catalog.resolve()
+        primary_layer = catalog_layer_by_resolved_path.get(resolved_catalog)
+        if primary_layer is not None:
+            catalog_dedup_skips.append(
+                {
+                    "skipped_layer": layer,
+                    "skipped_catalog": str(catalog),
+                    "primary_layer": primary_layer,
+                    "primary_catalog": str(resolved_catalog),
+                }
+            )
+            continue
+        catalog_layer_by_resolved_path[resolved_catalog] = layer
+        catalog_list.append((layer, resolved_catalog))
 
     payload: dict[str, Any] = {
         "repo_root": str(repo_root),
         "repo_catalog": str(repo_catalog),
         "scan_mode": args.scan_mode,
         "target_identities": sorted(target_set),
+        "target_source_layer_mode": target_source_layer_mode,
+        "target_source_layer_effective": effective_target_source_layer,
+        "session_id_input": session_id_input,
+        "session_id_map_source": session_id_map_source,
+        "session_id_map_size": len(session_id_map),
+        "session_id_map_identity_ids": sorted(session_id_map.keys()),
+        "projection_profile": projection_profile.profile_id,
+        "projection_profile_execution_mode": projection_profile.execution_mode,
+        "projection_profile_description": projection_profile.description,
+        "projection_excluded_areas": list(projection_profile.excluded_areas),
+        "gate_profile": gate_profile,
+        "gate_profile_file": gate_profile_file,
+        "target_branch": target_branch,
+        "release_head_sha": release_head_sha,
+        "required_gates_run_id": required_gates_run_id,
+        "run_url": run_url,
+        "workflow_file_sha": workflow_file_sha,
+        "run_head_sha": run_head_sha,
+        "run_workflow_file_sha": run_workflow_file_sha,
+        "checks_json": checks_json,
+        "jobs_json": jobs_json,
+        "release_cloud_evidence_adapter": (
+            build_projection_profile_excluded_release_cloud_evidence_adapter(
+                profile_id=projection_profile.profile_id,
+                execution_mode=projection_profile.execution_mode,
+                description=projection_profile.description,
+                owner_surface="full_identity_protocol_scan_summary",
+            )
+            if projection_profile.projection_only
+            else build_release_cloud_evidence_adapter_projection(release_adapter_payload)
+        ),
+        "catalog_dedup_skips": catalog_dedup_skips,
         "catalogs": [],
         "summary": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
+        "summary_runtime_active": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
+        "summary_fixture_or_demo": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
+        "summary_non_active_or_non_runtime": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
+        "summary_m2m": {"total_identities": 0, "pass": 0, "fail": 0},
+        "summary_terminal_truth_boundary": build_terminal_truth_boundary_projection_summary_skeleton(),
+        "summary_health_report_experience_writeback_closure": (
+            build_health_report_experience_writeback_closure_summary_skeleton()
+        ),
+        "summary_required_gate_bundle_projection": build_full_scan_required_gate_bundle_projection_summary_skeleton(),
+        "summary_required_gate_bundle_shadow_projection": build_full_scan_required_gate_bundle_projection_summary_skeleton(),
+        "summary_required_gate_bundle_scan_probe_projection": build_full_scan_required_gate_bundle_projection_summary_skeleton(),
+        "summary_tuple_context": {
+            "total_identities": 0,
+            "tuple_context_only_failures": 0,
+            "runtime_active_failures": 0,
+            "fixture_or_demo_failures": 0,
+            "non_active_or_non_runtime_failures": 0,
+            "identity_ids": [],
+        },
     }
+    runtime_active_identity_ids = _collect_runtime_active_identity_ids(
+        catalog_list=catalog_list,
+        scan_mode=args.scan_mode,
+        target_set=target_set,
+    )
+    external_next_hop_block_evidence = _load_external_next_hop_block_samples(
+        manifest_paths=_discover_host_visible_probe_manifest_paths(
+            repo_root=repo_root,
+            catalog_list=catalog_list,
+            explicit_manifest_arg=str(args.host_visible_probe_manifest or "").strip(),
+        ),
+        allowed_identity_ids=set(runtime_active_identity_ids),
+    )
+    payload["runtime_active_identity_ids"] = runtime_active_identity_ids
+    payload["host_visible_probe_manifest_paths"] = external_next_hop_block_evidence.get("manifest_paths", [])
+    shared_session_unbound_identities: list[str] = []
+    if (
+        args.scan_mode == "full"
+        and len(runtime_active_identity_ids) > 1
+        and not session_id_map
+        and session_id_input
+    ):
+        for identity_id in runtime_active_identity_ids:
+            if not _is_session_bound_for_identity(
+                catalog_list=catalog_list,
+                actor_id=actor_id,
+                identity_id=identity_id,
+                session_id=session_id_input,
+            ):
+                shared_session_unbound_identities.append(identity_id)
+        if shared_session_unbound_identities:
+            payload["preflight_status"] = STATUS_FAIL_REQUIRED
+            payload["preflight_error_code"] = ERR_SESSION_MAP_REQUIRED
+            payload["preflight_stale_reasons"] = [
+                "shared_session_unbound_for_multi_active_runtime",
+                f"recommend_session_id_map_for_identities:{','.join(shared_session_unbound_identities)}",
+            ]
+            if args.out:
+                out = Path(args.out).expanduser().resolve()
+                out.parent.mkdir(parents=True, exist_ok=True)
+                out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                print(f"[OK] wrote: {out}")
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+            print(
+                "[FAIL] "
+                f"{ERR_SESSION_MAP_REQUIRED} strict full-scan detected multi-active runtime identities "
+                f"without per-identity session map; unbound={shared_session_unbound_identities}"
+            )
+            return 1
+    target_severity_map: dict[str, str] = {}
+    target_m2m_map: dict[str, str] = {}
+    all_scanned_rows: list[dict[str, Any]] = []
+
+    def _update_target_severity(identity_id: str, severity: str) -> None:
+        if args.scan_mode != "target":
+            return
+        normalized = str(severity or "OK").strip().upper() or "OK"
+        rank = {"P0": 2, "P1": 1, "OK": 0}
+        current = target_severity_map.get(identity_id, "OK")
+        if rank.get(normalized, 0) >= rank.get(current, 0):
+            target_severity_map[identity_id] = normalized
+
+    def _update_target_m2m(identity_id: str, m2m_status: str) -> None:
+        if args.scan_mode != "target":
+            return
+        normalized = str(m2m_status or "PASS").strip().upper() or "PASS"
+        current = target_m2m_map.get(identity_id, "PASS")
+        if normalized == "FAIL" or current == "FAIL":
+            target_m2m_map[identity_id] = "FAIL"
+        else:
+            target_m2m_map[identity_id] = "PASS"
+
+    def _record_summary(item: dict[str, Any]) -> None:
+        severity = str(item.get("severity", "OK")).strip().upper() or "OK"
+        tuple_projection = _classify_tuple_context_projection(checks=item.get("checks", {}))
+        item["tuple_context_projection"] = tuple_projection
+        _bump_summary(payload["summary"], severity)
+        bucket = _summary_bucket_for_row(item)
+        item["summary_bucket"] = bucket
+        if bucket == "runtime_active":
+            _bump_summary(payload["summary_runtime_active"], severity)
+        elif bucket == "fixture_or_demo":
+            _bump_summary(payload["summary_fixture_or_demo"], severity)
+        else:
+            _bump_summary(payload["summary_non_active_or_non_runtime"], severity)
+        tuple_summary = payload["summary_tuple_context"]
+        tuple_summary["total_identities"] += 1
+        if bool(tuple_projection.get("tuple_context_only_failure", False)):
+            tuple_summary["tuple_context_only_failures"] += 1
+            if bucket == "runtime_active":
+                tuple_summary["runtime_active_failures"] += 1
+            elif bucket == "fixture_or_demo":
+                tuple_summary["fixture_or_demo_failures"] += 1
+            else:
+                tuple_summary["non_active_or_non_runtime_failures"] += 1
+            identity_id = str(item.get("identity_id", "")).strip()
+            if identity_id and identity_id not in tuple_summary["identity_ids"]:
+                tuple_summary["identity_ids"].append(identity_id)
+
+    def _record_required_gate_projection(
+        identity_id: str,
+        projection: dict[str, Any],
+        *,
+        summary_key: str = "summary_required_gate_bundle_projection",
+    ) -> None:
+        if not isinstance(projection, dict) or not projection:
+            return
+        summary = payload.get(summary_key)
+        if not isinstance(summary, dict):
+            return
+        summary["identities_with_projection"] += 1
+        projection_status = str(projection.get("projection_status", "")).strip().upper()
+        if projection_status == STATUS_PASS_REQUIRED:
+            summary["projection_pass"] += 1
+        elif required_gate_bundle_target_projection_is_scope_excluded(projection):
+            summary["projection_skipped_not_required"] += 1
+            identity_token = str(identity_id or "").strip()
+            if identity_token and identity_token not in summary["projection_scope_excluded_identity_ids"]:
+                summary["projection_scope_excluded_identity_ids"].append(identity_token)
+            scope_class = str(projection.get("scope_class", "") or "").strip()
+            scope_reason = str(projection.get("scope_reason", "") or "").strip()
+            if scope_class and scope_class not in summary["projection_scope_classes"]:
+                summary["projection_scope_classes"].append(scope_class)
+            if scope_reason and scope_reason not in summary["projection_scope_reasons"]:
+                summary["projection_scope_reasons"].append(scope_reason)
+        else:
+            summary["projection_fail"] += 1
+            identity_token = str(identity_id or "").strip()
+            if identity_token and identity_token not in summary["projection_fail_identity_ids"]:
+                summary["projection_fail_identity_ids"].append(identity_token)
+
+        failed_required_target_count = int(projection.get("failed_required_target_count") or 0)
+        if failed_required_target_count > 0:
+            summary["identities_with_failed_required_targets"] += 1
+        summary["total_targets"] += int(projection.get("total_targets") or 0)
+        summary["failed_required_targets"] += failed_required_target_count
+        for target_name in projection.get("failed_target_names", []):
+            target_token = str(target_name or "").strip()
+            if target_token and target_token not in summary["failed_target_names"]:
+                summary["failed_target_names"].append(target_token)
+        for row_key in projection.get("rows_without_projected_report_fields", []):
+            row_token = str(row_key or "").strip()
+            if row_token and row_token not in summary["rows_without_projected_report_fields"]:
+                summary["rows_without_projected_report_fields"].append(row_token)
+        for requirement_key in projection.get("missing_mapping_requirements", []):
+            requirement_token = str(requirement_key or "").strip()
+            if requirement_token and requirement_token not in summary["missing_mapping_requirements"]:
+                summary["missing_mapping_requirements"].append(requirement_token)
+        for stale_reason in projection.get("stale_reasons", []):
+            stale_token = str(stale_reason or "").strip()
+            if stale_token and stale_token not in summary["projection_stale_reasons"]:
+                summary["projection_stale_reasons"].append(stale_token)
+
+        target_status_counts = summary.get("target_status_counts")
+        failed_target_counts = summary.get("failed_target_counts")
+        if not isinstance(target_status_counts, dict) or not isinstance(failed_target_counts, dict):
+            return
+
+        for target in projection.get("targets", []):
+            if not isinstance(target, dict):
+                continue
+            target_name = str(target.get("target_name", "")).strip()
+            target_status = str(target.get("status", "")).strip().upper() or "UNKNOWN"
+            if target_name:
+                per_target_status = target_status_counts.setdefault(target_name, {})
+                if isinstance(per_target_status, dict):
+                    per_target_status[target_status] = int(per_target_status.get(target_status, 0)) + 1
+                if bool(target.get("required_contract", False)) and target_status == STATUS_FAIL_REQUIRED:
+                    failed_target_counts[target_name] = int(failed_target_counts.get(target_name, 0)) + 1
 
     for layer, catalog in catalog_list:
         rows = _catalog_rows(catalog) if catalog.exists() else []
@@ -359,15 +2477,10 @@ def main() -> int:
                 "scan_scope_hint": scan_scope_hint,
                 "checks": {},
             }
-            lane_applied_gate_set = _resolve_applied_gate_set(
-                layer_intent_text=layer_intent_text,
-                expected_work_layer=expected_work_layer,
-                expected_source_layer=expected_source_layer,
-            )
             resolve = _run(
                 [
                     "python3",
-                    "scripts/resolve_identity_context.py",
+                    str(SCRIPT_PATH.parent / "resolve_identity_context.py"),
                     "resolve",
                     "--identity-id",
                     iid,
@@ -382,25 +2495,344 @@ def main() -> int:
             )
             item["checks"]["resolve"] = {"rc": resolve.rc, "ok": resolve.ok, "tail": resolve.tail}
             resolved_scope = scan_scope_hint
+            resolved_pack_path: Path | None = None
             if resolve.ok:
                 data = _parse_json_safely(resolve.stdout) or {}
                 item["resolved_scope"] = data.get("resolved_scope")
                 item["source_layer"] = data.get("source_layer")
                 item["conflict_detected"] = data.get("conflict_detected")
+                resolved_pack_token = str(data.get("resolved_pack_path") or data.get("pack_path") or "").strip()
+                if resolved_pack_token:
+                    try:
+                        resolved_pack_path = Path(resolved_pack_token).expanduser().resolve()
+                        item["resolved_pack_path"] = str(resolved_pack_path)
+                    except Exception:
+                        resolved_pack_path = None
                 resolved_scope = str(data.get("resolved_scope", "")).upper() or scan_scope_hint
+            if resolved_pack_path is None:
+                fallback_pack = str(row.get("pack_path", "")).strip()
+                if fallback_pack:
+                    try:
+                        resolved_pack_path = Path(fallback_pack).expanduser().resolve()
+                    except Exception:
+                        resolved_pack_path = None
+            if _check_has_ctx_timeout_marker(resolve):
+                item["checks"]["context_timeout_guard"] = {
+                    "rc": resolve.rc,
+                    "ok": False,
+                    "tail": "CTX_TOOL_TIMEOUT resolve_identity_context_precheck_timeout",
+                }
+                item["context_timeout_guard_blocked"] = True
+                item["severity"] = "P0"
+                item["m2m_projection"] = _classify_m2m_projection(checks=item.get("checks", {}))
+                payload["summary_m2m"]["total_identities"] += 1
+                current_m2m = str(item["m2m_projection"].get("m2m_binding_closure_status", "")).upper()
+                if current_m2m == "PASS":
+                    payload["summary_m2m"]["pass"] += 1
+                else:
+                    payload["summary_m2m"]["fail"] += 1
+                _update_target_m2m(iid, current_m2m)
+                _update_target_severity(iid, "P0")
+                _record_summary(item)
+                all_scanned_rows.append(item)
+                layer_out["identities"].append(item)
+                continue
 
-            is_active_runtime = str(row.get("status", "")).lower() == "active" and str(row.get("profile", "")).lower() == "runtime"
-            is_fixture = str(row.get("profile", "")).lower() == "fixture" or str(row.get("runtime_mode", "")).lower() == "demo_only"
-            stamp_artifact = f"/tmp/identity-response-stamp-scan-{iid}.json"
-            stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-scan-{iid}.json"
-            reply_first_line_blocker_receipt = f"/tmp/identity-reply-first-line-blocker-receipt-scan-{iid}.json"
-            send_time_reply_file = f"/tmp/identity-send-time-reply-scan-{iid}.txt"
-            send_time_reply_gate_blocker_receipt = (
-                f"/tmp/identity-send-time-reply-gate-blocker-receipt-scan-{iid}.json"
+            effective_source_layer = expected_source_layer or ("global" if layer == "global" else "project")
+            requested_session_for_row = str(session_id_map.get(iid, session_id_input)).strip()
+            if iid in session_id_map:
+                item["session_id_map_applied"] = True
+            lane_lock_hint = _detect_session_lane_lock(
+                catalog_path=catalog,
+                identity_id=iid,
+                actor_id=actor_id,
+                session_id=requested_session_for_row,
+                resolved_pack_path=resolved_pack_path,
             )
-            execution_reply_coherence_blocker_receipt = (
-                f"/tmp/identity-execution-reply-coherence-blocker-receipt-scan-{iid}.json"
+            effective_work_layer = expected_work_layer
+            if not effective_work_layer:
+                inferred = resolve_layer_intent(
+                    explicit_work_layer="",
+                    explicit_source_layer=effective_source_layer,
+                    intent_text=layer_intent_text,
+                    default_work_layer=DEFAULT_WORK_LAYER,
+                    default_source_layer=effective_source_layer,
+                )
+                effective_work_layer = (
+                    str(inferred.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
+                )
+            if not expected_work_layer and lane_lock_hint in {"protocol", "instance"}:
+                effective_work_layer = lane_lock_hint
+            if effective_work_layer not in {"protocol", "instance", "dual"}:
+                effective_work_layer = DEFAULT_WORK_LAYER
+
+            lane_applied_gate_set = _resolve_applied_gate_set(
+                layer_intent_text=layer_intent_text,
+                expected_work_layer=effective_work_layer,
+                expected_source_layer=effective_source_layer,
             )
+            item["effective_expected_work_layer"] = effective_work_layer
+            item["effective_expected_source_layer"] = effective_source_layer
+            if lane_lock_hint:
+                item["detected_session_lane_lock"] = lane_lock_hint
+
+            mode_guard_cmd = [
+                "python3",
+                str(SCRIPT_PATH.parent / "validate_identity_runtime_mode_guard.py"),
+                "--identity-id",
+                iid,
+                "--catalog",
+                str(catalog),
+                "--repo-catalog",
+                str(repo_catalog),
+                "--expect-mode",
+                "auto",
+                "--admissibility-profile",
+                "launcher_outer_surface",
+                "--operation",
+                "scan",
+            ]
+            if str(scan_scope_hint or "").strip():
+                mode_guard_cmd.extend(["--scope", str(scan_scope_hint).strip()])
+            # Scan passes explicit --catalog for each row; bind IDENTITY_CATALOG to the
+            # same path so env drift cannot create false P0 runtime-mode failures.
+            mode_guard_env = dict(os.environ)
+            mode_guard_env["IDENTITY_CATALOG"] = str(catalog)
+            item["runtime_mode_guard_env_catalog_injected"] = True
+            mode_guard = _run(mode_guard_cmd, cwd=repo_root, env=mode_guard_env)
+            item["checks"]["runtime_mode_guard"] = {
+                "rc": mode_guard.rc,
+                "ok": mode_guard.ok,
+                "tail": mode_guard.tail,
+            }
+            if not mode_guard.ok:
+                item["runtime_mode_guard_blocked"] = True
+                mode_guard_raw = "\n".join(x for x in (mode_guard.stdout, mode_guard.stderr, mode_guard.tail) if x).upper()
+                env_catalog_mismatch = "IP-ENV-003" in mode_guard_raw
+                if env_catalog_mismatch and args.scan_mode == "full" and target_source_layer_mode == "auto":
+                    item["runtime_mode_guard_env_catalog_mismatch"] = True
+                    item["severity"] = "P1"
+                else:
+                    item["severity"] = _severity_for_row(item)
+                item["m2m_projection"] = _classify_m2m_projection(checks=item.get("checks", {}))
+                payload["summary_m2m"]["total_identities"] += 1
+                current_m2m = str(item["m2m_projection"].get("m2m_binding_closure_status", "")).upper()
+                if current_m2m == "PASS":
+                    payload["summary_m2m"]["pass"] += 1
+                else:
+                    payload["summary_m2m"]["fail"] += 1
+                _update_target_m2m(iid, current_m2m)
+                _update_target_severity(iid, str(item["severity"]))
+                _record_summary(item)
+                all_scanned_rows.append(item)
+                layer_out["identities"].append(item)
+                continue
+
+            row_profile = str(row.get("profile", "")).strip().lower()
+            row_runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+            row_status = str(row.get("status", "")).strip().lower()
+            row_is_active_runtime = row_status == "active" and row_profile == "runtime"
+            row_is_fixture = row_profile == "fixture" or row_runtime_mode == "demo_only"
+
+            if row_is_active_runtime and not requested_session_for_row:
+                item["checks"]["requested_session_binding"] = {
+                    "rc": 1,
+                    "ok": False,
+                    "tail": (
+                        f"{ERR_SESSION_MAP_REQUIRED} active runtime identity missing strict session selector "
+                        "(provide --session-id or identity entry in --session-id-map)"
+                    ),
+                }
+                item["session_id_requested"] = requested_session_for_row
+                item["session_id_effective"] = ""
+                item["session_id_resolution_mode"] = "missing_explicit_session_selector"
+                item["session_id_requested_bound"] = False
+                item["requested_session_binding_required"] = True
+                item["m2m_projection"] = _classify_m2m_projection(checks=item.get("checks", {}))
+                payload["summary_m2m"]["total_identities"] += 1
+                current_m2m = str(item["m2m_projection"].get("m2m_binding_closure_status", "")).upper()
+                if current_m2m == "PASS":
+                    payload["summary_m2m"]["pass"] += 1
+                else:
+                    payload["summary_m2m"]["fail"] += 1
+                _update_target_m2m(iid, current_m2m)
+                item["severity"] = "P0"
+                _update_target_severity(iid, str(item["severity"]))
+                _record_summary(item)
+                all_scanned_rows.append(item)
+                layer_out["identities"].append(item)
+                continue
+
+            scan_session_id, session_resolution_mode, requested_session_bound = _resolve_effective_scan_session_id(
+                catalog_path=catalog,
+                actor_id=actor_id,
+                identity_id=iid,
+                requested_session_id=requested_session_for_row,
+            )
+            if not scan_session_id:
+                scan_session_id = requested_session_for_row
+            SESSION_ID_FALLBACK = scan_session_id or requested_session_for_row or session_id_input
+            item["session_id_requested"] = requested_session_for_row
+            item["session_id_effective"] = scan_session_id
+            item["session_id_resolution_mode"] = session_resolution_mode
+            item["session_id_requested_bound"] = requested_session_bound
+            item["requested_session_binding_required"] = row_is_active_runtime
+            if row_is_active_runtime and requested_session_for_row and not requested_session_bound:
+                item["checks"]["requested_session_binding"] = {
+                    "rc": 1,
+                    "ok": False,
+                    "tail": "IP-ASB-SESSION-ENTRY-001 requested --session-id is not bound for actor+identity",
+                }
+                item["m2m_projection"] = _classify_m2m_projection(checks=item.get("checks", {}))
+                payload["summary_m2m"]["total_identities"] += 1
+                current_m2m = str(item["m2m_projection"].get("m2m_binding_closure_status", "")).upper()
+                if current_m2m == "PASS":
+                    payload["summary_m2m"]["pass"] += 1
+                else:
+                    payload["summary_m2m"]["fail"] += 1
+                _update_target_m2m(iid, current_m2m)
+                item["severity"] = "P0"
+                _update_target_severity(iid, str(item["severity"]))
+                _record_summary(item)
+                all_scanned_rows.append(item)
+                layer_out["identities"].append(item)
+                continue
+            if (not row_is_active_runtime) and requested_session_for_row and not requested_session_bound:
+                item["checks"]["requested_session_binding"] = {
+                    "rc": 0,
+                    "ok": True,
+                    "tail": "SKIPPED_NOT_REQUIRED requested --session-id binding is enforced only for active runtime rows",
+                }
+
+            is_active_runtime = row_is_active_runtime
+            is_fixture = row_is_fixture
+            stamp_artifact = str(
+                runtime_temp_file(
+                    channel="response-stamp",
+                    operation="scan",
+                    identity_id=iid,
+                    stem=f"identity-response-stamp-scan-{iid}",
+                    ext="json",
+                )
+            )
+            stamp_blocker_receipt = str(
+                runtime_temp_file(
+                    channel="response-stamp",
+                    operation="scan",
+                    identity_id=iid,
+                    stem=f"identity-stamp-blocker-receipt-scan-{iid}",
+                    ext="json",
+                )
+            )
+            reply_first_line_blocker_receipt = str(
+                runtime_temp_file(
+                    channel="response-stamp",
+                    operation="scan",
+                    identity_id=iid,
+                    stem=f"identity-reply-first-line-blocker-receipt-scan-{iid}",
+                    ext="json",
+                )
+            )
+            send_time_reply_file = str(
+                runtime_temp_file(
+                    channel="response-stamp",
+                    operation="scan",
+                    identity_id=iid,
+                    stem=f"identity-send-time-reply-scan-{iid}",
+                    ext="txt",
+                )
+            )
+            send_time_reply_gate_blocker_receipt = str(
+                runtime_temp_file(
+                    channel="response-stamp",
+                    operation="scan",
+                    identity_id=iid,
+                    stem=f"identity-send-time-reply-gate-blocker-receipt-scan-{iid}",
+                    ext="json",
+                )
+            )
+            execution_reply_coherence_blocker_receipt = str(
+                runtime_temp_file(
+                    channel="response-stamp",
+                    operation="scan",
+                    identity_id=iid,
+                    stem=f"identity-execution-reply-coherence-blocker-receipt-scan-{iid}",
+                    ext="json",
+                )
+            )
+            session_bound_run_id = _derive_run_id_from_session_id(scan_session_id)
+            required_gate_bundle_run_id = session_bound_run_id or f"scan-{layer}-{iid}"
+            required_gate_bundle_receipt = str(
+                runtime_temp_file(
+                    channel="required-gate-bundle",
+                    operation="scan",
+                    identity_id=iid,
+                    run_token=layer,
+                    stem=f"required-gate-bundle-scan-{layer}-{iid}",
+                    ext="json",
+                )
+            )
+            required_gate_bundle_receipt_probe = str(
+                runtime_temp_file(
+                    channel="required-gate-bundle",
+                    operation="validate",
+                    identity_id=iid,
+                    run_token=f"{layer}-validate-probe",
+                    stem=f"required-gate-bundle-scan-validate-probe-{layer}-{iid}",
+                    ext="json",
+                )
+            )
+            vibe_pack_out_root = str(named_temp_root("vibe-coding-feeding-packs"))
+            capability_fit_out_root = str(named_temp_root("capability-fit-matrices"))
+            current_round_anchor_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            item["scan_projection_profile"] = projection_profile.profile_id
+            item["scan_projection_profile_execution_mode"] = projection_profile.execution_mode
+            if projection_profile.projection_only:
+                item["check_matrix_mode"] = "projection_only"
+                item["check_matrix_skip_reason"] = (
+                    f"projection_profile_restricted:{projection_profile.profile_id}"
+                )
+                _apply_three_plane_projection(
+                    repo_root=repo_root,
+                    catalog=catalog,
+                    repo_catalog=repo_catalog,
+                    item=item,
+                    payload=payload,
+                    identity_id=iid,
+                    actor_id=actor_id,
+                    session_id=scan_session_id,
+                    scope_hint=scan_scope_hint,
+                    target_branch=target_branch,
+                    release_head_sha=release_head_sha,
+                    required_gates_run_id=required_gates_run_id,
+                    run_url=run_url,
+                    workflow_file_sha=workflow_file_sha,
+                    run_head_sha=run_head_sha,
+                    run_workflow_file_sha=run_workflow_file_sha,
+                    checks_json=checks_json,
+                    jobs_json=jobs_json,
+                    gh_runs_json=gh_runs_json,
+                    layer_intent_text=layer_intent_text,
+                    effective_work_layer=effective_work_layer,
+                    effective_source_layer=effective_source_layer,
+                    with_docs_contract=bool(args.with_docs_contract),
+                    record_required_gate_projection=_record_required_gate_projection,
+                    three_plane_projection_profile_id="terminal_truth_boundary_projection",
+                )
+                item["m2m_projection"] = _classify_m2m_projection(checks=item.get("checks", {}))
+                payload["summary_m2m"]["total_identities"] += 1
+                current_m2m = str(item["m2m_projection"].get("m2m_binding_closure_status", "")).upper()
+                if current_m2m == "PASS":
+                    payload["summary_m2m"]["pass"] += 1
+                else:
+                    payload["summary_m2m"]["fail"] += 1
+                _update_target_m2m(iid, current_m2m)
+                item["severity"] = _severity_for_row(item)
+                _update_target_severity(iid, str(item["severity"]))
+                _record_summary(item)
+                all_scanned_rows.append(item)
+                layer_out["identities"].append(item)
+                continue
             checks = {
                 "scope_resolution": [
                     "python3",
@@ -481,6 +2913,8 @@ def main() -> int:
                     iid,
                     "--actor-id",
                     actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--operation",
                     "scan",
                     "--json-only",
@@ -494,6 +2928,8 @@ def main() -> int:
                     iid,
                     "--actor-id",
                     actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--operation",
                     "scan",
                     "--json-only",
@@ -516,6 +2952,10 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--actor-id",
+                    actor_id,
+                    "--scope-mode",
+                    "actor_primary",
                     "--operation",
                     "scan",
                     "--json-only",
@@ -546,6 +2986,10 @@ def main() -> int:
                     str(repo_catalog),
                     "--identity-id",
                     iid,
+                    "--actor-id",
+                    actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--view",
                     "external",
                     "--disclosure-level",
@@ -563,6 +3007,10 @@ def main() -> int:
                     str(repo_catalog),
                     "--identity-id",
                     iid,
+                    "--actor-id",
+                    actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--stamp-json",
                     stamp_artifact,
                     "--force-check",
@@ -602,6 +3050,10 @@ def main() -> int:
                     "--enforce-first-line-gate",
                     "--operation",
                     "scan",
+                    "--actor-id",
+                    actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--blocker-receipt-out",
                     reply_first_line_blocker_receipt,
                     "--json-only",
@@ -625,7 +3077,7 @@ def main() -> int:
                 ],
                 "send_time_reply_gate": [
                     "python3",
-                    "scripts/compose_and_validate_governed_reply.py",
+                    "scripts/final_emit_governed.py",
                     "--catalog",
                     str(catalog),
                     "--repo-catalog",
@@ -639,9 +3091,13 @@ def main() -> int:
                     "--blocker-receipt-out",
                     send_time_reply_gate_blocker_receipt,
                     "--outlet-channel-id",
-                    "governed_adapter_v1",
+                    "final_emit_governed",
                     "--actor-id",
                     actor_id,
+                    "--session-id",
+                    scan_session_id,
+                    "--run-id",
+                    required_gate_bundle_run_id,
                     "--json-only",
                 ],
                 "send_time_reply_gate_validate": [
@@ -659,7 +3115,7 @@ def main() -> int:
                     "--enforce-send-time-gate",
                     "--reply-outlet-guard-applied",
                     "--outlet-channel-id",
-                    "governed_adapter_v1",
+                    "final_emit_governed",
                     "--reply-transport-ref",
                     send_time_reply_file,
                     "--operation",
@@ -668,6 +3124,72 @@ def main() -> int:
                     send_time_reply_gate_blocker_receipt,
                     "--actor-id",
                     actor_id,
+                    "--session-id",
+                    scan_session_id,
+                    "--json-only",
+                ],
+                "protocol_lane_headstamp_continuity": [
+                    "python3",
+                    "scripts/validate_protocol_lane_headstamp_continuity.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--stamp-json",
+                    stamp_artifact,
+                    "--actor-id",
+                    actor_id,
+                    "--session-id",
+                    scan_session_id,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--expected-work-layer",
+                    effective_work_layer,
+                    "--expected-source-layer",
+                    effective_source_layer,
+                    "--json-only",
+                ],
+                "host_visible_post_check_recovery": [
+                    "python3",
+                    "scripts/recover_host_visible_post_check_state.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--actor-id",
+                    actor_id,
+                    "--session-id",
+                    scan_session_id,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--receipt-source",
+                    HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
+                    "--allowed-live-receipt-sources",
+                    HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
+                    "--json-only",
+                ],
+                "host_transport_wiring_attestation": [
+                    "python3",
+                    "scripts/validate_host_transport_wiring_attestation.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--require-live-receipts",
+                    "--require-actor-id",
+                    actor_id,
+                    "--require-session-id",
+                    scan_session_id,
+                    "--require-run-id",
+                    required_gate_bundle_run_id,
                     "--json-only",
                 ],
                 "headstamp_recurrence_closure": [
@@ -683,6 +3205,8 @@ def main() -> int:
                     "scan",
                     "--actor-id",
                     actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--json-only",
                 ],
                 "execution_reply_identity_coherence": [
@@ -700,6 +3224,10 @@ def main() -> int:
                     "--enforce-coherence-gate",
                     "--operation",
                     "scan",
+                    "--actor-id",
+                    actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--blocker-receipt-out",
                     execution_reply_coherence_blocker_receipt,
                     "--json-only",
@@ -827,7 +3355,7 @@ def main() -> int:
                     "--operation",
                     "scan",
                     "--out-root",
-                    "/tmp/vibe-coding-feeding-packs",
+                    vibe_pack_out_root,
                     "--json-only",
                 ],
                 "capability_fit_optimization": [
@@ -895,7 +3423,7 @@ def main() -> int:
                     "--operation",
                     "scan",
                     "--out-root",
-                    "/tmp/capability-fit-matrices",
+                    capability_fit_out_root,
                     "--json-only",
                 ],
                 "vendor_namespace_separation": [
@@ -990,6 +3518,8 @@ def main() -> int:
                     str(repo_catalog),
                     "--identity-id",
                     iid,
+                    "--current-round-anchor-utc",
+                    current_round_anchor_utc,
                     "--operation",
                     "scan",
                     "--json-only",
@@ -1020,6 +3550,39 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "downsink_path_immutability": [
+                    "python3",
+                    "scripts/validate_protocol_downsink_path_immutability.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "downsink_path_write_guard": [
+                    "python3",
+                    "scripts/validate_protocol_downsink_path_write_guard.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "downsink_path_literal_lock": [
+                    "python3",
+                    "scripts/validate_protocol_downsink_path_literal_lock.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "required_contract_coverage": [
                     "python3",
                     "scripts/validate_required_contract_coverage.py",
@@ -1027,6 +3590,726 @@ def main() -> int:
                     str(catalog),
                     "--repo-catalog",
                     str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--actor-id",
+                    actor_id,
+                    "--session-id",
+                    scan_session_id,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--json-only",
+                ],
+                "unlock_formula_automation": [
+                    "python3",
+                    "scripts/validate_unlock_formula.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "release_plane_cloud_evidence": [
+                    "python3",
+                    "scripts/validate_release_plane_cloud_evidence.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--target-branch",
+                    target_branch,
+                    "--release-head-sha",
+                    release_head_sha,
+                    "--required-gates-run-id",
+                    required_gates_run_id,
+                    "--run-url",
+                    run_url,
+                    "--workflow-file-sha",
+                    workflow_file_sha,
+                    "--run-head-sha",
+                    run_head_sha,
+                    "--run-workflow-file-sha",
+                    run_workflow_file_sha,
+                    *(["--checks-json", checks_json] if checks_json else []),
+                    *(["--jobs-json", jobs_json] if jobs_json and not checks_json else []),
+                    *(["--gh-runs-json", gh_runs_json] if gh_runs_json and not checks_json and not jobs_json else []),
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "cross_cwd_absolute_input": [
+                    "python3",
+                    "scripts/validate_cross_cwd_absolute_input.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog.resolve()),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "run_id_report_selection": [
+                    "python3",
+                    "scripts/validate_run_id_report_selection.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "phase_bootstrap_before_strict": [
+                    "python3",
+                    "scripts/validate_phase_bootstrap_before_strict.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "tmp_collision_safety": [
+                    "python3",
+                    "scripts/validate_tmp_collision_safety.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "handoff_collab_freshness_rotation": [
+                    "python3",
+                    "scripts/validate_handoff_collab_freshness_rotation.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "protocol_feedback_atomic_emit": [
+                    "python3",
+                    "scripts/validate_protocol_feedback_atomic_emit.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "capability_boundary_classification": [
+                    "python3",
+                    "scripts/validate_capability_boundary_classification.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "promotion_evidence_pipeline": [
+                    "python3",
+                    "scripts/validate_promotion_pipeline.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "outlet_regression_matrix": [
+                    "python3",
+                    "scripts/validate_outlet_matrix.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "sidecar_cwd_parity": [
+                    "python3",
+                    "scripts/validate_sidecar_cwd_parity.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "docs_bridge_consistency": [
+                    "python3",
+                    "scripts/validate_docs_bridge_consistency.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "contract_mapping_coverage": [
+                    "python3",
+                    "scripts/validate_contract_mapping_coverage.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "prompt_bootstrap_capability": [
+                    "python3",
+                    "scripts/validate_prompt_bootstrap_capability.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "prompt_capability_matrix": [
+                    "python3",
+                    "scripts/validate_prompt_capability_matrix.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "refresh_strict_business_interference": [
+                    "python3",
+                    "scripts/validate_refresh_strict_business_interference.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "kernel_ssot_source": [
+                    "python3",
+                    "scripts/validate_kernel_ssot_source.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "prompt_derivation_conformance": [
+                    "python3",
+                    "scripts/validate_prompt_derivation_conformance.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "semantic_convergence": [
+                    "python3",
+                    "scripts/validate_semantic_convergence.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "prompt_kernel_executable_coupling": [
+                    "python3",
+                    "scripts/validate_prompt_kernel_executable_coupling.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--actor-id",
+                    actor_id,
+                    "--session-id",
+                    scan_session_id,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "required_gate_bundle_runner": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "NOT_APPLICABLE",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "NOT_APPLICABLE",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "NOT_APPLICABLE",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
+                    "--surface-label",
+                    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+                    "--operation",
+                    "scan",
+                    "--out",
+                    required_gate_bundle_receipt,
+                    "--json-only",
+                ],
+                "required_gate_bundle_runner_shadow": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "NOT_APPLICABLE",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "NOT_APPLICABLE",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "NOT_APPLICABLE",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
+                    "--surface-label",
+                    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+                    "--operation",
+                    "scan",
+                    "--out",
+                    required_gate_bundle_receipt_probe,
+                    "--json-only",
+                ],
+                "required_gate_recurrence_escalator": [
+                    "python3",
+                    "scripts/validate_required_gate_recurrence_escalator.py",
+                    "--identity-id",
+                    iid,
+                    "--surface",
+                    "full_scan",
+                    "--operation",
+                    "scan",
+                    "--receipt",
+                    required_gate_bundle_receipt,
+                    "--enforce-blocking",
+                    "--json-only",
+                ],
+                "required_gate_tuple_parity": [
+                    "python3",
+                    "scripts/validate_required_gate_tuple_parity.py",
+                    "--receipt",
+                    required_gate_bundle_receipt,
+                    "--receipt",
+                    required_gate_bundle_receipt_probe,
+                    "--json-only",
+                ],
+                "cross_verification_tracks": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "NOT_APPLICABLE",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "NOT_APPLICABLE",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "NOT_APPLICABLE",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
+                    "--target-name",
+                    "cross_verification_tracks",
+                    "--surface-label",
+                    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "intake_evidence_quorum": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "NOT_APPLICABLE",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "NOT_APPLICABLE",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "NOT_APPLICABLE",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
+                    "--target-name",
+                    "intake_evidence_quorum",
+                    "--surface-label",
+                    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "route_version_pinning": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "NOT_APPLICABLE",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "NOT_APPLICABLE",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "NOT_APPLICABLE",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
+                    "--target-name",
+                    "route_version_pinning",
+                    "--surface-label",
+                    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "fallback_taxonomy_normalization": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "NOT_APPLICABLE",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "NOT_APPLICABLE",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "NOT_APPLICABLE",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
+                    "--target-name",
+                    "fallback_taxonomy_normalization",
+                    "--surface-label",
+                    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "dedup_monotonicity": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "NOT_APPLICABLE",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "NOT_APPLICABLE",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "NOT_APPLICABLE",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
+                    "--target-name",
+                    "dedup_monotonicity",
+                    "--surface-label",
+                    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "cross_workflow_schema": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "NOT_APPLICABLE",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "NOT_APPLICABLE",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "NOT_APPLICABLE",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
+                    "--target-name",
+                    "cross_workflow_schema",
+                    "--surface-label",
+                    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "skill_path_integrity": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "NOT_APPLICABLE",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "NOT_APPLICABLE",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "NOT_APPLICABLE",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
+                    "--target-name",
+                    "skill_path_integrity",
+                    "--surface-label",
+                    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "execution_target_tuple_isolation": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "NOT_APPLICABLE",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "NOT_APPLICABLE",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "NOT_APPLICABLE",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
+                    "--target-name",
+                    "execution_target_tuple_isolation",
+                    "--surface-label",
+                    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "multimodal_plugin_enforcement": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "NOT_APPLICABLE",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "NOT_APPLICABLE",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "NOT_APPLICABLE",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
+                    "--target-name",
+                    "multimodal_plugin_enforcement",
+                    "--surface-label",
+                    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "reasoning_loop_failclose_enforcement": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "NOT_APPLICABLE",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "NOT_APPLICABLE",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "NOT_APPLICABLE",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
+                    "--target-name",
+                    "reasoning_loop_failclose_enforcement",
+                    "--surface-label",
+                    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "replay_archive_contract": [
+                    "python3",
+                    "scripts/validate_replay_archive_contract.py",
+                    "--catalog",
+                    str(catalog),
                     "--identity-id",
                     iid,
                     "--operation",
@@ -1042,6 +4325,19 @@ def main() -> int:
                     str(catalog),
                     "--repo-catalog",
                     str(repo_catalog),
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "experience_writeback": [
+                    "python3",
+                    "scripts/validate_identity_experience_writeback.py",
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--local-catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
                     "--operation",
                     "scan",
                     "--json-only",
@@ -1111,7 +4407,8 @@ def main() -> int:
                     "work_layer_gate_set_routing",
                 ):
                     checks[key].extend(["--layer-intent-text", layer_intent_text])
-            if expected_work_layer:
+            if effective_work_layer:
+                checks["response_stamp_render"].extend(["--work-layer", effective_work_layer])
                 for key in (
                     "layer_intent_resolution",
                     "reply_identity_context_first_line",
@@ -1122,24 +4419,44 @@ def main() -> int:
                     "protocol_inquiry_followup_chain",
                     "work_layer_gate_set_routing",
                 ):
-                    checks[key].extend(["--expected-work-layer", expected_work_layer])
-                checks["send_time_reply_gate"].extend(["--work-layer", expected_work_layer])
-            if expected_source_layer:
+                    checks[key].extend(["--expected-work-layer", effective_work_layer])
+                checks["send_time_reply_gate"].extend(["--work-layer", effective_work_layer])
+            if effective_source_layer:
+                checks["response_stamp_render"].extend(["--source-layer", effective_source_layer])
                 for key in (
                     "layer_intent_resolution",
                     "reply_identity_context_first_line",
                     "send_time_reply_gate_validate",
                     "execution_reply_identity_coherence",
                 ):
-                    checks[key].extend(["--expected-source-layer", expected_source_layer])
-                checks["send_time_reply_gate"].extend(["--source-layer", expected_source_layer])
+                    checks[key].extend(["--expected-source-layer", effective_source_layer])
+                checks["send_time_reply_gate"].extend(["--source-layer", effective_source_layer])
                 for key in (
                     "protocol_feedback_bootstrap_ready",
                     "protocol_entry_candidate_bridge",
                     "protocol_inquiry_followup_chain",
                     "work_layer_gate_set_routing",
                 ):
-                    checks[key].extend(["--source-layer", expected_source_layer])
+                    checks[key].extend(["--source-layer", effective_source_layer])
+            for cmd in checks.values():
+                if (
+                    isinstance(cmd, list)
+                    and len(cmd) >= 2
+                    and str(cmd[1]).strip() == "scripts/required_gate_bundle_runner.py"
+                ):
+                    if "--gate-profile" not in cmd:
+                        cmd.extend(["--gate-profile", gate_profile])
+                    if "--gate-profile-file" not in cmd:
+                        cmd.extend(["--gate-profile-file", gate_profile_file])
+            for key in (
+                "response_stamp_render",
+                "reply_identity_context_first_line",
+                "send_time_reply_gate_validate",
+                "execution_reply_identity_coherence",
+            ):
+                cmd = checks.get(key)
+                if isinstance(cmd, list) and "--actor-id" not in cmd:
+                    cmd.extend(["--actor-id", actor_id])
             if not is_fixture:
                 checks["prompt_quality"] = [
                     "python3",
@@ -1209,7 +4526,10 @@ def main() -> int:
                 "--json-only",
             ]
             if is_active_runtime:
-                runtime_report_dir_path = Path(str(row.get("pack_path", ""))).expanduser().resolve() / "runtime" / "reports"
+                runtime_pack_root = resolved_pack_path
+                if not isinstance(runtime_pack_root, Path):
+                    runtime_pack_root = Path(str(row.get("pack_path", ""))).expanduser().resolve()
+                runtime_report_dir_path = runtime_pack_root / "runtime" / "reports"
                 runtime_report_dir = str(runtime_report_dir_path)
                 checks["session_pointer"] = [
                     "python3",
@@ -1218,6 +4538,11 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--actor-id",
+                    actor_id,
+                    "--session-id",
+                    scan_session_id,
+                    "--strict-session-primary",
                 ]
                 checks["prompt_activation"] = [
                     "python3",
@@ -1237,7 +4562,11 @@ def main() -> int:
                     "--report-dir",
                     runtime_report_dir,
                 ]
-                latest_report = _latest_runtime_report(iid, runtime_report_dir_path)
+                latest_report = _latest_runtime_report(
+                    iid,
+                    runtime_report_dir_path,
+                    explicit_pack_root=runtime_pack_root,
+                )
                 if latest_report:
                     cap_report_cmd = [
                         "python3",
@@ -1260,8 +4589,65 @@ def main() -> int:
                     if report_all_ok and report_writeback_status == "WRITTEN" and report_permission_state == "WRITEBACK_WRITTEN":
                         cap_report_cmd.append("--require-activated")
                     checks["capability_activation_report"] = cap_report_cmd
-            for name, cmd in checks.items():
-                r = _run(cmd, cwd=repo_root)
+                    sidecar_cmd = checks.get("protocol_feedback_sidecar")
+                    if isinstance(sidecar_cmd, list):
+                        if "--report" not in sidecar_cmd:
+                            sidecar_cmd.extend(["--report", str(latest_report)])
+                        report_run_id = str(report_meta.get("run_id", "")).strip()
+                        if report_run_id and "--run-id" not in sidecar_cmd:
+                            sidecar_cmd.extend(["--run-id", report_run_id])
+                    mm_cmd = checks.get("multimodal_plugin_enforcement")
+                    if isinstance(mm_cmd, list) and "--report-selected-path" not in mm_cmd:
+                        mm_cmd.extend(["--report-selected-path", str(latest_report)])
+                    rl_cmd = checks.get("reasoning_loop_failclose_enforcement")
+                    if isinstance(rl_cmd, list) and "--report-selected-path" not in rl_cmd:
+                        rl_cmd.extend(["--report-selected-path", str(latest_report)])
+            live_host_receipt_sources: set[str] = set()
+            check_order = list(checks.keys())
+            if (
+                "send_time_reply_gate" in checks
+                and "host_transport_wiring_attestation" in checks
+                and check_order.index("send_time_reply_gate") < check_order.index("host_transport_wiring_attestation")
+            ):
+                check_order.remove("host_transport_wiring_attestation")
+                check_order.insert(check_order.index("send_time_reply_gate"), "host_transport_wiring_attestation")
+            if (
+                "host_visible_post_check_recovery" in checks
+                and "host_transport_wiring_attestation" in checks
+                and check_order.index("host_visible_post_check_recovery")
+                > check_order.index("host_transport_wiring_attestation")
+            ):
+                check_order.remove("host_visible_post_check_recovery")
+                check_order.insert(check_order.index("host_transport_wiring_attestation"), "host_visible_post_check_recovery")
+            if (
+                "host_visible_post_check_recovery" in checks
+                and "send_time_reply_gate" in checks
+                and check_order.index("host_visible_post_check_recovery") > check_order.index("send_time_reply_gate")
+            ):
+                check_order.remove("host_visible_post_check_recovery")
+                check_order.insert(check_order.index("send_time_reply_gate"), "host_visible_post_check_recovery")
+            for name in check_order:
+                cmd = checks[name]
+                run_cmd = cmd
+                if name == "host_transport_wiring_attestation":
+                    allowed_sources = {
+                        HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
+                    }
+                    allowed_sources.update(
+                        str(token).strip()
+                        for token in live_host_receipt_sources
+                        if str(token).strip()
+                    )
+                    if allowed_sources:
+                        run_cmd = list(cmd)
+                        if "--allowed-live-receipt-sources" not in run_cmd:
+                            run_cmd.extend(
+                                [
+                                    "--allowed-live-receipt-sources",
+                                    ",".join(sorted(allowed_sources)),
+                                ]
+                            )
+                r = _run(run_cmd, cwd=repo_root)
                 check_payload: dict[str, Any] = {"rc": r.rc, "ok": r.ok, "tail": r.tail}
                 if name in {"capability_activation_preflight", "capability_activation_report"}:
                     cap_status, cap_code = _extract_capability_signal(r.stdout)
@@ -1271,12 +4657,21 @@ def main() -> int:
                         check_payload["capability_activation_error_code"] = cap_code
                     if cap_code == "IP-CAP-003":
                         check_payload["env_auth_blocked"] = True
-                    if name == "capability_activation_preflight" and r.rc != 0 and cap_code == "IP-CAP-003":
-                        fallback_cmd = _replace_activation_policy(cmd, "route-any-ready")
+                    if name == "capability_activation_preflight" and capability_env_auth_fallback_eligible(
+                        requested_policy="strict-union",
+                        error_code=cap_code,
+                        rc=r.rc,
+                    ):
+                        fallback_cmd = replace_capability_activation_policy(
+                            cmd,
+                            CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY,
+                        )
                         fallback = _run(fallback_cmd, cwd=repo_root)
                         fb_status, fb_code = _extract_capability_signal(fallback.stdout)
                         check_payload["capability_activation_fallback_attempted"] = True
-                        check_payload["capability_activation_fallback_policy"] = "route-any-ready"
+                        check_payload["capability_activation_fallback_policy"] = (
+                            CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY
+                        )
                         check_payload["capability_activation_fallback_rc"] = fallback.rc
                         check_payload["capability_activation_fallback_tail"] = fallback.tail
                         if fb_status:
@@ -1289,9 +4684,12 @@ def main() -> int:
                             check_payload["tail"] = fallback.tail
                             check_payload["capability_activation_status"] = fb_status or "ACTIVATED"
                             check_payload["capability_activation_error_code"] = fb_code
-                            check_payload["capability_activation_policy_effective"] = "route-any-ready"
+                            check_payload["capability_activation_policy_effective"] = (
+                                CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY
+                            )
                 if name == "required_contract_coverage":
                     coverage_doc = _parse_json_safely(r.stdout) or {}
+                    coverage_projection = build_required_contract_coverage_projection(coverage_doc)
                     for k in (
                         "required_contract_total",
                         "required_contract_passed",
@@ -1306,6 +4704,733 @@ def main() -> int:
                     ):
                         if k in coverage_doc:
                             check_payload[k] = coverage_doc.get(k)
+                    for k, value in coverage_projection.items():
+                        check_payload[k] = value
+                if name == "unlock_formula_automation":
+                    unlock_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "unlock_formula_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "unlock_allowed",
+                        "decision_gates",
+                        "p0_total",
+                        "p0_done",
+                        "p0_not_done_refs",
+                        "audit_signoff_status",
+                        "env_blockers",
+                        "protocol_blockers",
+                        "formula_input_digest",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in unlock_doc:
+                            check_payload[k] = unlock_doc.get(k)
+                if name == "release_plane_cloud_evidence":
+                    release_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "release_plane_cloud_evidence_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "release_plane_status",
+                        "conditions",
+                        "target_branch",
+                        "release_head_sha",
+                        "required_gates_run_id",
+                        "run_url",
+                        "workflow_file_sha",
+                        "run_head_sha",
+                        "run_workflow_file_sha",
+                        "checks_json",
+                        "jobs_json",
+                        "required_checks_set",
+                        "release_cloud_evidence_adapter_status",
+                        "release_cloud_evidence_adapter_source_kind",
+                        "release_cloud_evidence_adapter_stale_reasons",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in release_doc:
+                            check_payload[k] = release_doc.get(k)
+                    for k in (
+                        "adapter_http_status",
+                        "github_rate_limit_remaining",
+                        "github_rate_limit_reset_epoch",
+                    ):
+                        value = release_adapter_payload.get(k)
+                        if value not in ("", None):
+                            check_payload[k] = value
+                if name == "cross_cwd_absolute_input":
+                    cross_cwd_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "cross_cwd_absolute_input_status",
+                        "cwd_parity_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "repo_catalog_input",
+                        "repo_catalog_is_absolute",
+                        "repo_cwd_resolved_repo_catalog",
+                        "tmp_cwd_resolved_repo_catalog",
+                        "repo_catalog_exists",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in cross_cwd_doc:
+                            check_payload[k] = cross_cwd_doc.get(k)
+                if name == "run_id_report_selection":
+                    run_selector_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "run_id_report_selection_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "run_id",
+                        "selection_strategy",
+                        "report_selected_path",
+                        "candidate_count",
+                        "candidate_paths",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in run_selector_doc:
+                            check_payload[k] = run_selector_doc.get(k)
+                if name == "phase_bootstrap_before_strict":
+                    phase_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "phase_bootstrap_before_strict_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "report_selected_path",
+                        "report_selection_mode",
+                        "report_selected_authority_class",
+                        "report_pointer_resolution_mode",
+                        "report_pointer_path",
+                        "report_path",
+                        "phase_a_refresh_applied",
+                        "phase_b_strict_revalidate_status",
+                        "phase_trace_status",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in phase_doc:
+                            check_payload[k] = phase_doc.get(k)
+                if name == "tmp_collision_safety":
+                    tmp_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "tmp_collision_safety_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "tmp_root",
+                        "generated_paths",
+                        "collision_count",
+                        "unique_path_count",
+                        "path_scope_guard_status",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in tmp_doc:
+                            check_payload[k] = tmp_doc.get(k)
+                if name == "handoff_collab_freshness_rotation":
+                    fresh_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "handoff_collab_freshness_rotation_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "rotation_applied",
+                        "freshness_age_days",
+                        "rotation_receipt_ref",
+                        "freshness_status",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in fresh_doc:
+                            check_payload[k] = fresh_doc.get(k)
+                if name == "protocol_feedback_atomic_emit":
+                    atomic_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_feedback_atomic_emit_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "transaction_id",
+                        "batch_ref",
+                        "index_ref",
+                        "receipt_ref",
+                        "receipt_path",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in atomic_doc:
+                            check_payload[k] = atomic_doc.get(k)
+                if name == "capability_boundary_classification":
+                    cap_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "capability_boundary_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "boundary_classification",
+                        "classification_source",
+                        "capability_activation_status",
+                        "capability_activation_error_code",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in cap_doc:
+                            check_payload[k] = cap_doc.get(k)
+                if name == "promotion_evidence_pipeline":
+                    promo_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "promotion_pipeline_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "promotion_evidence_selected_path",
+                        "promotion_evidence_selection_mode",
+                        "promotion_evidence_selected_authority_class",
+                        "promotion_evidence_pointer_resolution_mode",
+                        "promotion_evidence_pointer_path",
+                        "promotion_evidence_kind",
+                        "decision_hash",
+                        "input_hash",
+                        "reviewer_role",
+                        "reviewer_signature_ref",
+                        "evidence_bundle_refs",
+                        "receipt_path",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in promo_doc:
+                            check_payload[k] = promo_doc.get(k)
+                if name == "outlet_regression_matrix":
+                    outlet_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "outlet_matrix_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "report_selected_path",
+                        "report_selection_mode",
+                        "report_selected_authority_class",
+                        "report_pointer_resolution_mode",
+                        "report_pointer_path",
+                        "report_path",
+                        "report_run_id",
+                        "matrix_positive_status",
+                        "matrix_negative_status",
+                        "cross_cwd_parity_status",
+                        "send_time_gate_status",
+                        "governed_outlet_enforced",
+                        "outlet_channel_id",
+                        "outlet_bypass_detected",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in outlet_doc:
+                            check_payload[k] = outlet_doc.get(k)
+                if name == "sidecar_cwd_parity":
+                    sidecar_cwd_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "sidecar_cwd_parity_status",
+                        "cwd_parity_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "passthrough_digest",
+                        "root_digest",
+                        "temp_digest",
+                        "sidecar_contract_status",
+                        "sidecar_error_code",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in sidecar_cwd_doc:
+                            check_payload[k] = sidecar_cwd_doc.get(k)
+                if name == "docs_bridge_consistency":
+                    bridge_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "bridge_consistency_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "contradiction_pairs",
+                        "governance_anchor_refs",
+                        "review_anchor_refs",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in bridge_doc:
+                            check_payload[k] = bridge_doc.get(k)
+                if name == "contract_mapping_coverage":
+                    map_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "contract_mapping_coverage_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "total_requirements",
+                        "p0_total",
+                        "mapped_total",
+                        "p0_mapped",
+                        "coverage_rate",
+                        "p0_coverage_rate",
+                        "orphan_count",
+                        "unmapped_p0_requirements",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in map_doc:
+                            check_payload[k] = map_doc.get(k)
+                if name == "prompt_bootstrap_capability":
+                    prompt_bootstrap_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "prompt_bootstrap_contract_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "capability_driver_required_total",
+                        "capability_driver_present_total",
+                        "capability_driver_coverage_rate",
+                        "missing_capability_drivers",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in prompt_bootstrap_doc:
+                            check_payload[k] = prompt_bootstrap_doc.get(k)
+                if name == "prompt_capability_matrix":
+                    prompt_matrix_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "prompt_capability_matrix_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "capability_driver_required_total",
+                        "capability_driver_present_total",
+                        "capability_driver_coverage_rate",
+                        "missing_capability_drivers",
+                        "discovery_requiredized_all",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in prompt_matrix_doc:
+                            check_payload[k] = prompt_matrix_doc.get(k)
+                if name == "refresh_strict_business_interference":
+                    interference_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "refresh_strict_business_interference_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "refresh_receipt_ref",
+                        "strict_receipt_ref",
+                        "refresh_status",
+                        "strict_status",
+                        "interference_row_count_refresh",
+                        "interference_row_count_strict",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in interference_doc:
+                            check_payload[k] = interference_doc.get(k)
+                if name == "kernel_ssot_source":
+                    ssot_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "kernel_ssot_source_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "canonical_source_paths",
+                        "missing_source_paths",
+                        "ssot_validator_rc",
+                        "ssot_validator_tail",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in ssot_doc:
+                            check_payload[k] = ssot_doc.get(k)
+                if name == "prompt_derivation_conformance":
+                    derivation_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "prompt_derivation_conformance_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "kernel_contract_version",
+                        "kernel_contract_digest",
+                        "derived_from_contract_ids",
+                        "overlay_digest",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in derivation_doc:
+                            check_payload[k] = derivation_doc.get(k)
+                if name == "semantic_convergence":
+                    semantic_conv_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "semantic_convergence_status",
+                        "semantic_convergence_error_code",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "lineage_ref",
+                        "semantic_tuple_update",
+                        "semantic_tuple_three_plane",
+                        "semantic_tuple_full_scan",
+                        "mismatch_count",
+                        "mismatch_fields",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in semantic_conv_doc:
+                            check_payload[k] = semantic_conv_doc.get(k)
+                if name == "prompt_kernel_executable_coupling":
+                    coupling_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "prompt_kernel_executable_coupling_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "kernel_contract_ref",
+                        "validator_ref",
+                        "actor_context_explicit",
+                        "routing_validator_rc",
+                        "routing_validator_tail",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in coupling_doc:
+                            check_payload[k] = coupling_doc.get(k)
+                if name == "required_gate_bundle_runner":
+                    bundle_doc = _parse_json_safely(r.stdout) or {}
+                    for k in REQUIRED_GATE_BUNDLE_RUNNER_CAPTURE_FIELDS:
+                        if k in bundle_doc:
+                            check_payload[k] = bundle_doc.get(k)
+                    if "bundle_status" in bundle_doc:
+                        check_payload["required_gate_bundle_runner_status"] = bundle_doc.get("bundle_status")
+                if name == "required_gate_bundle_runner_shadow":
+                    bundle_shadow_doc = _parse_json_safely(r.stdout) or {}
+                    for k in REQUIRED_GATE_BUNDLE_RUNNER_CAPTURE_FIELDS:
+                        if k in bundle_shadow_doc:
+                            check_payload[k] = bundle_shadow_doc.get(k)
+                    if "bundle_status" in bundle_shadow_doc:
+                        check_payload["required_gate_bundle_runner_shadow_status"] = bundle_shadow_doc.get("bundle_status")
+                if name == "required_gate_recurrence_escalator":
+                    rec_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "required_gate_recurrence_status",
+                        "error_code",
+                        "escalation_level",
+                        "identity_id",
+                        "surface",
+                        "operation",
+                        "receipt_path",
+                        "state_path",
+                        "new_event_count",
+                        "tracked_event_count",
+                        "l1_error_families",
+                        "l2_error_families",
+                        "l3_error_families",
+                        "family_metrics",
+                        "stale_reasons",
+                    ):
+                        if k in rec_doc:
+                            check_payload[k] = rec_doc.get(k)
+                if name == "required_gate_tuple_parity":
+                    parity_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "required_gate_tuple_parity_status",
+                        "error_code",
+                        "tuple_fields",
+                        "core_tuple_fields",
+                        "conditional_tuple_fields",
+                        "receipts_checked",
+                        "surface_labels_checked",
+                        "min_receipts",
+                        "require_distinct_surface_labels",
+                        "require_distinct_operations",
+                        "operations_checked",
+                        "missing_operations",
+                        "duplicate_operations",
+                        "parity_contract_reasons",
+                        "missing_surface_labels",
+                        "duplicate_surface_labels",
+                        "load_errors",
+                        "missing_fields",
+                        "mismatches",
+                        "stale_reasons",
+                    ):
+                        if k in parity_doc:
+                            check_payload[k] = parity_doc.get(k)
+                if name == "cross_verification_tracks":
+                    cross_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "cross_verification_tracks_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "cross_verification_bundle_id",
+                        "source_url_set",
+                        "reference_timestamp_utc",
+                        "conflict_reconciliation_note",
+                        "missing_tracks",
+                        "missing_metadata_fields",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in cross_doc:
+                            check_payload[k] = cross_doc.get(k)
+                if name == "intake_evidence_quorum":
+                    quorum_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "intake_evidence_quorum_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "cross_verification_bundle_id",
+                        "source_url_set",
+                        "reference_timestamp_utc",
+                        "conflict_reconciliation_note",
+                        "missing_tracks",
+                        "missing_metadata_fields",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in quorum_doc:
+                            check_payload[k] = quorum_doc.get(k)
+                if name == "route_version_pinning":
+                    pin_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "pin_status",
+                        "pin_error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "route_endpoint",
+                        "workflow_id",
+                        "workflow_publish_version",
+                        "pin_proof_ref",
+                        "expected_route_endpoint",
+                        "expected_workflow_id",
+                        "expected_workflow_publish_version",
+                        "mismatch_fields",
+                        "receipt_path",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in pin_doc:
+                            check_payload[k] = pin_doc.get(k)
+                if name == "fallback_taxonomy_normalization":
+                    fn_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "fallback_taxonomy_normalization_status",
+                        "normalization_error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "report_selected_path",
+                        "report_selection_mode",
+                        "report_selected_authority_class",
+                        "report_pointer_resolution_mode",
+                        "report_pointer_path",
+                        "report_path",
+                        "taxonomy_version",
+                        "fallback_reason_row_count",
+                        "fallback_reason_rows",
+                        "unmapped_fallback_reasons",
+                        "blocker_taxonomy_namespace_preserved",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in fn_doc:
+                            check_payload[k] = fn_doc.get(k)
+                if name == "dedup_monotonicity":
+                    dedup_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "monotonicity_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "run_id",
+                        "parallel_claims_requested",
+                        "claim_rows_total",
+                        "grouped_run_count",
+                        "candidate_count",
+                        "earliest_claim_ts",
+                        "stable_tiebreaker",
+                        "winner_id",
+                        "winner_reason",
+                        "tie_candidate_count",
+                        "claims_path",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in dedup_doc:
+                            check_payload[k] = dedup_doc.get(k)
+                if name == "cross_workflow_schema":
+                    xwf_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "cross_workflow_schema_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "evidence_selected_path",
+                        "evidence_selection_mode",
+                        "evidence_selected_authority_class",
+                        "evidence_pointer_resolution_mode",
+                        "evidence_pointer_path",
+                        "evidence_kind",
+                        "run_id",
+                        "route_action",
+                        "quality_meta_state",
+                        "dedup_state",
+                        "evidence_hash",
+                        "schema_version",
+                        "hash_consistency_status",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in xwf_doc:
+                            check_payload[k] = xwf_doc.get(k)
+                if name == "skill_path_integrity":
+                    spath_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "path_integrity_status",
+                        "path_integrity_error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "layout_mode",
+                        "active_repo_root",
+                        "active_runtime_root",
+                        "required_skills",
+                        "missing_skill_paths",
+                        "out_of_layout_skill_paths",
+                        "allowed_skill_roots",
+                        "skill_path_rows",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in spath_doc:
+                            check_payload[k] = spath_doc.get(k)
+                if name == "execution_target_tuple_isolation":
+                    xtuple_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "execution_target_tuple_isolation_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "execution_target_kind",
+                        "execution_target_key",
+                        "execution_target_ref",
+                        "route_conflict_status",
+                        "route_conflict_error_code",
+                        "conflict_key_mode",
+                        "override_non_bypass_status",
+                        "process_call_support_status",
+                        "tuple_fields_present",
+                        "tuple_fields_missing",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in xtuple_doc:
+                            check_payload[k] = xtuple_doc.get(k)
+                if name == "multimodal_plugin_enforcement":
+                    mm_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "multimodal_plugin_enforcement_status",
+                        "multimodal_runtime_evidence_status",
+                        "multimodal_preflight_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "plugin_registry_status",
+                        "plugin_naming_status",
+                        "plugin_schema_status",
+                        "plugin_threshold_status",
+                        "plugin_path_status",
+                        "plugin_copy_policy_status",
+                        "provider_config_status",
+                        "provider_profile_id",
+                        "plugin_contract_owner",
+                        "plugin_resolution_mode",
+                        "report_selected_path",
+                        "runtime_report_selected_path",
+                        "runtime_report_selection_mode",
+                        "runtime_report_selected_authority_class",
+                        "runtime_report_pointer_resolution_mode",
+                        "runtime_report_pointer_path",
+                        "runtime_report_path",
+                        "runtime_report_run_id",
+                        "multimodal_calls",
+                        "multimodal_resolved",
+                        "multimodal_unresolved",
+                        "multimodal_errors",
+                        "multimodal_retry_calls",
+                        "runtime_gate_mode",
+                        "runtime_gate_required_confidence",
+                        "multimodal_runtime_evidence_refs",
+                        "forbidden_copy_refs",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in mm_doc:
+                            check_payload[k] = mm_doc.get(k)
+                if name == "reasoning_loop_failclose_enforcement":
+                    rl_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "reasoning_loop_failclose_status",
+                        "reasoning_runtime_evidence_status",
+                        "reasoning_attempt_trace_status",
+                        "no_target_done_block_status",
+                        "terminal_attempt_index",
+                        "terminal_attempt_target_reached",
+                        "terminal_attempt_no_target_reached",
+                        "no_target_completion_mode",
+                        "done_requires_terminal_target_reached",
+                        "reasoning_next_action_status",
+                        "reasoning_escalation_status",
+                        "escalation_requirement_mode",
+                        "escalation_signal_accept_nonempty_ref",
+                        "escalation_signal_nonempty_fields",
+                        "strict_run_id_binding",
+                        "runtime_report_selection_mode",
+                        "reasoning_four_track_status",
+                        "external_source_freshness_status",
+                        "reasoning_enforcement_level",
+                        "plugin_registry_status",
+                        "runtime_report_path",
+                        "runtime_report_run_id",
+                        "runtime_report_source",
+                        "report_selected_path",
+                        "reasoning_attempt_count",
+                        "reasoning_failed_attempt_count",
+                        "no_target_reached_detected",
+                        "reasoning_runtime_evidence_refs",
+                        "required_contract",
+                        "auto_required_signal",
+                        "error_code",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in rl_doc:
+                            check_payload[k] = rl_doc.get(k)
+                if name == "replay_archive_contract":
+                    replay_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "replay_archive_contract_status",
+                        "error_code",
+                        "replay_case_total",
+                        "replay_case_passed",
+                        "replay_case_failed",
+                        "stale_reasons",
+                        "evidence_ref",
+                        "out_path",
+                    ):
+                        if k in replay_doc:
+                            check_payload[k] = replay_doc.get(k)
                 if name == "semantic_routing_guard":
                     semantic_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
@@ -1617,9 +5742,22 @@ def main() -> int:
                         "sidecar_error_code",
                         "required_contract",
                         "auto_required_signal",
+                        "requiredization_scope_decision",
+                        "requiredization_scope_reason",
+                        "requiredization_current_round_linked",
+                        "current_round_anchor_utc",
+                        "activity_correlation_status",
+                        "activity_correlation_key",
+                        "activity_unscoped_count",
+                        "activity_ignored_missing_correlation_key_refs",
+                        "activity_ignored_missing_anchor_refs",
+                        "activity_ignored_pre_round_refs",
                         "enforce_blocking",
                         "escalation_required",
                         "escalation_decision",
+                        "observability_escalation_required",
+                        "observability_alert_level",
+                        "observability_escalation_reason",
                         "blocking_error_codes",
                         "p0_violations",
                         "track_a",
@@ -1668,6 +5806,51 @@ def main() -> int:
                     ):
                         if k in archival_doc:
                             check_payload[k] = archival_doc.get(k)
+                if name == "downsink_path_immutability":
+                    downsink_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_downsink_path_immutability_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "contract_key",
+                        "runtime_mirror_contract_path",
+                        "required_domains",
+                        "stale_reasons",
+                    ):
+                        if k in downsink_doc:
+                            check_payload[k] = downsink_doc.get(k)
+                if name == "downsink_path_write_guard":
+                    downsink_guard_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_downsink_path_write_guard_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "checked_candidate_count",
+                        "checked_candidates",
+                        "registry_rule_count",
+                        "probe_write_paths",
+                        "stale_reasons",
+                    ):
+                        if k in downsink_guard_doc:
+                            check_payload[k] = downsink_guard_doc.get(k)
+                if name == "downsink_path_literal_lock":
+                    downsink_literal_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_downsink_path_literal_lock_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "scan_file_count",
+                        "scan_files",
+                        "scan_globs",
+                        "registry_rule_count",
+                        "probe_path_literals",
+                        "stale_reasons",
+                    ):
+                        if k in downsink_literal_doc:
+                            check_payload[k] = downsink_literal_doc.get(k)
                 if name == "writeback_continuity":
                     writeback_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
@@ -1686,6 +5869,26 @@ def main() -> int:
                     ):
                         if k in writeback_doc:
                             check_payload[k] = writeback_doc.get(k)
+                if name == "experience_writeback":
+                    experience_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "experience_writeback_validation_status",
+                        "error_code",
+                        "report_selected_path",
+                        "report_selection_mode",
+                        "report_selected_authority_class",
+                        "report_pointer_resolution_mode",
+                        "report_pointer_path",
+                        "report_run_id",
+                        "writeback_status",
+                        "writeback_rule_id",
+                        "rulebook_match_count",
+                        "task_history_contains_run_id",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in experience_doc:
+                            check_payload[k] = experience_doc.get(k)
                 if name == "post_execution_mandatory":
                     post_exec_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
@@ -1828,7 +6031,13 @@ def main() -> int:
                     for k in (
                         "cross_actor_isolation_status",
                         "error_code",
+                        "actor_id",
+                        "scope_mode_effective",
                         "actor_binding_count",
+                        "actor_binding_count_total",
+                        "actor_binding_count_non_target",
+                        "global_observation_status",
+                        "global_observation_stale_reasons",
                         "active_identities",
                         "stale_reasons",
                     ):
@@ -1895,23 +6104,153 @@ def main() -> int:
                             check_payload[k] = reply_doc.get(k)
                 if name == "send_time_reply_gate":
                     send_doc = _parse_json_safely(r.stdout) or {}
+                    send_host_source = str(send_doc.get("host_visible_surface_live_receipt_source", "")).strip()
+                    if send_host_source:
+                        live_host_receipt_sources.add(send_host_source)
                     for k in (
                         "send_time_gate_status",
                         "error_code",
                         "governed_outlet_enforced",
                         "outlet_channel_id",
+                        "final_emit_channel_id",
+                        "final_emit_policy_mode",
+                        "final_emit_schema_id",
+                        "final_emit_schema_status",
+                        "final_emit_contract_status",
                         "outlet_preflight_receipt",
                         "outlet_bypass_detected",
                         "reply_evidence_mode",
                         "reply_evidence_ref",
                         "reply_sample_count",
+                        "reply_first_line_status",
+                        "reply_first_line_gate_executed",
+                        "send_time_block_stage",
+                        "reply_first_line_blocked_reason",
                         "reply_first_line_missing_count",
                         "reply_first_line_missing_refs",
                         "blocker_receipt_path",
+                        "host_transport_post_check_state_file",
+                        "host_transport_post_check_state_path",
+                        "host_transport_post_check_state_status",
+                        "host_transport_post_check_block_on_active",
+                        "host_transport_post_check_blocker_active",
+                        "host_transport_post_check_closure_status",
+                        "host_transport_post_check_error_code",
+                        "chat_egress_uniqueness_contract_id",
+                        "chat_egress_uniqueness_status",
+                        "chat_egress_uniqueness_reason",
+                        "chat_egress_uniqueness_error_code",
+                        "chat_egress_uniqueness_observed_send_time_status",
                         "stale_reasons",
                     ):
                         if k in send_doc:
                             check_payload[k] = send_doc.get(k)
+                if name == "send_time_reply_gate_validate":
+                    send_validate_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "send_time_gate_status",
+                        "error_code",
+                        "governed_outlet_enforced",
+                        "outlet_channel_id",
+                        "final_emit_channel_id",
+                        "final_emit_policy_mode",
+                        "final_emit_schema_id",
+                        "final_emit_schema_status",
+                        "final_emit_contract_status",
+                        "outlet_preflight_receipt",
+                        "outlet_bypass_detected",
+                        "reply_evidence_mode",
+                        "reply_evidence_ref",
+                        "reply_sample_count",
+                        "reply_first_line_status",
+                        "reply_first_line_gate_executed",
+                        "send_time_block_stage",
+                        "reply_first_line_blocked_reason",
+                        "reply_first_line_missing_count",
+                        "reply_first_line_missing_refs",
+                        "blocker_receipt_path",
+                        "host_transport_post_check_state_file",
+                        "host_transport_post_check_state_path",
+                        "host_transport_post_check_state_status",
+                        "host_transport_post_check_block_on_active",
+                        "host_transport_post_check_blocker_active",
+                        "host_transport_post_check_closure_status",
+                        "host_transport_post_check_error_code",
+                        "chat_egress_uniqueness_contract_id",
+                        "chat_egress_uniqueness_status",
+                        "chat_egress_uniqueness_reason",
+                        "chat_egress_uniqueness_error_code",
+                        "chat_egress_uniqueness_observed_send_time_status",
+                        "stale_reasons",
+                    ):
+                        if k in send_validate_doc:
+                            check_payload[k] = send_validate_doc.get(k)
+                if name == "protocol_lane_headstamp_continuity":
+                    lane_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_lane_headstamp_status",
+                        "protocol_lane_activation_status",
+                        "lane_activation_error_code",
+                        "headstamp_continuity_status",
+                        "headstamp_error_code",
+                        "requested_lane",
+                        "previous_lane",
+                        "resolved_lane",
+                        "route_source_ref",
+                        "lane_activation_evidence_ref",
+                        "protocol_request_detected",
+                        "error_code",
+                        "stale_reasons",
+                    ):
+                        if k in lane_doc:
+                            check_payload[k] = lane_doc.get(k)
+                if name == "host_transport_wiring_attestation":
+                    host_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "host_transport_wiring_attestation_status",
+                        "host_transport_wiring_attestation_live_coverage_status",
+                        "host_transport_wiring_attestation_required_channels",
+                        "host_transport_wiring_attestation_live_covered_channels",
+                        "host_transport_wiring_attestation_runtime_receipt_max_age_seconds",
+                        "host_transport_wiring_attestation_live_receipt_required",
+                        "host_transport_wiring_attestation_allowed_live_receipt_sources",
+                        "host_transport_wiring_attestation_live_binding_required",
+                        "host_transport_wiring_attestation_required_actor_id",
+                        "host_transport_wiring_attestation_required_session_id",
+                        "host_transport_wiring_attestation_required_run_id",
+                        "host_transport_wiring_attestation_state_file",
+                        "host_transport_wiring_attestation_receipt_pattern",
+                        "host_transport_wiring_attestation_strict_live_run_binding_required",
+                        "host_transport_post_check_closure_state_file",
+                        "host_transport_post_check_closure_state_path",
+                        "host_transport_post_check_block_on_active",
+                        "host_transport_post_check_blocker_active",
+                        "host_transport_post_check_closure_status",
+                        "host_transport_post_check_checked_at_utc",
+                        "host_transport_post_check_state_write_status",
+                        "error_code",
+                        "stale_reasons",
+                    ):
+                        if k in host_doc:
+                            check_payload[k] = host_doc.get(k)
+                if name == "host_visible_post_check_recovery":
+                    recovery_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "recovery_status",
+                        "error_code",
+                        "attestation_status",
+                        "attestation_error_code",
+                        "attestation_stale_reasons",
+                        "host_transport_post_check_blocker_active",
+                        "host_transport_post_check_state_write_status",
+                        "host_transport_post_check_closure_state_path",
+                        "seeded_channels",
+                        "seeded_receipt_paths",
+                        "seeded_receipt_source",
+                        "stale_reasons",
+                    ):
+                        if k in recovery_doc:
+                            check_payload[k] = recovery_doc.get(k)
                 if name == "execution_reply_identity_coherence":
                     coherence_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
@@ -2018,47 +6357,65 @@ def main() -> int:
                             check_payload[k] = inquiry_doc.get(k)
                 item["checks"][name] = check_payload
 
-            env = os.environ.copy()
-            env["IDENTITY_CATALOG"] = str(catalog)
-            three_plane = _run(
-                [
-                    "python3",
-                    "scripts/report_three_plane_status.py",
-                    "--identity-id",
-                    iid,
-                    "--scope",
-                    scan_scope_hint,
-                    *(["--layer-intent-text", layer_intent_text] if layer_intent_text else []),
-                    *(["--expected-work-layer", expected_work_layer] if expected_work_layer else []),
-                    *(["--expected-source-layer", expected_source_layer] if expected_source_layer else []),
-                    *(["--with-docs-contract"] if args.with_docs_contract else []),
-                ],
-                cwd=repo_root,
-                env=env,
+            _apply_three_plane_projection(
+                repo_root=repo_root,
+                catalog=catalog,
+                repo_catalog=repo_catalog,
+                item=item,
+                payload=payload,
+                identity_id=iid,
+                actor_id=actor_id,
+                session_id=scan_session_id,
+                scope_hint=scan_scope_hint,
+                target_branch=target_branch,
+                release_head_sha=release_head_sha,
+                required_gates_run_id=required_gates_run_id,
+                run_url=run_url,
+                workflow_file_sha=workflow_file_sha,
+                run_head_sha=run_head_sha,
+                run_workflow_file_sha=run_workflow_file_sha,
+                checks_json=checks_json,
+                jobs_json=jobs_json,
+                gh_runs_json=gh_runs_json,
+                layer_intent_text=layer_intent_text,
+                effective_work_layer=effective_work_layer,
+                effective_source_layer=effective_source_layer,
+                with_docs_contract=bool(args.with_docs_contract),
+                record_required_gate_projection=_record_required_gate_projection,
             )
-            item["checks"]["three_plane"] = {"rc": three_plane.rc, "ok": three_plane.ok, "tail": three_plane.tail}
-            tp = _parse_json_safely(three_plane.stdout)
-            if tp:
-                item["three_plane"] = {
-                    "instance": tp.get("instance_plane_status"),
-                    "repo": tp.get("repo_plane_status"),
-                    "release": tp.get("release_plane_status"),
-                    "overall": tp.get("overall_release_decision"),
-                }
-            item["severity"] = _severity_for_row(item)
-            payload["summary"]["total_identities"] += 1
-            if item["severity"] == "P0":
-                payload["summary"]["p0"] += 1
-            elif item["severity"] == "P1":
-                payload["summary"]["p1"] += 1
+            # Keep full-scan m2m projection strictly derived from full-scan checks.
+            # Three-plane projection is retained separately for observability only,
+            # avoiding cross-surface aggregation noise where nested three-plane
+            # failures appear despite this scan row having no failed checks.
+            item["m2m_projection"] = _classify_m2m_projection(checks=item.get("checks", {}))
+            payload["summary_m2m"]["total_identities"] += 1
+            current_m2m = str(item["m2m_projection"].get("m2m_binding_closure_status", "")).upper()
+            if current_m2m == "PASS":
+                payload["summary_m2m"]["pass"] += 1
             else:
-                payload["summary"]["ok"] += 1
+                payload["summary_m2m"]["fail"] += 1
+            _update_target_m2m(iid, current_m2m)
+            item["severity"] = _severity_for_row(item)
+            _update_target_severity(iid, str(item["severity"]))
+            _record_summary(item)
+            all_scanned_rows.append(item)
             layer_out["identities"].append(item)
 
         payload["catalogs"].append(layer_out)
 
     if args.scan_mode == "target":
         missing = sorted(target_set - matched_targets)
+        payload["summary_unique_targets"] = {
+            "total_identities": len(target_severity_map),
+            "p0": sum(1 for severity in target_severity_map.values() if str(severity).upper() == "P0"),
+            "p1": sum(1 for severity in target_severity_map.values() if str(severity).upper() == "P1"),
+            "ok": sum(1 for severity in target_severity_map.values() if str(severity).upper() == "OK"),
+        }
+        payload["summary_unique_targets_m2m"] = {
+            "total_identities": len(target_m2m_map),
+            "pass": sum(1 for status in target_m2m_map.values() if str(status).upper() == "PASS"),
+            "fail": sum(1 for status in target_m2m_map.values() if str(status).upper() == "FAIL"),
+        }
         payload["missing_target_identities"] = missing
         if missing:
             if args.out:
@@ -2069,6 +6426,25 @@ def main() -> int:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
             print(f"[FAIL] target identities not found in selected catalogs: {missing}")
             return 2
+
+    if projection_profile.host_visible_post_check_metrics_enabled:
+        host_visible_post_check_metrics = _build_host_visible_post_check_metrics(
+            rows=all_scanned_rows,
+            external_next_hop_block_samples=external_next_hop_block_evidence.get("samples", []),
+            external_next_hop_block_manifest_paths=external_next_hop_block_evidence.get("manifest_paths", []),
+            external_next_hop_block_sample_refs=external_next_hop_block_evidence.get("sample_refs", []),
+        )
+    else:
+        host_visible_post_check_metrics = _build_projection_profile_host_visible_post_check_metrics(
+            projection_profile=projection_profile,
+        )
+    payload["host_visible_post_check_metrics"] = host_visible_post_check_metrics
+    payload["chat_egress_uniqueness_status"] = str(
+        host_visible_post_check_metrics.get("chat_egress_uniqueness_status", "")
+    ).strip() or STATUS_SKIPPED_NOT_REQUIRED
+    from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
+
+    payload["surface_governance"] = build_governed_runtime_summary_surface_payload("full_identity_protocol_scan_summary")
 
     if args.out:
         out = Path(args.out).expanduser().resolve()

@@ -8,6 +8,7 @@ import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from runtime_temp_path_common import runtime_temp_root
 from typing import Any
 
 import yaml
@@ -20,8 +21,19 @@ from resolve_identity_context import (
     ensure_local_catalog,
     resolve_identity,
 )
+from version_baseline_common import (
+    REQUIRED_AGENT_IDENTITY_FIELDS,
+    REQUIRED_CATALOG_FIELDS,
+    REQUIRED_META_FIELDS,
+    REQUIRED_SCAFFOLD_METADATA_FIELDS,
+    apply_version_baseline_to_catalog_row,
+    apply_version_baseline_to_meta_doc,
+    apply_version_baseline_to_task_doc,
+    load_version_baseline_or_raise,
+)
 
 REPO_TARGET_CONFIRM_TOKEN = "I_UNDERSTAND_REPO_TARGET_WRITE"
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 
 
 def _now_iso() -> str:
@@ -64,6 +76,135 @@ def _write_json(path: Path, data: dict[str, Any]) -> None:
 
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _ensure_host_gateway_downsink(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    pack_path: Path,
+    protocol_root: Path,
+) -> tuple[bool, dict[str, Any], str]:
+    pack = pack_path.expanduser().resolve()
+    if not pack.exists():
+        return False, {}, f"pack_path_missing:{pack}"
+    task_path = (pack / "CURRENT_TASK.json").resolve()
+    if not task_path.exists():
+        return False, {}, f"current_task_missing:{task_path}"
+    try:
+        task_doc = _load_json(task_path)
+    except Exception as exc:
+        return False, {}, f"current_task_invalid_json:{exc}"
+    if not isinstance(task_doc, dict):
+        return False, {}, "current_task_not_object"
+
+    try:
+        from create_identity_pack import (
+            HOST_GATEWAY_CONTRACT_KEY,
+            UNIQUE_EGRESS_SCRIPT,
+            UNIQUE_INGRESS_SCRIPT,
+            materialize_protocol_host_gateway_artifacts,
+        )
+    except Exception as exc:
+        return False, {}, f"host_gateway_materializer_import_failed:{exc}"
+
+    try:
+        artifacts = materialize_protocol_host_gateway_artifacts(
+            task=task_doc,
+            identity_id=str(identity_id).strip(),
+            pack_dir=pack,
+            catalog_path=catalog_path.expanduser().resolve(),
+            protocol_root=protocol_root.expanduser().resolve(),
+        )
+    except Exception as exc:
+        return False, {}, f"host_gateway_materializer_failed:{exc}"
+
+    _write_json(task_path, task_doc)
+    contract = task_doc.get(HOST_GATEWAY_CONTRACT_KEY)
+    if not isinstance(contract, dict):
+        return False, {"gateway_artifacts": artifacts}, "host_gateway_contract_missing_after_materialize"
+    required_flag = bool(contract.get("required") is True)
+    ingress_script = str(contract.get("protocol_ingress_script", "")).strip()
+    egress_script = str(contract.get("protocol_egress_script", "")).strip()
+    ingress_wrapper = Path(str(artifacts.get("ingress_wrapper_path", "")).strip()).expanduser()
+    egress_wrapper = Path(str(artifacts.get("egress_wrapper_path", "")).strip()).expanduser()
+    session_chain_wrapper = Path(str(artifacts.get("session_chain_wrapper_path", "")).strip()).expanduser()
+    gateway_contract = Path(str(artifacts.get("gateway_contract_path", "")).strip()).expanduser()
+    missing_runtime_files = [
+        str(path)
+        for path in (ingress_wrapper, egress_wrapper, session_chain_wrapper, gateway_contract)
+        if not str(path) or not path.exists()
+    ]
+    payload = {
+        "host_gateway_contract_status": STATUS_PASS_REQUIRED if required_flag else "FAIL_REQUIRED",
+        "host_gateway_ingress_script": ingress_script,
+        "host_gateway_egress_script": egress_script,
+        "host_gateway_artifacts": artifacts,
+        "host_gateway_runtime_files_status": STATUS_PASS_REQUIRED if not missing_runtime_files else "FAIL_REQUIRED",
+        "host_gateway_runtime_files_missing": missing_runtime_files,
+        "task_path": str(task_path),
+    }
+    if not required_flag:
+        return False, payload, "host_gateway_required_flag_not_true"
+    if ingress_script != UNIQUE_INGRESS_SCRIPT:
+        return False, payload, "host_gateway_ingress_script_mismatch"
+    if egress_script != UNIQUE_EGRESS_SCRIPT:
+        return False, payload, "host_gateway_egress_script_mismatch"
+    if missing_runtime_files:
+        return False, payload, "host_gateway_runtime_files_missing"
+    return True, payload, ""
+
+
+def _ensure_identity_codex_launcher(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    pack_path: Path,
+    protocol_root: Path,
+) -> tuple[bool, dict[str, Any], str]:
+    task_path = (pack_path / "CURRENT_TASK.json").resolve()
+    if not task_path.exists():
+        return False, {}, f"current_task_missing:{task_path}"
+    install_cmd = [
+        "python3",
+        str((protocol_root / "scripts" / "install_identity_codex_launcher.py").resolve()),
+        "--catalog",
+        str(catalog_path.expanduser().resolve()),
+        "--identity-id",
+        str(identity_id).strip(),
+        "--current-task",
+        str(task_path),
+        "--identity-home",
+        str(catalog_path.expanduser().resolve().parent),
+        "--protocol-home",
+        str(protocol_root.expanduser().resolve()),
+        "--json-only",
+    ]
+    validate_cmd = [
+        "python3",
+        str((protocol_root / "scripts" / "validate_identity_codex_launcher.py").resolve()),
+        "--catalog",
+        str(catalog_path.expanduser().resolve()),
+        "--identity-id",
+        str(identity_id).strip(),
+        "--current-task",
+        str(task_path),
+        "--json-only",
+    ]
+    rc_install, out_install, err_install = _run_capture(install_cmd)
+    if rc_install != 0:
+        return False, {"install_stdout": out_install, "install_stderr": err_install}, "launcher_install_failed"
+    rc_validate, out_validate, err_validate = _run_capture(validate_cmd)
+    payload = {
+        "install_stdout": out_install,
+        "install_stderr": err_install,
+        "validate_stdout": out_validate,
+        "validate_stderr": err_validate,
+        "task_path": str(task_path),
+    }
+    if rc_validate != 0:
+        return False, payload, "launcher_validate_failed"
+    return True, payload, ""
 
 
 def _resolve_source_pack(args: argparse.Namespace) -> Path:
@@ -208,6 +349,7 @@ def _register_identity(
     pack_path: str,
     activate: bool,
     *,
+    version_baseline: dict[str, Any],
     profile: str,
     runtime_mode: str,
 ) -> None:
@@ -230,24 +372,258 @@ def _register_identity(
         existing["description"] = description or existing.get("description", "")
         existing["profile"] = profile
         existing["runtime_mode"] = runtime_mode
+        apply_version_baseline_to_catalog_row(existing, version_baseline)
         if activate:
             existing["status"] = "active"
     else:
-        identities.append(
-            {
-                "id": identity_id,
-                "title": title or identity_id,
-                "description": description or "",
-                "status": "active" if activate else "inactive",
-                "methodology_version": "v1.2.3",
-                "profile": profile,
-                "runtime_mode": runtime_mode,
-                "pack_path": pack_path,
-                "tags": ["identity"],
-            }
-        )
+        row = {
+            "id": identity_id,
+            "title": title or identity_id,
+            "description": description or "",
+            "status": "active" if activate else "inactive",
+            "methodology_version": "",
+            "profile": profile,
+            "runtime_mode": runtime_mode,
+            "pack_path": pack_path,
+            "tags": ["identity"],
+        }
+        apply_version_baseline_to_catalog_row(row, version_baseline)
+        identities.append(row)
     catalog["identities"] = identities
     _dump_yaml(catalog_path, catalog)
+
+
+def _sync_catalog_row_version_baseline(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    version_baseline: dict[str, Any],
+) -> tuple[bool, dict[str, Any], str]:
+    catalog = _load_yaml(catalog_path)
+    identities = [x for x in (catalog.get("identities") or []) if isinstance(x, dict)]
+    row = next((x for x in identities if str(x.get("id", "")).strip() == str(identity_id or "").strip()), None)
+    payload: dict[str, Any] = {
+        "catalog_path": str(catalog_path),
+        "identity_id": str(identity_id or "").strip(),
+        "catalog_row_found": bool(row),
+        "catalog_row_version_changed": False,
+    }
+    if not row:
+        payload["catalog_row_missing_reason"] = "identity_row_not_found"
+        return False, payload, "catalog_row_missing"
+
+    changed = apply_version_baseline_to_catalog_row(row, version_baseline)
+    payload["catalog_row_version_changed"] = bool(changed)
+    if changed:
+        catalog["identities"] = identities
+        _dump_yaml(catalog_path, catalog)
+    return True, payload, ""
+
+
+def _apply_version_baseline_to_pack_docs(
+    *,
+    pack_path: Path,
+    version_baseline: dict[str, Any],
+) -> tuple[bool, dict[str, Any], str]:
+    pack = pack_path.expanduser().resolve()
+    task_path = (pack / "CURRENT_TASK.json").resolve()
+    meta_path = (pack / "META.yaml").resolve()
+    payload: dict[str, Any] = {
+        "pack_path": str(pack),
+        "task_path": str(task_path),
+        "meta_path": str(meta_path),
+        "task_version_changed": False,
+        "meta_version_changed": False,
+        "meta_created": False,
+    }
+
+    if not task_path.exists():
+        payload["task_missing"] = True
+        return False, payload, "task_missing"
+    try:
+        task_doc = _load_json(task_path)
+    except Exception as exc:
+        payload["task_parse_error"] = str(exc)
+        return False, payload, "task_parse_failed"
+    if not isinstance(task_doc, dict):
+        payload["task_not_object"] = True
+        return False, payload, "task_not_object"
+
+    task_changed = apply_version_baseline_to_task_doc(task_doc, version_baseline)
+    payload["task_version_changed"] = bool(task_changed)
+    if task_changed:
+        _write_json(task_path, task_doc)
+
+    meta_created = False
+    if meta_path.exists():
+        try:
+            meta_doc = _load_yaml(meta_path)
+        except Exception as exc:
+            payload["meta_parse_error"] = str(exc)
+            return False, payload, "meta_parse_failed"
+        if not isinstance(meta_doc, dict):
+            payload["meta_not_object"] = True
+            return False, payload, "meta_not_object"
+    else:
+        meta_doc = {}
+        meta_created = True
+    meta_changed = apply_version_baseline_to_meta_doc(meta_doc, version_baseline)
+    payload["meta_created"] = bool(meta_created)
+    payload["meta_version_changed"] = bool(meta_changed)
+    if meta_created or meta_changed:
+        _dump_yaml(meta_path, meta_doc)
+
+    return True, payload, ""
+
+
+def _verify_version_baseline_alignment(
+    *,
+    pack_path: Path,
+    version_baseline: dict[str, Any],
+    catalog_row: dict[str, Any] | None,
+    require_catalog_row: bool,
+) -> tuple[bool, dict[str, Any], str]:
+    pack = pack_path.expanduser().resolve()
+    task_path = (pack / "CURRENT_TASK.json").resolve()
+    meta_path = (pack / "META.yaml").resolve()
+    mismatches: list[dict[str, str]] = []
+    missing: list[str] = []
+
+    task_doc: dict[str, Any] = {}
+    if task_path.exists():
+        try:
+            parsed = _load_json(task_path)
+        except Exception:
+            parsed = {}
+        task_doc = parsed if isinstance(parsed, dict) else {}
+    else:
+        missing.append("task_missing")
+    agent = task_doc.get("agent_identity") if isinstance(task_doc.get("agent_identity"), dict) else {}
+    scaffold = task_doc.get("scaffold_metadata") if isinstance(task_doc.get("scaffold_metadata"), dict) else {}
+
+    meta_doc: dict[str, Any] = {}
+    if meta_path.exists():
+        try:
+            parsed_meta = _load_yaml(meta_path)
+        except Exception:
+            parsed_meta = {}
+        meta_doc = parsed_meta if isinstance(parsed_meta, dict) else {}
+    else:
+        missing.append("meta_missing")
+
+    baseline_agent = dict(version_baseline.get("agent_identity") or {})
+    baseline_scaffold = dict(version_baseline.get("scaffold_metadata") or {})
+    baseline_meta = dict(version_baseline.get("meta") or {})
+    baseline_catalog = dict(version_baseline.get("catalog") or {})
+
+    for field in REQUIRED_AGENT_IDENTITY_FIELDS:
+        expected = str(baseline_agent.get(field, "")).strip()
+        if not expected:
+            continue
+        observed = str(agent.get(field, "")).strip()
+        if observed != expected:
+            mismatches.append(
+                {
+                    "field": f"task.agent_identity.{field}",
+                    "expected": expected,
+                    "observed": observed,
+                }
+            )
+    for field in REQUIRED_SCAFFOLD_METADATA_FIELDS:
+        expected = str(baseline_scaffold.get(field, "")).strip()
+        if not expected:
+            continue
+        observed = str(scaffold.get(field, "")).strip()
+        if observed != expected:
+            mismatches.append(
+                {
+                    "field": f"task.scaffold_metadata.{field}",
+                    "expected": expected,
+                    "observed": observed,
+                }
+            )
+    for field in REQUIRED_META_FIELDS:
+        expected = str(baseline_meta.get(field, "")).strip()
+        if not expected:
+            continue
+        observed = str(meta_doc.get(field, "")).strip()
+        if observed != expected:
+            mismatches.append(
+                {
+                    "field": f"meta.{field}",
+                    "expected": expected,
+                    "observed": observed,
+                }
+            )
+
+    row_found = isinstance(catalog_row, dict)
+    if require_catalog_row and not row_found:
+        missing.append("catalog_row_missing")
+    if row_found:
+        for field in REQUIRED_CATALOG_FIELDS:
+            expected = str(baseline_catalog.get(field, "")).strip()
+            if not expected:
+                continue
+            observed = str((catalog_row or {}).get(field, "")).strip()
+            if observed != expected:
+                mismatches.append(
+                    {
+                        "field": f"catalog.{field}",
+                        "expected": expected,
+                        "observed": observed,
+                    }
+                )
+
+    payload = {
+        "pack_path": str(pack),
+        "task_path": str(task_path),
+        "meta_path": str(meta_path),
+        "catalog_row_found": row_found,
+        "require_catalog_row": bool(require_catalog_row),
+        "mismatch_count": len(mismatches),
+        "missing_count": len(missing),
+        "mismatches": mismatches,
+        "missing": missing,
+    }
+    if mismatches or missing:
+        return False, payload, "version_baseline_alignment_mismatch"
+    return True, payload, ""
+
+
+def _activate_identity_in_catalog(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+) -> tuple[bool, dict[str, Any], str]:
+    catalog = _load_yaml(catalog_path)
+    identities = [x for x in (catalog.get("identities") or []) if isinstance(x, dict)]
+    target = str(identity_id or "").strip()
+    matched = False
+    for row in identities:
+        rid = str(row.get("id", "")).strip()
+        if not rid:
+            continue
+        if rid == target:
+            row["status"] = "active"
+            matched = True
+        else:
+            row["status"] = "inactive"
+    payload = {
+        "catalog_path": str(catalog_path),
+        "identity_id": target,
+        "catalog_row_found": matched,
+        "active_identities_after_apply": [
+            str(row.get("id", "")).strip()
+            for row in identities
+            if str(row.get("status", "")).strip().lower() == "active" and str(row.get("id", "")).strip()
+        ],
+    }
+    if not matched:
+        payload["catalog_row_missing_reason"] = "identity_row_not_found"
+        return False, payload, "catalog_row_missing"
+    catalog["identities"] = identities
+    _dump_yaml(catalog_path, catalog)
+    return True, payload, ""
 
 
 def _single_active_precheck(catalog_path: Path, target_identity_id: str, auto_converge: bool = False) -> int:
@@ -489,6 +865,12 @@ def cmd_scan(args: argparse.Namespace) -> int:
 
 
 def cmd_adopt(args: argparse.Namespace) -> int:
+    try:
+        version_baseline = load_version_baseline_or_raise(repo_root=_repo_root())
+    except Exception as exc:
+        print(f"[FAIL] version baseline unavailable: {exc}")
+        return 1
+
     _enforce_target_boundary(args)
     if not args.source_pack:
         print("[FAIL] adopt requires --source-pack")
@@ -522,7 +904,7 @@ def cmd_adopt(args: argparse.Namespace) -> int:
             "title": args.title or args.identity_id,
             "description": args.description or "",
             "status": "inactive",
-            "methodology_version": "v1.4.x",
+            "methodology_version": "",
             "tags": ["identity", "runtime"],
         }
         identities.append(row)
@@ -538,18 +920,91 @@ def cmd_adopt(args: argparse.Namespace) -> int:
     row["profile"] = "runtime"
     row["runtime_mode"] = "local_only"
     row["instance_uid"] = str(row.get("instance_uid", "")).strip() or f"inst-{uuid.uuid4()}"
-    if args.activate:
-        for item in identities:
-            if isinstance(item, dict):
-                item["status"] = "active" if str(item.get("id", "")).strip() == args.identity_id else "inactive"
+    requested_activate = bool(args.activate)
+    apply_version_baseline_to_catalog_row(row, version_baseline)
     catalog["identities"] = identities
     _dump_yaml(catalog_path, catalog)
+
+    baseline_apply_ok, baseline_apply_payload, baseline_apply_reason = _apply_version_baseline_to_pack_docs(
+        pack_path=dst,
+        version_baseline=version_baseline,
+    )
+    if not baseline_apply_ok:
+        print(f"[FAIL] version baseline apply failed: {baseline_apply_reason}")
+        print(json.dumps(baseline_apply_payload, ensure_ascii=False, indent=2))
+        return 1
+
+    row_ok, row_payload, row_reason = _sync_catalog_row_version_baseline(
+        catalog_path=catalog_path,
+        identity_id=args.identity_id,
+        version_baseline=version_baseline,
+    )
+    if not row_ok:
+        print(f"[FAIL] catalog row baseline sync failed: {row_reason}")
+        print(json.dumps(row_payload, ensure_ascii=False, indent=2))
+        return 1
+    catalog = _load_yaml(catalog_path)
+    identities = [x for x in (catalog.get("identities") or []) if isinstance(x, dict)]
+    row = next((x for x in identities if str(x.get("id", "")).strip() == args.identity_id), None)
+    baseline_verify_ok, baseline_verify_payload, baseline_verify_reason = _verify_version_baseline_alignment(
+        pack_path=dst,
+        version_baseline=version_baseline,
+        catalog_row=row,
+        require_catalog_row=True,
+    )
+    if not baseline_verify_ok:
+        print(f"[FAIL] version baseline verification failed: {baseline_verify_reason}")
+        print(json.dumps(baseline_verify_payload, ensure_ascii=False, indent=2))
+        return 1
+
+    activation_payload: dict[str, Any] = {}
+    if requested_activate:
+        activation_ok, activation_payload, activation_reason = _activate_identity_in_catalog(
+            catalog_path=catalog_path,
+            identity_id=args.identity_id,
+        )
+        if not activation_ok:
+            print(f"[FAIL] catalog activation failed: {activation_reason}")
+            print(json.dumps(activation_payload, ensure_ascii=False, indent=2))
+            return 1
+
+    downsink_ok, downsink_payload, downsink_reason = _ensure_host_gateway_downsink(
+        catalog_path=catalog_path,
+        identity_id=args.identity_id,
+        pack_path=dst,
+        protocol_root=_repo_root(),
+    )
+    if not downsink_ok:
+        print(f"[FAIL] host gateway downsink failed: {downsink_reason}")
+        if downsink_payload:
+            print(json.dumps(downsink_payload, ensure_ascii=False, indent=2))
+        return 1
+    launcher_ok, launcher_payload, launcher_reason = _ensure_identity_codex_launcher(
+        catalog_path=catalog_path,
+        identity_id=args.identity_id,
+        pack_path=dst,
+        protocol_root=_repo_root(),
+    )
+    if not launcher_ok:
+        print(f"[FAIL] identity codex launcher rollout failed: {launcher_reason}")
+        if launcher_payload:
+            print(json.dumps(launcher_payload, ensure_ascii=False, indent=2))
+        return 1
 
     print(f"[OK] adopted identity={args.identity_id} canonical={dst}")
     print(
         "contract_paths_rewritten="
         f"{bool(rewritten_files)} files={rewritten_files} fields={rewritten_fields}"
     )
+    print(
+        "version_baseline_closure="
+        f"task_changed:{baseline_apply_payload.get('task_version_changed', False)} "
+        f"meta_changed:{baseline_apply_payload.get('meta_version_changed', False)} "
+        f"meta_created:{baseline_apply_payload.get('meta_created', False)} "
+        f"catalog_changed:{row_payload.get('catalog_row_version_changed', False)}"
+    )
+    if requested_activate:
+        print(f"activation_closure=active_identities:{activation_payload.get('active_identities_after_apply', [])}")
     print(f"catalog={catalog_path}")
     return 0
 
@@ -574,6 +1029,17 @@ def cmd_lock(args: argparse.Namespace) -> int:
     row["instance_uid"] = str(row.get("instance_uid", "")).strip() or f"inst-{uuid.uuid4()}"
     catalog["identities"] = identities
     _dump_yaml(catalog_path, catalog)
+    launcher_ok, launcher_payload, launcher_reason = _ensure_identity_codex_launcher(
+        catalog_path=catalog_path,
+        identity_id=args.identity_id,
+        pack_path=Path(canonical).expanduser().resolve(),
+        protocol_root=_repo_root(),
+    )
+    if not launcher_ok:
+        print(f"[FAIL] identity codex launcher rollout failed: {launcher_reason}")
+        if launcher_payload:
+            print(json.dumps(launcher_payload, ensure_ascii=False, indent=2))
+        return 1
     print(f"[OK] lock applied for identity={args.identity_id}")
     print(f"canonical_pack_path={canonical}")
     return 0
@@ -594,6 +1060,28 @@ def cmd_repair_paths(args: argparse.Namespace) -> int:
         print(f"[FAIL] pack path not found: {pack}")
         return 1
     rewritten_files, rewritten_fields = _rewrite_identity_contract_paths(pack, old_root=None)
+    downsink_ok, downsink_payload, downsink_reason = _ensure_host_gateway_downsink(
+        catalog_path=catalog_path,
+        identity_id=args.identity_id,
+        pack_path=pack,
+        protocol_root=_repo_root(),
+    )
+    if not downsink_ok:
+        print(f"[FAIL] host gateway downsink failed: {downsink_reason}")
+        if downsink_payload:
+            print(json.dumps(downsink_payload, ensure_ascii=False, indent=2))
+        return 1
+    launcher_ok, launcher_payload, launcher_reason = _ensure_identity_codex_launcher(
+        catalog_path=catalog_path,
+        identity_id=args.identity_id,
+        pack_path=pack,
+        protocol_root=_repo_root(),
+    )
+    if not launcher_ok:
+        print(f"[FAIL] identity codex launcher rollout failed: {launcher_reason}")
+        if launcher_payload:
+            print(json.dumps(launcher_payload, ensure_ascii=False, indent=2))
+        return 1
     print(
         f"[OK] repaired contract paths for {args.identity_id}: "
         f"changed={bool(rewritten_files)} files={rewritten_files} fields={rewritten_fields}"
@@ -616,6 +1104,7 @@ def _build_report(
     changed_files: list[str] | None = None,
     rewritten_files_count: int = 0,
     rewritten_fields_count: int = 0,
+    extras: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], Path]:
     ts = datetime.now(timezone.utc)
     report_id = f"identity-install-{args.identity_id}-{operation}-{int(ts.timestamp())}-{int(ts.microsecond/1000):03d}"
@@ -654,6 +1143,8 @@ def _build_report(
         report["backup_ref"] = backup_ref
     if rollback_ref:
         report["rollback_ref"] = rollback_ref
+    if isinstance(extras, dict) and extras:
+        report.update(extras)
     report_path = Path(args.report_dir) / f"{report_id}.json"
     return report, report_path
 
@@ -683,6 +1174,12 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 
 def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
+    try:
+        version_baseline = load_version_baseline_or_raise(repo_root=_repo_root())
+    except Exception as exc:
+        print(f"[FAIL] version baseline unavailable: {exc}")
+        return 1
+
     rc = _single_active_precheck(
         Path(args.catalog).expanduser().resolve(),
         args.identity_id,
@@ -693,15 +1190,36 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
     _enforce_target_boundary(args)
     src = _resolve_source_pack(args)
     dst = _resolve_target_pack(args)
+    catalog_path = Path(args.catalog).expanduser().resolve()
     src_sig = _dir_signature(src)
     dst_sig = _dir_signature(dst) if dst.exists() else ""
     conflict_type, action = _classify_conflict(src_sig, dst_sig, dst.exists(), args.destructive_replace)
+    requested_activate = bool(args.activate)
 
     backup_ref = ""
     rollback_ref = ""
     changed: list[str] = []
     rewritten_files_count = 0
     rewritten_fields_count = 0
+    downsink_status = "SKIPPED_NOT_REQUIRED"
+    downsink_reason = ""
+    downsink_payload: dict[str, Any] = {}
+    launcher_status = "SKIPPED_NOT_REQUIRED"
+    launcher_reason = ""
+    launcher_payload: dict[str, Any] = {}
+    baseline_apply_status = "SKIPPED_NOT_REQUIRED"
+    baseline_apply_reason = ""
+    baseline_apply_payload: dict[str, Any] = {}
+    baseline_catalog_sync_status = "SKIPPED_NOT_REQUIRED"
+    baseline_catalog_sync_reason = ""
+    baseline_catalog_sync_payload: dict[str, Any] = {}
+    baseline_verify_status = "SKIPPED_NOT_REQUIRED"
+    baseline_verify_reason = ""
+    baseline_verify_payload: dict[str, Any] = {}
+    activation_status = "SKIPPED_NOT_REQUIRED"
+    activation_reason = ""
+    activation_payload: dict[str, Any] = {}
+    install_block_reasons: list[str] = []
     if not dry_run and action == "guarded_apply":
         if dst.exists():
             backup_dir = Path(args.backup_dir) / f"{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
@@ -716,15 +1234,113 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
         identity_profile = "fixture" if bool(args.allow_repo_target) else "runtime"
         identity_runtime_mode = "demo_only" if bool(args.allow_repo_target) else "local_only"
         _register_identity(
-            Path(args.catalog),
+            catalog_path,
             args.identity_id,
             args.title,
             args.description,
             (Path(args.target_root) / args.identity_id).as_posix(),
-            args.activate,
+            False,
+            version_baseline=version_baseline,
             profile=identity_profile,
             runtime_mode=identity_runtime_mode,
         )
+
+    if not dry_run and dst.exists():
+        baseline_apply_ok, baseline_apply_payload, baseline_apply_reason = _apply_version_baseline_to_pack_docs(
+            pack_path=dst,
+            version_baseline=version_baseline,
+        )
+        if baseline_apply_ok:
+            baseline_apply_status = STATUS_PASS_REQUIRED
+        else:
+            baseline_apply_status = "FAIL_REQUIRED"
+            install_block_reasons.append(f"baseline_apply_failed:{baseline_apply_reason}")
+
+        row, row_payload, row_reason = _sync_catalog_row_version_baseline(
+            catalog_path=catalog_path,
+            identity_id=args.identity_id,
+            version_baseline=version_baseline,
+        )
+        if row:
+            baseline_catalog_sync_status = STATUS_PASS_REQUIRED
+        else:
+            if requested_activate or args.register:
+                baseline_catalog_sync_status = "FAIL_REQUIRED"
+                install_block_reasons.append(f"baseline_catalog_sync_failed:{row_reason}")
+            else:
+                baseline_catalog_sync_status = "SKIPPED_NOT_REQUIRED"
+                baseline_catalog_sync_reason = row_reason or "catalog_row_not_required_for_non_registered_install"
+        baseline_catalog_sync_payload = row_payload
+
+        catalog_doc = _load_yaml(catalog_path) if catalog_path.exists() else {}
+        rows = [x for x in (catalog_doc.get("identities") or []) if isinstance(x, dict)]
+        catalog_row = next((x for x in rows if str(x.get("id", "")).strip() == args.identity_id), None)
+        verify_ok, verify_payload, verify_reason = _verify_version_baseline_alignment(
+            pack_path=dst,
+            version_baseline=version_baseline,
+            catalog_row=catalog_row,
+            require_catalog_row=bool(args.register or requested_activate),
+        )
+        baseline_verify_payload = verify_payload
+        baseline_verify_reason = verify_reason
+        if verify_ok:
+            baseline_verify_status = STATUS_PASS_REQUIRED
+        else:
+            baseline_verify_status = "FAIL_REQUIRED"
+            install_block_reasons.append(f"baseline_verify_failed:{verify_reason}")
+
+        if requested_activate and not install_block_reasons:
+            activation_ok, activation_payload, activation_reason = _activate_identity_in_catalog(
+                catalog_path=catalog_path,
+                identity_id=args.identity_id,
+            )
+            if activation_ok:
+                activation_status = STATUS_PASS_REQUIRED
+            else:
+                activation_status = "FAIL_REQUIRED"
+                install_block_reasons.append(f"activation_failed:{activation_reason}")
+        elif requested_activate and install_block_reasons:
+            activation_status = "SKIPPED_NOT_REQUIRED"
+            activation_reason = "activation_blocked_by_version_baseline_precheck"
+
+        if not install_block_reasons:
+            downsink_ok, downsink_payload, downsink_reason = _ensure_host_gateway_downsink(
+                catalog_path=catalog_path,
+                identity_id=args.identity_id,
+                pack_path=dst,
+                protocol_root=_repo_root(),
+            )
+            if not downsink_ok:
+                downsink_status = "FAIL_REQUIRED"
+                install_block_reasons.append(f"host_gateway_downsink_failed:{downsink_reason}")
+            else:
+                downsink_status = STATUS_PASS_REQUIRED
+        if not install_block_reasons:
+            launcher_ok, launcher_payload, launcher_reason = _ensure_identity_codex_launcher(
+                catalog_path=catalog_path,
+                identity_id=args.identity_id,
+                pack_path=dst,
+                protocol_root=_repo_root(),
+            )
+            if not launcher_ok:
+                launcher_status = "FAIL_REQUIRED"
+                install_block_reasons.append(f"identity_codex_launcher_failed:{launcher_reason}")
+            else:
+                launcher_status = STATUS_PASS_REQUIRED
+        else:
+            downsink_status = "SKIPPED_NOT_REQUIRED"
+            downsink_reason = "host_gateway_downsink_skipped_due_to_baseline_block"
+            launcher_status = "SKIPPED_NOT_REQUIRED"
+            launcher_reason = "identity_codex_launcher_skipped_due_to_baseline_block"
+    elif not dry_run:
+        baseline_apply_reason = "version_baseline_apply_skipped_target_missing"
+        baseline_catalog_sync_reason = "version_baseline_catalog_sync_skipped_target_missing"
+        baseline_verify_reason = "version_baseline_verify_skipped_target_missing"
+        downsink_reason = "host_gateway_downsink_skipped_target_missing"
+        launcher_reason = "identity_codex_launcher_skipped_target_missing"
+        if requested_activate:
+            activation_status = "SKIPPED_NOT_REQUIRED"
+            activation_reason = "activation_skipped_target_missing"
 
     op = "dry-run" if dry_run else "install"
     report, report_path = _build_report(
@@ -741,6 +1357,27 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
         changed_files=changed,
         rewritten_files_count=rewritten_files_count,
         rewritten_fields_count=rewritten_fields_count,
+        extras={
+            "version_baseline_apply_status": baseline_apply_status,
+            "version_baseline_apply_reason": baseline_apply_reason,
+            "version_baseline_apply_payload": baseline_apply_payload,
+            "version_baseline_catalog_sync_status": baseline_catalog_sync_status,
+            "version_baseline_catalog_sync_reason": baseline_catalog_sync_reason,
+            "version_baseline_catalog_sync_payload": baseline_catalog_sync_payload,
+            "version_baseline_verify_status": baseline_verify_status,
+            "version_baseline_verify_reason": baseline_verify_reason,
+            "version_baseline_verify_payload": baseline_verify_payload,
+            "activation_status": activation_status,
+            "activation_reason": activation_reason,
+            "activation_payload": activation_payload,
+            "host_gateway_downsink_status": downsink_status,
+            "host_gateway_downsink_reason": downsink_reason,
+            "host_gateway_downsink_payload": downsink_payload,
+            "identity_codex_launcher_status": launcher_status,
+            "identity_codex_launcher_reason": launcher_reason,
+            "identity_codex_launcher_payload": launcher_payload,
+            "install_block_reasons": install_block_reasons,
+        },
     )
     _write_json(report_path, report)
 
@@ -760,9 +1397,22 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
             "rewrite_summary="
             f"files:{rewritten_files_count} fields:{rewritten_fields_count}"
         )
+    if baseline_apply_payload:
+        print(
+            "version_baseline_closure="
+            f"task_changed:{baseline_apply_payload.get('task_version_changed', False)} "
+            f"meta_changed:{baseline_apply_payload.get('meta_version_changed', False)} "
+            f"meta_created:{baseline_apply_payload.get('meta_created', False)} "
+            f"catalog_changed:{baseline_catalog_sync_payload.get('catalog_row_version_changed', False)}"
+        )
+    if requested_activate and activation_payload:
+        print(f"activation_closure=active_identities:{activation_payload.get('active_identities_after_apply', [])}")
     if action == "abort_and_explain":
         print("next_action=abort_and_explain_conflict")
-    return 0
+    if install_block_reasons:
+        print("install_block_reasons=" + ",".join(install_block_reasons))
+    success = downsink_status != "FAIL_REQUIRED" and not install_block_reasons
+    return 0 if success else 1
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
@@ -836,8 +1486,8 @@ def main() -> int:
     common.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     common.add_argument("--scope", default="")
     common.add_argument("--canonical-root", default="")
-    common.add_argument("--report-dir", default="/tmp/identity-install-reports")
-    common.add_argument("--backup-dir", default="/tmp/identity-install-backups")
+    common.add_argument("--report-dir", default=str(runtime_temp_root() / "identity-install-reports"))
+    common.add_argument("--backup-dir", default=str(runtime_temp_root() / "identity-install-backups"))
     common.add_argument("--destructive-replace", action="store_true")
     common.add_argument("--allow-repo-target", action="store_true")
     common.add_argument("--allow-repo-target-confirm", default="")

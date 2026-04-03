@@ -7,7 +7,18 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from tool_vendor_governance_common import latest_identity_upgrade_report, load_json, resolve_pack_and_task
+from capability_activation_projection_common import CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS
+from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID, FINAL_EMIT_POLICY_MODE
+from protocol_infra_contract import HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
+from report_selection_authority_projection_common import (
+    collect_report_selection_authority_projection_stale_reasons,
+)
+from tool_vendor_governance_common import (
+    build_identity_upgrade_report_selection_projection,
+    load_json,
+    resolve_identity_upgrade_report_selection,
+    resolve_pack_and_task,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -19,16 +30,17 @@ REPO_ROOT = SCRIPT_DIR.parent
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate", "mutation"}
 INSPECTION_OPERATIONS = {"scan", "three-plane", "inspection"}
+HOST_VISIBLE_GOVERNED_CHANNELS = {
+    str(channel).strip().lower()
+    for channel in HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
+    if str(channel).strip()
+}
+HOST_VISIBLE_GOVERNED_CHANNELS.add(FINAL_EMIT_CHANNEL_ID.lower())
 
 MANDATORY_REPORT_FIELDS = (
     "permission_state",
     "writeback_status",
     "next_action",
-    "skills_used",
-    "mcp_tools_used",
-    "tool_calls_used",
-    "capability_activation_status",
-    "capability_activation_error_code",
     "writeback_mode",
     "phase_a_refresh_applied",
     "phase_b_strict_revalidate_status",
@@ -38,6 +50,12 @@ MANDATORY_REPORT_FIELDS = (
     "outlet_channel_id",
     "outlet_preflight_receipt",
     "outlet_bypass_detected",
+    "final_emit_channel_id",
+    "final_emit_policy_mode",
+    "final_emit_schema_id",
+    "final_emit_schema_status",
+    "final_emit_contract_status",
+    *CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS,
 )
 
 
@@ -72,11 +90,15 @@ def _parse_json_payload(raw: str) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
-def _resolve_report(identity_id: str, pack_path: Path, explicit: str) -> Path | None:
-    if explicit.strip():
-        p = Path(explicit).expanduser().resolve()
-        return p if p.exists() else None
-    return latest_identity_upgrade_report(identity_id, pack_path)
+def _resolve_report_selection(identity_id: str, pack_path: Path, explicit: str) -> dict[str, Any]:
+    resolution = resolve_identity_upgrade_report_selection(
+        identity_id,
+        pack_path,
+        explicit_report=explicit,
+    )
+    payload = build_identity_upgrade_report_selection_projection(resolution, field_prefix="report")
+    payload["_selected_report_path"] = resolution.selected_report
+    return payload
 
 
 def _run_experience_writeback_validator(
@@ -97,6 +119,7 @@ def _run_experience_writeback_validator(
         identity_id,
         "--execution-report",
         str(report_path),
+        "--json-only",
     ]
     p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
     return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
@@ -107,6 +130,14 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
         print(json.dumps(payload, ensure_ascii=False))
     else:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def _is_host_visible_governed_channel(channel_id: str) -> bool:
+    return str(channel_id or "").strip().lower() in HOST_VISIBLE_GOVERNED_CHANNELS
+
+
+def _is_final_emit_channel(channel_id: str) -> bool:
+    return str(channel_id or "").strip().lower() == FINAL_EMIT_CHANNEL_ID
 
 
 def main() -> int:
@@ -150,6 +181,19 @@ def main() -> int:
         "post_execution_mandatory_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
         "report_selected_path": "",
+        "report_logical_identity_key": "",
+        "report_selection_mode": "",
+        "report_selected_authority_class": "",
+        "report_pointer_resolution_mode": "",
+        "report_pointer_path": "",
+        "experience_writeback_validation_status": "",
+        "experience_writeback_error_code": "",
+        "experience_writeback_report_selected_path": "",
+        "experience_writeback_report_logical_identity_key": "",
+        "experience_writeback_report_selection_mode": "",
+        "experience_writeback_report_selected_authority_class": "",
+        "experience_writeback_report_pointer_resolution_mode": "",
+        "experience_writeback_report_pointer_path": "",
         "missing_fields": [],
         "writeback_mode": "",
         "writeback_status": "",
@@ -163,6 +207,11 @@ def main() -> int:
         "outlet_channel_id": "",
         "outlet_preflight_receipt": "",
         "outlet_bypass_detected": False,
+        "final_emit_channel_id": "",
+        "final_emit_policy_mode": "",
+        "final_emit_schema_id": "",
+        "final_emit_schema_status": "",
+        "final_emit_contract_status": "",
         "stale_reasons": [],
     }
 
@@ -171,7 +220,9 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
 
-    report_path = _resolve_report(args.identity_id, pack_path, args.report)
+    report_selection = _resolve_report_selection(args.identity_id, pack_path, args.report)
+    payload.update({k: v for k, v in report_selection.items() if not k.startswith("_")})
+    report_path = report_selection.get("_selected_report_path")
     if report_path is None:
         payload["error_code"] = ERR_MANDATORY_STATE
         payload["stale_reasons"] = ["execution_report_not_found"]
@@ -183,7 +234,6 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
-    payload["report_selected_path"] = str(report_path)
     try:
         report = load_json(report_path)
     except Exception as exc:
@@ -225,10 +275,26 @@ def main() -> int:
             "outlet_channel_id": str(report.get("outlet_channel_id", "")).strip(),
             "outlet_preflight_receipt": str(report.get("outlet_preflight_receipt", "")).strip(),
             "outlet_bypass_detected": bool(report.get("outlet_bypass_detected", False)),
+            "final_emit_channel_id": str(report.get("final_emit_channel_id", "")).strip(),
+            "final_emit_policy_mode": str(report.get("final_emit_policy_mode", "")).strip(),
+            "final_emit_schema_id": str(report.get("final_emit_schema_id", "")).strip(),
+            "final_emit_schema_status": str(report.get("final_emit_schema_status", "")).strip().upper(),
+            "final_emit_contract_status": str(report.get("final_emit_contract_status", "")).strip().upper(),
         }
     )
 
-    stale_reasons: list[str] = []
+    stale_reasons = collect_report_selection_authority_projection_stale_reasons(
+        payload,
+        selected_path_key="report_selected_path",
+        logical_identity_key_key="report_logical_identity_key",
+        selection_mode_key="report_selection_mode",
+        selected_authority_class_key="report_selected_authority_class",
+        pointer_resolution_mode_key="report_pointer_resolution_mode",
+        expected_selected_path=report_path,
+        selected_path_reason="report_selected_path_projection_mismatch",
+        authority_reason="report_authority_projection_missing",
+        logical_identity_reason="report_logical_identity_projection_missing_or_mismatch",
+    )
     if missing_fields:
         stale_reasons.append("mandatory_report_fields_missing")
 
@@ -243,29 +309,103 @@ def main() -> int:
             stale_reasons.append("phase_b_strict_revalidate_status_missing_after_phase_a")
 
     if args.operation in STRICT_OPERATIONS:
+        outlet_channel_id = str(payload.get("outlet_channel_id", "")).strip()
         if not bool(payload.get("governed_outlet_enforced", False)):
             stale_reasons.append("governed_outlet_not_enforced")
-        if not str(payload.get("outlet_channel_id", "")).strip():
+        if not outlet_channel_id:
             stale_reasons.append("outlet_channel_id_missing")
+        elif not _is_host_visible_governed_channel(outlet_channel_id):
+            stale_reasons.append("outlet_channel_id_not_governed_host_visible")
         if not str(payload.get("outlet_preflight_receipt", "")).strip():
             stale_reasons.append("outlet_preflight_receipt_missing")
         if bool(payload.get("outlet_bypass_detected", False)):
             stale_reasons.append("outlet_bypass_detected_in_strict_operation")
+        if str(payload.get("final_emit_channel_id", "")).strip() != FINAL_EMIT_CHANNEL_ID:
+            stale_reasons.append("final_emit_channel_id_not_canonical")
+        if _is_final_emit_channel(outlet_channel_id) and str(payload.get("final_emit_policy_mode", "")).strip() != FINAL_EMIT_POLICY_MODE:
+            stale_reasons.append("final_emit_policy_mode_not_required")
+        if str(payload.get("final_emit_schema_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+            stale_reasons.append("final_emit_schema_status_not_pass")
+        if str(payload.get("final_emit_contract_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+            stale_reasons.append("final_emit_contract_status_not_pass")
 
-    if upgrade_required and all_ok and writeback_status == "WRITTEN":
+    strict_non_upgrade_closed = (
+        (not upgrade_required)
+        and all_ok
+        and writeback_mode == "STRICT_WRITEBACK"
+        and writeback_status in {"WRITTEN", "NOT_REQUIRED"}
+    )
+    strict_upgrade_closed = upgrade_required and all_ok and writeback_status == "WRITTEN"
+
+    if strict_upgrade_closed:
         rc_ew, out_ew, err_ew = _run_experience_writeback_validator(
             identity_id=args.identity_id,
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             report_path=report_path,
         )
-        if rc_ew != 0:
-            tail = ""
-            if out_ew:
-                tail = out_ew.splitlines()[-1]
-            elif err_ew:
-                tail = err_ew.splitlines()[-1]
+        ew_payload = _parse_json_payload(out_ew) or {}
+        payload.update(
+            {
+                "experience_writeback_validation_status": ew_payload.get(
+                    "experience_writeback_validation_status", ""
+                ),
+                "experience_writeback_error_code": ew_payload.get("error_code", ""),
+                "experience_writeback_report_selected_path": ew_payload.get(
+                    "report_selected_path", ""
+                ),
+                "experience_writeback_report_logical_identity_key": ew_payload.get(
+                    "report_logical_identity_key", ""
+                ),
+                "experience_writeback_report_selection_mode": ew_payload.get(
+                    "report_selection_mode", ""
+                ),
+                "experience_writeback_report_selected_authority_class": ew_payload.get(
+                    "report_selected_authority_class", ""
+                ),
+                "experience_writeback_report_pointer_resolution_mode": ew_payload.get(
+                    "report_pointer_resolution_mode", ""
+                ),
+                "experience_writeback_report_pointer_path": ew_payload.get(
+                    "report_pointer_path", ""
+                ),
+            }
+        )
+        ew_status = str(
+            payload.get("experience_writeback_validation_status", "")
+        ).strip().upper()
+        if ew_status == STATUS_PASS_REQUIRED:
+            stale_reasons.extend(
+                collect_report_selection_authority_projection_stale_reasons(
+                    payload,
+                    selected_path_key="experience_writeback_report_selected_path",
+                    logical_identity_key_key="experience_writeback_report_logical_identity_key",
+                    selection_mode_key="experience_writeback_report_selection_mode",
+                    selected_authority_class_key="experience_writeback_report_selected_authority_class",
+                    pointer_resolution_mode_key="experience_writeback_report_pointer_resolution_mode",
+                    expected_selected_path=report_path,
+                    selected_path_reason="experience_writeback_report_selected_path_projection_mismatch",
+                    authority_reason="experience_writeback_authority_projection_missing",
+                    logical_identity_reason="experience_writeback_report_logical_identity_projection_missing_or_mismatch",
+                )
+            )
+        if rc_ew != 0 or ew_status != STATUS_PASS_REQUIRED:
+            child_error = str(payload.get("experience_writeback_error_code", "")).strip()
+            child_reasons = ew_payload.get("stale_reasons", [])
+            first_reason = ""
+            if isinstance(child_reasons, list) and child_reasons:
+                first_reason = str(child_reasons[0]).strip()
+            tail = child_error or first_reason
+            if not tail:
+                if out_ew:
+                    tail = out_ew.splitlines()[-1]
+                elif err_ew:
+                    tail = err_ew.splitlines()[-1]
             stale_reasons.append(f"experience_writeback_linkage_failed:{tail or 'validator_failed'}")
+    elif strict_non_upgrade_closed:
+        # Non-upgrade closure path: strict execution can legitimately finish without writeback mutation.
+        # In this branch, next_recovery_action may be empty by design.
+        pass
     else:
         if writeback_mode != "DEGRADED_WRITEBACK":
             stale_reasons.append("degraded_mode_required_for_non_closed_execution")

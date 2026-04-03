@@ -1,0 +1,9 @@
+{
+  "status": "PASS_REQUIRED",
+  "verification_source": "canonical_fixture_snapshot",
+  "summary": "fast bootstrap audit stayed green for the canonical v1.6.12 replay fixture",
+  "identities": [
+    "base-repo-architect",
+    "base-repo-closure-orchestrator"
+  ]
+}

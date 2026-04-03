@@ -1,0 +1,60 @@
+schema_version: 1
+budget_version: v1.6
+last_updated_utc: '2026-04-02T14:13:50Z'
+policy_mode: dual_threshold_with_family_convergence
+budgets:
+  validator_scripts:
+    warn: 281
+    fail: 283
+  error_codes:
+    warn: 737
+    fail: 740
+  error_code_families:
+    warn: 259
+    fail: 265
+  mapping_rows_missing_in_bundle:
+    warn: 0
+    fail: 1
+  direct_validate_calls:
+    scripts/identity_creator.py:
+      warn: 89
+      fail: 94
+    scripts/release_readiness_check.py:
+      warn: 149
+      fail: 154
+    scripts/report_three_plane_status.py:
+      warn: 80
+      fail: 85
+    scripts/full_identity_protocol_scan.py:
+      warn: 87
+      fail: 92
+    scripts/e2e_smoke_test.sh:
+      warn: 116
+      fail: 121
+    .github/workflows/_identity-required-gates.yml:
+      warn: 14
+      fail: 16
+convergence_guard:
+  enabled: true
+  mode: no_rebound
+  enforce_mode: fail_required
+  baseline_snapshot_utc: '2026-04-02T14:13:50Z'
+  ceilings:
+    validator_scripts: 281
+    error_codes: 737
+    error_code_families: 259
+    mapping_rows_missing_in_bundle: 0
+    direct_validate_calls:
+      scripts/identity_creator.py: 89
+      scripts/release_readiness_check.py: 149
+      scripts/report_three_plane_status.py: 80
+      scripts/full_identity_protocol_scan.py: 87
+      scripts/e2e_smoke_test.sh: 116
+      .github/workflows/_identity-required-gates.yml: 14
+error_code_family_strategy:
+  mode: numeric_suffix_collapse
+  rationale: Enforce convergence on stable contract families while preserving raw
+    code telemetry.
+  family_regex: s/-[0-9]+$//
+  migration_note: Raw error-code count remains monitored; promotion guard now also
+    enforces family-level budgets and no-rebound ceilings.

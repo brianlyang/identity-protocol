@@ -1,0 +1,9 @@
+schema_version: 1
+alias: github_control_plane_offload
+pointer_contract: frozen_versioned_active_carrier
+upgrade_switch_mode: pointer_only
+replay_snapshot_immutable: true
+active_file: identity/protocol/mappings/github-control-plane-offload.v1.6.5.yaml
+notes:
+  - "Stable entrypoint for tooling; switch this pointer when upgrading offload-plan versions."
+  - "Historical versioned files remain immutable replay snapshots."

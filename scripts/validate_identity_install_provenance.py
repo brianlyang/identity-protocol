@@ -22,6 +22,16 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _resolve_pack_root(catalog_path: Path, pack_path: str) -> Path:
+    catalog_root = catalog_path.expanduser().resolve().parent
+    p = Path(pack_path).expanduser()
+    if not p.is_absolute():
+        p = (catalog_root / p).resolve()
+    else:
+        p = p.resolve()
+    return p
+
+
 def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     catalog = _load_yaml(catalog_path)
     identities = catalog.get("identities") or []
@@ -30,12 +40,9 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
         raise FileNotFoundError(f"identity id not found in catalog: {identity_id}")
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
+        p = _resolve_pack_root(catalog_path, pack_path) / "CURRENT_TASK.json"
         if p.exists():
             return p
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
 
@@ -49,15 +56,18 @@ def _glob_paths(pattern: str, *, pack_root: Path) -> list[Path]:
         if has_magic:
             return sorted(Path(x).resolve() for x in glob.glob(str(p)))
         return [p.resolve()] if p.exists() else []
-    preferred = sorted(pack_root.glob(raw))
-    if preferred:
-        return preferred
-    return sorted(Path(".").glob(raw))
+    local_prefix = f"identity/runtime/local/{pack_root.name}/"
+    mapped_raw = raw
+    if raw.startswith(local_prefix):
+        mapped_raw = f"runtime/{raw[len(local_prefix):]}"
+    elif raw.startswith("identity/runtime/"):
+        mapped_raw = f"runtime/{raw[len('identity/runtime/'):]}"
+    return sorted(pack_root.glob(mapped_raw))
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate install provenance contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
     args = ap.parse_args()

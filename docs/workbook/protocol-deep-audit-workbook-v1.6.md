@@ -1,0 +1,1565 @@
+# Identity Protocol v1.6 Deep Audit Workbook
+
+Status: Canonical intake and routing workbook
+Layer: protocol
+Scope: serial deep-audit intake for the `v1.6` workbook family, radiating over the active `v1.6.x` stream lanes
+Authority boundary: this workbook is canonical only as the protocol-side intake/routing surface selected by `identity/protocol/mappings/workbook-registry.current.yaml`; it does not override `docs/workbook/protocol-issue-register-v1.6.md` for current status authority.
+
+## 0) Fixed role boundary
+
+1. This workbook exists to concentrate scattered issue discovery into one protocol-owned routing surface inside `identity-protocol-local`.
+2. It is allowed to span multiple stream files and owner lanes because the cleanup family itself crosses the current `v1.6.x` stream set.
+3. It must not drift into a second semantic SSOT; stream semantics still belong to owner governance docs and owner review ledgers under `docs/governance/` and `docs/review/`.
+4. Status mirroring in this file must remain byte-for-byte consistent with `docs/workbook/protocol-issue-register-v1.6.md`.
+5. Optional workspace projections may mirror this workbook for operator convenience, but they never outrank this protocol-internal intake surface.
+
+## 1) Current control-plane alias refs
+
+- `identity/protocol/mappings/workbook-registry.current.yaml`
+- `identity/protocol/mappings/stream-doc-registry.current.yaml`
+- `identity/protocol/mappings/control-plane-status.current.yaml`
+
+## 2) Current machine recheck lock
+
+- `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 102`, `command snippets checked: 1387`)
+- `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
+
+## 3) Root-cause clusters (compressed)
+
+### RC-01 Stream integration model is still partial
+
+Symptoms:
+
+- active stream docs can land in registry without corresponding scope-matrix completion;
+- stream-opening validator can pass while motherline/supporting matrices remain incomplete.
+- required-gate bundle order can lag behind newly added motherline rows, leaving new stream requirements outside strict bundle coverage even after contract-binding is updated.
+- contract-first stream docs can also land with executable snippets and required current-alias references that the repository cannot yet satisfy, turning the doc-contract checker red after the stream is registered.
+
+
+
+Root cause:
+
+- stream registration and stream-scope completeness are not enforced by one end-to-end completeness gate, required-gate bundle parity still relies on a frozen manual requirement order that can miss newly added motherline rows, and stream doc publication can still outrun executable/current-alias closure on newly opened lanes.
+
+### RC-02 Authority and compatibility concerns are still colocated
+
+Symptoms:
+
+- strict consumer code still carries compatibility-pointer diagnostics or references;
+- some live status/validator surfaces still read `session/active_identity.json` directly.
+
+
+
+Root cause:
+
+- authority consumers, replay/compiled consumers, and compatibility/status consumers are not enforced as separate classes at the API boundary.
+
+### RC-03 Anti-forget guards are parser- and launch-context-fragile
+
+Symptoms:
+
+- drift guard can report missing lineage even when the delegate really invokes the required scripts through variables;
+- probe suite and tracked fixture can silently diverge;
+- multiple validators still depend on caller cwd because `--repo-root` defaults to `.`.
+- operational control-plane tools still depend on caller cwd outside the repaired validator lane, so workspace-root and protocol-root launches diverge or fail.
+- the authoritative identity resolver still picks its default local catalog from the ambient parent git root on workspace-root launches, so omission of `--local-catalog` can break project-local resolution even when the canonical workspace `.identity/catalog.local.yaml` is present.
+- several active direct-entry scripts still bind `--repo-catalog` to the caller launch root, so the same project-local replay fails from the workspace root and advances from the protocol root.
+- some older operational validators still derive `repo_root = Path.cwd().resolve()` internally, so even absolute governed inputs can flip pass/fail across workspace-root and protocol-root launches.
+
+
+
+Root cause:
+
+- text matching, fixture snapshot assumptions, and cwd-relative repo-root defaults are doing work that should be handled by semantic invocation parsing plus self-rooted fixture/live parity enforcement; launch-context invariance was fixed piecemeal for validators and some operational tools, but not yet generalized into direct-entry `--repo-catalog` defaults, hidden `Path.cwd()` repo-root consumers, or the machine gates that should exercise those paths directly.
+
+### RC-04 Historical baseline docs still act as live defaults and active anchors
+
+Symptoms:
+
+- `v1.6.0` governance and `v1.6` review docs still appear as default builder/validator inputs;
+- `contract-binding` still anchors many live rows back into the large historical motherline docs;
+- prompt-bootstrap and protocol SSOT docs still reuse the historical motherline as active anchor instead of pure archive context.
+
+
+
+Root cause:
+
+- historical traceability assets were not fully demoted after stream extraction; they remain in active defaults.
+
+### RC-05 Old-version-named active carriers were never normalized
+
+Symptoms:
+
+- `*.current.yaml` resolves to older-version active files across mapping/plugin surfaces;
+- plugin registry and evidence allowlist still use older version names as current carriers.
+
+
+
+Root cause:
+
+- current-pointer semantics were layered on top of versioned filenames, but the naming strategy was never re-normalized once those files became long-term active carriers.
+
+### RC-06 Shared infra exists, but adoption is not enforced
+
+Symptoms:
+
+- temp/probe shared helpers exist;
+- multiple live scripts still default to `/tmp` or direct `mktemp -d /tmp/...` usage.
+- machine checkers exist for docs and catalog-default hygiene, but they still miss launch-context-broken executable snippets and direct-entry repo-catalog defaults.
+
+
+
+Root cause:
+
+- shared infra was introduced as an available helper, not as an enforced construction pattern; the corresponding checkers were built around syntax/flag presence and pattern scans, not around governed launch-context execution semantics.
+
+### RC-07 `v1.6.12` standard closure and promotion closure are properly separated, and promotion proof now depends on governed continuity evidence rather than flaky smoke alone
+
+Symptoms:
+
+- stream opening stays closed even when host-runtime smoke remains inconclusive;
+- promotion no longer depends on live smoke alone and is now lifted by a governed continuity bundle on the controlled emitter path;
+- unrelated control-plane reds must not be allowed to reopen the headstamp lane once the continuity bundle has satisfied the promotion proof contract.
+
+
+
+Root cause:
+
+- host-runtime smoke is not stable enough to be the sole promotion proof source; the repaired lane therefore has to force validator-required probe names, tracked fixture contents, live-suite expectations, and governed continuity compensation to evolve together as one machine evidence bundle.
+
+### RC-08 Compatibility mirror semantic demotion is incomplete at terminology/schema layer
+
+Symptoms:
+
+- runtime/repair/status tooling correctly treats `session/active_identity.json` as non-authoritative, but still names it `canonical_session_pointer` in helper names, payload fields, and receipts;
+- this leaves the compatibility-mirror semantic boundary correct in some places and linguistically polluted in others.
+
+
+
+Root cause:
+
+- semantic demotion from “canonical pointer” to “compatibility mirror” was enforced at authority rules first, but not fully normalized across helper naming and payload schema.
+
+### RC-09 Top-level kernel/release metadata keeps drifting back into active gating
+
+Symptoms:
+
+- the original `v1.4.10`/`v1.5` top-level story was removed, but the same lane still drifts whenever the active draft head advances without the other top-level release markers moving with it;
+- `identity/protocol/IDENTITY_PROTOCOL.md` now advertises `v1.6.14` while `README.md`, `VERSIONING.md`, and `requirements-dev.txt` still advertise `v1.6.13`;
+- active readiness/e2e/upgrade flows still execute the release metadata validator, so this drift immediately re-enters machine gating instead of remaining a harmless doc lag.
+
+
+
+Root cause:
+
+- top-level overview/release markers were repaired once, but the repo still lacks a single machine-maintained draft-head writer for all four top-level markers; active gates therefore keep inheriting whichever marker drifts last, even after the original legacy baseline has been removed.
+
+### RC-10 Direct global-home catalog fallback still bypasses project runtime selection
+
+Symptoms:
+
+- the original deep audit reproduced active entrypoints defaulting to `~/.codex/.identity/catalog.local.yaml` instead of shared runtime-path resolution or explicit runtime-catalog authority;
+- that defect used to create “false green on the wrong catalog” behavior across project-local identities and launch-context-sensitive replays;
+- current resolver / strict-entry / semantic-clarity lanes are now green, so the remaining RC-10 tail is metadata hygiene and regression prevention rather than live precedence ambiguity.
+- runtime-mode guard now also needs to keep one subtle admissibility split explicit: identities already adopted into the selected runtime catalog must pass strict project-runtime entry, while repo-metadata-only fallback identities must fail-close instead of being mistaken for runtime-admitted project identities.
+
+
+
+Root cause:
+
+- the original root cause was a `v1.4.x`-era family of direct global-home catalog defaults that outlived the newer runtime-path contract; resolver / launcher / strict-entry closure has now removed that live leak, so remaining RC-10 work is raw metadata backfill and regression prevention, not active fallback semantics.
+- the residual regression-prevention task is therefore not “loosen runtime-mode guard”; it is “freeze the runtime-admitted vs repo-metadata-fallback distinction as machine-readable guard output plus dedicated probes,” so operator confusion cannot reintroduce false admissibility.
+
+### RC-11 No motherline no-downgrade rule freezes compatibility surfaces to migration-only
+
+Symptoms:
+
+- earlier deep scans found live compatibility residue on multiple surfaces: shared pointers were treated as warning-level drift, helper interfaces exposed drift-allow semantics, active scaffolds normalized legacy overlays/aliases, and canonical docs still lacked a bottom-layer no-downgrade clause;
+- the motherline rule is now frozen and the live pointer/control-plane leak has been closed, so the remaining RC-11 surface is residual helper/doc truth-sync and regression prevention;
+- any future compatibility, fallback, or bridge wording must stay quarantined to migration/replay/diagnostic lanes and must not re-enter active defaults, validator green paths, current-turn truth, active execution entry, or protocol-owned success paths.
+
+Root cause:
+
+- the original root cause was the absence of one explicit motherline principle saying compatibility, fallback, and bridge surfaces are migration/replay/diagnostic-only and may not re-enter active defaults, validator green paths, or current-turn runtime truth; `rq_047_protocol_no_downgrade_motherline_contract_v1` now freezes that principle, so the remaining RC-11 work is residual cleanup/truth-sync and regression prevention rather than missing motherline definition.
+
+### RC-12 Route/lane governance still begins too late in the execution chain
+
+Symptoms:
+
+- declared route contracts can look complete for the route -> instance-script -> receipt path while real rescue execution still happens through direct MCP/browser tool calls in conversation;
+- browser-manual/editor-interactive lanes can become the only live-success path without being declared in `allowed_execution_lanes`, so the system achieves success outside the governed lane family instead of through it;
+- some packs carry only receipt/emitter/recovery helper scripts in `INSTANCE_SCRIPT_MANIFEST.json`, leaving no instance-owned business executor that can actually own lane choice, auth preflight, or session freshness before tools fire.
+
+Root cause:
+
+- `v1.6.15` currently hardens the route -> instance-script -> lane-admission chain, but direct conversation-level tool execution is not yet required to enter through that chain; as a result, undeclared live rescue lanes can still succeed outside protocol-owned route/lane admission.
+- protocol closure note (2026-03-23): the shared owner lane now closes this blind spot at protocol level by freezing additive direct-tool admission plus the canonical execution-lane taxonomy for webhook and interactive direct-tool lanes. Remaining browser-manual rollout gaps are instance-owned adoption debt, not missing protocol semantics.
+
+### RC-13 Third/fourth-loop source contracts exist, but runtime-consumable strengthening symmetry is still missing
+
+Symptoms:
+
+- `identity/protocol/IDENTITY_PROTOCOL.md` already freezes the third/fourth source contracts as `Auto-routing contract` and `Rule learning contract`, so the kernel has not forgotten these loops;
+- the active runtime contract family and validator family already touch nearby surfaces such as orchestration, knowledge acquisition, experience feedback, discovery requiredization, and capability arbitration;
+- `scripts/ci/run_required_runtime_gates_ci.sh` already executes those validators, proving the problem is not complete absence from required CI;
+- active packs such as `office-ops-expert` and `custom-creative-ecom-analyst` already expose `accurate_judgement_enforcement` and `reasoning_loop_enforcement` under `capability_arbitration_contract`, but do not yet expose symmetric `route_discovery_enforcement` / `feedback_operational_prompt_enforcement` hooks;
+- the third loop still lacks one frozen roundtable/vendor/reference/runtime-probe four-track cross-validation primitive, so AI-parallel discovery can degrade into scattered probes rather than governed serial convergence;
+- the fourth loop still lacks the same shared cross-validation primitive plus a governed loop-back into the first loop, so prompt optimization can drift into self-reinforcing injection instead of returning through multimodal accurate judgement;
+- required-gate bundle status and release-readiness projection still do not expose the same class of loop-level strengthening citizenship for the third/fourth loops that the protocol already provides for the first two.
+
+Root cause:
+
+- the protocol froze the third/fourth loops at kernel-source level and partial validator/runtime-contract level, but never fully lifted them into symmetric upper-layer strengthening surfaces that instances can consume as first-class runtime capability primitives while preserving independent third-loop and fourth-loop centers over one shared four-track cross-validation primitive plus a fourth-loop-to-first-loop governed reentry path.
+
+### RC-14 Fourth-loop-to-first-loop loopback semantics can still collapse into generic fourth-loop wording unless frozen as a distinct bridge
+
+Symptoms:
+
+- `ASB16-RQ-048` / `ASB16-RQ-049` are now machine-landed for third/fourth-loop strengthening, but the 4→1 return path can still be misread as merely a fourth-loop sub-bullet unless it is tracked as its own semantic object;
+- the shared `roundtable_four_track_cross_validation_contract_v1` primitive can be misclassified as the loopback bridge unless the bridge is named and bounded separately;
+- without a standalone bridge contract, prompt-derived artifacts can drift semantically toward “current-round truth” instead of staying governed preflight aids that must re-enter first-loop revalidation;
+- workbook/register surfaces previously had no standalone row to keep this bridge open as docs-owned debt after `ISSUE-030` closure.
+
+Root cause:
+
+- the protocol now has independent third-loop and fourth-loop strengthening centers plus a shared four-track primitive, but the fourth-loop-to-first-loop reentry path still needs its own frozen bridge contract (`feedback_to_judgement_loopback_contract_v1`) so that promotion evidence, prompt derivation, and first-loop truth are not semantically collapsed into one object.
+
+### RC-15 Protocol artifact families remain semantically overloaded under generic "memory" wording
+
+Symptoms:
+
+- pack-root `RULEBOOK.jsonl` and runtime `runtime/rulebooks/*.jsonl` are easy to miscall as one undifferentiated rule memory;
+- `TASK_HISTORY.md` can be misread as continuity or recovery state instead of chronology;
+- runtime dialogue-governance, experience-feedback, protocol-feedback, and continuity families already exist but were frozen in separate owner streams with no single motherline routing matrix;
+- `runtime/memory-absorption/**` is path-registered and therefore easy to over-read as an active generic sink unless explicitly quarantined;
+- declaration keys and gates such as `reject_memory_gate` or `*_contract` blocks are easy to misreport as if they were the storage family itself.
+
+Root cause:
+
+- the protocol froze individual lanes over time, but it never froze one cross-family routing matrix that classifies protocol-owned persisted artifacts by semantic owner, fixed path family, payload class, production method, and primary consumer. Without that matrix, multiple distinct families keep collapsing into generic “memory” wording.
+
+## 4) Routed issue sections
+
+### ISSUE-001 - Active stream scope matrix incompleteness
+
+- `status`: CLOSED
+- `problem_statement`: `v1.6.11` and `v1.6.12` are present in stream registry but missing from active stream-scope matrix.
+- `primary_owner_doc`: `docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.8.md`
+  - `docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md`
+- `machine_gate`: `scripts/validate_stream_scope_semantic_integrity.py`
+- `root_cause`: RC-01
+- `stop_condition`:
+  - `identity/protocol/mappings/stream-scope-matrix.v1.6.yaml` includes `v1.6.11` and `v1.6.12`;
+  - validator no longer fails on missing row;
+  - future-stream completeness is checked in a way that does not depend only on touched diff docs.
+
+### ISSUE-002 - Strict authority consumer still touches compatibility pointer literal
+
+- `status`: CLOSED
+- `problem_statement`: strict response-stamp consumer path still reads `session/active_identity.json` literal.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md`
+  - `docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md`
+- `machine_gate`: `scripts/validate_response_authority_consumer_semantics.py`
+- `root_cause`: RC-02
+- `stop_condition`:
+  - strict authority consumers no longer directly read compatibility pointer files;
+  - any compatibility diagnostics are routed through exempt replay/status consumers only.
+
+### ISSUE-003 - Required-gate drift validator remains parser- and launch-context-fragile
+
+- `status`: CLOSED
+- `problem_statement`: delegated script lineage and repo-root resolution are still launch-context fragile; the validator can report missing lineage on variable-based shell invocation and can false-red when launched outside the protocol repo root.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md`
+  - `docs/governance/identity-host-unique-channel-governance-v1.6.6.md`
+- `machine_gate`: `scripts/validate_required_gate_surface_drift.py`
+- `root_cause`: RC-03
+- `stop_condition`:
+  - variable-based invocation and literal invocation are treated equivalently by the drift validator;
+  - current host-visible delegate no longer appears as false-red;
+  - strict validators produce the same verdict regardless of caller cwd.
+
+### ISSUE-004 - Historical baseline docs still behave as live defaults
+
+- `status`: CLOSED
+- `problem_statement`: live builder/validator defaults no longer point directly to `v1.6.0` governance and `v1.6` review historical motherline docs; the remaining historical literals are frozen to explicit checker/traceability surfaces only.
+- `primary_owner_doc`: `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+  - `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `machine_gate`:
+  - `scripts/validate_historical_baseline_default_boundary.py`
+- `root_cause`: RC-04
+- `stop_condition`:
+  - active builder/validator defaults no longer route through historical motherline docs unless explicitly requested for replay/traceability;
+  - machine gate proves the only remaining literals live in explicit checker surfaces, not runtime default resolution.
+
+### ISSUE-005 - Old-version-named active carriers remain current pointers
+
+- `status`: CLOSED
+- `problem_statement`: multiple `*.current.yaml` pointers still resolve to old-version-named active files, but those carriers are now explicitly frozen as intentional compatibility aliases instead of incidental drift.
+- `primary_owner_doc`: `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+  - `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `machine_gate`:
+  - `scripts/validate_current_alias_versioned_carrier.py`
+- `root_cause`: RC-05
+- `stop_condition`:
+  - explicit naming strategy is frozen;
+  - versioned current carriers carry `pointer_contract=frozen_versioned_active_carrier`, `upgrade_switch_mode=pointer_only`, and `replay_snapshot_immutable=true`, and the machine gate validates them.
+
+### ISSUE-006 - Temp/probe shared infra is not mandatory yet
+
+- `status`: CLOSED
+- `problem_statement`: shared temp-path helper now backs the remaining live temp/probe surfaces that were still defaulting to `/tmp` or direct `mktemp`.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md`
+  - `docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md`
+- `machine_gate`:
+  - `scripts/validate_runtime_temp_path_contract.py`
+- `root_cause`: RC-06
+- `stop_condition`:
+  - live scripts and probe runners converge on shared temp-path helpers or an equivalently frozen contract.
+  - targeted machine gate blocks reintroduction of direct `/tmp` and raw probe `mktemp` usage on the repaired surfaces.
+
+### ISSUE-007 - Batch-6/7 compatibility wrapper residue closure
+
+- `status`: CLOSED
+- `problem_statement`: the reopened active-pack residue is now closed: protocol strict targets remain canonical, active runtime-pack `CURRENT_TASK.json` surfaces are inventoried from the local runtime catalog, and the stale `validate_v16_*` literals were backfilled to canonical validator ids.
+- `primary_owner_doc`: `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+- `machine_gate`:
+  - `scripts/validate_active_validator_alias_residue.py`
+  - supporting evidence scan: `rg -n '"validator": "scripts/validate_v16_' .identity/*/CURRENT_TASK.json`
+- `root_cause`: RC-04 and RC-05
+- `stop_condition`:
+  - wrappers remain explicitly classified as replay-only compatibility aliases in contract-binding;
+  - protocol strict targets continue using canonical validator ids only;
+  - active runtime-pack `CURRENT_TASK.json` task surfaces stay backfilled to canonical validator ids;
+  - the machine gate continues covering both protocol strict targets and active runtime-pack inventory discovered from the local catalog.
+
+### ISSUE-008 - Archived `v1.6.9` remains a semantic pollution risk
+
+- `status`: CLOSED
+- `problem_statement`: `v1.6.9` is archived, but still remains present in active registry/evidence references and is therefore still easy to reuse as if it were an active stream.
+- `primary_owner_doc`: `docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.8.md`
+  - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml`
+- `machine_gate`:
+  - currently social/documentation discipline; no explicit active-citation guard yet.
+- `root_cause`: RC-01 and RC-05
+- `stop_condition`:
+  - active/archived citation boundary is frozen in docs and, if needed, enforced by a doc-level guard.
+
+### ISSUE-009 - `v1.6.12` promotion-lane parity drift is closed on the current branch
+
+- `status`: CLOSED
+- `problem_statement`: validator-required promotion probes, tracked fixture manifest, and live suite behavior were previously drifting; current-branch recheck confirms that this drift no longer reproduces and the owner governance/review lane now reflects the repaired state.
+- `primary_owner_doc`: `docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.12-native-chat-bootstrap-entry.md`
+  - `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `machine_gate`:
+  - `scripts/validate_native_chat_bootstrap_entry_stream.py`
+  - `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+- `root_cause`: RC-03 and RC-07
+- `stop_condition`:
+  - tracked fixture manifest contains every required promotion probe;
+  - live suite passes fully;
+  - validator-required probe names, fixture manifest, and live suite are parity-checked by one mechanism;
+  - owner governance/review surfaces explicitly record that this lane is no longer an active red residual.
+
+### ISSUE-010 - Compatibility pointer still carries canonical-pointer terminology in live tooling
+
+- `status`: CLOSED
+- `problem_statement`: compatibility mirror files and payloads are no longer labeled as `canonical_session_pointer` in live runtime/repair/status tooling; live payloads now use compatibility-only terminology.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md`
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+- `machine_gate`:
+  - `scripts/validate_compatibility_pointer_terminology.py`
+- `root_cause`: RC-08
+- `stop_condition`:
+  - live helper names, payload field names, and receipt fields stop presenting compatibility mirror paths as canonical session pointers;
+  - machine gate validates the renamed compatibility-only terminology on every repaired live surface.
+
+### ISSUE-011 - Validator repo-root resolution is still cwd-coupled
+
+- `status`: CLOSED
+- `problem_statement`: multiple active validators still default `--repo-root` to `.`, so machine verdicts can change with caller cwd instead of being invariant to launch location.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md`
+  - `docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md`
+- `machine_gate`:
+  - `scripts/validate_stream_scope_semantic_integrity.py`
+  - `scripts/validate_required_gate_surface_drift.py`
+  - supporting evidence scan: `rg -n 'add_argument\\(\"--repo-root\", default=\"\\.\"\\)' scripts/validate_*.py`
+- `root_cause`: RC-03
+- `stop_condition`:
+  - strict validators self-resolve repo root from script/repo location or canonical contract instead of caller cwd;
+  - equivalent invocations from parent repo and protocol repo produce the same verdict.
+
+### ISSUE-012 - Top-level release metadata drift against the active draft head
+
+- `status`: CLOSED
+- `problem_statement`: the rebound release-metadata drift is re-closed: `README.md`, `VERSIONING.md`, and `requirements-dev.txt` now move in lock-step with `identity/protocol/IDENTITY_PROTOCOL.md`, so the active draft head no longer diverges across top-level markers.
+- `primary_owner_doc`: `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
+- `machine_gate`:
+  - `scripts/validate_release_metadata_sync.py`
+  - supporting live surfaces: `scripts/release_readiness_check.py`, `scripts/e2e_smoke_test.sh`, `scripts/execute_identity_upgrade.py`
+- `root_cause`: RC-09
+- `stop_condition`:
+  - every top-level draft-head marker (`IDENTITY_PROTOCOL.md`, `README.md`, `VERSIONING.md`, `requirements-dev.txt`) moves in lock-step with the active draft head;
+  - `scripts/validate_release_metadata_sync.py` returns `PASS_REQUIRED` again without weakening the validator or hardcoding a stale version token.
+
+### ISSUE-013 - Stream-doc command and current-alias contract drift closure
+
+- `status`: CLOSED
+- `problem_statement`: the doc-command/current-alias drift is now closed: the checker is repo-root invariant, understands workspace-owned script references, the affected `v1.6.11` / `v1.6.13` docs now carry their required `*.current.yaml` alias refs, and `IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md` now references the canonical prompt-kernel executable coupling validator.
+- `primary_owner_doc`: `docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md`
+- `secondary_refs`:
+  - `docs/governance/agent-relay-final-answer-governance-v1.6.11.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.11-agent-relay-final-answer.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.13-instance-pack-topology.md`
+  - `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`
+- `machine_gate`:
+  - `scripts/docs_command_contract_check.py`
+- `root_cause`: RC-01 and RC-04
+- `stop_condition`:
+  - current stream governance/review docs continue including every required `*.current.yaml` alias ref enforced by the checker;
+  - command snippets continue referencing live validator paths only;
+  - `python3 scripts/docs_command_contract_check.py` stays clean from both workspace root and protocol root.
+
+### ISSUE-014 - Legacy compatibility taxonomy has crossed into an active machine-gate default
+
+- `status`: CLOSED
+- `problem_statement`: former `WATCH-001` is now closed as issue-grade debt: compiled-brief pass-default surfaces were moved onto the neutral token `tracked_compiled_brief_frozen_path`, while `legacy_canonical_compatibility_path` is explicitly narrowed to governance/migration taxonomy and no longer serves as the positive compiled-brief gate token.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md`
+  - `docs/governance/p0-compiled-brief-directory-taxonomy-governance-plan-2026-03-18.md`
+- `machine_gate`:
+  - `scripts/validate_compiled_brief_projection_boundary.py`
+  - `scripts/ci/run_semantic_clarity_probes_ci.sh`
+  - `scripts/validate_compatibility_legacy_boundary.py`
+- `root_cause`: RC-03 and RC-08
+- `stop_condition`:
+  - compiled-brief positive validation and semantic-clarity CI stop requiring `legacy_canonical_compatibility_path` as a PASS-default token; satisfied.
+  - compatibility terminology remains outside current-turn authoritative payloads and strict visible lanes; satisfied.
+  - the old watch claim is replaced by a machine-checked taxonomy that no longer depends on the legacy term; satisfied via `tracked_compiled_brief_frozen_path`.
+
+### ISSUE-015 - Batch-6/7 active docs still normalize compatibility wrappers as canonical executables
+
+- `status`: CLOSED
+- `problem_statement`: active `v1.6.0` / `v1.6` governance-review docs were canonicalized to non-versioned executables, `contract-binding.v1.6.yaml` now records the remaining versioned aliases as `wrapper_compatibility_optional`, and `scripts/validate_contract_binding_reference_integrity.py` now fail-closes on doc executable-role drift instead of checking anchors only.
+- `primary_owner_doc`: `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+  - `identity/protocol/mappings/contract-binding.v1.6.yaml`
+  - `scripts/create_identity_pack.py`
+- `machine_gate`:
+  - `scripts/validate_contract_binding_reference_integrity.py`
+  - supporting evidence scan: `rg -n 'validate_v16_intake_evidence_core.py|validate_v16_cross_workflow_schema.py|validate_v16_skill_path_integrity.py' docs/governance/identity-actor-session-binding-governance-v1.6.0.md docs/review/protocol-remediation-audit-ledger-v1.6.md identity/protocol/mappings/contract-binding.v1.6.yaml`
+- `root_cause`: RC-01 and RC-04
+- `stop_condition`:
+  - active governance/review docs switch canonical validator/normalizer refs to the non-versioned ids already used in mapping/scaffolding; satisfied.
+  - wrapper ids appear only as explicit compatibility aliases where mapping says they are optional; satisfied.
+  - the checker grows executable-role parity validation so docs cannot drift back while still returning a false green; satisfied.
+
+### ISSUE-016 - Required-gate bundle parity for new motherline rows `ASB16-RQ-042` / `ASB16-RQ-043`
+
+- `status`: CLOSED
+- `problem_statement`: the initial bundle-parity red was caused by `required_gate_bundle_runner.py` stopping at `asb16-rq-041` while `contract-binding.v1.6.yaml` already carried `ASB16-RQ-042` / `ASB16-RQ-043`.
+- `primary_owner_doc`: `docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md`
+- `secondary_refs`:
+  - `docs/governance/agent-relay-final-answer-governance-v1.6.11.md`
+  - `docs/governance/identity-instance-pack-topology-governance-v1.6.13.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.11-agent-relay-final-answer.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.13-instance-pack-topology.md`
+- `machine_gate`:
+  - `scripts/validate_control_plane_budget.py`
+  - `scripts/validate_control_plane_invariants.py`
+  - `scripts/validate_control_plane_status_sync.py`
+- `root_cause`: RC-01 and RC-03
+- `stop_condition`:
+  - required-gate bundle order or its generator absorbs `asb16-rq-042` and `asb16-rq-043`; satisfied.
+  - control-plane budget and invariants return `mapping_rows_missing_in_bundle_count=0`; satisfied.
+  - machine-maintained control-plane budget/status refresh lands without hand-editing and status sync returns `PASS_REQUIRED`; satisfied.
+
+### ISSUE-017 - Operational repo-root invariance outside the repaired validator lane
+
+- `status`: CLOSED
+- `problem_statement`: repo-root/cwd invariance had been repaired only for validators; operational tooling still depended on caller cwd until this pass generalized self-resolution.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/governance/identity-failclose-monotonic-governance-v1.6.4.md`
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+- `machine_gate`:
+  - direct replay: `python3 identity-protocol-local/scripts/render_control_plane_status.py --json-only`
+  - direct replay: `python3 identity-protocol-local/scripts/sync_plugin_join_wiring.py --check --json-only`
+  - direct replay: `python3 scripts/scan_identity_path_residue.py --identity-id <ID> --json-only`
+- `root_cause`: RC-03
+- `stop_condition`:
+  - operational control-plane tools self-resolve protocol/workspace roots from script location or governed catalog semantics instead of caller cwd; satisfied.
+  - workspace-root and protocol-root launches yield the same semantic verdict or fail-close for the same reason; satisfied.
+  - the path-residue scanner can discover project-local identity homes without manual `--repo-root` pinning; satisfied.
+
+### ISSUE-018 - `v1.6.14` launcher stream docs-contract red
+
+- `status`: CLOSED
+- `problem_statement`: the new `v1.6.14` launcher lane did introduce a real docs-contract red: the review ledger initially omitted a required current-alias reference and overpromoted future launcher scripts into executable-looking snippets.
+- `primary_owner_doc`: `docs/governance/identity-codex-launcher-governance-v1.6.14.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`
+  - `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
+  - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml`
+- `machine_gate`:
+  - `scripts/docs_command_contract_check.py`
+  - downstream visibility: `scripts/validate_control_plane_status_sync.py`
+- `root_cause`: RC-01
+- `stop_condition`:
+  - the `v1.6.14` review/governance docs carry every required current-alias reference enforced by the checker; satisfied.
+  - any launcher command snippet promoted to executable status points at landed scripts only; satisfied.
+  - `python3 scripts/docs_command_contract_check.py` returns clean from both workspace root and protocol root without special casing this lane; satisfied.
+
+### ISSUE-019 - Authoritative resolver default local catalog ambient-root coupling
+
+- `status`: CLOSED
+- `problem_statement`: the authoritative resolver now self-roots its default local catalog to the project runtime, so omitting `--local-catalog` no longer changes the resolved source layer/canonical pack tuple between workspace-root and protocol-root replays.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+  - `scripts/validate_resolve_identity_context_default_local_catalog.py`
+- `machine_gate`:
+  - direct replay: `python3 identity-protocol-local/scripts/resolve_identity_context.py resolve --identity-id base-repo-architect`
+  - invariant replay: `python3 identity-protocol-local/scripts/validate_resolve_identity_context_default_local_catalog.py --json-only`
+- `root_cause`: RC-03
+- `stop_condition`:
+  - authoritative default resolution self-roots to the active project runtime from both workspace and protocol roots when `--local-catalog` is omitted;
+  - omission of `--local-catalog` no longer changes the resolved source layer for the same project-local identity;
+  - a machine gate covers the direct authoritative-resolve path rather than only scanning `--catalog` repo-fixture defaults.
+
+### ISSUE-020 - Active script default catalog routing on scope/state/repair surfaces
+
+- `status`: CLOSED
+- `problem_statement`: the affected scope/state/repair scripts now default through shared runtime-path semantics, so omitting `--catalog` no longer silently falls back to `~/.codex/.identity/catalog.local.yaml` for active project-local work.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+- `machine_gate`:
+  - direct replay: `python3 identity-protocol-local/scripts/validate_identity_scope_resolution.py --identity-id base-repo-architect`
+  - direct replay: `python3 identity-protocol-local/scripts/validate_identity_scope_persistence.py --identity-id base-repo-architect`
+  - direct replay: `python3 identity-protocol-local/scripts/validate_identity_state_consistency.py`
+  - static guard: `python3 identity-protocol-local/scripts/validate_cli_catalog_default_semantics.py --json-only`
+- `root_cause`: RC-10
+- `stop_condition`:
+  - active scope/state/repair scripts stop embedding direct `~/.codex/.identity/catalog.local.yaml` defaults;
+  - omission of `--catalog` either resolves through shared runtime-path semantics or fail-closes explicitly instead of silently validating the wrong catalog;
+  - a machine gate scans for direct global-home catalog defaults on active scripts referenced by current protocol contracts.
+
+### ISSUE-021 - Active direct-entry scripts still bind `--repo-catalog` to caller launch root
+
+- `status`: CLOSED
+- `problem_statement`: the direct-entry lane previously resolved bare `--repo-catalog identity/catalog/identities.yaml` against caller cwd; it is now closed by a shared resolver plus parity replays that keep workspace-root and protocol-root launches on the same semantic surface.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+  - `scripts/validate_cli_catalog_default_semantics.py`
+- `machine_gate`:
+  - workspace/protocol parity replay: `python3 identity-protocol-local/scripts/validate_fixture_runtime_boundary.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml`
+  - workspace/protocol parity replay: `python3 identity-protocol-local/scripts/validate_protocol_entry_candidate_bridge.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --json-only`
+  - workspace/protocol parity replay: `python3 identity-protocol-local/scripts/render_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --actor-id assistant:codex --session-id test-session --json-only`
+- `root_cause`: RC-03
+- `stop_condition`:
+  - active direct-entry scripts self-root default `--repo-catalog` to the protocol repository or a shared path-resolution helper instead of caller cwd;
+  - the same relative/default replay yields the same semantic result from workspace-root and protocol-root launches;
+  - a dedicated machine gate exercises direct-entry repo-catalog defaults rather than only scanning for global-home catalog literals.
+- `closure_evidence`:
+  - `scripts/resolve_identity_context.py` now exports `resolve_repo_catalog_path(...)`, and the three direct-entry scripts consume it.
+  - `python3 identity-protocol-local/scripts/validate_cli_catalog_default_semantics.py --json-only` now returns `launch_context_parity_status=PASS_REQUIRED` with green replays for `validate_fixture_runtime_boundary.py`, `validate_protocol_entry_candidate_bridge.py`, and `render_identity_response_stamp.py`.
+
+### ISSUE-022 - `validate_identity_local_persistence.py` still derives repo root from caller cwd
+
+- `status`: CLOSED
+- `problem_statement`: the local-persistence lane previously mixed `Path.cwd()` repo-root semantics with non-self-rooted local-catalog defaults; it is now closed by shared repo/local catalog resolvers that produce the same governed interpretation from workspace-root and protocol-root launches.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/governance/local-instance-persistence-boundary-v1.4.6.md`
+  - `scripts/release_readiness_check.py`
+  - `scripts/e2e_smoke_test.sh`
+- `machine_gate`:
+  - workspace/protocol parity replay: `python3 identity-protocol-local/scripts/validate_identity_local_persistence.py --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --local-catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml`
+  - supporting direct replay: `python3 identity-protocol-local/scripts/identity_status.py --identity-id base-repo-architect --json`
+- `root_cause`: RC-03
+- `stop_condition`:
+  - local-persistence and adjacent operational tooling resolve repo root from script/protocol location instead of `Path.cwd()`;
+  - default local-catalog selection for these tools self-roots to the project runtime when no explicit catalog/env override is supplied;
+  - workspace-root and protocol-root replays with the same absolute inputs produce the same verdict.
+- `closure_evidence`:
+  - `validate_identity_local_persistence.py` now derives its protocol root from the resolved repo catalog and passes from both workspace root and protocol root with the same absolute governed inputs.
+  - `identity_status.py`, `collect_identity_health_report.py`, `validate_identity_experience_writeback.py`, and the scope validators now self-root default local catalogs to the project runtime.
+
+### ISSUE-023 - Docs command checker still misses launch-context-broken executable snippets
+
+- `status`: CLOSED
+- `problem_statement`: the docs checker previously stopped at executable existence/flag syntax and could not distinguish a workspace-safe command from a protocol-root-only launch-context fragment; it is now closed by workspace semantic probes plus workspace-root invariant active snippets on the affected lane.
+- `primary_owner_doc`: `docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md`
+- `secondary_refs`:
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+  - `scripts/docs_command_contract_check.py`
+- `machine_gate`:
+  - `python3 identity-protocol-local/scripts/docs_command_contract_check.py`
+  - correlated replay: `python3 identity-protocol-local/scripts/render_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --actor-id assistant:codex --session-id test-session --json-only`
+- `root_cause`: RC-06
+- `stop_condition`:
+  - the docs checker validates launch-context/path semantics for executable snippets, not just script presence and flag names;
+  - active docs stop publishing executable commands whose relative path arguments fail from workspace-root replays;
+  - doc checker green and direct replay green become coupled on this lane.
+- `closure_evidence`:
+  - `scripts/docs_command_contract_check.py` now recognizes workspace-root invariant `identity-protocol-local/scripts/...` commands and runs workspace semantic probes for safe path-sensitive executables.
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md` and `docs/review/protocol-remediation-audit-ledger-v1.6.md` now publish workspace-root invariant commands on the cited headstamp/actor-session-binding snippets.
+
+### ISSUE-024 - `v1.6.14` launcher convergence runtime authority and cross-workspace pilot proof were not yet machine-frozen
+
+- `status`: CLOSED
+- `problem_statement`: the launcher convergence lane had already landed the canonical entry, receipt family, and synthetic convergence probes, but runtime-path authority still was not part of formal launcher closure, live control-plane consumers still mixed launcher closure with non-runtime catalog scope, and cross-workspace pilot proof remained a discussion goal instead of a machine-executed proof lane.
+- `primary_owner_doc`: `docs/governance/identity-codex-launcher-governance-v1.6.14.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`
+  - `docs/governance/identity-codex-launcher-workspace-convergence-roundtable-v1.6.14.md`
+  - `scripts/ci/run_required_runtime_gates_ci.sh`
+- `machine_gate`:
+  - `scripts/validate_identity_codex_launcher.py`
+  - `scripts/check_identity_codex_launcher_migration_closure.py`
+  - `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh`
+  - `scripts/ci/run_identity_codex_launcher_cross_workspace_pilot_probes_ci.sh`
+  - supporting consumers: `scripts/release_readiness_check.py`, `scripts/identity_creator.py`
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - launcher install validation proves both asset presence and runtime-path authority against the selected workspace-local runtime catalog; satisfied.
+  - aggregate launcher closure proof, required gates, readiness, and creator enforcement all consume launcher closure in `workspace-runtime-only` mode rather than mixing repo fixture catalogs into live runtime proof; satisfied.
+  - the same convergence entry is machine-proven against more than one workspace-local runtime catalog with no workspace-specific wrapper exception; satisfied for the launcher pilot proof lane.
+  - generic workspace-convergence promotion remains deferred; closer follow-on work stays on evidence breadth / archival / truth-sync rather than on semantic reopening; satisfied.
+- `closure_evidence`:
+  - launcher runtime authority is now surfaced as `runtime_paths_status` in both the single-identity validator and the aggregate launcher migration-closure checker.
+  - `install_identity_codex_launcher.py` now writes launcher config under the launcher config home while binding `IDENTITY_HOME` / `IDENTITY_CATALOG` to the selected runtime catalog surface.
+  - the cross-workspace pilot probe now copies a sibling workspace runtime catalog into a temporary workspace, rewrites pack paths to the copied runtime surface, and proves dry-run/apply/closure/validator parity on the same convergence entry with no workspace-specific wrapper branch.
+  - launcher convergence receipts now keep `evidence_ref` / `manifest_ref` machine-visible, emit governed `EVIDENCE_MANIFEST.<run_token>.json` bundles under `activity/evidence/v1614-identity-codex-launcher/<date>/`, and the post-closure truth-sync surface `scripts/refresh_identity_codex_launcher_evidence_truth_sync.py` can normalize older convergence receipts without reopening launcher semantics.
+  - `scripts/release_readiness_check.py` now consumes the convergence-entry probe lane itself, so readiness symmetry covers both the aggregate closure checker and the governed receipt/manifest truth-sync bundle.
+
+### ISSUE-025 - Authoritative resolver and active health entrypoints now freeze explicit runtime-catalog authority; remaining raw metadata hygiene stays separate
+
+- `status`: CLOSED
+- `problem_statement`: the deep audit originally reproduced a live precedence bug on the authority resolver family: the foreign-project env precedence lane in `scripts/ci/run_semantic_clarity_probes_ci.sh` failed because `scripts/resolve_identity_context.py` did not consume `IDENTITY_CATALOG` as the runtime-local catalog unless `--local-catalog` was passed explicitly, while several active utility surfaces still derived default catalogs from script-root path heuristics instead of explicit runtime-catalog authority.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+  - `identity/protocol/IDENTITY_RUNTIME.md`
+  - `scripts/validate_cli_catalog_default_semantics.py`
+- `machine_gate`:
+  - `scripts/ci/run_semantic_clarity_probes_ci.sh`
+  - `scripts/validate_cli_catalog_default_semantics.py`
+  - direct replay: `python3 scripts/resolve_identity_context.py resolve --identity-id global-authority --repo-catalog identity/catalog/identities.yaml`
+- `root_cause`: RC-03, RC-10, and RC-11
+- `stop_condition`:
+  - `resolve_identity_context.py` consumes explicit runtime-catalog authority (`--local-catalog` / `IDENTITY_CATALOG`) before any script-root-derived fallback and the foreign-project precedence lane turns green; satisfied.
+  - active health/runtime utilities stop embedding script-root catalog defaults on current runtime surfaces and either resolve through the shared runtime-path contract or fail-close explicitly; satisfied.
+  - launch-context parity stays machine-checked from both workspace-root and protocol-root launches; satisfied.
+- `closure_evidence`:
+  - `bash scripts/ci/run_semantic_clarity_probes_ci.sh` now passes both `foreign project env ignored when current project has no session pointer` and `current project session pointer wins over foreign project env`.
+  - `python3 scripts/validate_cli_catalog_default_semantics.py --json-only` now reports `cli_catalog_default_semantics_status=PASS_REQUIRED`, zero runtime global-home default hits, and launch-context parity across workspace-root/protocol-root replays.
+  - resolver truth now stays closed while any remaining raw catalog metadata underdescription is tracked separately by `ISSUE-029`.
+
+### ISSUE-026 - Session-primary authority now fail-closes compatibility drift; remaining compatibility work stays quarantined
+
+- `status`: CLOSED
+- `problem_statement`: protocol runtime originally could hold the correct session-primary authoritative identity while the shared compatibility pointer family (`session/active_identity.json` + `session/mirror/current.json`) still pointed at an older identity; active health/status tooling downgraded that state to warning-level drift and the canonical repair surface rebuilt pointer payloads from actor-global compatibility projection state rather than from current session-primary truth.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+  - `docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md`
+  - `scripts/repair_actor_session_authority_residue.py`
+- `machine_gate`:
+  - `scripts/validate_identity_session_pointer_consistency.py`
+  - `scripts/refresh_identity_session_status.py`
+  - `scripts/collect_identity_health_report.py`
+  - supporting runtime feedback: `system-requirements-analyst` active-runtime re-entry report
+- `root_cause`: RC-02 and RC-11
+- `stop_condition`:
+  - current runtime health/status surfaces stop classifying compatibility-pointer drift as warn-level residue once session-primary truth is available; satisfied.
+  - protocol-owned convergence rewrites canonical/mirror pointer surfaces from authoritative `(actor_id,session_id)->identity_id` truth first and treats compatibility projection as diagnostic metadata only; satisfied.
+  - pointer-drift repair/convergence becomes a protocol-owned fail-close lane rather than a repeated manual/operator interpretation problem; satisfied.
+- `closure_evidence`:
+  - `python3 scripts/validate_identity_switch_closure_semantics.py --json-only` now returns `PASS_REQUIRED` with `compatibility_pointer_identity_authority=diagnostic_only`.
+  - `scripts/refresh_identity_session_status.py` now classifies stale/missing compatibility projection under available session-primary truth as `POINTER_FAIL`, not warning-level drift.
+  - `scripts/collect_identity_health_report.py` now invokes the pointer guard through `--strict-session-primary`, and `scripts/repair_actor_session_authority_residue.py` rebuilds canonical/mirror pointer surfaces from authoritative binding first.
+  - `scripts/validate_identity_session_pointer_consistency.py` no longer exposes the old `--allow-compatibility-projection-drift` interface residue on strict lanes.
+
+### ISSUE-027 - Motherline no-downgrade contract is now frozen and live residue is quarantined off active payloads
+
+- `status`: CLOSED
+- `problem_statement`: the bottom-layer no-downgrade / no-backstop / no backward-compatibility rule is frozen, and the remaining live compatibility residue has now been pushed off active payload surfaces. The closure target was not “invent a new principle” but “hold the existing principle everywhere so active defaults, validator green paths, current-turn runtime truth, active execution entry, and protocol-owned success paths do not regress back into compatibility behavior.”
+- `primary_owner_doc`: `identity/protocol/IDENTITY_PROTOCOL.md`
+- `secondary_refs`:
+  - `identity/protocol/IDENTITY_RUNTIME.md`
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`
+  - `identity/protocol/mappings/contract-binding.v1.6.yaml`
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+- `machine_gate`:
+  - `scripts/validate_compatibility_legacy_boundary.py`
+  - `scripts/validate_strict_actor_entry_semantics.py`
+  - `scripts/validate_identity_switch_closure_semantics.py`
+  - `scripts/validate_identity_session_pointer_consistency.py`
+  - `scripts/validate_identity_runtime_contract.py`
+  - `scripts/validate_identity_collab_trigger.py`
+  - supporting audit scan: `rg -n 'legacy_alias_bridge|legacy-commerce-overlay|assistant:codex|compatibility backstop|backward compatibility' identity/protocol docs scripts`
+- `root_cause`: RC-11
+- `stop_condition`:
+  - `rq_047_protocol_no_downgrade_motherline_contract_v1` remains frozen in protocol kernel text, contract binding, governance, and review surfaces;
+  - active scaffold/validator/helper families stay green only when compatibility residue is quarantined away from active defaults, validator green paths, current-turn runtime truth, active execution entry, and protocol-owned success paths;
+  - active governed payload families keep canonical `error_code` only; replay/migration alias echo is explicit rather than implicit;
+  - canonical docs/workbook/review truth stays synchronized so residual wording cannot quietly reopen downgrade/backstop semantics.
+- `closure_evidence`:
+  - `identity/protocol/IDENTITY_PROTOCOL.md` now freezes `rq_047_protocol_no_downgrade_motherline_contract_v1`;
+  - `identity/protocol/mappings/contract-binding.v1.6.yaml` now binds the rule as `ASB16-RQ-047`;
+  - `identity/protocol/IDENTITY_RUNTIME.md` now hard-freezes active-runtime no-downgrade semantics, including current-turn truth, active entry, and validator-green-path boundaries;
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml` now explicitly says the protocol does not provide backward compatibility on active surfaces;
+  - `scripts/headstamp_error_family_common.py` now keeps active payload projection canonical-only by default and requires explicit replay/migration opt-in before alias echo can appear;
+  - `scripts/validate_compatibility_legacy_boundary.py --json-only` now returns `PASS_REQUIRED` only when active payload projection stays canonical-only and replay alias echo remains explicit/quarantined;
+  - `docs/governance/identity-headstamp-egress-governance-v1.6.1.md` truth-syncs that `legacy_error_code` / `compat_error_code` are replay-only and forbidden on active governed payload surfaces.
+
+### ISSUE-028 - Declared route/script lane governance is now protocol-owned; remaining browser-manual gaps are instance adoption only
+
+- `status`: CLOSED
+- `problem_statement`: `v1.6.15` originally left a protocol-owned blind spot because direct MCP/browser rescue could still feel extra-contractual. The shared owner lane now closes that gap generically: direct tool entry must enter via route/script/lane admission or fail closed, and the canonical execution-lane taxonomy now freezes both webhook and interactive direct-tool lanes without importing business-scene semantics. Remaining browser-manual rollout gaps belong to pack adoption, not protocol semantics.
+- `primary_owner_doc`: `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
+  - `scripts/instance_script_orchestration_common.py`
+  - `scripts/validate_route_execution_lane_admission.py`
+  - `scripts/validate_identity_capability_activation.py`
+- `machine_gate`:
+  - `scripts/validate_route_execution_lane_admission.py`
+  - `scripts/validate_identity_capability_activation.py`
+  - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
+  - supporting live adoption audit: target-pack route/manifest/session evidence scan
+- `root_cause`: RC-12 and RC-11
+- `stop_condition`:
+  - direct tool execution for a declared route must either enter through route/script/lane admission or fail-close before MCP/browser tools run;
+  - browser/manual rescue, when it is a legitimate supported lane, must be expressed through the canonical lane taxonomy rather than private pack-local token invention;
+  - remaining target-pack business executor rollout, auth preflight scripts, session-freshness scripts, and optional skill binding stay below protocol once the shared lane family is closed.
+- `closure_evidence`:
+  - the protocol-owned validator family freezes additive `direct_tool_entry_policy` semantics on top of the existing execution-lane contract; declared direct-tool lanes must use canonical `lane_source=governed_direct_tool_entry`, carry `receipt_timing=pre_tool_execution`, and report `tool_entry_admission_timing`, `auth_preflight_status`, and `session_freshness_status` through the shared `instance_script_admission_receipt` validator instead of relying on pack-local narrative;
+  - `scripts/instance_script_orchestration_common.py` now also freezes the canonical execution-lane taxonomy for current supported generic lanes: `governed_webhook` -> `webhook_single_flight` + `analysis_webhook`, and `governed_direct_tool_entry` -> `tool_admission_serialized` + `interactive_session`;
+  - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh` now proves positive direct-tool admission plus negative fail-close on missing `direct_tool_entry_policy`, mismatched `tool_entry_admission_timing`, and mismatched direct-tool lane taxonomy;
+  - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md` and `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md` now truth-sync that remaining browser-manual gaps are instance adoption only and must not be misreported as missing protocol semantics.
+
+### ISSUE-029 - Workspace-local runtime catalog metadata hygiene is now protocol-owned and closed on its own lane
+
+- `status`: CLOSED
+- `problem_statement`: the raw metadata follow-on that used to remain after resolver repair is now owned by a dedicated protocol hygiene lane rather than by launcher semantics. Runtime resolver truth stays authority-first, while raw workspace-local catalog self-description is now validated and repaired directly through shared infrastructure.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md`
+  - `docs/governance/identity-codex-launcher-governance-v1.6.14.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`
+- `machine_gate`:
+  - `scripts/validate_runtime_catalog_metadata_hygiene.py`
+  - `scripts/repair_runtime_catalog_metadata_hygiene.py`
+  - `scripts/check_identity_codex_launcher_migration_closure.py`
+  - `scripts/run_identity_codex_launcher_workspace_convergence.py`
+  - `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh`
+  - `scripts/ci/run_identity_codex_launcher_cross_workspace_pilot_probes_ci.sh`
+- `root_cause`: RC-03 and RC-10
+- `stop_condition`:
+  - raw workspace-local runtime catalog rows become self-descriptive enough that protocol-owned truth no longer needs to correct `canonical_scope=UNKNOWN`-class residue for healthy rows;
+  - creator/backfill-equivalent hygiene tooling normalizes catalog metadata without changing the already-correct resolver truth path;
+  - the cleanup remains explicitly separate from `v1.6.14` launcher semantics, so launcher convergence stays closed while metadata hygiene advances on its own lane.
+- `current_evidence`:
+  - `python3 scripts/validate_runtime_catalog_metadata_hygiene.py --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --require-active --json-only` now returns `PASS_REQUIRED` with `checked_identity_count=4`, `violation_count=0`;
+  - `scripts/check_identity_codex_launcher_migration_closure.py --catalog ../.identity/catalog.local.yaml --workspace-runtime-only --json-only` now projects `runtime_catalog_metadata_hygiene_status=PASS_REQUIRED` alongside launcher closure for all active runtime identities;
+  - `scripts/run_identity_codex_launcher_workspace_convergence.py` now performs metadata hygiene repair before launcher closure, and both launcher convergence probe families seed `canonical_scope=UNKNOWN` / empty `canonical_pack_path` and prove apply-time repair;
+  - required gates and readiness now consume `scripts/validate_runtime_catalog_metadata_hygiene.py`, so raw metadata hygiene is no longer an informal follow-on note.
+
+### ISSUE-030 - Routing/learning strengthening symmetry is now landed as a protocol-owned upper-layer runtime contract
+
+- `status`: CLOSED
+- `problem_statement`: the protocol kernel already froze the third/fourth source contracts as `Auto-routing contract` and `Rule learning contract`; the remaining work was to land symmetric runtime-consumable strengthening above them. That symmetry is now protocol-owned: packs can carry the strengthening hooks, validators can fail-close them, and required-gate/readiness surfaces now project them directly.
+- `primary_owner_doc`: `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md`
+  - `identity/protocol/IDENTITY_PROTOCOL.md`
+  - `/Users/yangxi/.codex/.identity/office-ops-expert/CURRENT_TASK.json`
+  - `/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/CURRENT_TASK.json`
+- `machine_gate`:
+  - `scripts/validate_identity_routing_learning_strengthening.py`
+  - `scripts/validate_identity_capability_arbitration.py`
+  - `scripts/validate_discovery_requiredization.py`
+  - `scripts/validate_capability_fit_roundtable_evidence.py`
+  - `scripts/validate_identity_orchestration_contract.py`
+  - `scripts/validate_identity_knowledge_contract.py`
+  - `scripts/validate_identity_experience_feedback.py`
+  - `scripts/validate_identity_experience_feedback_governance.py`
+  - `scripts/required_gate_bundle_runner.py`
+  - `scripts/release_readiness_check.py`
+- `root_cause`: RC-13
+- `stop_condition`:
+  - third-loop strengthening lands above the kernel `Auto-routing contract` as a symmetric runtime-consumable binding with explicit route-discovery convergence evidence;
+  - fourth-loop strengthening lands above the kernel `Rule learning contract` as a symmetric runtime-consumable binding with scoped operational-prompt injection, replay verification, and rollback semantics;
+  - both loops consume the same `roundtable_four_track_cross_validation_contract_v1` primitive without introducing a fallback/backstop compatibility bridge;
+  - active packs gain governed `route_discovery_enforcement` and `feedback_operational_prompt_enforcement` surfaces beside the already-landed first-two-loop hooks;
+  - required-gate bundle and release-readiness surfaces project the strengthened third/fourth loops as first-class citizenship.
+- `current_evidence`:
+  - `create_identity_pack.py` and `repair_contract_backfill.py` now materialize `route_discovery_enforcement` / `feedback_operational_prompt_enforcement` under `capability_arbitration_contract`;
+  - `scripts/validate_identity_routing_learning_strengthening.py` now fail-closes the strengthening pair and currently returns `PASS_REQUIRED` for all four active workspace-local runtime identities (`base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, `base-repo-architect`, `base-repo-closure-orchestrator`);
+  - `scripts/validate_identity_capability_arbitration.py` now consumes the strengthening hooks directly and replays `Capability arbitration contract validation PASSED` across the same four active runtime identities;
+  - `required_gate_bundle_runner.py` now binds `ASB16-RQ-048` / `ASB16-RQ-049`, while `scripts/ci/run_required_runtime_gates_ci.sh` and `scripts/release_readiness_check.py` now include the strengthening validator family;
+  - the strengthening lane remains generic protocol infrastructure only: no business-specific routing policy, prompt content, or backward-compatibility bridge was introduced.
+
+### ISSUE-031 - Fourth-loop-to-first-loop loopback bridge is now machine-consumed and closed without semantic collapse back into ISSUE-030
+
+- `status`: CLOSED
+- `problem_statement`: the third/fourth-loop strengthening centers were landed under `ISSUE-030`, and the remaining 4→1 return path required its own explicit machine consumer lane so that fourth-loop prompt artifacts could not be misread as first-loop truth, and the shared four-track primitive could not be misread as the loopback transport/admission surface.
+- `primary_owner_doc`: `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md`
+  - `identity/protocol/mappings/contract-binding.v1.6.yaml`
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`
+- `machine_gate`:
+  - `scripts/docs_command_contract_check.py`
+  - `scripts/validate_issue_register_consistency.py`
+  - `scripts/validate_contract_binding_reference_integrity.py`
+  - `scripts/validate_identity_routing_learning_strengthening.py`
+  - `scripts/validate_feedback_to_judgement_loopback.py`
+  - `scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh`
+- `root_cause`: RC-14
+- `stop_condition`:
+  - `feedback_to_judgement_loopback_contract_v1` remains frozen as a standalone bridge contract rather than being folded into either the fourth-loop center or the shared four-track primitive;
+  - loopback artifacts are explicitly bounded as governed preflight aids only, never as current-round truth;
+  - the bounded closed-loop topology (`third-loop exploration -> fourth-loop promotion -> first-loop revalidation`) is machine-visible as a round trip rather than a narrative claim;
+  - first-loop revalidation authority, TTL expiry, conflict demotion, rollback, and negative-feedback writeback are all machine-visible on the canonical bridge evidence family;
+  - a dedicated machine consumer lane can consume `ASB16-RQ-050` without reopening `ISSUE-030` or weakening no-downgrade boundaries.
+- `current_evidence`:
+  - `scripts/validate_feedback_to_judgement_loopback.py` now owns the canonical `ASB16-RQ-050` machine consumer lane and fail-closes on replay-gate drift, missing loopback field anchors, broken first-loop revalidation prerequisites, or missing negative-feedback preservation;
+  - `scripts/validate_identity_routing_learning_strengthening.py` now republishes the same closed-loop proof as `third_loop_exploration_status`, `fourth_loop_promotion_status`, `first_loop_revalidation_status`, `conflict_demotion_status`, `negative_feedback_writeback_status`, and `live_roundtrip_proof_status`, so the bounded round trip stays machine-visible without reopening the third/fourth-loop center;
+  - `scripts/required_gate_bundle_runner.py`, `scripts/release_readiness_check.py`, and `scripts/ci/run_required_runtime_gates_ci.sh` now consume the dedicated loopback validator lane directly, while `scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh` proves positive and negative fixture coverage plus round-trip projection assertions;
+  - `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md`, `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md`, and `identity/protocol/mappings/contract-binding.v1.6.yaml` now truth-sync the bridge as machine-consumed closure instead of a docs-only opening.
+
+### ISSUE-032 - Protocol artifact-family routing remains semantically overloaded under generic "memory" wording
+
+- `status`: CLOSED
+- `problem_statement`: protocol-owned persisted artifact families inside identity packs/runtime already exist, but they are still too easy to collapse into generic “memory” language. Without one routing matrix, pack rulebook, pack task-history, runtime dialogue-governance, runtime experience-feedback, runtime protocol-feedback, runtime continuity/reentry, and runtime memory-absorption quarantine can be semantically polluted into one bucket.
+- `primary_owner_doc`: `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md`
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`
+  - `identity/protocol/IDENTITY_PROTOCOL.md`
+  - `identity/protocol/IDENTITY_RUNTIME.md`
+  - `README.md`
+- `machine_gate`:
+  - `scripts/docs_command_contract_check.py`
+  - `scripts/validate_issue_register_consistency.py`
+- `root_cause`: RC-15
+- `stop_condition`:
+  - one canonical matrix freezes each protocol-owned persisted family by semantic owner, fixed path, payload class, production method, and primary consumer;
+  - `memory` is no longer used as a canonical sink name in active protocol docs for these families;
+  - `RULEBOOK.jsonl` stays distinct from runtime experience-feedback rulebooks;
+  - `TASK_HISTORY.md` stays distinct from continuity/reentry state;
+  - raw dialogue retention stays distinct from dialogue-governance summaries and continuity/reentry bind artifacts;
+  - `runtime/protocol-feedback/**` stays governance communication-only;
+  - `runtime/memory-absorption/**` stays quarantine/re-materialization only;
+  - at least one machine-consumed family landing proves the matrix can drive shared validator/creator/readiness/runtime-hook wiring without per-pack folklore;
+  - whole-matrix routing enforcement reuses the same matrix instead of re-deriving semantics pack by pack.
+- `current_evidence`:
+  - `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md` now freezes the canonical routing matrix across eight protocol-scoped persisted families and explicitly classifies declaration keys/gates as non-artifact control-plane surfaces;
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md` now records the current protocol/runtime scan basis, the new raw dialogue-retention family, and the quarantine-only interpretation of `runtime/memory-absorption/**`;
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`, `identity/protocol/IDENTITY_PROTOCOL.md`, `identity/protocol/IDENTITY_RUNTIME.md`, and `identity/protocol/mappings/contract-binding.v1.6.yaml` now truth-sync the family names, fixed paths, forbidden conflations, `rq_051_identity_dialogue_retention_contract_v1`, and `rq_052_identity_artifact_family_routing_contract_v1` / `ASB16-RQ-052`;
+  - `scripts/identity_dialogue_retention_common.py`, `scripts/run_identity_dialogue_retention_guard_runtime.py`, `scripts/run_identity_delivery_runtime_hooks.py`, `scripts/validate_identity_dialogue_retention.py`, and `scripts/ci/run_identity_dialogue_retention_probes_ci.sh` now land the first machine-consumed family closure for this stream;
+  - `scripts/validate_identity_artifact_family_routing.py` and `scripts/ci/run_identity_artifact_family_routing_probes_ci.sh` now land the whole-matrix routing closure and fail-close on missing contract coverage, generic `memory` sink drift, pack/runtime family collisions, protocol-feedback root drift, continuity/reentry anchor drift, and memory-absorption active-path leakage without collapsing family-specific owner semantics into one super-validator;
+  - `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, `scripts/release_readiness_check.py`, `scripts/ci/run_required_runtime_gates_ci.sh`, `scripts/validate_required_contract_coverage.py`, and `scripts/required_gate_bundle_runner.py` now consume the same routing row instead of leaving whole-matrix routing as docs-only guidance;
+  - current workspace-local replay stays `PASS_REQUIRED` on `scripts/validate_identity_artifact_family_routing.py` for all four active runtime identities: `base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, `base-repo-architect`, and `base-repo-closure-orchestrator`;
+  - `base-repo-audit-expert-v3` no longer carries protocol-owned required failures on the adopted continuity/artifact-family subset after two shared closeout-strengthening moves landed together: `scripts/validate_identity_context_continuity_receipts.py` now joins repeated migration ancestry back to the bounded checkpoint root and projects bundle-compatible `RQ-046` contract truth, while `scripts/repair_contract_backfill.py` restores the three `rq_039` dependent contract skeletons (`tool_installation_contract`, `vendor_api_discovery_contract`, `vendor_api_solution_contract`) instead of leaving protocol-owned routing closure blocked on missing dependent-contract drift;
+  - the previously red discovery/tool/vendor lane on `base-repo-audit-expert-v3` was also closed through shared infrastructure rather than pack-local edits: `scripts/tool_vendor_governance_common.py` now normalizes pack-scoped `identity/runtime/**` report contracts onto live runtime-pack roots instead of falling back to repo fixture/demo paths, so `scripts/validate_identity_tool_installation.py`, `scripts/validate_identity_vendor_api_discovery.py`, `scripts/validate_identity_vendor_api_solution.py`, and aggregate `scripts/validate_required_contract_coverage.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --operation scan --json-only` now replay green on required coverage;
+  - `base-repo-closure-orchestrator` now also replays `PASS_REQUIRED` on `rq_052` after the protocol-owned post-delivery runtime hook bridge (`scripts/run_identity_delivery_runtime_hooks.py` -> `scripts/run_identity_dialogue_retention_guard_runtime.py`) refreshed live dialogue-retention evidence without reopening routing semantics;
+  - `base-repo-architect` remains green on `rq_052` while its optional dialogue-retention family is `SKIPPED_NOT_REQUIRED`, confirming the routing lane preserves optional-family semantics instead of forcing synthetic replay debt.
+- `execution_closeout_boundary`:
+  - semantic ownership remains with `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md` plus the inherited owner streams it explicitly references;
+  - architectural final lock is frozen for `ISSUE-032`; execution closeout owns the bounded whole-matrix validator/probe/gate/readiness/workbook truth-sync path, plus live replay breadth and any future inherited-family residual triage, so long as the work stays inside the same frozen routing matrix;
+  - execution closeout must not redefine family names, fixed roots, canonical producer/consumer roles, or frozen non-goals, and must not promote `runtime/memory-absorption/**` back onto an active success path;
+  - execution closeout must return to semantic-owner review before shipping any change that adds/renames a family, repoints a canonical root, changes canonical producer/consumer roles, relaxes the `memory` anti-pollution boundary, or introduces compatibility/backstop/pack-specific shortcuts to hide inherited-family failures;
+  - if a future routed red is caused by an inherited owner validator, it remains execution-closeout evidence debt unless the proposed fix crosses one of those semantic-owner boundaries;
+  - audit/review verifies closure and truth-sync state, but does not become a replacement semantic owner.
+
+### ISSUE-033 - `v1.6.14` launcher command discovery now freezes fresh-shell resume semantics instead of promoting resumability from partial facts
+
+- `status`: CLOSED
+- `problem_statement`: the launcher lane had already frozen canonical commands, install paths, runtime-path authority, and cross-workspace convergence, but command discovery still had a narrower bug: it could promote resume readiness from partial facts such as host-thread UUID presence, shortcut availability, or merely explicit-looking `run:<...>` session ids. That created a protocol gap between “bundle says resume is recommended” and “fresh-shell launch is actually executable and semantically correct.”
+- `primary_owner_doc`: `docs/governance/identity-codex-launcher-governance-v1.6.14.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`
+  - `README.md`
+  - `scripts/render_identity_codex_launcher.py`
+  - `scripts/identity_codex_launcher_common.py`
+- `machine_gate`:
+  - `scripts/ci/run_identity_codex_launcher_probes_ci.sh`
+  - `scripts/docs_command_contract_check.py`
+  - direct replay: `python3 scripts/render_identity_codex_launcher.py commands --identity-id <id> --thread-id <host-thread-uuid> --json-only`
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - command discovery recommendations are judged by fresh-shell executability rather than shortcut discoverability, ambient intuition, or host-thread UUID presence alone;
+  - `resume_status` may be `PASS_REQUIRED` only when both the host thread UUID and the authoritative identity session tuple are resolved;
+  - explicit `--session-id run:<...>` inputs are accepted only when they are authoritative for the requested identity rather than merely syntactically shaped like a run id;
+  - the protocol freezes `resume <host-thread-uuid>` as the Codex recovery target and freezes `--session-id run:<...>` as launcher-side tuple closure only, with no semantic collapse between the two;
+  - positive and negative probe coverage proves the renderer, launcher common, and dry-run path all fail-close together.
+- `current_evidence`:
+  - `scripts/render_identity_codex_launcher.py` now exports `catalog_context_status`, `host_thread_id_status`, `identity_session_tuple_status`, and `resume_command_fresh_shell_executable_status`, and only emits `recommended_resume_command` when that fresh-shell resume status is `PASS_REQUIRED`;
+  - when the ambient shell catalog differs from the resolved identity catalog, the command bundle now emits explicit `--catalog <resolved-catalog>` rather than treating ambient catalog drift as operator folklore;
+  - `scripts/identity_codex_launcher_common.py` now requires authoritative runtime identity resolution for both bound and explicit session tuples, so a non-authoritative explicit `run:<...>` no longer yields a resumable recommendation surface;
+  - `scripts/ci/run_identity_codex_launcher_probes_ci.sh` now proves four cases together: positive authoritative resume, negative missing tuple, negative invalid explicit tuple, and positive dry-run preservation of `resume <host-thread-uuid>` as the recovery tail;
+  - `README.md` plus the `v1.6.14` governance/review pair now explicitly state that `resume <host-thread-uuid>` remains the Codex recovery target for prior records, while `--session-id run:<...>` is launcher tuple closure only.
+
+### ISSUE-034 - `v1.6.14` launcher command discovery now canonicalizes preferred command surfaces under catalog mismatch instead of dual-ranking stale shortcuts
+
+- `status`: CLOSED
+- `problem_statement`: after `ISSUE-033` landed, the launcher bundle correctly froze fresh-shell resume executability, but a residual operator-surface gap remained: when command discovery already knew the current shell was in `ambient_catalog_mismatch_requires_explicit_catalog`, the bundle still labeled short launcher commands as `preferred_*` while only placing the real mismatch-safe canonical commands under `recommended_*`. That split semantic ownership between a convenience shortcut and the actual executable primary surface.
+- `primary_owner_doc`: `docs/governance/identity-codex-launcher-governance-v1.6.14.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`
+  - `README.md`
+  - `scripts/render_identity_codex_launcher.py`
+- `machine_gate`:
+  - `scripts/ci/run_identity_codex_launcher_probes_ci.sh`
+  - `scripts/docs_command_contract_check.py`
+  - direct replay: `python3 scripts/render_identity_codex_launcher.py commands --identity-id <id> --catalog <alt-catalog> --thread-id <host-thread-uuid> --session-id <run:session-id> --json-only`
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - when the bundle classifies `ambient_catalog_mismatch_requires_explicit_catalog`, `preferred_start_command` must equal the same canonical fresh-shell primary command as `recommended_start_command`;
+  - under that same mismatch state, `preferred_resume_command` must equal `recommended_resume_command` when resume is fresh-shell executable, or remain empty rather than labeling a stale short shortcut as preferred;
+  - any retained short launcher form must be explicitly demoted to a convenience/reference surface rather than remaining on the preferred operator lane;
+  - positive probe coverage must prove the mismatch lane with explicit `--catalog`, must prove that stale short resume shortcuts are not left on the preferred lane when tuple closure is non-authoritative under that mismatched catalog, and must keep `resume <host-thread-uuid>` semantically distinct from launcher tuple closure.
+- `current_evidence`:
+  - `scripts/render_identity_codex_launcher.py` now canonicalizes `preferred_start_command` to the same mismatch-safe fresh-shell command as `recommended_start_command` whenever `catalog_context_reason=ambient_catalog_mismatch_requires_explicit_catalog`;
+  - the same renderer now canonicalizes `preferred_resume_command` to the canonical resume surface under mismatch, while retaining short launchers only as `shortcut_start_command`, `shortcut_resume_command`, and `copyable_commands.*.shortcut` reference fields;
+  - `scripts/ci/run_identity_codex_launcher_probes_ci.sh` now copies the governed catalog to an alternate path and proves that ambient-catalog mismatch forces `preferred_*` and `recommended_*` to converge on the same explicit `--catalog` / `--session-id` primary surface;
+  - `README.md` plus the `v1.6.14` governance/review pair now explicitly freeze that short launchers may remain visible as convenience/reference surfaces under mismatch, but must not remain labeled as the preferred operator command surface.
+
+### ISSUE-035 - `v1.6.14` installed short launchers now stay pinned to their governed install catalog instead of inheriting ambient catalog drift
+
+- `status`: CLOSED
+- `problem_statement`: after `ISSUE-034` landed, the command bundle correctly stopped dual-ranking stale shortcuts under catalog mismatch, but a remaining execution-surface gap survived: an already-installed `id-<identity-id>` shortcut could still inherit ambient `IDENTITY_CATALOG` drift from the shell before its own launcher logic ran, causing global identities invoked from a project shell to resolve against the wrong catalog and fail even though the canonical explicit generic command already worked.
+- `primary_owner_doc`: `docs/governance/identity-codex-launcher-governance-v1.6.14.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`
+  - `README.md`
+  - `scripts/identity_codex_launcher_common.py`
+  - `scripts/install_identity_codex_launcher.py`
+  - `scripts/validate_identity_codex_launcher.py`
+- `machine_gate`:
+  - `scripts/ci/run_identity_codex_launcher_probes_ci.sh`
+  - `scripts/validate_identity_codex_launcher.py`
+  - `scripts/docs_command_contract_check.py`
+  - direct replay: `IDENTITY_CATALOG=<foreign-catalog> ${CODEX_HOME}/bin/id-<identity-id> --dry-run --json-only -- resume <host-thread-uuid>`
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - installed `id-<identity-id>` shims must forward explicit `--catalog <resolved-catalog>` internally for both `commands` and `exec`, so ambient env/catalog drift cannot silently rebind the shortcut to a foreign catalog;
+  - launcher install validation must fail-close if a shortcut exists without that governed catalog binding;
+  - probe coverage must prove both `commands` and `--dry-run -- resume <host-thread-uuid>` succeed for the shortcut even when `IDENTITY_CATALOG` is intentionally pointed at a foreign catalog;
+  - this execution-stability catalog pinning must not be misreported as a change to the mismatch discovery semantics: the command bundle must still keep the explicit generic `--catalog` surface as the preferred/recommended primary command under mismatch.
+- `current_evidence`:
+  - `scripts/identity_codex_launcher_common.py` now renders the shortcut shim with explicit `--catalog <resolved-catalog>` forwarding plus a governed catalog-binding marker comment, covering both `commands` and `exec`;
+  - `scripts/install_identity_codex_launcher.py` and `scripts/render_identity_codex_launcher.py` now pass the selected governed catalog into shortcut rendering instead of leaving the shortcut catalog-agnostic;
+  - `scripts/validate_identity_codex_launcher.py` now fail-closes stale installed shortcuts missing explicit catalog binding;
+  - `scripts/render_identity_codex_launcher.py` now preflights both command-bundle and exec surfaces through `scripts/validate_identity_runtime_mode_guard.py` in observational mode, so repo-metadata fallback identities fail-close with machine-readable admissibility payloads while launcher-owned env/catalog mismatch semantics remain available for canonical explicit-command rendering;
+  - `scripts/ci/run_identity_codex_launcher_probes_ci.sh` now injects env/catalog mismatch and proves the installed shortcut still returns a valid mismatch-aware command bundle and a valid dry-run resume payload;
+  - the same launcher probe lane now also proves structured fail-close for runtime-unadmitted repo-metadata identities on both `commands --json-only` and `--dry-run --json-only`, replacing the old traceback-only crash mode with the shared admissibility split;
+  - the fresh-shell ingress path is now hardened by the protocol-owned env loaders (`scripts/use_local_identity_env.sh` and related launcher probe coverage), which expose `${CODEX_HOME}/bin` on `PATH` idempotently instead of leaving short-launcher availability to manual shell edits;
+  - `README.md` plus the `v1.6.14` governance/review pair now explicitly separate shortcut execution-time catalog pinning from the operator-visible preferred command surface under mismatch.
+
+### ISSUE-036 - `RQ-046` receipt-family bundle projection and release-freeze budget ceiling lagged final 1.6.x hardening
+
+- `status`: CLOSED
+- `problem_statement`: late `1.6.x` hardening exposed two release-freeze gaps that were both shared-infrastructure issues rather than pack patches:
+  - `scripts/validate_identity_context_continuity_receipts.py` returned a correct direct PASS/FAIL verdict but did not project bundle-compatible contract truth for `required_gate_bundle_runner.py --target-name identity_context_continuity_receipts`, so single-target bundle probes could still fail-close on `bundle_entry_contract_failed`;
+  - the final continuity hardening introduced one new `IP-ICREC-005` code, leaving the machine-maintained control-plane budget ceiling one raw error-code behind audited head.
+- `primary_owner_doc`: `docs/governance/identity-context-continuity-governance-v1.6.16.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md`
+  - `identity/protocol/mappings/control-plane-budget.v1.6.yaml`
+  - `identity/protocol/mappings/control-plane-status.v1.6.json`
+  - `docs/governance/identity-v1.6x-release-closure-governance.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md`
+  - `scripts/required_gate_bundle_runner.py`
+- `machine_gate`:
+  - `scripts/validate_identity_context_continuity_receipts.py`
+  - direct replay: `python3 scripts/required_gate_bundle_runner.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --operation scan --target-name identity_context_continuity_receipts --json-only`
+  - `scripts/ci/run_identity_context_continuity_probes_ci.sh`
+  - `scripts/validate_control_plane_budget.py`
+  - `scripts/validate_control_plane_status_sync.py`
+- `root_cause`: RC-01 and RC-03
+- `stop_condition`:
+  - inherited `RQ-046` requirement truth is projected as bundle-compatible runtime fields instead of being available only to direct validator consumers;
+  - non-canonical `receipt_family_contract_id` drift fail-closes before receipt-join interpretation;
+  - single-target bundle replay for `identity_context_continuity_receipts` returns `PASS_REQUIRED` on a live adopted identity;
+  - the final `1.6.x` control-plane budget/status baseline is refreshed through the machine renderers and returns green without hand-edited budget shortcuts.
+- `current_evidence`:
+  - `scripts/identity_context_continuity_common.py` now derives receipt-family requirement truth from the inherited `context_continuity_contract_v1` / `reentry_brief_consumption_contract_v1` pair when no standalone task key exists;
+  - `scripts/validate_identity_context_continuity_receipts.py` now emits `required_contract`, `auto_required_signal`, `contract_key`, `contract_id`, and `contract_derivation_mode`, and it now fail-closes non-canonical receipt-family binding drift with `IP-ICREC-005`;
+  - `scripts/ci/run_identity_context_continuity_probes_ci.sh` now proves both the positive bundle-compatible projection and a negative contract-drift fixture while keeping the existing multi-hop join proof intact;
+  - direct live replay on `base-repo-audit-expert-v3` now returns `bundle_status=PASS_REQUIRED` for `python3 scripts/required_gate_bundle_runner.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --operation scan --target-name identity_context_continuity_receipts --json-only`;
+  - `python3 scripts/materialize_control_plane_surfaces.py --write --json-only` now re-anchors the final `1.6.x` release-freeze baseline through the canonical sequenced control-plane materializer, delegating budget refresh before status refresh so `scripts/validate_control_plane_budget.py --json-only` and `scripts/validate_control_plane_status_sync.py --json-only` both return `PASS_REQUIRED` without write-order races or hand-edited shortcuts;
+  - `docs/governance/identity-v1.6x-release-closure-governance.md` plus `docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md` now freeze the version-boundary law that `1.6.x` must close current-universe debt on root / machine / runtime terms before `1.7.x` is allowed to begin as a future-facing line.
+
+### ISSUE-037 - Weak live linkage closure is now machine-landed across trio/prompt/sample/loop consumer lanes
+
+- `status`: CLOSED
+- `problem_statement`: the stream opened because several protocol-owned consumers could pass on declaration, prompt/sample/meta, or freshness-only signals even when current-run binding and next-hop consumption were not yet proven. The fix had to remain additive shared infrastructure rather than a semantic reopen of `v1.6.17` / `v1.6.18`.
+- `primary_owner_doc`: `docs/governance/identity-weak-live-linkage-governance-v1.6.19.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.19-weak-live-linkage.md`
+  - `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md`
+  - `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md`
+  - `identity/protocol/IDENTITY_PROTOCOL.md`
+  - `identity/protocol/IDENTITY_RUNTIME.md`
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`
+- `machine_gate`:
+  - `scripts/validate_identity_tool_installation.py`
+  - `scripts/validate_identity_vendor_api_discovery.py`
+  - `scripts/validate_identity_vendor_api_solution.py`
+  - `scripts/validate_discovery_requiredization.py`
+  - `scripts/validate_identity_capability_arbitration.py`
+  - `scripts/validate_identity_experience_feedback.py`
+  - `scripts/validate_identity_knowledge_acquisition.py`
+  - `scripts/validate_identity_trigger_regression.py`
+  - `scripts/validate_identity_routing_learning_strengthening.py`
+  - `scripts/validate_feedback_to_judgement_loopback.py`
+  - `scripts/validate_prompt_bootstrap_capability.py`
+  - `scripts/validate_prompt_capability_matrix.py`
+  - `scripts/validate_prompt_derivation_conformance.py`
+  - `scripts/validate_identity_experience_feedback_governance.py`
+  - `scripts/validate_identity_weak_live_linkage.py`
+  - `scripts/repair_contract_backfill.py`
+  - `scripts/execute_identity_upgrade.py`
+  - `scripts/ci/run_identity_weak_live_linkage_probes_ci.sh`
+- `root_cause`: RC-01 and RC-06
+- `stop_condition`:
+  - `ASB16-RQ-055` remains the machine-law intake for the four-layer differential-audit method;
+  - prompt-side validators prove current-run driver binding rather than prompt presence alone;
+  - sample-family validators retain sample/self-test semantics while strict operations auto-select governed current-run live reports when present;
+  - loop-center semantic truth and live-bridge truth stay machine-separated, and both replay green on real runtime identities once shared current-run route/roundtable receipts exist;
+  - freshness-only latest-log checks stay distinct from same-run binding, and the same-run join replays green on real runtime identities;
+  - the closure remains shared infrastructure only: no pack-local workaround, no validator loosening, no hardcoded identity exception, and no reopening of `v1.6.17` / `v1.6.18`.
+- `current_evidence`:
+  - `scripts/weak_live_current_run_projection_common.py` now lands one shared producer/backfill lane for:
+    - current-run sample-family live reports,
+    - route optimization / roundtable receipts,
+    - current-run feedback-log joins;
+  - `scripts/create_identity_pack.py` now auto-wires the route optimization + roundtable contract family for new packs;
+  - `scripts/repair_contract_backfill.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --apply --json-only` and the same replay on `custom-creative-ecom-analyst` now both return `current_run_live_projection_status=PASS_REQUIRED` with route contracts restored and governed live artifacts written under `runtime/reports/`, `runtime/protocol-feedback/`, and `runtime/logs/feedback/`;
+  - direct runtime replay on both `base-repo-audit-expert-v3` and `custom-creative-ecom-analyst` now returns:
+    - `overall_linkage_status=PASS_REQUIRED`
+    - `operational_closure_class=full_operational_closure`
+    - `live_bridge_status=PASS_REQUIRED`
+    - `route_live_binding_status=PASS_REQUIRED`;
+  - direct self-run on `base-repo-audit-expert-v3` via `python3 scripts/execute_identity_upgrade.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3` produced `runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1774398915.json`, and that report now carries `weak_live_current_run_projection_status=PASS_REQUIRED` plus seven projection refs in `artifacts`;
+  - `bash scripts/ci/run_identity_weak_live_linkage_probes_ci.sh` remains green, and its hermetic closure proof is explicitly kept separate from real-runtime closure.
+
+### ISSUE-038 - Broadcast-delivery and identity communication transport convergence are now protocol-owned and fleet-closed
+
+- `status`: CLOSED
+- `problem_statement`: component-owner semantics already existed for host-gateway broadcast, agent handoff, collaboration trigger, protocol-feedback reply/inbox, and protocol-feedback atomic emit, but active identities adopted them unevenly and there was no shared convergence executor or fleet closure checker for the end-to-end transport surface. That left the protocol with owner-green semantics but adoption-red runtime packs.
+- `primary_owner_doc`: `docs/governance/identity-broadcast-communication-convergence-governance-v1.6.20.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.20-broadcast-communication-convergence.md`
+  - `docs/governance/identity-host-unique-channel-governance-v1.6.6.md`
+  - `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md`
+  - `identity/protocol/IDENTITY_RUNTIME.md`
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`
+- `machine_gate`:
+  - `scripts/validate_identity_broadcast_delivery.py`
+  - `scripts/run_identity_broadcast_delivery.py`
+  - `scripts/check_identity_broadcast_migration_closure.py`
+  - `scripts/validate_identity_communication_transport.py`
+  - `scripts/run_identity_communication_transport.py`
+  - `scripts/check_identity_communication_transport_closure.py`
+  - `scripts/ci/run_identity_broadcast_delivery_probes_ci.sh`
+  - `scripts/ci/run_identity_communication_transport_probes_ci.sh`
+- `root_cause`: RC-06
+- `stop_condition`:
+  - dedicated broadcast-delivery adoption is restored and validated through shared backfill + shared sync executor + fleet closure checker;
+  - aggregate communication transport is restored and validated through one bounded shared convergence executor instead of structure-only green or manual bootstrap;
+  - creator/update/gate/readiness surfaces consume the same shared lanes;
+  - direct live replay on `base-repo-audit-expert-v3` plus workspace-fleet closure replay are green without pack-local repair logic;
+  - semantic ownership stays clean: broadcast delivery does not collapse into protocol-feedback or learning, and identity communication transport does not collapse into strict identity-to-identity-only messaging or a new artifact family.
+- `current_evidence`:
+  - `bash scripts/ci/run_identity_broadcast_delivery_probes_ci.sh` returns `PASS`;
+  - `bash scripts/ci/run_identity_communication_transport_probes_ci.sh` returns `PASS`;
+  - `python3 scripts/check_identity_broadcast_migration_closure.py --catalog ../.identity/catalog.local.yaml --workspace-runtime-only --json-only` returns `PASS_REQUIRED`;
+  - `python3 scripts/check_identity_communication_transport_closure.py --catalog ../.identity/catalog.local.yaml --workspace-runtime-only --json-only` returns `PASS_REQUIRED`;
+  - direct runtime replay on `base-repo-audit-expert-v3` through `python3 scripts/repair_contract_backfill.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --apply --json-only` followed by `python3 scripts/run_identity_communication_transport.py --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id base-repo-audit-expert-v3 --json-only` now returns `PASS_REQUIRED` with green `broadcast_sync_executor_status`, `atomic_emit_bootstrap_status`, and `transport_projection_status`;
+  - the same shared backfill + shared convergence lane also replays green on `custom-creative-ecom-analyst`, `base-repo-architect`, and `base-repo-closure-orchestrator`, proving this stream closes as shared infrastructure rather than a one-pack workaround.
+
+### ISSUE-039 - Terminal clean truth / canonical publishability / negative-feedback veto are now protocol-owned machine law
+
+- `status`: CLOSED
+- `problem_statement`: lower-layer execution closure already had legitimate strict non-upgrade and review-required closure branches, but the protocol still lacked one higher-order machine contract to decide whether a closed execution may occupy clean terminal truth or canonical publishable-result semantics. That left dirty terminal states vulnerable to “done enough” misreadings even when execution closure itself was legal.
+- `primary_owner_doc`: `docs/governance/identity-terminal-truth-cleanliness-governance-v1.6.21.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.21-terminal-truth-cleanliness.md`
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+  - `identity/protocol/IDENTITY_PROTOCOL.md`
+  - `identity/protocol/IDENTITY_RUNTIME.md`
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`
+- `machine_gate`:
+  - `scripts/terminal_truth_cleanliness_common.py`
+  - `scripts/validate_terminal_truth_cleanliness.py`
+  - `scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh`
+  - `scripts/create_identity_pack.py`
+  - `scripts/repair_contract_backfill.py`
+  - `scripts/execute_identity_upgrade.py`
+  - `scripts/required_gate_bundle_runner.py`
+  - `scripts/validate_required_contract_coverage.py`
+  - `scripts/ci/run_required_runtime_gates_ci.sh`
+- `root_cause`: RC-01 and RC-06
+- `stop_condition`:
+  - execution closure truth remains preserved and distinct from clean terminal truth;
+  - negative feedback vetoes clean terminal truth / canonical publishability without falsely rewriting every review-required execution closure into “execution invalid”;
+  - create/backfill/fresh-run producer lanes all emit one shared terminal-truth projection family;
+  - clean fixture proof passes and dirty fixtures fail-close on the higher-order lane;
+  - explicit terminal-state equivalence classes distinguish review/revalidation/repair/retry/quarantine/failure semantics rather than collapsing non-clean states into one bucket;
+  - generic completed/done alias surfaces remain subordinate to the same higher-order clean-terminal truth law rather than silently reoccupying clean-terminal semantics;
+  - runtime dirty reports become machine-visible dirty terminal states instead of surviving as quasi-clean terminal truth.
+- `current_evidence`:
+  - `bash scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh` now passes with:
+    - clean fixture -> `identity_terminal_truth_cleanliness_status=PASS_REQUIRED`, `terminal_state_machine_status=PASS_REQUIRED`, `terminal_state_class=completed_clean`
+    - review-required fixture -> `execution_closure_status=PASS_REQUIRED`, `terminal_truth_class=review_required_execution_closure`, `publishable=false`, `terminal_state_class=review_pending`
+    - explicit review flag fixture -> `review_required=true` still vetoes clean terminal truth even when `next_action` is otherwise neutral, and the payload remains coherently classified as `terminal_state_class=review_pending`
+    - degraded fixture -> `negative_feedback_class=degraded_execution`, `loopback_required=true`, `next_state_after_veto=revalidation_pending`, `terminal_state_class=revalidation_pending`
+    - explicit dirty retry fixture -> execution closure may remain green while `fallback_reason`, `needs_revalidation=true`, `retry_required=true`, and structured `error_info` still veto clean terminal truth and force `terminal_state_class=retry_pending`
+    - placeholder fixture -> `negative_feedback_class=placeholder_result`, `terminal_state_class=repair_pending`
+    - adoption-mismatch fixture -> `terminal_state_machine_status=FAIL_REQUIRED` with explicit projection-drift blockers;
+    - clean-alias-drift fixture -> `terminal_clean_alias_surface_status=FAIL_REQUIRED` once generic `status` / `done` surfaces claim completion while the higher-order lane stays non-clean;
+  - `scripts/create_identity_pack.py` now auto-wires `identity_terminal_truth_cleanliness_contract_v1` for new packs;
+  - `scripts/repair_contract_backfill.py` now backfills the same contract for adopted packs and projects the higher-order terminal-truth fields onto the active execution report;
+  - `scripts/execute_identity_upgrade.py` now emits the same projection family on fresh runs;
+  - direct runtime replay on the current workspace-local `base-repo-audit-expert-v3` execution report now fail-closes as non-clean terminal truth because the active report is still pre-mutation-gate blocked (`all_ok=false`, `writeback_status=MISSING`, `next_action=satisfy_pre_mutation_gate_and_rerun_update`), which is the intended new machine judgment.
+
+
+### ISSUE-040 - Chat history is being misused as handoff state and lane closure lacks a durable skeleton
+
+- `status`: CLOSED
+- `problem_statement`: accepted ISSUE-040 closure moved handoff, continuation, and reopen away from chat-native recap into machine-admitted lane-card, execution-receipt, and reopen-gate contracts. Workbook truth is synced to that accepted closure chain without reopening family semantics.
+- `primary_owner_doc`: `docs/governance/identity-lane-card-handoff-governance-v1.6.x.md`; `docs/governance/identity-lane-execution-receipt-governance-v1.6.x.md`; `docs/governance/identity-lane-reopen-gate-governance-v1.6.x.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-card-handoff.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-execution-receipt.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-reopen-gate.md`
+  - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
+- `machine_gate`:
+  - `c09a3a6` formalized `lane_card_handoff_contract_v1` with `no card, no handoff / no takeover`;
+  - `7dc829e32a4fc7a2a01757ed02aa15512aa790cb` formalized `lane_execution_receipt_contract_v1` with `no durable execution receipt, no continuation claim`;
+  - `908b8348d22c0583408cc6dfc4acd97217a03579` formalized `lane_reopen_gate_contract_v1` with machine-triggered reopen only.
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - no card, no handoff; no card, no takeover;
+  - no durable execution receipt, no continuation claim;
+  - reopen is machine-triggered only.
+- `current_evidence`:
+  - accepted closure chain: `c09a3a6` -> `7dc829e32a4fc7a2a01757ed02aa15512aa790cb` -> `908b8348d22c0583408cc6dfc4acd97217a03579`;
+  - workbook truth for ISSUE-040 is synchronized to the accepted lane-card handoff family and does not retain pending or OPEN state.
+
+### ISSUE-041 - Subagent/probe residue teardown is not part of closure and lifecycle governance is incomplete
+
+- `status`: CLOSED
+- `problem_statement`: accepted ISSUE-041 closure made residue teardown receipt, child runtime owner binding, and governed-root replay exclusion part of closure law. Workbook truth is synced to that accepted closure chain without reopening family semantics.
+- `primary_owner_doc`: `docs/governance/identity-residue-teardown-closure-governance-v1.6.x.md`; `docs/governance/identity-child-runtime-owner-binding-governance-v1.6.x.md`; `docs/governance/identity-governed-root-replay-exclusion-governance-v1.6.x.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-residue-teardown-closure.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-child-runtime-owner-binding.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-governed-root-replay-exclusion.md`
+  - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
+- `machine_gate`:
+  - `9fdb1114ed63a467846141a9049cc949f2b5e131` formalized `residue_teardown_closure_contract_v1` with required teardown receipt fields and `closure_incomplete_if_residue_teardown_missing`;
+  - `a929b0267f3c50a827b1385123f081f487806efd` formalized `child_runtime_owner_binding_admission_contract_v1` so unowned child tmp/probe/runtime roots are not admitted;
+  - `3aed210` formalized `governed_root_replay_exclusion_contract_v1` so nested governed-root replay is not admitted and guard cleanup may delete only machine-admitted stale residue.
+- `root_cause`: RC-01 and RC-06
+- `stop_condition`:
+  - closure is incomplete when teardown receipts are missing;
+  - child tmp/probe/runtime residue without owner binding is not admitted;
+  - nested governed-root replay is not admitted;
+  - guard cleanup deletes only machine-admitted stale residue and must not overreach live runtime.
+- `current_evidence`:
+  - accepted closure chain: `9fdb1114ed63a467846141a9049cc949f2b5e131` -> `a929b0267f3c50a827b1385123f081f487806efd` -> `3aed210`;
+  - workbook truth for ISSUE-041 is synchronized to the accepted lifecycle closure family and does not retain pending or OPEN state.
+
+### ISSUE-042 - Result-only execution accounting and fail-close closure gating are missing
+
+- `status`: CLOSED
+- `problem_statement`: accepted ISSUE-042 closure froze result-only progress, validation, and bounded closure gates so narrative effort cannot be mistaken for delivery. Workbook truth is synced to that accepted closure chain without reopening family semantics.
+- `primary_owner_doc`: `docs/governance/identity-result-only-progress-accounting-governance-v1.6.x.md`; `docs/governance/identity-validation-receipt-required-for-completion-governance-v1.6.x.md`; `docs/governance/identity-bounded-commit-required-for-closure-governance-v1.6.x.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-result-only-progress-accounting.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-validation-receipt-required-for-completion.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-bounded-commit-required-for-closure.md`
+  - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
+- `machine_gate`:
+  - `63fa59804fc2a2b49d44a1a96245e40ff02cf8e0` formalized `result_only_progress_accounting_contract_v1` with `not written = not progressed`;
+  - `e20fe7f7ce028463bcfa0dafbee3d857bfb1d62f` formalized `validation_receipt_required_for_completion_contract_v1` with `not validated = not complete`;
+  - `0dfbdcf6b52ad9c1f3df762dca4a3af4814471af` formalized `bounded_commit_required_for_closure_contract_v1` with `not committed = not closed`.
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - `not written = not progressed`;
+  - `not validated = not complete`;
+  - `not committed = not closed`.
+- `current_evidence`:
+  - accepted closure chain: `63fa59804fc2a2b49d44a1a96245e40ff02cf8e0` -> `e20fe7f7ce028463bcfa0dafbee3d857bfb1d62f` -> `0dfbdcf6b52ad9c1f3df762dca4a3af4814471af`;
+  - workbook truth for ISSUE-042 is synchronized to the accepted result-only closure family and does not retain pending or OPEN state.
+
+
+
+### RC-01 Pending intake cluster
+
+- `status`: CLEAR
+- canonical_scope: no pending intake items are open in the current v1.6 workbook snapshot; the marker is retained so workbook family validation can resolve the pending-intake cluster surface without reinterpreting accepted issue truth.
+
+### ISSUE-043 — non_owner_machine_law_reinforcement_admission_contract_v1
+
+- `status`: CLOSED
+- governing_law: `machine_law_reinforcement_may_be_admitted_from_root_middle_or_consumer_surfaces_without_redefining_accepted_root_law`
+- unique_delta_vs_issue_045: cross-layer whole-lane reinforcement completion may start from root, middle, or consumer layers and still complete the lane, but only through admitted reinforcement scope, preserved owner truth, and without redefining accepted root law.
+- reinforcement_entry_surface: `root|middle|consumer`
+- reinforcement_authority_source: `accepted_root_law_ref`
+- accepted_root_law_ref: `explicit_required`
+- reinforcement_scope_status: `bounded`
+- whole_lane_completion_target: `complete_whole_lane`
+- whole_lane_completion_status: `admitted`
+- non_owner_reinforcement_status: `admitted`
+- cross_layer_completion_admission_status: `admitted`
+- canonical_owner_truth_preservation_status: `preserved`
+- root_semantic_redefinition_status: `not_redefined`
+- stale_reasons: `[]`
+
+### Hard boundaries
+- preserve canonical owner truth
+- preserve accepted root law semantics
+- fail-close on silent whole-lane reopen
+- do not overwrite ISSUE-044 / ISSUE-045 truth
+- do not restate ISSUE-045 continuation / anti-loop law
+- do not restate ISSUE-046 runtime actuator law
+- do not restate ISSUE-044 adoption law
+
+### ISSUE-044 - Identity instance protocol delta adoption state is not machine-visible and relevant protocol drift is not fail-closed
+- `status`: CLOSED
+- `status`: CLOSED
+- `problem_statement`: accepted ISSUE-044 closure formalized a machine-visible protocol delta adoption bridge so the authoritative protocol head, last seen head, adopted head, relevant unadopted delta count, capability families, and fail-close stale reasons are recorded on one governed surface instead of being inferred from chat memory or ad hoc rerun judgment. Workbook truth is synced to that accepted closure without reopening ISSUE-040/041/042 execution-lifecycle semantics.
+- `primary_owner_doc`: `docs/governance/identity-instance-protocol-delta-adoption-governance-v1.6.x.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-instance-protocol-delta-adoption.md`
+  - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
+  - `docs/governance/identity-issue-register-truth-sync-governance-v1.6.x.md`
+- `machine_gate`:
+  - `ebfe53bfb5c124a0dd8bf50d13bbe8f1133a3acc` formalized `instance_protocol_delta_adoption_contract_v1` through `scripts/instance_protocol_delta_adoption_contract_common.py`, `scripts/validate_instance_protocol_delta_adoption.py`, and `scripts/ci/run_instance_protocol_delta_adoption_probes_ci.sh`, freezing `protocol_current_head`, `last_seen_protocol_commit`, `last_adopted_protocol_commit`, `capability_families`, `relevant_unadopted_commit_count`, `protocol_delta_adoption_status`, `protocol_delta_adoption_mode`, `state_path`, and `stale_reasons` as the canonical adoption-state family.
+- `root_cause`: RC-02 and RC-06
+- `stop_condition`:
+  - authoritative protocol truth must resolve from one authoritative root before adoption state is admitted;
+  - relevant protocol delta adoption remains pending until protocol owner surfaces and instance-local adoption markers are both ready;
+  - adopted head may advance only after current/seen/adopted separation and machine-written stale reasons are preserved on the governed state surface;
+  - `protocol_delta_adoption` remains semantically distinct from `instance_script_protocol_adoption`.
+- `current_evidence`:
+  - accepted closure commit: `ebfe53bfb5c124a0dd8bf50d13bbe8f1133a3acc`;
+  - direct validator replay `python3 scripts/validate_instance_protocol_delta_adoption.py --json-only` returns `PASS_REQUIRED`;
+  - direct probe replay `bash scripts/ci/run_instance_protocol_delta_adoption_probes_ci.sh` returns `PASS`;
+  - workbook and issue-register truth for ISSUE-044 now route this bridge as a distinct closed lane rather than reopening the ISSUE-040/041/042 execution-loop family.
+
+### ISSUE-045 - Lane segmented infrastructure admission is not frozen and handoff still depends on chat reconstruction
+
+- `status`: CLOSED
+- `problem_statement`: active execution-loop closures eliminated chat-only continuation claims and unbounded residue replay, but continuation across a multi-layer lane still required one canonical law that freezes root/middle/tail admission, durable baton fields, and tail truth-sync non-reinterpretation on repo-visible owner surfaces instead of chat-native reconstruction.
+- `primary_owner_doc`: `docs/governance/identity-lane-segmented-infrastructure-admission-governance-v1.6.x.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-segmented-infrastructure-admission.md`
+  - `docs/governance/identity-lane-card-handoff-governance-v1.6.x.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-card-handoff.md`
+  - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
+  - `docs/governance/identity-issue-register-truth-sync-governance-v1.6.x.md`
+- `machine_gate`: canonical governance/review law freeze landed; segmented continuation must now consume repo-visible baton state and may not reopen semantics through chat recap or tail truth-sync
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - root, middle, and tail lane segments must each have an admissible entry rule that does not require reopening full chat context;
+  - durable baton state must become machine-visible and bounded on repo surfaces, including fixed write set, layer state, next exact action, validation bundle, reopen triggers, and commit gate;
+  - tail truth-sync may synchronize accepted closure, but it must not reinterpret or replace accepted root law;
+  - continuation and takeover must remain legal through machine-admitted baton surfaces rather than chat-native recap.
+- `current_evidence`:
+  - `docs/governance/identity-lane-segmented-infrastructure-admission-governance-v1.6.x.md` now freezes segmented entry rules for `root`, `middle`, and `tail`, the required baton field family, and the prohibition on chat-native takeover;
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-segmented-infrastructure-admission.md` now records the audit judgment that continuation must consume repo-visible baton surfaces, that execution-loop state fields (`planning_budget_status`, `scope_lock_status`, `mutation_phase_entry_status`, `repeated_plan_restatement_status`, `repeated_reanchor_status`, `repeated_compaction_without_progress_status`, `execution_loop_status`, `stale_reasons`) are machine-visible, and that `execution_loop_not_entering_mutation_phase` fail-closes repeated pre-mutation looping;
+  - accepted ISSUE-040 / ISSUE-041 / ISSUE-042 closures remain complementary upstream protections, while ISSUE-045 now closes the lane-segmentation law gap without reopening those earlier streams.
+
+### ISSUE-046 - Scope-locked mutation-phase runtime enforcement is implemented but not canonically landed as a formal workbook/register issue
+
+- `status`: CLOSED
+- problem_statement: accepted owner surfaces already enforce the scope-locked mutation-phase runtime guard, but workbook/register had not yet landed that accepted runtime enforcement as a canonical formal issue, leaving long-term audit and tracking without a stable ISSUE-046 truth surface even though the governing runtime invariant was already implemented and adopted.
+- primary_owner_doc: `docs/governance/identity-scope-locked-mutation-phase-runtime-enforcement-governance-v1.6.x.md`
+- secondary_refs:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-scope-locked-mutation-phase-runtime-enforcement.md`
+  - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
+  - `docs/governance/identity-issue-register-truth-sync-governance-v1.6.x.md`
+- machine_gate: workbook/register formalization may land `scope_locked_mutation_phase_runtime_enforcement` as ISSUE-046 only by truth-syncing the already accepted owner-surface runtime guard; it must not restate, replace, or reinterpret the runtime law body and must preserve the already accepted ISSUE-044 adoption bridge.
+- root_cause: RC-03 and RC-06
+- stop_condition:
+  - ISSUE-046 must become a canonical workbook/register issue for the already implemented runtime guard law without rewriting the owner-surface invariant;
+  - workbook/register may perform formal promotion, truth-sync, ordering, and parseable status normalization only;
+  - ISSUE-043 / ISSUE-044 accepted closure truth must remain preserved while workbook tracking becomes machine-readable;
+  - ISSUE-045 / ISSUE-047 / ISSUE-048 and other blockers remain out of scope for this formal promotion lane.
+- current_evidence:
+  - `docs/governance/identity-scope-locked-mutation-phase-runtime-enforcement-governance-v1.6.x.md` remains the owner-surface law source for the runtime guard;
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-scope-locked-mutation-phase-runtime-enforcement.md` remains the accepted audit ledger for the runtime enforcement lane;
+  - workbook and issue-register truth now land ISSUE-046 as the canonical formal tracking issue for that already accepted runtime guard without rewriting the runtime law body or ISSUE-044 adoption truth.
+
+### ISSUE-047 - Execution-loop post-mutation closeout law is accepted but not canonically landed as a formal workbook/register issue
+
+- `status`: CLOSED
+- `problem_statement`: accepted phase-1 root-infra closure already formalized `execution_loop_after_mutation_not_closing` on canonical governance/review/common/validator/probe surfaces, but workbook/register had not yet landed that accepted closeout as one sole formal issue, leaving long-term audit and review without a canonical issue-routed truth anchor even though the owner-surface law was already accepted.
+- `primary_owner_doc`: `docs/governance/identity-execution-loop-after-mutation-not-closing-governance-v1.6.x.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.x-execution-loop-after-mutation-not-closing.md`
+  - `docs/governance/identity-workbook-truth-sync-governance-v1.6.x.md`
+  - `docs/governance/identity-issue-register-truth-sync-governance-v1.6.x.md`
+- `machine_gate`: accepted phase-1 closure `1e0ce227daf87d2f7853c4d7ff8c964bdfe499b0` already freezes `execution_loop_after_mutation_not_closing`; workbook/register phase-2 only truth-syncs that accepted owner-surface law as the sole formal issue and must not reopen or reinterpret the phase-1 invariant.
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - ISSUE-047 must become the sole formal workbook/register issue for this lane while preserving `1e0ce227daf87d2f7853c4d7ff8c964bdfe499b0` as the accepted truth anchor;
+  - workbook/register may synchronize accepted closure only and must not reinterpret, replace, or originate the already accepted governance/review/common/validator/probe law;
+  - once mutation-phase entry, staged paths, or validator/probe/targeted-regression evidence exists, allowed next actions remain collapsed to validator/probe/stage-and-commit or fail-close receipts, and any later reread/recap/re-anchor/reinspection must stay fail-closed as `execution_loop_after_mutation_not_closing`;
+  - ISSUE-043 / ISSUE-044 / ISSUE-045 / ISSUE-046, `protocol_lane_headstamp_continuity`, and other blockers remain out of scope for this formal issue landing.
+- `current_evidence`:
+  - accepted closure commit: `1e0ce227daf87d2f7853c4d7ff8c964bdfe499b0`;
+  - direct validator replay `python3 scripts/validate_execution_loop_after_mutation_not_closing.py --json-only` returns `PASS_REQUIRED`;
+  - direct probe replay `TMPDIR=$PWD/.tmp bash scripts/ci/run_execution_loop_after_mutation_not_closing_probes_ci.sh` returns `PASS`;
+  - targeted regression replay `TMPDIR=$PWD/.tmp python3 scripts/validate_execution_loop_after_mutation_not_closing.py --targeted-regression mutation_entered_closeout_only --json-only` returns `PASS_REQUIRED`;
+  - workbook and issue-register truth now land ISSUE-047 as the sole formal issue for the accepted phase-1 closure without rewriting the owner-surface invariant.
+
+### ISSUE-048 - Formal issue truth-sync and release-closure probe companion horizon are canonically synchronized
+
+- `status`: CLOSED
+- `problem_statement`: accepted phase-1 root-infra closure already froze `execution_loop_after_mutation_not_closing` on canonical owner surfaces, but release-closure workbook/register and the real probe companion horizon still needed one independent formal issue so long-term audit, release truth-sync, and probe expectations could converge on the same accepted anchor without reopening the phase-1 law.
+- `primary_owner_doc`: `docs/governance/identity-v1.6x-release-closure-governance.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md`
+  - `docs/release/identity-v1.6x-release-closure-summary.md`
+  - `scripts/release_closure_integrated_probe_common.py`
+- `machine_gate`: accepted phase-1 closure `1e0ce227daf87d2f7853c4d7ff8c964bdfe499b0` remains the sole owner-surface truth anchor; ISSUE-048 only lands formal workbook/register truth-sync plus release-closure probe companion sync and must not reopen or reinterpret the accepted phase-1 invariant.
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - ISSUE-048 must become the sole formal workbook/register issue for this release-closure truth-sync lane while preserving `1e0ce227daf87d2f7853c4d7ff8c964bdfe499b0` as the accepted truth anchor;
+  - release-closure governance/review/summary surfaces and the real probe companion helper must truth-sync the canonical workbook horizon to `ISSUE-048` without changing governing law, fail-close semantics, or probe class;
+  - once mutation-phase entry, staged paths, or validator/probe/targeted-regression evidence exists, allowed next actions remain collapsed to validator/probe/stage-and-commit or fail-close receipts, and any later reread/recap/re-anchor/reinspection must stay fail-closed as `execution_loop_after_mutation_not_closing`;
+  - ISSUE-043 / ISSUE-044 / ISSUE-045 / ISSUE-046, `protocol_lane_headstamp_continuity`, and other blockers remain out of scope for this formal issue truth-sync lane.
+- `current_evidence`:
+  - accepted phase-1 truth anchor: `1e0ce227daf87d2f7853c4d7ff8c964bdfe499b0`;
+  - accepted prior closed anchor remains `ISSUE-043` commit `fb7b5301626cb5d83504e9e94fe0e2cb9f787b7c`;
+  - release-closure governance/review/summary horizons now truth-sync to `ISSUE-048`;
+  - release-closure integrated probe companion now expects the canonical `ISSUE-048` horizon rather than a stale `ISSUE-047`;
+  - workbook and issue-register now land ISSUE-048 as the formal issue for release-closure truth-sync / probe companion sync without rewriting the accepted phase-1 owner-surface invariant.
+
+
+
+### ISSUE-049 - Explicit protocol-feedback escalation is not consumed into rail switch + canonical emission/receipt flow
+
+- `status`: CLOSED
+- `problem_statement`: explicit protocol-feedback / escalation requests were previously able to remain inside explanation-only handling instead of being consumed into machine action that selected the `protocol-feedback` rail and entered canonical emission / receipt flow.
+- `primary_owner_doc`: `docs/review/protocol-remediation-audit-ledger-v1.6.x-protocol-feedback-rail-switch-and-emission-obligation-consumption.md`
+- `secondary_refs`:
+  - `docs/governance/identity-protocol-feedback-rail-switch-and-emission-obligation-consumption-governance-v1.6.x.md`
+  - `scripts/protocol_feedback_rail_switch_and_emission_obligation_consumption_contract_common.py`
+  - `scripts/validate_protocol_feedback_rail_switch_and_emission_obligation_consumption.py`
+  - `scripts/ci/run_protocol_feedback_rail_switch_and_emission_obligation_consumption_probes_ci.sh`
+  - `scripts/validate_protocol_feedback_bootstrap_ready.py`
+  - `scripts/emit_protocol_feedback_atomic.py`
+  - `scripts/validate_protocol_feedback_atomic_emit.py`
+- `machine_gate`: once a request is recognized as explicit `protocol-feedback` / escalation, the instance must switch to the protocol-feedback rail and enter canonical emission / receipt flow; explanation-only handling or generic chat acknowledgement is `FAIL_REQUIRED` and cannot count as admitted completion.
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - explicit protocol-feedback / escalation detection is machine-visible as `protocol_feedback_request_detected`;
+  - rule knowledge / applicability is machine-visible as `protocol_feedback_rule_known`;
+  - rail selection is machine-visible as `protocol_feedback_rail_selected` and identifies entry into the protocol-feedback rail rather than ordinary chat handling;
+  - emission obligation is machine-visible as `protocol_feedback_emission_obligation_status`;
+  - canonical channel entry / emit invocation / artifact materialization are machine-visible as `protocol_feedback_channel_entered`, `protocol_feedback_emit_invoked`, and `protocol_feedback_artifact_materialized`;
+  - rule consumption is machine-visible as `protocol_feedback_rule_consumption_status`;
+  - stale or incomplete handling remains machine-visible through `stale_reasons`;
+  - explanation-only handling after explicit escalation detection remains fail-closed as non-completion.
+- `closure_evidence`:
+  - `docs/governance/identity-protocol-feedback-rail-switch-and-emission-obligation-consumption-governance-v1.6.x.md` and `docs/review/protocol-remediation-audit-ledger-v1.6.x-protocol-feedback-rail-switch-and-emission-obligation-consumption.md` now freeze the bounded ISSUE-049 contract with the required machine-visible state family;
+  - `scripts/protocol_feedback_rail_switch_and_emission_obligation_consumption_contract_common.py` and `scripts/validate_protocol_feedback_rail_switch_and_emission_obligation_consumption.py` now compose `scripts/validate_protocol_feedback_bootstrap_ready.py`, `scripts/emit_protocol_feedback_atomic.py`, and `scripts/validate_protocol_feedback_atomic_emit.py` into one executable proof lane that fail-closes skipped emit, skipped channel entry, and missing artifacts;
+  - `bash scripts/ci/run_protocol_feedback_rail_switch_and_emission_obligation_consumption_probes_ci.sh` now proves positive explicit-request consumption plus negative fail-close on skipped atomic emit, skipped outbox sync, and document drift;
+  - `TMPDIR=$PWD/.tmp python3 scripts/validate_protocol_feedback_rail_switch_and_emission_obligation_consumption.py --json-only` returns `PASS_REQUIRED`;
+  - `TMPDIR=$PWD/.tmp bash scripts/ci/run_protocol_feedback_rail_switch_and_emission_obligation_consumption_probes_ci.sh` returns `PASS`.
+- `current_evidence`:
+  - ISSUE-049 remains narrow: it closes explicit rail switch + canonical emission / receipt consumption only;
+  - existing bootstrap / atomic emit / atomic emit validation surfaces remain the shared primitives consumed by the new lane;
+  - non-goals remain fixed: do not reopen owner-binding portability, anti-loop family semantics, or generalized protocol-feedback scope.
+
+### ISSUE-050 - Architect-authorized execution-governance follow-on lacks machine-admitted single-owner two-phase lane semantics
+
+- `status`: CLOSED
+- `problem_statement`: architect-owned execution-governance follow-on could diagnose the right loop-control gap yet still mix role fields with concrete identity, require avoidable second-owner handoff before the law was frozen, or let implementation begin without a repo-visible contract-freeze receipt.
+- `primary_owner_doc`: `docs/review/protocol-remediation-audit-ledger-v1.6.x-single-owner-two-phase-execution-governance.md`
+- `secondary_refs`:
+  - `docs/governance/identity-single-owner-two-phase-execution-governance-v1.6.x.md`
+  - `scripts/single_owner_two_phase_execution_governance_contract_common.py`
+  - `scripts/validate_single_owner_two_phase_execution_governance.py`
+  - `scripts/ci/run_single_owner_two_phase_execution_governance_probes_ci.sh`
+- `machine_gate`: architect-authorized execution-governance follow-on is admitted only as one non-canonical `protocol_feedback_packet` with `single_owner_two_phase` semantics under `architect_authorized_single_owner_two_phase_execution_governance_contract_v1`; `phase_b` must remain blocked until `execution_governance_contract_freeze_receipt` is repo-visible, and role/identity pollution is fail-closed because concrete identity is not admitted in `owner_role` or `suggested_executor_role`.
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - packet semantics remain machine-visible through `truth_class`, `canonical`, `portable`, and `runtime_binding_not_authoritative`;
+  - role / identity separation remains machine-visible through `owner_role`, `suggested_executor_role`, and non-canonical `suggested_executor_identity` receipt-only admission;
+  - phase ordering remains machine-visible through `lane_execution_model=single_owner_two_phase`, `phase_a_completion_receipt_status`, and `phase_b_precondition_status`;
+  - same-owner continuation remains the default through `handoff_policy.default_mode=single_owner_no_handoff`;
+  - second-owner entry remains fail-closed unless blocker / handoff receipt is machine-visible;
+  - stale or incomplete handling remains machine-visible through `stale_reasons`.
+- `closure_evidence`:
+  - `docs/governance/identity-single-owner-two-phase-execution-governance-v1.6.x.md` and `docs/review/protocol-remediation-audit-ledger-v1.6.x-single-owner-two-phase-execution-governance.md` now freeze ISSUE-050 as a bounded architect-authorized execution-governance lane that does not reopen accepted control-plane runtime-evidence-only closure;
+  - `scripts/single_owner_two_phase_execution_governance_contract_common.py` and `scripts/validate_single_owner_two_phase_execution_governance.py` now freeze the non-canonical packet payload, role/identity separation, phase-A freeze receipt gate, same-owner default, and second-owner fail-close rule;
+  - `bash scripts/ci/run_single_owner_two_phase_execution_governance_probes_ci.sh` now proves positive packet acceptance plus negative fail-close on canonicalization drift and role-field identity pollution;
+  - `TMPDIR=$PWD/.tmp python3 scripts/validate_single_owner_two_phase_execution_governance.py --json-only` returns `PASS_REQUIRED`;
+  - `TMPDIR=$PWD/.tmp bash scripts/ci/run_single_owner_two_phase_execution_governance_probes_ci.sh` returns `PASS`.
+- `current_evidence`:
+  - ISSUE-050 remains narrow: it admits same-owner two-phase execution-governance follow-on only;
+  - ISSUE-045 baton continuity, ISSUE-046 post-lock runtime enforcement, and ISSUE-049 protocol-feedback rail-switch remain upstream prerequisites rather than reopened targets;
+  - concrete identity remains forbidden in role fields and, if needed at all, is admitted only in non-canonical handoff / blocker receipts.
+
+
+## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
+
+1. The rows below capture desensitized follow-on reinforcement for active streams; they are routed through this workbook so the protocol architect can land them on canonical governance/review surfaces without reopening the closed `ISSUE-001..024` correctness family.
+2. These rows are routing/intake metadata only; semantic ownership remains with the target stream governance doc and its review ledger.
+
+### RF-ORCH-001 - Aggregate route-scope/cardinality projection closure
+
+- `classification`: architecture reinforcement intake, non-reopen
+- `judgment`: landed shared builders/validators now freeze aggregate capability-activation artifacts as multi-route summaries rather than route-scoped receipts, so the protocol-owned requirement is explicit scope/cardinality projection instead of a synthetic `route_selected`.
+- `canonical_landings`:
+  - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
+- `implementation_follow_on`:
+  - `scripts/instance_script_orchestration_common.py`
+  - `scripts/validate_identity_capability_activation.py`
+  - `scripts/validate_route_script_receipt_join.py`
+  - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
+- `machine_acceptance`:
+  - aggregate artifacts reuse one canonical field family: `route_scope`, `route_scope_mode`, `route_activation_strategy`, `route_ready_count`, `route_total_count`, `route_ids`, and `route_selection_cardinality`;
+  - route-scoped admission/execution/emit/recovery receipts continue requiring `route_selected` and keep `route_scope_mode=route_receipt` plus `route_ids=[route_selected]`;
+  - validator/probe coverage fail-closes if an artifact claims single-route scope without route provenance or drifts into parallel alias vocabulary.
+- `non_goals`:
+  - do not invent an arbitrary selected route for aggregate `route-any-ready` status;
+  - do not weaken `route_selected` on route-scoped receipts;
+  - do not mint parallel aliases such as `projection_scope`, `route_count`, or `cardinality`.
+
+### RF-ORCH-002 - Declared-vs-observed dependency projection closure
+
+- `classification`: architecture reinforcement intake, non-reopen
+- `judgment`: landed shared builders/validators now standardize one declared-vs-observed dependency projection across route-scoped and aggregate artifacts instead of leaving the diff fragmented across report families.
+- `canonical_landings`:
+  - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
+- `implementation_follow_on`:
+  - `scripts/instance_script_orchestration_common.py`
+  - `scripts/validate_route_script_receipt_join.py`
+  - `scripts/validate_identity_capability_activation.py`
+  - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
+- `machine_acceptance`:
+  - declared dependencies, observed activations/executions, and gap reasons are machine-visible through `declared_dependency_projection`, `observed_dependency_projection`, `dependency_gap_reasons`, `undeclared_usage_*`, and `missing_declared_dependency_*`;
+  - undeclared observed usage and missing declared dependency are surfaced through one governed gap model rather than per-artifact narrative-only wording;
+  - the same declared/observed projection stays reusable across route-scoped and aggregate artifacts where applicable.
+- `non_goals`:
+  - do not replace machine-readable diff with narrative-only explanations;
+  - do not absorb instance-specific business heuristics into dependency provenance;
+  - do not create pack-local dependency dialects outside the shared validator/probe/control family.
+
+### RF-ORCH-003 - Semantic-anchor extension-hook gap
+
+- `classification`: architecture reinforcement intake, non-reopen
+- `judgment`: downstream semantic narrowing can occur even when route/script orchestration remains correct; protocol should carry a generic semantic-anchor envelope by ref/schema/digest rather than domain-specific business fields.
+- `canonical_landings`:
+  - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
+- `implementation_follow_on`:
+  - `scripts/instance_script_orchestration_common.py`
+  - `scripts/validate_route_script_receipt_join.py`
+  - `scripts/validate_identity_capability_activation.py`
+  - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
+- `machine_acceptance`:
+  - anchor ref/schema/source/revision/digest/status remain machine-visible;
+  - downstream consumers cannot silently drop a declared anchor without a governed mismatch signal;
+  - partial anchor families fail closed once any anchor field is emitted;
+  - aggregate promotion occurs only under single-family, non-ambiguous projection across contributing route rows;
+  - anchor projection remains on the shared validator/probe/control path.
+- `non_goals`:
+  - do not freeze product-specific keywords, scoring models, or supplier logic into protocol SSOT;
+  - do not reinterpret semantic-anchor support as protocol ownership of downstream business judgment.
+
+### RF-ORCH-004 - Outcome sentinel reference-hook gap
+
+- `classification`: architecture reinforcement intake, non-reopen
+- `judgment`: protocol needs a way to reference downstream risk signals without promoting business KPIs or thresholds into the core orchestration contract.
+- `canonical_landings`:
+  - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
+- `implementation_follow_on`:
+  - `scripts/instance_script_orchestration_common.py`
+  - `scripts/validate_route_script_receipt_join.py`
+  - `scripts/validate_identity_capability_activation.py`
+  - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
+  - release/audit consumers only when a stream explicitly opts into sentinel gating
+- `machine_acceptance`:
+  - sentinel ref/schema/status remain machine-visible when present;
+  - partial sentinel families fail closed once any sentinel field is emitted;
+  - aggregate promotion occurs only under single-family, non-ambiguous projection across contributing route rows;
+  - advisory vs fail-close semantics are explicit;
+  - sentinel support does not bypass route/script/dependency provenance requirements.
+- `non_goals`:
+  - do not freeze universal business scoring thresholds in protocol core;
+  - do not use sentinel refs to relabel business drift as proof that orchestration semantics are wrong.
+
+### RF-ORCH-005 - Role-boundary non-substitution matrix gap
+
+- `classification`: architecture reinforcement intake, non-reopen
+- `judgment`: the stream already freezes that instance scripts do not replace skills / MCP / tools, but review can still drift unless the four-role matrix and non-substitution rule become an explicit canonical clause.
+- `canonical_landings`:
+  - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
+- `implementation_follow_on`:
+  - reviewer boundary wording only where a natural diagnostic surface already exists
+  - no standalone fake machine gate for semantic misuse wording
+- `machine_acceptance`:
+  - `agent/codex`, `identity instance/scripts`, `skills/scripts`, and `mcp/tool` roles are explicitly separated;
+  - protocol review wording classifies “identity instance/scripts must replace skill business scripts” as semantic misuse rather than contract defect;
+  - the reinforcement stays on the existing shared consumer / review motherline without reopening inherited streams.
+- `non_goals`:
+  - do not reinterpret identity-pack instance scripts as a replacement for business execution libraries;
+  - do not use this reinforcement to smuggle category heuristics, pricing logic, SKU semantics, or other business vocabulary into protocol SSOT.
+
+## 6) Frozen operating rule
+
+1. New scans must update the owning stream docs and machine gates before a row here can move to `CLOSED`.
+2. This workbook may aggregate evidence, but it may not locally reinterpret already-frozen owner semantics.
+3. This workbook remains protocol-internal; no external mirror may supersede it.

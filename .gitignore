@@ -1,6 +1,9 @@
 # Local runtime instance storage (outside repo by default)
+.identity/
 .identity-protocol/
 .codex/
+.tmp/
+.IDENTITY.run__*.md
 
 # Optional workspace-mapped local catalogs/instances
 identity/catalog.local.yaml
@@ -29,6 +32,12 @@ identity/runtime/examples/*-update-replay-*.json
 
 # Pack runtime protocol-feedback artifacts (generated during local replays)
 identity/packs/*/runtime/protocol-feedback/
+
+# Activity evidence/logs are local runtime artifacts (do not version-control)
+activity/
+
+# Local runtime scratch under repo fixture packs
+identity/store-manager/runtime/
 
 # keep deterministic handoff self-test fixtures versioned
 !identity/runtime/local/

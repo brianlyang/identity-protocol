@@ -1,0 +1,474 @@
+schema_version: 1
+registry_version: v1
+stream_version: v1.6
+updated_at_utc: "2026-03-24T00:00:00Z"
+
+terms:
+  - term_id: catalog_multi_active
+    canonical_term: catalog_multi_active
+    aliases:
+      - "catalog multi-active"
+      - "actor-scoped multi-active"
+    semantics: "Catalog may contain multiple runtime+active identities; this is not a violation by itself."
+    allowed_scope:
+      - catalog
+      - runtime_status
+
+  - term_id: session_primary_binding
+    canonical_term: session_primary_binding
+    aliases:
+      - "session-primary binding"
+      - "strict session single-primary"
+      - "会话单主"
+    semantics: "In strict lane, actor_id+session_id tuple must bind to one identity and fail-close on drift."
+    allowed_scope:
+      - strict_lane
+      - send_time_gate
+
+  - term_id: no_downgrade_motherline
+    canonical_term: no_downgrade_motherline
+    aliases:
+      - "no downgrade motherline"
+      - "no backstop motherline"
+      - "no backward compatibility"
+      - "不做向下兼容"
+      - "兼容只限迁移诊断"
+    semantics: "Compatibility, fallback, and bridge surfaces may exist only for migration, replay, or diagnostics. Active protocol/runtime surfaces do not downgrade or provide backward compatibility, and those compatibility surfaces must not re-enter active defaults, validator green paths, current-turn runtime truth, active execution entry, or protocol-owned success paths."
+    allowed_scope:
+      - governance
+      - migration_governance
+      - runtime_guard
+      - stream_v1_6_10
+
+  - term_id: route_discovery_convergence_contract
+    canonical_term: route_discovery_convergence_contract_v1
+    aliases:
+      - "route discovery convergence"
+      - "auto-routing strengthening"
+      - "第三环上浮补强"
+    semantics: "Upper-layer strengthening contract above the kernel Auto-routing contract. Under persistent uncertainty, route discovery may fan out across candidates, but acceptance must converge serially with explicit selection basis, selected candidate, and governed fallback."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_17
+
+  - term_id: roundtable_four_track_cross_validation_contract
+    canonical_term: roundtable_four_track_cross_validation_contract_v1
+    aliases:
+      - "roundtable four-track cross validation"
+      - "four-track cross validation"
+      - "圆桌四轨交叉核验"
+      - "第三四环共享四轨核验原语"
+    semantics: "Shared cross-validation primitive consumed by the strengthened third and fourth loops. The frozen tracks are roundtable, vendor/official capability, reference/specification, and search/runtime probe. First-loop multimodal evidence may feed these tracks but does not become a fifth track. The third loop and fourth loop keep independent centers; they both consume this primitive. Third-loop parallel probes require serial acceptance through this primitive. Fourth-loop artifacts may promote only after this primitive is satisfied, and any next-round first-loop reentry must occur separately through feedback_to_judgement_loopback_contract_v1."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_17
+
+  - term_id: feedback_operational_prompt_contract
+    canonical_term: feedback_operational_prompt_contract_v1
+    aliases:
+      - "feedback operational prompt"
+      - "rule-learning strengthening"
+      - "第四环上浮补强"
+    semantics: "Upper-layer strengthening contract above the kernel Rule learning contract. Evidence-linked feedback derives scoped operational prompts that remain replay-verified, rollback-capable, TTL-bounded, and non-authoritative relative to kernel/system/identity baseline instructions."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_17
+
+  - term_id: feedback_to_judgement_loopback_contract
+    canonical_term: feedback_to_judgement_loopback_contract_v1
+    aliases:
+      - "feedback to judgement loopback"
+      - "4→1 loopback"
+      - "第四环回挂第一环"
+      - "operational prompt preflight binding"
+    semantics: "Standalone bridge contract governing how fourth-loop governed artifacts re-enter next-round first-loop preflight. It does not replace the fourth-loop center and does not replace first-loop truth. Loopback artifacts are governed preflight aids only: they remain scope-bounded, TTL-bounded, replay/rollback-controlled, and subordinate to current-round first-loop evidence revalidation."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_17
+
+  - term_id: artifact_family_routing_matrix
+    canonical_term: artifact_family_routing_matrix_v1
+    aliases:
+      - "artifact family routing matrix"
+      - "artifact routing matrix"
+      - "记忆分流矩阵"
+    semantics: "Protocol-scoped routing matrix that freezes each governed persisted artifact family by semantic owner, canonical fixed paths, payload class, production method, and primary consumer. `memory` is not a canonical family name inside this matrix."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: pack_rulebook_family
+    canonical_term: pack_rulebook_family
+    aliases:
+      - "pack rulebook"
+      - "RULEBOOK family"
+      - "包根规则簿"
+    semantics: "Durable pack-root rulebook family anchored at `RULEBOOK.jsonl`. It is the long-lived pack rule surface and is distinct from runtime experience-feedback rulebooks under `runtime/rulebooks/*.jsonl`."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: pack_task_history_family
+    canonical_term: pack_task_history_family
+    aliases:
+      - "task history family"
+      - "pack task history"
+      - "任务历史家族"
+    semantics: "Chronological pack-root task/result writeback family anchored at `TASK_HISTORY.md`. It preserves historical chronology and must not be reinterpreted as continuity, dialogue, feedback, or protocol-communication state."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: runtime_dialogue_governance_family
+    canonical_term: runtime_dialogue_governance_family
+    aliases:
+      - "dialogue governance family"
+      - "runtime dialogue reports"
+      - "对话治理家族"
+    semantics: "Governed runtime dialogue-report family under `runtime/reports/dialogue-*`. It captures objective/constraint/evidence/result-support extraction from dialogue and must not be reclassified as continuity, learning, or protocol-feedback traffic."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: runtime_dialogue_retention_family
+    canonical_term: runtime_dialogue_retention_family
+    aliases:
+      - "dialogue retention family"
+      - "raw dialogue truth family"
+      - "对话留存家族"
+    semantics: "Governed runtime raw-dialogue retention family rooted at `runtime/reports/dialogue-retention/**` and `runtime/state/dialogue-retention/**`. It mirrors product-sidecar session truth plus governed supplements/receipts and must remain distinct from dialogue-governance, continuity/reentry, protocol-feedback, and memory-absorption quarantine."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: runtime_experience_feedback_family
+    canonical_term: runtime_experience_feedback_family
+    aliases:
+      - "experience feedback family"
+      - "runtime feedback learning family"
+      - "经验反馈家族"
+    semantics: "Governed runtime learning family rooted at `runtime/rulebooks/*.jsonl`, `runtime/examples/*experience-feedback*.json`, and `runtime/logs/feedback/*.json`. It is replay-backed learning state and is distinct from pack rulebook, continuity, and protocol-feedback communication."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: runtime_protocol_feedback_family
+    canonical_term: runtime_protocol_feedback_family
+    aliases:
+      - "protocol feedback family"
+      - "runtime protocol feedback"
+      - "协议反馈家族"
+    semantics: "Governed runtime communication family rooted at `runtime/protocol-feedback/**`, including inbox/outbox/index/proposal/issue/roundtable/validation surfaces. It is not a generic learning or continuity sink."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: runtime_context_continuity_family
+    canonical_term: runtime_context_continuity_family
+    aliases:
+      - "context continuity family"
+      - "reentry family"
+      - "上下文连续性家族"
+    semantics: "Governed runtime continuity family rooted at `runtime/reports/context-continuity/**` and `runtime/state/context-continuity/**`. It carries checkpoints, reentry brief, and continuity receipts and must remain distinct from task history, learning, and protocol-feedback communication."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: runtime_memory_absorption_family
+    canonical_term: runtime_memory_absorption_family
+    aliases:
+      - "memory absorption family"
+      - "absorption quarantine family"
+      - "记忆吸收隔离家族"
+    semantics: "Governed quarantine/migration family rooted at `runtime/memory-absorption/**`. It is re-materialization-only by default and cannot satisfy active continuity, dialogue-governance, experience-feedback, or protocol-feedback obligations."
+    allowed_scope:
+      - governance
+      - migration_governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: declaration_gate_not_artifact_family
+    canonical_term: declaration_gate_not_artifact_family
+    aliases:
+      - "gate not artifact family"
+      - "contract key not sink"
+      - "声明键不是产物家族"
+    semantics: "Control-plane declaration keys and gates such as `reject_memory_gate` or `*_contract` blocks declare obligations and validators but are not persisted artifact families or output path roots."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: protocol_generated_gateway_shell
+    canonical_term: protocol_generated_gateway_shell
+    aliases:
+      - "protocol gateway shell"
+      - "wrapper strong-control"
+      - "protocol-generated wrapper shell"
+    semantics: "Thin protocol-controlled boundary shell generated from protocol canonical template; closed set is ingress/egress/session-chain wrappers only."
+    allowed_scope:
+      - runtime_gate
+      - stream_v1_6_10
+
+  - term_id: protocol_controlled_mirror_artifact
+    canonical_term: protocol_controlled_mirror_artifact
+    aliases:
+      - "protocol-controlled mirror"
+      - "mirror constrained"
+      - "governed mirror artifact"
+    semantics: "Protocol-contract-controlled mirror/downsink artifact; schema/path are protocol-governed but it is not gateway shell code."
+    allowed_scope:
+      - runtime_gate
+      - runtime_state
+      - runtime_reports
+      - stream_v1_6_10
+
+  - term_id: instance_autonomous_runtime
+    canonical_term: instance_autonomous_runtime
+    aliases:
+      - "runtime default autonomy"
+      - "instance runtime autonomy"
+      - "runtime 默认自治"
+    semantics: "Default class for runtime files not explicitly elevated into protocol-controlled mirror or gateway shell governance."
+    allowed_scope:
+      - instance_runtime
+      - stream_v1_6_10
+
+  - term_id: tracked_compiled_brief_artifact
+    canonical_term: tracked_compiled_brief_artifact
+    aliases:
+      - "tracked compiled brief"
+      - "governed generated artifact"
+      - "compiled runtime brief artifact"
+    semantics: "Tracked generated brief artifact consumed by config/docs/review as a compiled model-instructions brief; it is not ordinary runtime evidence/log and not instance-autonomous runtime state."
+    allowed_scope:
+      - compiled_brief
+      - compatibility_path
+      - stream_v1_6_10
+
+  - term_id: tracked_compiled_brief_frozen_path
+    canonical_term: tracked_compiled_brief_frozen_path
+    aliases:
+      - "compiled brief frozen path"
+      - "tracked compiled brief path"
+      - "冻结 compiled brief 路径"
+    semantics: "Pass-default path-status term for a tracked compiled brief whose current filesystem location is intentionally frozen by governance; unlike migration labels, it is safe to appear in generated compiled-brief artifacts and positive machine gates."
+    allowed_scope:
+      - compiled_brief
+      - path_status
+      - stream_v1_6_10
+
+  - term_id: legacy_canonical_compatibility_path
+    canonical_term: legacy_canonical_compatibility_path
+    aliases:
+      - "legacy canonical path"
+      - "compatibility canonical path"
+      - "兼容 canonical 路径"
+    semantics: "Still-valid canonical compatibility path retained during governance freeze or migration staging; consumers continue to use it until a separately approved migration closes."
+    allowed_scope:
+      - compatibility_path
+      - migration_governance
+      - stream_v1_6_10
+
+  - term_id: instance_owned_technical_debt
+    canonical_term: instance_owned_technical_debt
+    aliases:
+      - "instance technical debt"
+      - "instance-owned debt"
+      - "实例技术债务"
+    semantics: "Missing instance-local skills/config/transport/install/replay hygiene and other local recovery obligations remain instance-owned until the instance completes self-heal and proves closure."
+    allowed_scope:
+      - instance_runtime
+      - protocol_feedback_triage
+      - escalation_gate
+      - stream_v1_6_10
+
+  - term_id: instance_clean_proof
+    canonical_term: instance_clean_proof
+    aliases:
+      - "instance clean proof"
+      - "self-heal closure proof"
+      - "实例清债证据"
+    semantics: "Replayable proof that instance-owned technical debt is closed; required before escalating any remaining issue as protocol residual."
+    allowed_scope:
+      - protocol_feedback_triage
+      - escalation_gate
+      - review_acceptance
+      - stream_v1_6_10
+
+  - term_id: protocol_residual_issue
+    canonical_term: protocol_residual_issue
+    aliases:
+      - "protocol residual"
+      - "shared protocol residual"
+      - "协议残留问题"
+    semantics: "Shared contract / wiring / validator / CI / governance issue that remains only after instance_clean_proof; unresolved instance-owned technical debt must not be relabeled as protocol residual."
+    allowed_scope:
+      - governance
+      - review
+      - protocol_feedback_triage
+      - stream_v1_6_10
+
+  - term_id: weak_live_linkage
+    canonical_term: weak_live_linkage
+    aliases:
+      - "weak live linkage"
+      - "弱实链路"
+      - "contract-strong live-weak"
+      - "false-green live closure"
+    semantics: "Validator/contract/prompt/hook/sample surfaces may pass on declaration, prompt/sample/meta evidence, or latest-log presence while current-run binding and next-hop consumption remain unproven. Such a pass is not full operational closure and must be interpreted through the four-layer differential-audit model: contract layer, artifact layer, run-binding layer, and consumption layer."
+    allowed_scope:
+      - governance
+      - review
+      - runtime_contract
+      - stream_v1_6_19
+
+  - term_id: identity_broadcast_delivery
+    canonical_term: identity_broadcast_delivery
+    aliases:
+      - "broadcast delivery"
+      - "identity broadcast delivery"
+      - "广播投递"
+    semantics: "Dedicated runtime adoption lane that consumes host-gateway broadcast source truth and materializes pack-local visibility/read/pending-ack projection plus governed delivery receipts. It is delivery/projection only, not reply/inbox/atomic emit, not a learning or continuity sink, and not the upstream broadcast-source semantic owner."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_20
+
+  - term_id: identity_communication_transport
+    canonical_term: identity_communication_transport
+    aliases:
+      - "identity communication transport"
+      - "communication transport convergence"
+      - "身份通信传输"
+    semantics: "Aggregate convergence surface across agent handoff, collaboration trigger, protocol-feedback reply/inbox/atomic emit, and broadcast delivery. It remains broader than strict identity-to-identity messaging, does not replace the component-owner semantics, is not a new artifact family, and reaches green only when bounded live bootstrap plus component validator truth jointly pass."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_20
+
+  - term_id: identity_terminal_truth_cleanliness
+    canonical_term: identity_terminal_truth_cleanliness
+    aliases:
+      - "terminal truth cleanliness"
+      - "clean terminal truth"
+      - "canonical publishability veto"
+      - "终态真值清洁度"
+    semantics: "Higher-order protocol lane that distinguishes execution closure truth from clean terminal truth and canonical publishability. Dirty signals may veto clean terminal truth and publishability without retroactively invalidating the lower execution-closure truth."
+    allowed_scope:
+      - governance
+      - review
+      - runtime_contract
+      - stream_v1_6_21
+
+forbidden_phrases:
+  - phrase: "multi-active state is a protocol violation"
+    replacement: "catalog_multi_active is allowed; enforce session_primary_binding in strict lanes"
+    rationale: "Prevents catalog-lane and session-lane semantics from being conflated."
+
+  - phrase: "all protocol-governed instance runtime files under `runtime/state`, `runtime/gate`, `runtime/plugins`, and `runtime/protocol-feedback`"
+    replacement: "runtime default is instance_autonomous_runtime; only protocol_generated_gateway_shell and explicit protocol_controlled_mirror_artifact entries are protocol-governed"
+    rationale: "Prevents blanket protocol ownership claims over all runtime files."
+
+  - phrase: "`runtime/gate/protocol_ingress_wrapper.py`, `runtime/gate/protocol_egress_wrapper.py`, and `runtime/gate/protocol_session_chain_wrapper.py` are governed mirrors, not source of truth."
+    replacement: "the three wrapper files are protocol_generated_gateway_shell, while protocol_gateway_contract.json is a protocol_controlled_mirror_artifact"
+    rationale: "Prevents gateway shell and mirror artifact semantics from being conflated."
+
+  - phrase: "`identity/runtime/IDENTITY_COMPILED.md` is an ordinary runtime artifact."
+    replacement: "`identity/runtime/IDENTITY_COMPILED.md` is a tracked_compiled_brief_artifact at a tracked_compiled_brief_frozen_path."
+    rationale: "Prevents the compiled brief from being misclassified as runtime evidence/log pollution."
+
+  - phrase: "`identity/runtime/IDENTITY_COMPILED.md` is an instance-autonomous runtime state file."
+    replacement: "`identity/runtime/IDENTITY_COMPILED.md` is a tracked_compiled_brief_artifact and must be updated through source-first compile flow."
+    rationale: "Prevents autonomous runtime-state semantics from being incorrectly applied to the compiled brief."
+
+  - phrase: "protocol will backstop instance technical debt"
+    replacement: "instance_owned_technical_debt remains instance-owned; protocol_residual_issue starts only after instance_clean_proof"
+    rationale: "Prevents protocol/instance ownership from collapsing."
+
+  - phrase: "instance may escalate to protocol before self-heal closure"
+    replacement: "No instance-clean proof, no protocol escalation."
+    rationale: "Prevents unresolved instance debt from being relabeled as protocol residual."
+
+  - phrase: "protocol residual may include unresolved instance configuration or skill debt"
+    replacement: "protocol_residual_issue is limited to shared defects that remain after instance_clean_proof"
+    rationale: "Prevents instance-local obligations from being pushed into protocol scope."
+
+  - phrase: "compatibility bridge may remain as an active runtime default"
+    replacement: "no_downgrade_motherline: compatibility bridges are migration/replay/diagnostic-only"
+    rationale: "Prevents compatibility bridges from surviving as active defaults or runtime backstops."
+
+  - phrase: "fallback/backstop may restore current-turn runtime truth"
+    replacement: "session_primary_binding + no_downgrade_motherline require fail-close when authoritative runtime truth is missing"
+    rationale: "Prevents fallback/backstop language from re-entering current-turn runtime semantics."
+
+  - phrase: "protocol may provide downward compatibility for lagging instances"
+    replacement: "instances must self-upgrade; active protocol surfaces do not provide downward compatibility"
+    rationale: "Prevents lagging adoption from reopening the motherline as a compatibility backstop."
+
+  - phrase: "compatibility/backstop may remain on active entry or success path"
+    replacement: "no_downgrade_motherline forbids compatibility/backstop on active execution entry and protocol-owned success paths"
+    rationale: "Keeps compatibility residue out of live execution and success semantics."
+
+  - phrase: "third and fourth loops share one center"
+    replacement: "third and fourth loops keep independent centers and share one roundtable four-track cross-validation primitive"
+    rationale: "Prevents the shared primitive from being misclassified as a shared loop center."
+
+  - phrase: "fourth loop directly rewrites first-loop truth"
+    replacement: "fourth-loop artifacts may only re-enter through feedback_to_judgement_loopback_contract_v1 and first-loop revalidation remains authoritative"
+    rationale: "Prevents loopback guidance from being misclassified as first-loop truth."
+
+  - phrase: "operational prompt is current-round truth"
+    replacement: "operational prompt artifacts are governed preflight aids, not current-round truth"
+    rationale: "Prevents prompt-derived artifacts from outranking current evidence."
+
+  - phrase: "all memory-like artifacts may use one generic protocol memory sink"
+    replacement: "artifact_family_routing_matrix_v1 requires exact family resolution by owner + fixed path + producer + consumer"
+    rationale: "Prevents multiple governed families from collapsing into one generic memory bucket."
+
+  - phrase: "raw dialogue history may stay in generic memory or continuity by default"
+    replacement: "runtime_dialogue_retention_family owns governed raw dialogue mirrors; runtime_context_continuity_family remains bounded checkpoint/reentry support"
+    rationale: "Prevents raw dialogue truth from collapsing into continuity or generic memory wording."
+
+  - phrase: "RULEBOOK.jsonl and runtime/rulebooks are the same rule memory"
+    replacement: "pack_rulebook_family is distinct from runtime_experience_feedback_family"
+    rationale: "Prevents pack-root durable rulebook semantics from collapsing into replay-backed runtime feedback rulebooks."
+
+  - phrase: "TASK_HISTORY.md is the continuity or recovery sink"
+    replacement: "pack_task_history_family is chronological history; runtime_context_continuity_family owns checkpoint/reentry recovery"
+    rationale: "Prevents task chronology from being misused as startup continuity state."
+
+  - phrase: "runtime/protocol-feedback may serve as continuity or learning sink by default"
+    replacement: "runtime_protocol_feedback_family is governance communication only; continuity and learning stay on their own families"
+    rationale: "Prevents governance traffic from being misclassified as continuity or learning state."
+
+  - phrase: "runtime/memory-absorption may satisfy active protocol obligations"
+    replacement: "runtime_memory_absorption_family is quarantine/re-materialization only"
+    rationale: "Prevents absorbed legacy material from re-entering active success-path semantics."
+
+  - phrase: "review required means execution closure is invalid"
+    replacement: "review-required execution closure may remain legal while clean_terminal_truth and canonical_publishability are vetoed"
+    rationale: "Prevents higher-order terminal-truth veto semantics from collapsing the lower execution-closure truth."
+
+  - phrase: "reject_memory_gate is the memory storage path"
+    replacement: "declaration_gate_not_artifact_family: reject_memory_gate is a control gate, not a sink"
+    rationale: "Prevents gate declarations from being misclassified as artifact outputs."
+
+scan_roots:
+  - identity/protocol/IDENTITY_PROTOCOL.md
+  - identity/protocol/IDENTITY_RUNTIME.md
+
+include_active_stream_docs: true
+active_stream_registry: identity/protocol/mappings/stream-doc-registry.current.yaml

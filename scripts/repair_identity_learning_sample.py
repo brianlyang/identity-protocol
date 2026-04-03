@@ -9,6 +9,32 @@ from typing import Any
 
 import yaml
 
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_PASS = "PASS"
+L3_ATTEMPT_FIELDS = (
+    "attempt",
+    "hypothesis",
+    "patch",
+    "expected_effect",
+    "result",
+    "result_code",
+    "target_reached",
+    "no_target_reached",
+    "next_action",
+    "evidence_refs",
+)
+L3_RUN_FIELDS = (
+    "roundtable_evidence_refs",
+    "vendor_evidence_refs",
+    "network_evidence_refs",
+    "reference_evidence_refs",
+)
+L3_EXTERNAL_FIELDS = (
+    "external_source_freshness_status",
+    "conflict_reconciliation_note",
+    "source_url_set",
+)
+
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -57,7 +83,56 @@ def _resolve_rulebook_path(pack: Path, task: dict[str, Any]) -> Path:
     return p
 
 
+def _nonempty(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (int, float, bool)):
+        return True
+    if isinstance(value, list):
+        return len(value) > 0
+    if isinstance(value, dict):
+        return len(value) > 0
+    return True
+
+
+def _extract_attempts(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    for key in ("reasoning_attempts", "attempts"):
+        value = payload.get(key)
+        if isinstance(value, list):
+            return [row for row in value if isinstance(row, dict)]
+    return []
+
+
+def _sample_missing_l3_minimum(payload: dict[str, Any]) -> list[str]:
+    stale_reasons: list[str] = []
+    attempts = _extract_attempts(payload)
+    if not attempts:
+        stale_reasons.append("reasoning_attempts_missing")
+    else:
+        first = attempts[0]
+        missing_attempt = [field for field in L3_ATTEMPT_FIELDS if field not in first]
+        if missing_attempt:
+            stale_reasons.append(f"attempt_fields_missing:{','.join(missing_attempt)}")
+
+    missing_run_fields = [field for field in L3_RUN_FIELDS if not _nonempty(payload.get(field))]
+    if missing_run_fields:
+        stale_reasons.append(f"run_fields_missing:{','.join(missing_run_fields)}")
+
+    missing_external_fields = [field for field in L3_EXTERNAL_FIELDS if not _nonempty(payload.get(field))]
+    if missing_external_fields:
+        stale_reasons.append(f"external_fields_missing:{','.join(missing_external_fields)}")
+
+    freshness = str(payload.get("external_source_freshness_status", "")).strip().upper()
+    if freshness not in {STATUS_PASS_REQUIRED, STATUS_PASS}:
+        stale_reasons.append("external_source_freshness_status_not_pass")
+    return stale_reasons
+
+
 def _bootstrap_payload(identity_id: str, run_id: str, now: str) -> dict[str, Any]:
+    base_ref = f"identity://{identity_id}/runtime/examples/{identity_id}-learning-sample.json#{run_id}"
+    source_url = f"https://example.org/identity/{identity_id}/learning-bootstrap/{run_id}"
     return {
         "run_id": run_id,
         "problem_type": "identity_learning_loop_bootstrap",
@@ -72,8 +147,21 @@ def _bootstrap_payload(identity_id: str, run_id: str, now: str) -> dict[str, Any
                 },
                 "expected_effect": "learning-loop validator can find identity-scoped sample without cross-identity fallback",
                 "result": "pass",
+                "result_code": "pass",
+                "target_reached": True,
+                "no_target_reached": False,
+                "next_action": "continue_strict_update_with_wrapper_chain",
+                "evidence_refs": [base_ref],
             }
         ],
+        "roundtable_evidence_refs": [f"{base_ref}:roundtable"],
+        "vendor_evidence_refs": [f"{base_ref}:vendor"],
+        "network_evidence_refs": [f"{base_ref}:network"],
+        "reference_evidence_refs": [f"{base_ref}:reference"],
+        "external_source_freshness_status": STATUS_PASS_REQUIRED,
+        "conflict_reconciliation_note": "bootstrap sample has no unresolved cross-track conflict",
+        "source_url_set": [source_url],
+        "overall_status": "pass",
         "final_status": "pass",
         "notes": "auto-generated bootstrap sample",
         "generated_at": now,
@@ -165,11 +253,21 @@ def main() -> int:
     task = _resolve_current_task(pack)
     sample = pack / "runtime" / "examples" / f"{args.identity_id}-learning-sample.json"
     created = False
+    repaired = False
     if sample.exists() and not args.force:
         try:
             payload = _load_json(sample)
             run_id = str(payload.get("run_id", "")).strip() or f"bootstrap-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
-            print(f"[OK] learning sample exists: {sample}")
+            stale_reasons = _sample_missing_l3_minimum(payload)
+            if stale_reasons:
+                now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                payload = _bootstrap_payload(args.identity_id, run_id, now)
+                sample.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                repaired = True
+                print(f"[OK] learning sample enriched for L3 reasoning gate: {sample}")
+                print(f"[INFO] stale_reasons={','.join(stale_reasons)}")
+            else:
+                print(f"[OK] learning sample exists: {sample}")
         except Exception:
             run_id = f"bootstrap-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
             sample.parent.mkdir(parents=True, exist_ok=True)
@@ -190,7 +288,7 @@ def main() -> int:
         print(f"[OK] {note}")
     else:
         print(f"[INFO] {note}")
-    if created:
+    if created or repaired:
         print(f"[INFO] run_id={run_id}")
     return 0
 

@@ -1,0 +1,231 @@
+schema_version: 1
+evidence_family: protocol_root_decision_evidence_admissibility
+evidence_version: v1
+contract_file: identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_decision_evidence_admissibility.py
+probe_script: scripts/ci/run_protocol_root_decision_evidence_admissibility_probes_ci.sh
+common_script: scripts/root_decision_evidence_admissibility_common.py
+status_key: protocol_root_decision_evidence_admissibility_status
+error_codes:
+- IP-DEA-001
+- IP-DEA-002
+- IP-DEA-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Decision-evidence admissibility law'
+  - '## Six decision-evidence classes'
+  - '## Required decision-evidence differentiations'
+  - '## Evidence-class proof alignment'
+  - frozen-law evidence requires frozen-law decision-evidence proof;
+  - demoted-support evidence requires demotion-confinement decision-evidence proof.
+  - '## Adjudication-phase evidence alignment'
+  - 'runtime-state live binding requires bound runtime evidence and bound-runtime decision-evidence proof;'
+  - 'receipt-driven closure requires adjudicated verdict closure evidence and adjudicated-verdict-closure decision-evidence proof;'
+  - '## Decision-evidence proof discipline'
+  - '## Decision-evidence proof limits'
+  - '## Non-compliant decision-evidence collapses'
+  - 'A machine decision may be motivated, supported, or terminally justified only by evidence classes whose provenance, admissibility, binding, and terminal scope are appropriate for that decision.'
+  - 'Decision-evidence admissibility law must also remain machine-readable as separate evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse row families rather than one narrative evidence claim.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Decision-evidence admissibility row-family completeness must stay explicit'
+      - "Required evidence-class, differentiation, adjudication-phase-alignment,\ndecision-evidence-proof, evidence-class-proof-alignment, limit, and collapse\nfamilies must remain explicit as separate machine-readable row families."
+      - "README root decision-evidence admissibility completeness discipline must\ntherefore stay congruent with admitted\ndecision-evidence-admissibility-completeness rows rather than becoming a\nfreehand completeness summary."
+      - 'The machine world must not finalize decision-evidence admissibility while required row identity drift remains known only internally.'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root decision-evidence admissibility completeness discipline'
+      - 'Decision-evidence admissibility law is not a soft prose bundle.'
+      - 'These decision-evidence-admissibility-completeness rules must remain bound to canonical decision-evidence-admissibility-completeness rows rather than drifting into soft summary prose.'
+      - '1. required evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root decision-evidence admissibility completeness boundary'
+      - '1. Decision-evidence admissibility law must remain machine-readable as separate evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse row families.'
+      - '4. Protocol legality must not finalize decision-evidence admissibility while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root decision-evidence admissibility completeness discipline rendered at protocol root must remain congruent with admitted decision-evidence-admissibility-completeness rows rather than silently authoring an alternate completeness summary.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime decision-evidence admissibility consumption boundary'
+      - '1. Runtime consumes decision-evidence admissibility law as separate evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse row families rather than as undifferentiated decision-evidence prose.'
+      - '4. Runtime must not finalize decision-evidence admissibility while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root decision-evidence admissibility completeness discipline as a governed completeness projection bound to admitted decision-evidence-admissibility-completeness rows rather than as a freehand completeness summary.'
+required_evidence_class_rows:
+  - order: 1
+    evidence_class_id: frozen_law_evidence
+    contract_heading: '### 1. Frozen-law evidence'
+    evidence_role: frozen_law_evidence
+  - order: 2
+    evidence_class_id: machine_registry_evidence
+    contract_heading: '### 2. Machine-registry evidence'
+    evidence_role: machine_registry_evidence
+  - order: 3
+    evidence_class_id: validator_probe_verdict_evidence
+    contract_heading: '### 3. Validator-and-probe verdict evidence'
+    evidence_role: validator_probe_verdict_evidence
+  - order: 4
+    evidence_class_id: bound_runtime_evidence
+    contract_heading: '### 4. Bound runtime evidence'
+    evidence_role: bound_runtime_evidence
+  - order: 5
+    evidence_class_id: adjudicated_verdict_closure_evidence
+    contract_heading: '### 5. Adjudicated verdict closure evidence'
+    evidence_role: adjudicated_verdict_closure_evidence
+  - order: 6
+    evidence_class_id: demoted_support_evidence
+    contract_heading: '### 6. Demoted support evidence'
+    evidence_role: demoted_support_evidence
+required_differentiation_rows:
+  - order: 1
+    differentiation_id: motivation_vs_terminal_evidence
+    contract_phrase: 'motivating evidence is separated from terminal decision evidence;'
+  - order: 2
+    differentiation_id: latest_visible_vs_bound_receipt
+    contract_phrase: 'latest visible receipt is separated from bound admissible receipt;'
+  - order: 3
+    differentiation_id: runtime_vs_shared_law_evidence
+    contract_phrase: 'runtime evidence is separated from shared-law evidence;'
+  - order: 4
+    differentiation_id: summary_projection_vs_source_evidence
+    contract_phrase: 'summary, projection, or commentary is separated from source evidence;'
+  - order: 5
+    differentiation_id: support_material_vs_active_success_path_evidence
+    contract_phrase: 'sample, fixture, diagnostics, migration, and replay evidence are separated from active success-path evidence;'
+  - order: 6
+    differentiation_id: bound_runtime_vs_adjudicated_verdict_closure_evidence
+    contract_phrase: 'bound runtime evidence is separated from adjudicated verdict closure evidence;'
+  - order: 7
+    differentiation_id: prose_payload_vs_machine_decision_evidence
+    contract_phrase: 'handoff payload or operator-facing prose is separated from machine decision evidence.'
+required_adjudication_phase_alignment_rows:
+  - order: 1
+    machine_surface: runtime_state
+    evidence_class_id: bound_runtime_evidence
+    proof_id: bound_runtime_decision_evidence_proof
+    surface_role: live_state_truth_binding
+  - order: 2
+    machine_surface: receipts
+    evidence_class_id: adjudicated_verdict_closure_evidence
+    proof_id: adjudicated_verdict_closure_decision_evidence_proof
+    surface_role: adjudicated_verdict_closure
+required_decision_evidence_proof_rows:
+  - order: 1
+    proof_id: frozen_law_decision_evidence_proof
+    contract_heading: '### 1. Frozen-law decision-evidence proof'
+    proof_role: frozen_law_decision_evidence_proof
+  - order: 2
+    proof_id: registry_resolution_decision_evidence_proof
+    contract_heading: '### 2. Registry-resolution decision-evidence proof'
+    proof_role: registry_resolution_decision_evidence_proof
+  - order: 3
+    proof_id: validator_verdict_decision_evidence_proof
+    contract_heading: '### 3. Validator-verdict decision-evidence proof'
+    proof_role: validator_verdict_decision_evidence_proof
+  - order: 4
+    proof_id: bound_runtime_decision_evidence_proof
+    contract_heading: '### 4. Bound-runtime decision-evidence proof'
+    proof_role: bound_runtime_decision_evidence_proof
+  - order: 5
+    proof_id: adjudicated_verdict_closure_decision_evidence_proof
+    contract_heading: '### 5. Adjudicated-verdict-closure decision-evidence proof'
+    proof_role: adjudicated_verdict_closure_decision_evidence_proof
+  - order: 6
+    proof_id: demotion_confinement_decision_evidence_proof
+    contract_heading: '### 6. Demotion-confinement decision-evidence proof'
+    proof_role: demotion_confinement_decision_evidence_proof
+required_evidence_class_proof_alignment_rows:
+  - order: 1
+    evidence_class_id: frozen_law_evidence
+    proof_id: frozen_law_decision_evidence_proof
+    alignment_role: frozen_law_evidence_class_proof_alignment
+  - order: 2
+    evidence_class_id: machine_registry_evidence
+    proof_id: registry_resolution_decision_evidence_proof
+    alignment_role: machine_registry_evidence_class_proof_alignment
+  - order: 3
+    evidence_class_id: validator_probe_verdict_evidence
+    proof_id: validator_verdict_decision_evidence_proof
+    alignment_role: validator_probe_verdict_evidence_class_proof_alignment
+  - order: 4
+    evidence_class_id: bound_runtime_evidence
+    proof_id: bound_runtime_decision_evidence_proof
+    alignment_role: bound_runtime_evidence_class_proof_alignment
+  - order: 5
+    evidence_class_id: adjudicated_verdict_closure_evidence
+    proof_id: adjudicated_verdict_closure_decision_evidence_proof
+    alignment_role: adjudicated_verdict_closure_evidence_class_proof_alignment
+  - order: 6
+    evidence_class_id: demoted_support_evidence
+    proof_id: demotion_confinement_decision_evidence_proof
+    alignment_role: demoted_support_evidence_class_proof_alignment
+required_decision_evidence_limit_rows:
+  - order: 1
+    limit_id: frozen_law_not_registry_resolution
+    contract_phrase: 'frozen-law decision-evidence proof is not proof of registry resolution;'
+  - order: 2
+    limit_id: registry_resolution_not_validator_verdict
+    contract_phrase: 'registry-resolution decision-evidence proof is not proof of validator-and-probe verdict passage;'
+  - order: 3
+    limit_id: validator_verdict_not_bound_runtime
+    contract_phrase: 'validator-verdict decision-evidence proof is not proof of bound runtime evidence;'
+  - order: 4
+    limit_id: bound_runtime_not_verdict_closure
+    contract_phrase: 'bound-runtime decision-evidence proof is not proof of adjudicated verdict closure;'
+  - order: 5
+    limit_id: adjudicated_verdict_closure_not_upstream_legality_authorship
+    contract_phrase: 'adjudicated-verdict-closure decision-evidence proof is not proof of upstream legality authorship or earlier-phase substitution;'
+  - order: 6
+    limit_id: adjudicated_verdict_closure_not_support_terminality
+    contract_phrase: 'adjudicated-verdict-closure decision-evidence proof is not proof that demoted support evidence may terminate the decision;'
+  - order: 7
+    limit_id: demotion_confinement_not_active_terminal_scope
+    contract_phrase: 'demotion-confinement decision-evidence proof is not proof that support material may enter active success-path terminal scope.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: motivation_surface_as_terminal_evidence
+    contract_phrase: 'motivating or contextual material is treated as if it were terminal decision evidence.'
+  - order: 2
+    collapse_id: latest_visible_receipt_as_admissible_evidence
+    contract_phrase: 'the latest visible receipt is treated as if it were automatically bound admissible evidence.'
+  - order: 3
+    collapse_id: runtime_residue_as_shared_law_evidence
+    contract_phrase: 'runtime residue is treated as if it rewrote shared law or constitutional authority.'
+  - order: 4
+    collapse_id: summary_projection_as_source_evidence
+    contract_phrase: 'summary, projection, or commentary is treated as if it were source evidence.'
+  - order: 5
+    collapse_id: sample_fixture_diagnostic_as_live_decision_evidence
+    contract_phrase: 'sample, fixture, diagnostics, migration, or replay material is treated as if it were active success-path evidence.'
+  - order: 6
+    collapse_id: receipt_closure_as_upstream_legality_evidence
+    contract_phrase: 'receipt closure is treated as if it authored or replaced earlier legality phases.'
+  - order: 7
+    collapse_id: prose_payload_as_machine_decision_evidence
+    contract_phrase: 'handoff prose or operator-facing narration is treated as if it were machine decision evidence.'
+  - order: 8
+    collapse_id: decision_evidence_class_proof_flattening
+    contract_phrase: 'frozen-law, registry, validator-verdict, bound-runtime, adjudicated-closure, and demoted-support evidence classes are treated as if one decision-evidence proof stratum were sufficient for all of them.'
+decision_evidence_admissibility_completeness_rows:
+  - order: 1
+    completeness_id: explicit_decision_evidence_admissibility_row_families
+    contract_phrase: 'required evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - order: 2
+    completeness_id: congruent_decision_evidence_admissibility_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_decision_evidence_admissibility_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_decision_evidence_admissibility_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize decision-evidence admissibility while missing or unexpected row identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_decision_evidence_admissibility_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'

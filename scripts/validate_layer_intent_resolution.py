@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from headstamp_error_family_common import ERR_HDSTAMP_ACTOR_LAYER_MISMATCH, inject_legacy_error_fields
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
@@ -20,11 +21,12 @@ STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
-ERR_LAYER_INTENT = "IP-ASB-STAMP-SESSION-001"
+ERR_LAYER_INTENT = ERR_HDSTAMP_ACTOR_LAYER_MISMATCH
 STRICT_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate"}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    payload = inject_legacy_error_fields(payload)
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
     else:
@@ -112,6 +114,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument("--layer-intent-text", default="")
     ap.add_argument("--work-layer", default="", help="explicit work-layer override for resolver seed")
     ap.add_argument("--source-layer", default="", help="explicit source-layer override for resolver seed")
@@ -171,6 +174,7 @@ def main() -> int:
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             actor_id=args.actor_id,
+            session_id=str(args.session_id or "").strip(),
             explicit_catalog=bool(str(args.catalog or "").strip()),
         )
     except Exception as exc:

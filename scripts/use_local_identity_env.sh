@@ -21,10 +21,17 @@ SCRIPT_DIR="$(cd "$(dirname "${SOURCE_FILE}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 CODEX_HOME_DEFAULT="${HOME}/.codex"
-IDENTITY_HOME_DEFAULT="${CODEX_HOME_DEFAULT}/identity"
+CODEX_HOME="${CODEX_HOME:-${CODEX_HOME_DEFAULT}}"
+IDENTITY_HOME_DEFAULT="${CODEX_HOME}/.identity"
 IDENTITY_HOME="${1:-${IDENTITY_HOME_DEFAULT}}"
 IDENTITY_PROTOCOL_HOME="${2:-${REPO_ROOT}}"
 IDENTITY_CATALOG="${IDENTITY_HOME}/catalog.local.yaml"
+IDENTITY_BIN_DIR="${CODEX_HOME}/bin"
+
+case ":${PATH:-}:" in
+  *":${IDENTITY_BIN_DIR}:"*) ;;
+  *) export PATH="${IDENTITY_BIN_DIR}${PATH:+:${PATH}}" ;;
+esac
 
 mkdir -p "${IDENTITY_HOME}/config"
 RUNTIME_ENV_PATH="${IDENTITY_HOME}/config/runtime-paths.env"
@@ -51,6 +58,7 @@ else
   return 1 2>/dev/null || exit 1
 fi
 
+export CODEX_HOME
 export IDENTITY_HOME
 export IDENTITY_PROTOCOL_HOME
 export IDENTITY_CATALOG

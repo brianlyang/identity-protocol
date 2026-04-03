@@ -5,6 +5,7 @@ import argparse
 import json
 import re
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,11 @@ from protocol_feedback_lane_common import (
     collect_protocol_feedback_activity,
     decide_requiredization_scope,
     discover_default_correlation_keys,
+    should_seed_default_correlation_keys,
+)
+from report_selection_authority_projection_common import (
+    build_report_selection_authority_projection,
+    collect_report_selection_authority_projection_stale_reasons,
 )
 from response_stamp_common import resolve_layer_intent
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
@@ -25,6 +31,9 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_CONTRACT_MISSING_FIELDS = "IP-SID-001"
 ERR_P0_BLOCKING_REQUIRED = "IP-SID-002"
 ERR_VALIDATOR_RUNTIME = "IP-SID-003"
+ERR_ACTIVITY_UNSCOPED_WARNING = "IP-SID-004"
+ERR_TRACK_A_AUTHORITY_PROJECTION = "IP-SID-005"
+ERR_TRACK_A_AUTHORITY_MISMATCH = "IP-SID-006"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate", "mutation"}
 REQ_CONTRACT_KEYS = (
@@ -40,6 +49,7 @@ DEFAULT_CONTRACT = {
     "blocking_error_prefixes": list(DEFAULT_BLOCKING_PREFIXES),
     "escalation_policy": "p0_governance_boundary",
 }
+UNSCOPED_ALERT_THRESHOLD = 5
 
 ERR_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -141,6 +151,11 @@ def main() -> int:
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--report", default="")
+    ap.add_argument(
+        "--current-round-anchor-utc",
+        default="",
+        help="optional explicit current-round anchor timestamp (UTC, ISO-8601). Overrides report mtime anchor when provided.",
+    )
     ap.add_argument("--expected-work-layer", default="")
     ap.add_argument("--expected-source-layer", default="")
     ap.add_argument("--layer-intent-text", default="")
@@ -175,18 +190,58 @@ def main() -> int:
         explicit_source_layer=str(args.expected_source_layer or "").strip(),
         intent_text=str(args.layer_intent_text or "").strip(),
         default_work_layer="instance",
-        default_source_layer="auto",
+        default_source_layer="project",
+    )
+    run_id = str(args.run_id or "").strip()
+    explicit_corr_keys = list(args.correlation_key or [])
+    default_seeded = should_seed_default_correlation_keys(
+        operation=args.operation,
+        run_id=run_id,
+        explicit_keys=explicit_corr_keys,
     )
     default_corr = discover_default_correlation_keys(pack_path)
     correlation_keys = build_correlation_keys(
-        default_keys=default_corr.get("correlation_keys", []),
-        run_id=str(args.run_id or "").strip(),
-        explicit_keys=list(args.correlation_key or []),
+        default_keys=(default_corr.get("correlation_keys", []) if default_seeded else []),
+        run_id=run_id,
+        explicit_keys=explicit_corr_keys,
     )
+    current_round_anchor_utc = str(args.current_round_anchor_utc or "").strip()
+    anchor_source = "none"
+    anchor_report_path = ""
+    if current_round_anchor_utc:
+        anchor_source = "explicit"
+    report_token = str(args.report or "").strip()
+    if not current_round_anchor_utc and report_token:
+        report_path = Path(report_token).expanduser().resolve()
+        if report_path.exists():
+            anchor_report_path = str(report_path)
+            try:
+                current_round_anchor_utc = (
+                    datetime.fromtimestamp(report_path.stat().st_mtime, tz=timezone.utc)
+                    .strftime("%Y-%m-%dT%H:%M:%SZ")
+                )
+                anchor_source = "report"
+            except Exception:
+                current_round_anchor_utc = ""
+    if not current_round_anchor_utc:
+        default_report = str(default_corr.get("latest_report_path", "")).strip()
+        if default_report:
+            default_report_path = Path(default_report).expanduser().resolve()
+            if default_report_path.exists():
+                anchor_report_path = str(default_report_path)
+                try:
+                    current_round_anchor_utc = (
+                        datetime.fromtimestamp(default_report_path.stat().st_mtime, tz=timezone.utc)
+                        .strftime("%Y-%m-%dT%H:%M:%SZ")
+                    )
+                    anchor_source = "default_report"
+                except Exception:
+                    current_round_anchor_utc = ""
     activity = collect_protocol_feedback_activity(
         feedback_root=(pack_path / "runtime" / "protocol-feedback"),
         correlation_keys=correlation_keys,
         activity_window_hours=float(args.activity_window_hours or 72.0),
+        current_round_anchor_utc=current_round_anchor_utc,
     )
     auto_required_candidate = (not required_declared) and bool(activity.get("protocol_feedback_activity_detected", False))
     required_scope = decide_requiredization_scope(
@@ -214,9 +269,23 @@ def main() -> int:
         "activity_correlation_status": str(activity.get("activity_correlation_status", "")),
         "activity_correlation_key": str(activity.get("activity_correlation_key", "")),
         "activity_window_hours": float(activity.get("activity_window_hours", args.activity_window_hours)),
+        "current_round_anchor_utc": str(activity.get("current_round_anchor_utc", "")),
+        "anchor_source": anchor_source,
+        "anchor_report_path": anchor_report_path,
         "activity_correlated_refs": list(activity.get("activity_correlated_refs", [])),
         "activity_unscoped_refs": list(activity.get("activity_unscoped_refs", [])),
+        "activity_ref_count": len(list(activity.get("protocol_feedback_activity_refs", []))),
+        "activity_correlated_ref_count": len(list(activity.get("activity_correlated_refs", []))),
+        "activity_unscoped_count": len(list(activity.get("activity_unscoped_refs", []))),
+        "activity_unscoped_ref_count": len(list(activity.get("activity_unscoped_refs", []))),
+        "activity_ignored_missing_correlation_key_refs": list(
+            activity.get("activity_ignored_missing_correlation_key_refs", [])
+        ),
+        "activity_ignored_missing_anchor_refs": list(activity.get("activity_ignored_missing_anchor_refs", [])),
+        "activity_ignored_pre_round_refs": list(activity.get("activity_ignored_pre_round_refs", [])),
         "activity_ignored_stale_refs": list(activity.get("activity_ignored_stale_refs", [])),
+        "activity_ignored_pre_round_ref_count": len(list(activity.get("activity_ignored_pre_round_refs", []))),
+        "activity_ignored_stale_ref_count": len(list(activity.get("activity_ignored_stale_refs", []))),
         "protocol_feedback_activity_detected": bool(activity.get("protocol_feedback_activity_detected", False)),
         "protocol_feedback_activity_refs": list(activity.get("protocol_feedback_activity_refs", [])),
         "resolved_work_layer": str(layer_intent.get("resolved_work_layer", "")),
@@ -226,6 +295,7 @@ def main() -> int:
         "intent_source": str(layer_intent.get("intent_source", "")),
         "intent_confidence": layer_intent.get("intent_confidence"),
         "fallback_reason": str(layer_intent.get("fallback_reason", "")),
+        "default_correlation_seeded": default_seeded,
         "default_correlation_run_id": str(default_corr.get("latest_run_id", "")),
         "default_correlation_report": str(default_corr.get("latest_report_path", "")),
         "correlation_keys": correlation_keys,
@@ -235,6 +305,9 @@ def main() -> int:
         "sidecar_error_code": "",
         "escalation_required": False,
         "escalation_decision": "NON_BLOCKING_DEFAULT",
+        "observability_escalation_required": False,
+        "observability_alert_level": "NONE",
+        "observability_escalation_reason": "",
         "blocking_error_codes": [],
         "p0_violations": [],
         "track_a": {},
@@ -245,7 +318,19 @@ def main() -> int:
     }
 
     if not required:
-        if auto_required_candidate and bool(activity.get("requiredization_historical_activity_detected", False)):
+        activity_detected = bool(activity.get("protocol_feedback_activity_detected", False))
+        activity_unscoped = str(activity.get("activity_correlation_status", "")).strip().upper() == "ACTIVITY_UNSCOPED"
+        if activity_detected and activity_unscoped:
+            payload["sidecar_contract_status"] = STATUS_WARN_NON_BLOCKING
+            payload["sidecar_error_code"] = ERR_ACTIVITY_UNSCOPED_WARNING
+            payload["escalation_decision"] = "UNSCOPED_ACTIVITY_NON_BLOCKING"
+            payload["observability_escalation_required"] = payload.get("activity_unscoped_count", 0) >= UNSCOPED_ALERT_THRESHOLD
+            payload["observability_alert_level"] = (
+                "L1" if payload.get("activity_unscoped_count", 0) >= UNSCOPED_ALERT_THRESHOLD else "INFO"
+            )
+            payload["observability_escalation_reason"] = "activity_unscoped_without_current_round_linkage"
+            payload["stale_reasons"] = ["activity_unscoped_without_current_round_linkage"]
+        elif auto_required_candidate and bool(activity.get("requiredization_historical_activity_detected", False)):
             payload["stale_reasons"] = ["contract_not_required_due_lane_scope_history_only_activity"]
         else:
             payload["stale_reasons"] = ["contract_not_required"]
@@ -403,6 +488,41 @@ def main() -> int:
         default_status=STATUS_FAIL_REQUIRED,
     )
 
+    writeback_projection = build_report_selection_authority_projection(
+        wb_payload,
+        selected_path_key="report_selected_path",
+        logical_identity_key_key="report_logical_identity_key",
+        selection_mode_key="report_selection_mode",
+        selected_authority_class_key="report_selected_authority_class",
+        pointer_resolution_mode_key="report_pointer_resolution_mode",
+        pointer_path_key="report_pointer_path",
+        projection_source="writeback_continuity",
+    )
+    post_projection = build_report_selection_authority_projection(
+        post_payload,
+        selected_path_key="report_selected_path",
+        logical_identity_key_key="report_logical_identity_key",
+        selection_mode_key="report_selection_mode",
+        selected_authority_class_key="report_selected_authority_class",
+        pointer_resolution_mode_key="report_pointer_resolution_mode",
+        pointer_path_key="report_pointer_path",
+        projection_source="post_execution_mandatory",
+    )
+    post_experience_projection = build_report_selection_authority_projection(
+        post_payload,
+        selected_path_key="experience_writeback_report_selected_path",
+        logical_identity_key_key="experience_writeback_report_logical_identity_key",
+        selection_mode_key="experience_writeback_report_selection_mode",
+        selected_authority_class_key="experience_writeback_report_selected_authority_class",
+        pointer_resolution_mode_key="experience_writeback_report_pointer_resolution_mode",
+        pointer_path_key="experience_writeback_report_pointer_path",
+        projection_source="post_execution_experience_writeback",
+    )
+    post_preferred = str(post_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED or any(
+        post_projection.get(key) for key in ("selected_path", "selection_mode", "selected_authority_class", "pointer_resolution_mode")
+    )
+    aggregate_projection = post_projection if post_preferred else writeback_projection
+
     payload["track_a"] = {
         "writeback_continuity_status": wb_result["status"],
         "writeback_error_code": wb_result["error_code"],
@@ -410,8 +530,58 @@ def main() -> int:
         "post_execution_error_code": post_result["error_code"],
         "writeback_required_contract": wb_payload.get("required_contract"),
         "post_execution_required_contract": post_payload.get("required_contract"),
-        "writeback_report_selected_path": wb_payload.get("report_selected_path"),
-        "post_execution_report_selected_path": post_payload.get("report_selected_path"),
+        "report_selected_path": aggregate_projection.get("selected_path", ""),
+        "report_logical_identity_key": aggregate_projection.get("logical_identity_key", ""),
+        "report_selection_mode": aggregate_projection.get("selection_mode", ""),
+        "report_selected_authority_class": aggregate_projection.get("selected_authority_class", ""),
+        "report_pointer_resolution_mode": aggregate_projection.get("pointer_resolution_mode", ""),
+        "report_pointer_path": aggregate_projection.get("pointer_path", ""),
+        "report_projection_source": aggregate_projection.get("projection_source", ""),
+        "writeback_report_selected_path": writeback_projection.get("selected_path", ""),
+        "writeback_report_logical_identity_key": writeback_projection.get("logical_identity_key", ""),
+        "writeback_report_selection_mode": writeback_projection.get("selection_mode", ""),
+        "writeback_report_selected_authority_class": writeback_projection.get("selected_authority_class", ""),
+        "writeback_report_pointer_resolution_mode": writeback_projection.get("pointer_resolution_mode", ""),
+        "writeback_report_pointer_path": writeback_projection.get("pointer_path", ""),
+        "post_execution_report_selected_path": post_projection.get("selected_path", ""),
+        "post_execution_report_logical_identity_key": post_projection.get("logical_identity_key", ""),
+        "post_execution_report_selection_mode": post_projection.get("selection_mode", ""),
+        "post_execution_report_selected_authority_class": post_projection.get("selected_authority_class", ""),
+        "post_execution_report_pointer_resolution_mode": post_projection.get("pointer_resolution_mode", ""),
+        "post_execution_report_pointer_path": post_projection.get("pointer_path", ""),
+        "post_execution_experience_writeback_validation_status": post_payload.get(
+            "experience_writeback_validation_status", ""
+        ),
+        "post_execution_experience_writeback_error_code": post_payload.get(
+            "experience_writeback_error_code", ""
+        ),
+        "post_execution_experience_writeback_report_selected_path": post_experience_projection.get(
+            "selected_path", ""
+        ),
+        "post_execution_experience_writeback_report_logical_identity_key": post_experience_projection.get(
+            "logical_identity_key", ""
+        ),
+        "post_execution_experience_writeback_report_selection_mode": post_experience_projection.get(
+            "selection_mode", ""
+        ),
+        "post_execution_experience_writeback_report_selected_authority_class": post_experience_projection.get(
+            "selected_authority_class", ""
+        ),
+        "post_execution_experience_writeback_report_pointer_resolution_mode": post_experience_projection.get(
+            "pointer_resolution_mode", ""
+        ),
+        "post_execution_experience_writeback_report_pointer_path": post_experience_projection.get(
+            "pointer_path", ""
+        ),
+        "writeback_mode": post_payload.get("writeback_mode") or wb_payload.get("writeback_mode"),
+        "writeback_status": post_payload.get("writeback_status") or wb_payload.get("writeback_status"),
+        "next_action": post_payload.get("next_action") or wb_payload.get("next_action"),
+        "next_recovery_action": post_payload.get("next_recovery_action") or wb_payload.get("next_recovery_action"),
+        "final_emit_channel_id": post_payload.get("final_emit_channel_id"),
+        "final_emit_policy_mode": post_payload.get("final_emit_policy_mode"),
+        "final_emit_schema_id": post_payload.get("final_emit_schema_id"),
+        "final_emit_schema_status": post_payload.get("final_emit_schema_status"),
+        "final_emit_contract_status": post_payload.get("final_emit_contract_status"),
     }
     payload["track_b"] = {
         "semantic_routing_status": sem_result["status"],
@@ -427,6 +597,132 @@ def main() -> int:
         "namespace_auto_required_signal": ns_payload.get("auto_required_signal"),
         "reply_channel_auto_required_signal": reply_channel_payload.get("auto_required_signal"),
     }
+
+    track_a_stale_reasons: list[str] = []
+    if str(wb_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED:
+        track_a_stale_reasons.extend(
+            collect_report_selection_authority_projection_stale_reasons(
+                wb_payload,
+                selected_path_key="report_selected_path",
+                logical_identity_key_key="report_logical_identity_key",
+                selection_mode_key="report_selection_mode",
+                selected_authority_class_key="report_selected_authority_class",
+                pointer_resolution_mode_key="report_pointer_resolution_mode",
+                require_selected_path=True,
+                selected_path_reason="track_a_writeback_report_selected_path_missing",
+                authority_reason="track_a_writeback_authority_projection_missing",
+                logical_identity_reason="track_a_writeback_report_logical_identity_missing_or_mismatch",
+            )
+        )
+    if str(post_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED:
+        track_a_stale_reasons.extend(
+            collect_report_selection_authority_projection_stale_reasons(
+                post_payload,
+                selected_path_key="report_selected_path",
+                logical_identity_key_key="report_logical_identity_key",
+                selection_mode_key="report_selection_mode",
+                selected_authority_class_key="report_selected_authority_class",
+                pointer_resolution_mode_key="report_pointer_resolution_mode",
+                require_selected_path=True,
+                selected_path_reason="track_a_post_execution_report_selected_path_missing",
+                authority_reason="track_a_post_execution_authority_projection_missing",
+                logical_identity_reason="track_a_post_execution_report_logical_identity_missing_or_mismatch",
+            )
+        )
+    if (
+        str(wb_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED
+        and str(post_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED
+        and writeback_projection.get("selected_path")
+        and post_projection.get("selected_path")
+        and writeback_projection.get("selected_path") != post_projection.get("selected_path")
+    ):
+        track_a_stale_reasons.append("track_a_writeback_post_execution_selected_path_mismatch")
+    if (
+        str(wb_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED
+        and str(post_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED
+        and writeback_projection.get("logical_identity_key")
+        and post_projection.get("logical_identity_key")
+        and writeback_projection.get("logical_identity_key") != post_projection.get("logical_identity_key")
+    ):
+        track_a_stale_reasons.append(
+            "track_a_writeback_post_execution_logical_identity_mismatch"
+        )
+
+    aggregate_projection_payload = payload["track_a"]
+    aggregate_selected_path_reason = (
+        "track_a_report_selected_path_missing"
+        if post_preferred
+        else "track_a_aggregate_report_selected_path_missing"
+    )
+    aggregate_authority_reason = (
+        "track_a_report_authority_projection_missing"
+        if post_preferred
+        else "track_a_aggregate_authority_projection_missing"
+    )
+    track_a_stale_reasons.extend(
+        collect_report_selection_authority_projection_stale_reasons(
+            aggregate_projection_payload,
+            selected_path_key="report_selected_path",
+            logical_identity_key_key="report_logical_identity_key",
+            selection_mode_key="report_selection_mode",
+            selected_authority_class_key="report_selected_authority_class",
+            pointer_resolution_mode_key="report_pointer_resolution_mode",
+            require_selected_path=True,
+            selected_path_reason=aggregate_selected_path_reason,
+            authority_reason=aggregate_authority_reason,
+            logical_identity_reason="track_a_aggregate_report_logical_identity_missing_or_mismatch",
+        )
+    )
+
+    post_experience_status = str(
+        payload["track_a"].get("post_execution_experience_writeback_validation_status", "")
+    ).strip().upper()
+    if post_experience_status == STATUS_PASS_REQUIRED:
+        track_a_stale_reasons.extend(
+            collect_report_selection_authority_projection_stale_reasons(
+                post_payload,
+                selected_path_key="experience_writeback_report_selected_path",
+                logical_identity_key_key="experience_writeback_report_logical_identity_key",
+                selection_mode_key="experience_writeback_report_selection_mode",
+                selected_authority_class_key="experience_writeback_report_selected_authority_class",
+                pointer_resolution_mode_key="experience_writeback_report_pointer_resolution_mode",
+                require_selected_path=True,
+                selected_path_reason="track_a_post_execution_experience_writeback_report_selected_path_missing",
+                authority_reason="track_a_post_execution_experience_writeback_authority_projection_missing",
+                logical_identity_reason="track_a_post_execution_experience_writeback_report_logical_identity_missing_or_mismatch",
+            )
+        )
+        if (
+            post_projection.get("selected_path")
+            and post_experience_projection.get("selected_path")
+            and post_projection.get("selected_path") != post_experience_projection.get("selected_path")
+        ):
+            track_a_stale_reasons.append(
+                "track_a_post_execution_experience_writeback_selected_path_mismatch"
+            )
+        if (
+            post_projection.get("logical_identity_key")
+            and post_experience_projection.get("logical_identity_key")
+            and post_projection.get("logical_identity_key")
+            != post_experience_projection.get("logical_identity_key")
+        ):
+            track_a_stale_reasons.append(
+                "track_a_post_execution_experience_writeback_logical_identity_mismatch"
+            )
+
+    payload["track_a"]["track_a_stale_reasons"] = track_a_stale_reasons
+    if track_a_stale_reasons:
+        payload["sidecar_contract_status"] = STATUS_FAIL_REQUIRED
+        payload["sidecar_error_code"] = (
+            ERR_TRACK_A_AUTHORITY_MISMATCH
+            if any("mismatch" in reason for reason in track_a_stale_reasons)
+            else ERR_TRACK_A_AUTHORITY_PROJECTION
+        )
+        payload["escalation_required"] = True
+        payload["escalation_decision"] = "TRACK_A_AUTHORITY_FAIL_CLOSE"
+        payload["stale_reasons"] = track_a_stale_reasons
+        _emit(payload, json_only=args.json_only)
+        return 1
 
     p0_violations: list[dict[str, Any]] = []
 

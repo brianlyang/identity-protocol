@@ -1,0 +1,633 @@
+schema_version: 1
+registry_family: protocol_root_corpus
+registry_version: v1
+root_dir: identity/protocol
+validator_script: scripts/validate_protocol_root_corpus_governance.py
+probe_script: scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh
+common_script: scripts/root_corpus_governance_common.py
+status_key: protocol_root_corpus_governance_status
+error_codes:
+- IP-RCG-001
+- IP-RCG-002
+- IP-RCG-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Governance row-family completeness must stay explicit'
+      - Required registered-top-level-entry, corpus-class-profile,
+        root-index-class-projection, root-maintenance-guardrail, and
+        forbidden-content-class families must remain explicit as separate
+        machine-readable row families.
+      - README root governance completeness discipline must therefore stay
+        congruent with admitted governance-completeness rows rather than becoming
+        a freehand completeness summary.
+      - README maintenance guardrails about how protocol root is authored and
+        kept law-bearing must therefore stay bound to canonical guardrail rows
+        rather than remaining reviewer-memory advice.
+      - The machine world must not finalize governance legality while required
+        rel-path, corpus-class, root-index-class-projection,
+        root-maintenance-guardrail, or forbidden-content-class identity drift
+        remains known only internally.
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root governance completeness discipline'
+      - Governance law is not a soft prose bundle.
+      - These governance-completeness rules must remain bound to canonical governance-completeness
+        rows rather than drifting into soft summary prose.
+      - '1. required registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class rows must remain explicit as separate machine-readable row families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root governance completeness boundary'
+      - '1. Governance law must remain machine-readable as separate registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class row families.'
+      - '4. Protocol legality must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, root-maintenance-guardrail, or forbidden-content-class identities remain known only inside validator logic.'
+      - '6. README root governance completeness discipline rendered at protocol root
+        must remain congruent with admitted governance-completeness rows rather
+        than silently authoring an alternate completeness summary.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime governance consumption boundary'
+      - '1. Runtime consumes governance law as separate registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class row families rather than as undifferentiated governance prose.'
+      - '4. Runtime must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, root-maintenance-guardrail, or forbidden-content-class identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root governance completeness discipline as a governed
+        completeness projection bound to admitted governance-completeness rows
+        rather than as a freehand completeness summary.'
+governance_completeness_rows:
+  - order: 1
+    completeness_id: explicit_governance_row_families
+    contract_phrase: 'required registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class rows must remain explicit as separate machine-readable row families;'
+  - order: 2
+    completeness_id: congruent_governance_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_governance_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_governance_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, root-maintenance-guardrail, or forbidden-content-class identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_governance_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'
+forbidden_content_classes:
+  - class_id: workbook_issue_projection
+    description: Workbook issue rows or issue-register projection markers must not enter protocol-root law-bearing files.
+    patterns:
+      - '^###\s+ISSUE-\d+\b'
+      - '^\|\s*ISSUE-\d+\b'
+      - '^-\s+`status`:\s+[A-Z_]+\s*$'
+  - class_id: closure_ledger_narration
+    description: Temporal closure chatter and residual-red ledger language must not enter protocol-root law-bearing files.
+    patterns:
+      - '\bresidual red\b'
+      - 'What remains intentionally open:'
+      - 'What no longer remains open on this sheet:'
+  - class_id: business_domain_example
+    description: Business/domain examples must not enter protocol-root law-bearing files.
+    patterns:
+      - '\bWeChat Shop\b'
+      - '\bTaobao\b'
+      - '\b1688\b'
+      - '\bSKU\b'
+      - '\bofferId\b'
+      - '\bstore manager\b'
+corpus_class_profiles:
+  - corpus_class: bottom_theory
+    required_markers:
+      - '## Document Positioning'
+      - '### Boundary relative to streams, releases, and the protocol-root corpus'
+      - '## One-line motherline'
+      - '### Constitutional derivation order'
+  - corpus_class: root_index
+    required_markers:
+      - '## Root reading order'
+      - '## What belongs at protocol root'
+      - '## What must not be treated as protocol-root law'
+      - '## Root maintenance guardrails'
+      - '## Machine-world entry summary'
+  - corpus_class: constitution
+    required_markers:
+      - '## Normative source map (current governed execution)'
+      - '## Governance execution stack (how work is controlled)'
+      - '## Foundational design philosophy boundary'
+      - '## Conflict resolution'
+  - corpus_class: runtime_constitution
+    required_markers:
+      - '## Integration objective'
+      - '## Native vs extension boundary'
+      - '## Foundational design philosophy anchor'
+      - '## Startup sequence'
+      - '## Execution guard checks'
+  - corpus_class: root_contract
+    required_markers:
+      - '## Document positioning'
+      - '## Root-law scope and non-goals'
+      - '## Foundational design philosophy anchor'
+      - '## Constitutional inheritance and authority boundary'
+      - '## Machine-world audience'
+      - '## Runtime adjudication boundary'
+root_index_class_projections:
+  - order: 1
+    projection_label: bottom theory / interpretive source
+    bound_corpus_classes:
+      - bottom_theory
+    required_markers:
+      - 'IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md'
+  - order: 2
+    projection_label: constitutions
+    bound_corpus_classes:
+      - constitution
+      - runtime_constitution
+    required_markers:
+      - 'IDENTITY_PROTOCOL.md'
+      - 'IDENTITY_RUNTIME.md'
+  - order: 3
+    projection_label: root contract law
+    bound_corpus_classes:
+      - root_contract
+    required_markers:
+      - machine-law primacy, machine-world ontology, current-truth epistemology,
+        decision-evidence admissibility, success-path state admissibility,
+        entry-surface legitimacy, error terminality, artifact-family
+        admissibility, prompt bootstrap, discovery, handoff, instance
+        self-judgement, protocol-instance responsibility, stream-design
+        admissibility, truth lifecycle, operator answer surface, and other
+        root-domain contracts
+  - order: 4
+    projection_label: machine-consumed registries and mappings
+    bound_corpus_classes:
+      - machine_registry_directory
+    required_markers:
+      - canonical bindings, term registries, stream registries, scope matrices,
+        and related SSOT rows
+  - order: 5
+    projection_label: governed subdomain protocol extensions
+    bound_corpus_classes:
+      - governed_subdomain_extension
+    required_markers:
+      - 'broadcast/'
+      - 'plugins/'
+  - order: 6
+    projection_label: clearly demoted support material
+    bound_corpus_classes:
+      - demoted_support_directory
+    required_markers:
+      - only when it is explicit that the material is not active-runtime truth
+root_maintenance_guardrails:
+  - order: 1
+    guardrail_label: stream/version is manifestation, not origin
+    required_markers:
+      - stream or release labels mark governed freeze history;
+      - they do not become the philosophical source of protocol existence;
+      - no root contract should be written as if a stream label were prior to
+        bottom theory.
+  - order: 2
+    guardrail_label: machine verdict is adjudication, not philosophy source
+    required_markers:
+      - validators, probes, mappings, runtime state, and receipts determine
+        current machine verdict;
+      - they do not retroactively define the meaning of design philosophy;
+      - philosophy explains why law has the shape it has, while
+        machine-consumed surfaces decide current-turn legality.
+  - order: 3
+    guardrail_label: root contracts must preserve layer clarity
+    required_markers:
+      - each root contract should state what bottom-theory commitments it
+        inherits;
+      - each root contract should also state which concrete law it freezes;
+      - no root contract should blur philosophical grounding, contract
+        freezing, and runtime-source authority into one layer.
+  - order: 4
+    guardrail_label: root corpus admission must stay law-bearing
+    required_markers:
+      - the root directory should accept only bottom theory, constitutions, root
+        contracts, machine-consumed registries/mappings, governed subdomain
+        protocol packs, and clearly demoted support material;
+      - stream-local commentary, workbook material, business strategy, or
+        workspace residue must not be promoted into protocol-root law-bearing
+        position.
+  - order: 5
+    guardrail_label: root-corpus admission must be machine-governed
+    required_markers:
+      - law-bearing admission, classification, and exclusion at
+        `identity/protocol/` should be mirrored in protocol-owned registry /
+        validator / probe surfaces rather than left to reviewer taste or oral
+        memory;
+      - if root purity depends only on human recollection, the root corpus has
+        already started to drift away from machine law.
+  - order: 6
+    guardrail_label: protocol repo authority is exclusive
+    required_markers:
+      - protocol cleanliness, audit, commit admission, and release readiness
+        for identity law must resolve only from the
+        `identity-protocol-local` repository root;
+      - an enclosing workspace repo, instance repo, or other host container may
+        physically contain the protocol checkout, but it remains
+        non-authoritative for protocol-law verdicts;
+      - outer git dirty/clean state, top-level resolution, or history must not
+        be projected as protocol repo truth.
+registered_top_level_entries:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    entry_kind: file
+    corpus_class: bottom_theory
+    law_bearing: true
+    required_markers:
+      - '### Three orders must never be collapsed'
+      - 'In philosophical order, the identity protocol exists because this bottom theory exists first.'
+      - 'root-corpus admission law must be projected into machine-consumed registry and validation surfaces'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/README.md
+    entry_kind: file
+    corpus_class: root_index
+    law_bearing: true
+    required_markers:
+      - '## Source-order, reading-order, and adjudication-order'
+      - 'root-corpus admission must be machine-governed'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    entry_kind: file
+    corpus_class: constitution
+    law_bearing: true
+    required_markers:
+      - 'This file is therefore a protocol-law constitution derived from that bottom theory'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    entry_kind: file
+    corpus_class: runtime_constitution
+    law_bearing: true
+    required_markers:
+      - 'runtime is an operational embodiment of protocol bottom theory'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/LANE_HANDOFF_CONTRACT.md
+    entry_kind: file
+    corpus_class: demoted_support_directory
+    law_bearing: false
+    required_markers:
+      - 'This file is admitted at protocol root only as clearly demoted support material.'
+      - 'It is not active-runtime truth for canonical handoff law and does not compete with the accepted lane-card handoff contract.'
+      - 'This file is compatibility-only.'
+  - rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for machine-law primacy'
+      - '## Machine-law primacy law'
+      - '## Four primacy commitments'
+      - '## Required primacy anchors'
+      - '## Machine-law primacy proof discipline'
+      - '## Machine-law primacy proof limits'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for machine-world ontology law'
+      - '## Machine-world ontology law'
+      - '## Four ontology strata'
+      - '## Required ontology objects'
+      - '## Machine-world ontology proof discipline'
+      - '## Machine-world ontology proof limits'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for current-truth epistemology law'
+      - '## Current-truth epistemology law'
+      - '## Five epistemic commitments'
+      - '## Required epistemic differentiations'
+      - '## Epistemic commitment-proof alignment'
+      - '## Epistemic-proof discipline'
+      - '## Epistemic-proof limits'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for decision-evidence admissibility law'
+      - '## Decision-evidence admissibility law'
+      - '## Six decision-evidence classes'
+      - '## Required decision-evidence differentiations'
+      - '## Evidence-class proof alignment'
+      - '## Adjudication-phase evidence alignment'
+      - '## Decision-evidence proof discipline'
+      - '## Decision-evidence proof limits'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for success-path state admissibility law'
+      - '## Success-path state admissibility law'
+      - '## Six state classes'
+      - '## Required state differentiations'
+      - '## State-class proof alignment'
+      - '## State-admission proof discipline'
+      - '## State-admission proof limits'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for entry-surface legitimacy law'
+      - '## Entry-surface legitimacy law'
+      - '## Six entry classes'
+      - '## Required entry differentiations'
+      - '## Entry-admission proof discipline'
+      - '## Entry-admission proof limits'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/ERROR_TERMINALITY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for error terminality law'
+      - '## Error terminality law'
+      - '## Seven error classes'
+      - '## Required error differentiations'
+      - '## Error-terminality proof discipline'
+      - '## Error-terminality proof limits'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for artifact-family admissibility law'
+      - '## Artifact-family admissibility law'
+      - '## Six family-admission classes'
+      - '## Required family-admission differentiations'
+      - '## Family-admission proof discipline'
+      - '## Family-admission proof limits'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for prompt bootstrap behavior'
+      - '## Contract anchors'
+      - '## Base protocol capability absorption matrix (full set)'
+      - '## Prompt-bootstrap proof discipline'
+      - '## Prompt-bootstrap proof limits'
+      - '## Continuous iteration protocol (mandatory)'
+      - '## Four-track evidence binding (T1/T2/T3/T4)'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/IDENTITY_CONTROL_PLANE_MVP.md
+    entry_kind: file
+    corpus_class: demoted_support_directory
+    law_bearing: false
+    required_markers:
+      - 'This file is admitted at protocol root only as clearly demoted support material.'
+      - 'It is not a protocol-root constitution, not a root contract, and not active-runtime truth outside the machine-bound control-plane lane it documents.'
+  - rel_path: identity/protocol/IDENTITY_DISCOVERY.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'This file remains the authoritative root-domain contract for deterministic identity discovery law.'
+      - '## Deterministic identity discovery law'
+      - '## Method: `identity/list`'
+      - '## Discovery precedence'
+      - '## Activation policy contract'
+      - '## Required error reporting'
+      - '## Minimal local implementation requirements'
+      - '## Discovery-proof discipline'
+      - '## Discovery-proof limits'
+      - '## Non-compliant discovery collapses'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'This file remains the authoritative root-domain contract for governed agent-handoff law.'
+      - '## Governed handoff law'
+      - '## Two governed handoff roles'
+      - '## Mandatory handoff payload fields'
+      - '## Required handoff evidence and next-step anchors'
+      - '## Handoff-proof discipline'
+      - '## Handoff-proof limits'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for identity-instance self-judgement law'
+      - '## Four self-judgement questions'
+      - '## Required self-judgement anchors'
+      - '## Self-judgement proof discipline'
+      - '## Self-judgement proof limits'
+      - '## Non-compliant self-judgement collapses'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for protocol-vs-instance responsibility law'
+      - '## Four-layer relation'
+      - '## Responsibility law'
+      - '## Escalation admission law'
+      - '## Escalation-proof discipline'
+      - '## Escalation-proof limits'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for stream-design admissibility'
+      - '## Admissibility law'
+      - '## Five required design questions'
+      - '## Admissibility-proof discipline'
+      - '## Admissibility-proof limits'
+      - '## Mandatory projection surfaces'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for truth-lifecycle law'
+      - '## Truth-lifecycle law'
+      - '## Five lifecycle stages'
+      - '## Memory-bearing lifecycle strata'
+      - '## Required lifecycle differentiations'
+      - '## Truth-lifecycle proof discipline'
+      - '## Truth-lifecycle proof limits'
+      - '## Non-compliant lifecycle collapses'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for operator answer-surface law'
+      - '## Operator answer-surface law'
+      - '## Four answer-surface strata'
+      - '## Lifecycle-aware support-memory discipline'
+      - '## Support-memory limits'
+      - '## Answer-claim backing alignment'
+      - '## Answer-claim epistemic alignment'
+      - '## Answer-surface proof discipline'
+      - '## Answer-surface proof limits'
+      - '## Compression boundary'
+      - '## Non-compliant answer-surface collapses'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/mappings
+    entry_kind: directory
+    corpus_class: machine_registry_directory
+    law_bearing: true
+    required_children:
+      - root-corpus-registry.current.yaml
+      - root-corpus-registry.v1.yaml
+      - root-corpus-authority.current.yaml
+      - root-corpus-authority.v1.yaml
+      - root-corpus-derivation.current.yaml
+      - root-corpus-derivation.v1.yaml
+      - root-corpus-gateway-admissibility.current.yaml
+      - root-corpus-gateway-admissibility.v1.yaml
+      - root-corpus-law-bundle.current.yaml
+      - root-corpus-law-bundle.v1.yaml
+      - root-corpus-precedence.current.yaml
+      - root-corpus-precedence.v1.yaml
+      - root-corpus-transition.current.yaml
+      - root-corpus-transition.v1.yaml
+      - root-corpus-question-routing.current.yaml
+      - root-corpus-question-routing.v1.yaml
+      - root-corpus-ordering.current.yaml
+      - root-corpus-ordering.v1.yaml
+      - root-constitutional-spine.current.yaml
+      - root-constitutional-spine.v1.yaml
+      - root-machine-law-primacy.current.yaml
+      - root-machine-law-primacy.v1.yaml
+      - root-machine-world-ontology.current.yaml
+      - root-machine-world-ontology.v1.yaml
+      - root-current-truth-epistemology.current.yaml
+      - root-current-truth-epistemology.v1.yaml
+      - root-decision-evidence-admissibility.current.yaml
+      - root-decision-evidence-admissibility.v1.yaml
+      - root-success-path-state-admissibility.current.yaml
+      - root-success-path-state-admissibility.v1.yaml
+      - root-entry-surface-legitimacy.current.yaml
+      - root-entry-surface-legitimacy.v1.yaml
+      - root-error-terminality.current.yaml
+      - root-error-terminality.v1.yaml
+      - root-artifact-family-admissibility.current.yaml
+      - root-artifact-family-admissibility.v1.yaml
+      - root-agent-handoff.current.yaml
+      - root-agent-handoff.v1.yaml
+      - root-lane-handoff.current.yaml
+      - root-lane-handoff.v1.yaml
+      - root-prompt-bootstrap.current.yaml
+      - root-prompt-bootstrap.v1.yaml
+      - root-identity-discovery.current.yaml
+      - root-identity-discovery.v1.yaml
+      - root-identity-instance-self-judgement.current.yaml
+      - root-identity-instance-self-judgement.v1.yaml
+      - root-protocol-instance-responsibility.current.yaml
+      - root-protocol-instance-responsibility.v1.yaml
+      - root-stream-design-admissibility.current.yaml
+      - root-stream-design-admissibility.v1.yaml
+      - root-design-question-closure.current.yaml
+      - root-design-question-closure.v1.yaml
+      - root-machine-registry-completeness.current.yaml
+      - root-machine-registry-completeness.v1.yaml
+      - root-truth-lifecycle.current.yaml
+      - root-truth-lifecycle.v1.yaml
+      - root-operator-answer-surface.current.yaml
+      - root-operator-answer-surface.v1.yaml
+      - contract-binding.current.yaml
+      - stream-doc-registry.current.yaml
+      - semantic-term-registry.current.yaml
+      - layer-targeted-gate-profile.current.yaml
+      - version-baseline.current.yaml
+  - rel_path: identity/protocol/broadcast
+    entry_kind: directory
+    corpus_class: governed_subdomain_extension
+    law_bearing: true
+    required_children:
+      - index.json
+  - rel_path: identity/protocol/plugins
+    entry_kind: directory
+    corpus_class: governed_subdomain_extension
+    law_bearing: true
+    required_children:
+      - README.md
+      - PLUGIN_REGISTRY.current.yaml
+      - PLUGIN_DOC_CONTROL.current.yaml
+      - FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+      - PROVIDER_PROFILES.current.yaml
+  - rel_path: identity/protocol/fixtures
+    entry_kind: directory
+    corpus_class: demoted_support_directory
+    law_bearing: false

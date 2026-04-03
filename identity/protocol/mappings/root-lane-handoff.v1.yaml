@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "artifact_family": "root_lane_handoff",
+  "artifact_classification": "compatibility",
+  "governing_law": "canonical_lane_card_handoff_family_must_not_compete_with_parallel_root_handoff_artifacts",
+  "canonical_contract_type": "lane_card_handoff_contract_v1",
+  "canonical_governance_doc": "docs/governance/identity-lane-card-handoff-governance-v1.6.x.md",
+  "canonical_review_doc": "docs/review/protocol-remediation-audit-ledger-v1.6.x-lane-card-handoff.md",
+  "contract_file": "identity/protocol/LANE_HANDOFF_CONTRACT.md",
+  "current_file": "identity/protocol/mappings/root-lane-handoff.current.yaml",
+  "validator_script": "scripts/validate_protocol_root_lane_handoff.py",
+  "probe_script": "scripts/ci/run_protocol_root_lane_handoff_probes_ci.sh",
+  "common_script": "scripts/root_lane_handoff_common.py",
+  "status_key": "protocol_root_lane_handoff_status",
+  "error_codes": [
+    "IP-RLH-001",
+    "IP-RLH-002",
+    "IP-RLH-003"
+  ],
+  "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+  "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+  "probe_shadow_bootstrap_contract": "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings",
+  "accepted_issue_commit": "c09a3a6",
+  "required_contract_phrases": [
+    "This file records the pre-existing `root-lane-handoff` artifact family as a",
+    "The canonical handoff law remains the accepted `ISSUE-040A`",
+    "Parallel root-lane-handoff artifacts must not compete with that canonical",
+    "Chat remains navigation-only, not durable handoff state.",
+    "No card, no handoff.",
+    "No card, no takeover.",
+    "This file is compatibility-only.",
+    "It must not originate or claim an alternate canonical handoff law.",
+    "Validators must fail-close if this artifact family claims canonical handoff authority."
+  ],
+  "forbidden_contract_phrases": [
+    "This file remains the authoritative root-domain contract for governed lane-handoff law.",
+    "authoritative root-domain contract for governed lane-handoff law"
+  ],
+  "classification_options": [
+    "canonical",
+    "derived",
+    "compatibility",
+    "residual"
+  ]
+}

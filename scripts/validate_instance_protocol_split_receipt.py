@@ -12,7 +12,9 @@ from protocol_feedback_lane_common import (
     collect_protocol_feedback_activity,
     decide_requiredization_scope,
     discover_default_correlation_keys,
+    should_seed_default_correlation_keys,
 )
+from resolve_identity_context import resolve_repo_catalog_path
 from response_stamp_common import resolve_layer_intent, resolve_stamp_context
 from tool_vendor_governance_common import boolish, contract_required, load_json, resolve_pack_and_task, resolve_report_path
 
@@ -60,7 +62,20 @@ SENSITIVE_RE = re.compile(
     r"(?i)(tenant[_-]?id|customer[_-]?id|client[_-]?id|merchant[_-]?id|sku[_-]?id|product[_-]?id|shop[_-]?id|order[_-]?id)"
 )
 
-STRICT_OPERATIONS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
+CLI_OPERATION_CHOICES = (
+    "activate",
+    "update",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "scan",
+    "three-plane",
+    "inspection",
+    "mutation",
+)
+
+STRICT_OPERATIONS = frozenset(op for op in CLI_OPERATION_CHOICES if op not in {"scan", "three-plane", "inspection"})
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -149,7 +164,7 @@ def _collect_feedback_paths(protocol_actions: Any) -> list[str]:
                 paths.append(token)
     else:
         text = str(protocol_actions or "")
-        for m in re.finditer(r"runtime/protocol-feedback/[^\s\"']+", text):
+        for m in re.finditer(r"runtime/protocol-feedback/[^\s\"']+", text):  # downsink-path-lock: allow-nonregistry-literal
             paths.append(m.group(0).strip())
     return sorted(set(paths))
 
@@ -169,6 +184,8 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument("--receipt", default="")
     ap.add_argument("--expected-work-layer", default="")
     ap.add_argument("--expected-source-layer", default="")
@@ -178,7 +195,7 @@ def main() -> int:
     ap.add_argument("--activity-window-hours", type=float, default=72.0)
     ap.add_argument(
         "--operation",
-        choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
+        choices=CLI_OPERATION_CHOICES,
         default="validate",
     )
     ap.add_argument("--json-only", action="store_true")
@@ -200,7 +217,7 @@ def main() -> int:
     trigger_contract = _select_trigger_contract(task)
     required_declared = contract_required(split_contract) if split_contract else False
 
-    repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=Path(__file__).resolve())
     source_default = "auto"
     if repo_catalog_path.exists():
         try:
@@ -208,6 +225,8 @@ def main() -> int:
                 identity_id=args.identity_id,
                 catalog_path=catalog_path,
                 repo_catalog_path=repo_catalog_path,
+                actor_id=args.actor_id,
+                session_id=str(args.session_id or "").strip(),
             ).source_domain
         except Exception:
             source_default = "auto"
@@ -219,11 +238,18 @@ def main() -> int:
         default_source_layer=source_default,
     )
 
+    run_id = str(args.run_id or "").strip()
+    explicit_corr_keys = list(args.correlation_key or [])
+    default_seeded = should_seed_default_correlation_keys(
+        operation=args.operation,
+        run_id=run_id,
+        explicit_keys=explicit_corr_keys,
+    )
     default_corr = discover_default_correlation_keys(pack_path)
     correlation_keys = build_correlation_keys(
-        default_keys=default_corr.get("correlation_keys", []),
-        run_id=str(args.run_id or "").strip(),
-        explicit_keys=list(args.correlation_key or []),
+        default_keys=(default_corr.get("correlation_keys", []) if default_seeded else []),
+        run_id=run_id,
+        explicit_keys=explicit_corr_keys,
     )
     activity = collect_protocol_feedback_activity(
         feedback_root=(pack_path / "runtime" / "protocol-feedback"),
@@ -275,6 +301,7 @@ def main() -> int:
         "intent_source": str(layer_intent.get("intent_source", "")),
         "intent_confidence": layer_intent.get("intent_confidence"),
         "fallback_reason": str(layer_intent.get("fallback_reason", "")),
+        "default_correlation_seeded": default_seeded,
         "default_correlation_run_id": str(default_corr.get("latest_run_id", "")),
         "default_correlation_report": str(default_corr.get("latest_report_path", "")),
         "correlation_keys": correlation_keys,
@@ -390,10 +417,8 @@ def main() -> int:
     feedback_paths = _collect_feedback_paths(protocol_actions_val)
     payload["feedback_paths"] = feedback_paths
 
-    has_outbox_path = any("runtime/protocol-feedback/outbox-to-protocol/" in p for p in feedback_paths)
-    has_index_path = any("runtime/protocol-feedback/evidence-index/" in p for p in feedback_paths) or (
-        "runtime/protocol-feedback/evidence-index/" in evidence_index_ref
-    )
+    has_outbox_path = any("runtime/protocol-feedback/outbox-to-protocol/" in p for p in feedback_paths)  # downsink-path-lock: allow-nonregistry-literal
+    has_index_path = any("runtime/protocol-feedback/evidence-index/" in p for p in feedback_paths) or ("runtime/protocol-feedback/evidence-index/" in evidence_index_ref)  # downsink-path-lock: allow-nonregistry-literal
 
     if feedback_triggered:
         if not has_outbox_path or not has_index_path:

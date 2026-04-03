@@ -1,0 +1,589 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import errno
+import json
+import re
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from protocol_infra_contract import (
+    HOST_VISIBLE_FINAL_CHANNEL_ID,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED,
+    HOST_VISIBLE_POST_CHECK_RECOVERY_ARTIFACT_CHANNEL,
+    HOST_VISIBLE_POST_CHECK_RECOVERY_MATERIALIZATION_REASON,
+    HOST_VISIBLE_POST_CHECK_RECOVERY_REPLY_TRANSPORT_REF,
+    HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
+    HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS,
+    HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
+    HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD,
+    HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
+    HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
+    HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS,
+    HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
+    HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
+    HOST_VISIBLE_SURFACE_STATE_FILE,
+    PRIVILEGE_ESCALATION_ERROR_CODE,
+    PRIVILEGE_ESCALATION_REASON_PREFIX,
+    PRIVILEGE_ESCALATION_REMEDIATION_HINT,
+)
+from governed_reply_transport_lifecycle_common import resolve_governed_reply_transport_artifact
+from host_visible_surface_runtime_common import resolve_host_visible_surface_runtime_paths
+from host_visible_final_channel_relay_common import (
+    build_host_visible_final_channel_relay_receipt,
+    project_host_visible_final_channel_relay_fields,
+)
+from tool_vendor_governance_common import resolve_pack_and_task
+
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+ERR_MISSING = "IP-HDSTAMP-001"
+ERR_INVALID = "IP-HDSTAMP-003"
+FIXTURE_ALLOWED_OPERATIONS = set(HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS)
+
+SCRIPT_PATH = Path(__file__).resolve()
+SCRIPT_DIR = SCRIPT_PATH.parent
+REPO_ROOT = SCRIPT_DIR.parent
+
+
+def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    if json_only:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def _as_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _resolve_runtime_path(pack_path: Path, raw_path: str, default_rel: str) -> Path:
+    token = str(raw_path or "").strip()
+    if not token:
+        token = default_rel
+    p = Path(token).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    if token.startswith("identity/runtime/"):
+        return (pack_path / "runtime" / token[len("identity/runtime/") :]).resolve()
+    if token.startswith("runtime/"):
+        return (pack_path / token).resolve()
+    return (pack_path / token).resolve()
+
+
+def _read_json_or_default(path: Path, default: dict[str, Any]) -> dict[str, Any]:
+    if not path.exists():
+        return dict(default)
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            raise PermissionError(
+                _format_privilege_escalation_reason(
+                    path=path,
+                    scope="host_visible_recovery_state_read",
+                    exc=exc,
+                )
+            ) from exc
+        return dict(default)
+    data = json.loads(raw)
+    return data if isinstance(data, dict) else dict(default)
+
+
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            raise PermissionError(
+                _format_privilege_escalation_reason(
+                    path=path.parent,
+                    scope="host_visible_recovery_dir_write",
+                    exc=exc,
+                )
+            ) from exc
+        raise
+    try:
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            raise PermissionError(
+                _format_privilege_escalation_reason(
+                    path=path,
+                    scope="host_visible_recovery_write",
+                    exc=exc,
+                )
+            ) from exc
+        raise
+
+
+def _is_privilege_escalation_error(exc: Exception) -> bool:
+    if isinstance(exc, PermissionError):
+        return True
+    if isinstance(exc, OSError) and getattr(exc, "errno", None) in {
+        errno.EACCES,
+        errno.EPERM,
+        errno.EROFS,
+    }:
+        return True
+    return False
+
+
+def _format_privilege_escalation_reason(*, path: Path, scope: str, exc: Exception) -> str:
+    safe_scope = str(scope or "").strip() or "unknown_scope"
+    safe_path = str(path.expanduser().resolve())
+    safe_exc = type(exc).__name__
+    return (
+        f"{PRIVILEGE_ESCALATION_REASON_PREFIX}:{safe_scope}:path={safe_path}:error={safe_exc}:"
+        f"hint={PRIVILEGE_ESCALATION_REMEDIATION_HINT}:error_code={PRIVILEGE_ESCALATION_ERROR_CODE}"
+    )
+
+
+def _receipt_path_for_channel(*, receipt_glob_path: Path, channel: str, run_id: str, now_token: str) -> Path:
+    pattern_name = receipt_glob_path.name
+    channel_token = re.sub(r"[^A-Za-z0-9._-]+", "_", str(channel or "").strip()).strip("._") or "unknown"
+    run_token = re.sub(r"[^A-Za-z0-9._-]+", "_", str(run_id or "").strip()).strip("._") or "run"
+    suffix = f"{now_token}-{channel_token}-{run_token}"
+    if "*" in pattern_name:
+        filename = pattern_name.replace("*", suffix, 1)
+    elif pattern_name.endswith(".json"):
+        filename = f"{pattern_name[:-5]}-{suffix}.json"
+    else:
+        filename = f"{pattern_name}-{suffix}.json"
+    return (receipt_glob_path.parent / filename).resolve()
+
+
+def _parse_json_payload(stdout: str) -> dict[str, Any]:
+    text = str(stdout or "").strip()
+    if not text:
+        return {}
+    for line in reversed(text.splitlines()):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            payload = json.loads(line)
+        except Exception:
+            continue
+        if isinstance(payload, dict):
+            return payload
+    return {}
+
+
+def _default_receipt_source_for_operation(operation: str) -> str:
+    return HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE
+
+
+def _default_allowed_sources_for_operation(operation: str) -> str:
+    return HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(
+        description=(
+            "Recover host-visible post-check blocker by reseeding runtime receipts + state, "
+            "then re-running live attestation with strict tuple binding."
+        )
+    )
+    ap.add_argument("--catalog", required=True)
+    ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--identity-id", required=True)
+    ap.add_argument(
+        "--operation",
+        choices=[
+            "activate",
+            "update",
+            "mutation",
+            "readiness",
+            "e2e",
+            "ci",
+            "validate",
+            "scan",
+            "three-plane",
+            "inspection",
+            "send-time",
+        ],
+        default="validate",
+    )
+    ap.add_argument("--actor-id", required=True)
+    ap.add_argument("--session-id", required=True)
+    ap.add_argument("--run-id", required=True)
+    ap.add_argument("--receipt-source", default="")
+    ap.add_argument("--reply-transport-ref", default=HOST_VISIBLE_POST_CHECK_RECOVERY_REPLY_TRANSPORT_REF)
+    ap.add_argument(
+        "--host-visible-shadow-root",
+        default="",
+        help=(
+            "optional shadow root that mirrors host-visible runtime receipts/state/closure-state "
+            "under an isolated workspace instead of mutating live pack runtime surfaces"
+        ),
+    )
+    ap.add_argument("--allowed-live-receipt-sources", default="")
+    ap.add_argument("--skip-attestation", action="store_true")
+    ap.add_argument("--json-only", action="store_true")
+    args = ap.parse_args()
+
+    catalog_path = Path(args.catalog).expanduser().resolve()
+    repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    operation = str(args.operation or "").strip().lower() or "validate"
+    receipt_source = str(args.receipt_source or "").strip() or _default_receipt_source_for_operation(operation)
+    allowed_live_receipt_sources = (
+        str(args.allowed_live_receipt_sources or "").strip() or _default_allowed_sources_for_operation(operation)
+    )
+
+    base_payload: dict[str, Any] = {
+        "identity_id": args.identity_id,
+        "catalog_path": str(catalog_path),
+        "repo_catalog_path": str(repo_catalog_path),
+        "operation": operation,
+        "run_id": str(args.run_id).strip(),
+        "actor_id": str(args.actor_id).strip(),
+        "session_id": str(args.session_id).strip(),
+        "receipt_source": receipt_source,
+        "allowed_live_receipt_sources": allowed_live_receipt_sources,
+        "session_run_id_projection": "",
+        "session_run_id_projection_mismatch": False,
+        "recovery_status": STATUS_FAIL_REQUIRED,
+        "error_code": "",
+        "stale_reasons": [],
+    }
+    session_token = str(args.session_id or "").strip()
+    run_token = str(args.run_id or "").strip()
+    if session_token.lower().startswith("run:"):
+        session_bound_run_id = str(session_token.split(":", 1)[1]).strip()
+        base_payload["session_run_id_projection"] = session_bound_run_id
+        if session_bound_run_id and session_bound_run_id != run_token:
+            base_payload["session_run_id_projection_mismatch"] = True
+
+    if operation not in FIXTURE_ALLOWED_OPERATIONS and receipt_source == HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE:
+        base_payload["error_code"] = ERR_INVALID
+        base_payload["stale_reasons"] = [f"fixture_receipt_source_forbidden_for_operation:{operation}"]
+        _emit(base_payload, json_only=args.json_only)
+        return 1
+
+    try:
+        pack_path, task_path = resolve_pack_and_task(catalog_path, args.identity_id)
+        task = json.loads(task_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        base_payload["error_code"] = ERR_MISSING
+        base_payload["stale_reasons"] = [f"resolve_pack_or_task_failed:{type(exc).__name__}"]
+        _emit(base_payload, json_only=args.json_only)
+        return 1
+
+    contract = task.get(HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY)
+    if not isinstance(contract, dict) or contract.get("required") is not True:
+        base_payload["error_code"] = ERR_MISSING
+        base_payload["stale_reasons"] = ["host_visible_surface_contract_missing_or_not_required"]
+        _emit(base_payload, json_only=args.json_only)
+        return 1
+
+    required_channels = sorted(set(_as_list(contract.get("required_channels")) or HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS))
+    required_attestation_fields = set(
+        _as_list(contract.get("required_attestation_fields")) or HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS
+    )
+    required_pass_status_fields = set(
+        _as_list(contract.get("required_pass_status_fields")) or HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS
+    )
+    runtime_paths = resolve_host_visible_surface_runtime_paths(
+        pack_path=pack_path,
+        contract=contract,
+        shadow_root=str(args.host_visible_shadow_root or "").strip(),
+    )
+    state_path = Path(str(runtime_paths.get("runtime_state_path", ""))).resolve()
+    receipt_glob_path = Path(str(runtime_paths.get("runtime_receipt_pattern_path", ""))).resolve()
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    now_token = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    status_map = {
+        "wrapper_surface_status": STATUS_PASS_REQUIRED,
+        "entry_receipt_tuple_status": STATUS_PASS_REQUIRED,
+        "headstamp_first_line_status": STATUS_PASS_REQUIRED,
+        "send_time_gate_status": STATUS_PASS_REQUIRED,
+        "final_emit_contract_status": STATUS_PASS_REQUIRED,
+    }
+
+    issues: list[str] = []
+    final_channel_relay_projection: dict[str, Any] = {}
+    transport_resolution = resolve_governed_reply_transport_artifact(
+        repo_root=REPO_ROOT,
+        catalog_path=catalog_path,
+        repo_catalog_path=repo_catalog_path,
+        identity_id=str(args.identity_id).strip(),
+        actor_id=str(args.actor_id).strip(),
+        session_id=str(args.session_id).strip(),
+        operation=operation,
+        run_id=str(args.run_id).strip(),
+        reply_transport_ref=str(args.reply_transport_ref).strip(),
+        artifact_channel=HOST_VISIBLE_POST_CHECK_RECOVERY_ARTIFACT_CHANNEL,
+        artifact_stem=f"host-visible-post-check-recovery-{args.identity_id}",
+        materialization_reason=HOST_VISIBLE_POST_CHECK_RECOVERY_MATERIALIZATION_REASON,
+    )
+    reply_transport_ref = str(transport_resolution.get("reply_transport_effective_ref", "")).strip()
+    base_payload.update(
+        {
+            "reply_transport_requested_ref": str(
+                transport_resolution.get("reply_transport_requested_ref", "")
+            ).strip(),
+            "reply_transport_resolution_mode": str(
+                transport_resolution.get("reply_transport_resolution_mode", "")
+            ).strip(),
+            "reply_transport_source_materialized": bool(
+                transport_resolution.get("reply_transport_source_materialized", False)
+            ),
+            "reply_transport_source_status": str(
+                transport_resolution.get("reply_transport_source_status", "")
+            ).strip(),
+            "reply_transport_source_path": str(
+                transport_resolution.get("reply_transport_source_path", "")
+            ).strip(),
+            "host_visible_runtime_scope": str(runtime_paths.get("runtime_scope", "")).strip(),
+            "host_visible_runtime_shadow_root": str(
+                runtime_paths.get("runtime_shadow_root", "")
+            ).strip(),
+            "host_visible_runtime_state_live_path": str(
+                runtime_paths.get("live_runtime_state_path", "")
+            ).strip(),
+            "host_visible_runtime_receipt_pattern_live_path": str(
+                runtime_paths.get("live_runtime_receipt_pattern_path", "")
+            ).strip(),
+            "host_visible_runtime_post_check_closure_state_live_path": str(
+                runtime_paths.get("live_post_check_closure_state_path", "")
+            ).strip(),
+        }
+    )
+    if str(transport_resolution.get("reply_transport_source_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+        base_payload["error_code"] = str(transport_resolution.get("error_code", "")).strip() or ERR_INVALID
+        base_payload["stale_reasons"] = [
+            str(item).strip()
+            for item in (transport_resolution.get("stale_reasons") or [])
+            if str(item).strip()
+        ] or ["reply_transport_source_resolution_not_pass"]
+        _emit(base_payload, json_only=args.json_only)
+        return 1
+    if HOST_VISIBLE_FINAL_CHANNEL_ID in required_channels and bool(
+        contract.get("final_channel_relay_required", HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED)
+    ):
+        reply_path = Path(reply_transport_ref).expanduser()
+        if reply_transport_ref and reply_path.exists():
+            relay_rc, relay_payload = build_host_visible_final_channel_relay_receipt(
+                repo_root=REPO_ROOT,
+                pack_path=pack_path.resolve(),
+                identity_id=str(args.identity_id).strip(),
+                run_id=str(args.run_id).strip(),
+                reply_transport_ref=reply_transport_ref,
+                now_token=now_token,
+            )
+            final_channel_relay_projection = project_host_visible_final_channel_relay_fields(relay_payload)
+            relay_status = str(
+                final_channel_relay_projection.get("agent_relay_final_answer_status", "")
+            ).strip().upper()
+            if relay_rc != 0 or relay_status != STATUS_PASS_REQUIRED:
+                relay_reasons = [
+                    str(item).strip()
+                    for item in (relay_payload.get("stale_reasons") or [])
+                    if str(item).strip()
+                ]
+                issues.append(
+                    "recovery_final_channel_relay_not_pass:"
+                    + (relay_reasons[0] if relay_reasons else "unknown")
+                )
+
+    receipt_paths: list[str] = []
+    receipt_paths_by_channel: dict[str, str] = {}
+
+    for channel in required_channels:
+        receipt_path = _receipt_path_for_channel(
+            receipt_glob_path=receipt_glob_path,
+            channel=channel,
+            run_id=str(args.run_id).strip(),
+            now_token=now_token,
+        )
+        receipt_payload: dict[str, Any] = {
+            "schema_version": "v1",
+            "created_at_utc": now,
+            "identity_id": str(args.identity_id).strip(),
+            "actor_id": str(args.actor_id).strip(),
+            "session_id": str(args.session_id).strip(),
+            "run_id": str(args.run_id).strip(),
+            "reply_transport_ref": reply_transport_ref,
+            "emit_channel_id": str(channel).strip(),
+            HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD: receipt_source,
+        }
+        receipt_payload.update(status_map)
+        if str(channel).strip() == HOST_VISIBLE_FINAL_CHANNEL_ID and final_channel_relay_projection:
+            receipt_payload.update(final_channel_relay_projection)
+        missing_fields = sorted(field for field in required_attestation_fields if field not in receipt_payload)
+        if missing_fields:
+            issues.append(f"recovery_receipt_missing_required_fields:{channel}:{','.join(missing_fields)}")
+            continue
+        try:
+            _write_json(receipt_path, receipt_payload)
+        except PermissionError as exc:
+            base_payload["error_code"] = PRIVILEGE_ESCALATION_ERROR_CODE
+            base_payload["stale_reasons"] = [str(exc)]
+            _emit(base_payload, json_only=args.json_only)
+            return 1
+        except Exception as exc:
+            base_payload["error_code"] = ERR_INVALID
+            base_payload["stale_reasons"] = [f"host_visible_recovery_receipt_write_failed:{channel}:{type(exc).__name__}"]
+            _emit(base_payload, json_only=args.json_only)
+            return 1
+        receipt_paths.append(str(receipt_path))
+        receipt_paths_by_channel[str(channel).strip()] = str(receipt_path)
+
+    default_channels: dict[str, Any] = {}
+    for channel in required_channels:
+        default_channels[channel] = {
+            "last_receipt_path": "",
+            "last_status": "",
+            "receipt_source": "",
+            "last_run_id": "",
+            "updated_at_utc": "",
+        }
+
+    try:
+        state_doc = _read_json_or_default(
+            state_path,
+            {
+                "schema_version": "v1",
+                "identity_id": str(args.identity_id).strip(),
+                "channels": default_channels,
+                "updated_at_utc": "",
+            },
+        )
+    except PermissionError as exc:
+        base_payload["error_code"] = PRIVILEGE_ESCALATION_ERROR_CODE
+        base_payload["stale_reasons"] = [str(exc)]
+        _emit(base_payload, json_only=args.json_only)
+        return 1
+    channels_doc = state_doc.get("channels")
+    if not isinstance(channels_doc, dict):
+        channels_doc = {}
+    for channel in required_channels:
+        ch_doc = dict(channels_doc.get(channel) or {}) if isinstance(channels_doc.get(channel), dict) else {}
+        ch_doc["last_receipt_path"] = str(receipt_paths_by_channel.get(channel, "")).strip()
+        ch_doc["last_status"] = STATUS_PASS_REQUIRED if all(
+            status_map.get(field, "") == STATUS_PASS_REQUIRED for field in required_pass_status_fields
+        ) else STATUS_FAIL_REQUIRED
+        ch_doc["receipt_source"] = receipt_source
+        ch_doc["last_run_id"] = str(args.run_id).strip()
+        ch_doc["updated_at_utc"] = now
+        channels_doc[channel] = ch_doc
+    state_doc["schema_version"] = "v1"
+    state_doc["identity_id"] = str(args.identity_id).strip()
+    state_doc["channels"] = channels_doc
+    state_doc["updated_at_utc"] = now
+    try:
+        _write_json(state_path, state_doc)
+    except PermissionError as exc:
+        base_payload["error_code"] = PRIVILEGE_ESCALATION_ERROR_CODE
+        base_payload["stale_reasons"] = [str(exc)]
+        _emit(base_payload, json_only=args.json_only)
+        return 1
+    except Exception as exc:
+        base_payload["error_code"] = ERR_INVALID
+        base_payload["stale_reasons"] = [f"host_visible_recovery_state_write_failed:{type(exc).__name__}"]
+        _emit(base_payload, json_only=args.json_only)
+        return 1
+
+    base_payload.update(
+        {
+            "pack_path": str(pack_path),
+            "task_path": str(task_path),
+            "host_visible_state_path": str(state_path),
+            "host_visible_receipt_pattern": str(receipt_glob_path),
+            "host_visible_runtime_scope": str(runtime_paths.get("runtime_scope", "")).strip(),
+            "host_visible_runtime_shadow_root": str(runtime_paths.get("runtime_shadow_root", "")).strip(),
+            "seeded_channels": required_channels,
+            "seeded_receipt_paths": receipt_paths,
+            "seeded_receipt_source": receipt_source,
+            "seeded_final_channel_relay_receipt_path": str(
+                final_channel_relay_projection.get("agent_relay_final_answer_receipt_path", "")
+            ).strip(),
+            "seeded_final_channel_relay_status": str(
+                final_channel_relay_projection.get("agent_relay_final_answer_status", "")
+            ).strip(),
+        }
+    )
+
+    if issues:
+        base_payload["error_code"] = ERR_INVALID
+        base_payload["stale_reasons"] = issues
+        _emit(base_payload, json_only=args.json_only)
+        return 1
+
+    if args.skip_attestation:
+        base_payload["recovery_status"] = STATUS_PASS_REQUIRED
+        base_payload["error_code"] = ""
+        base_payload["stale_reasons"] = []
+        _emit(base_payload, json_only=args.json_only)
+        return 0
+
+    attestation_cmd = [
+        sys.executable,
+        str((SCRIPT_DIR / "validate_host_transport_wiring_attestation.py").resolve()),
+        "--catalog",
+        str(catalog_path),
+        "--identity-id",
+        str(args.identity_id).strip(),
+        "--operation",
+        operation,
+        "--require-live-receipts",
+        "--require-actor-id",
+        str(args.actor_id).strip(),
+        "--require-session-id",
+        str(args.session_id).strip(),
+        "--require-run-id",
+        str(args.run_id).strip(),
+        "--allowed-live-receipt-sources",
+        allowed_live_receipt_sources,
+        "--json-only",
+    ]
+    if str(args.host_visible_shadow_root or "").strip():
+        attestation_cmd.extend(
+            ["--host-visible-shadow-root", str(args.host_visible_shadow_root).strip()]
+        )
+    proc = subprocess.run(attestation_cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
+    attestation_payload = _parse_json_payload(proc.stdout)
+    attestation_status = str(attestation_payload.get("host_transport_wiring_attestation_status", "")).strip().upper()
+    base_payload["attestation_rc"] = int(proc.returncode)
+    base_payload["attestation_status"] = attestation_status
+    base_payload["attestation_error_code"] = str(attestation_payload.get("error_code", "")).strip()
+    base_payload["attestation_stale_reasons"] = [
+        str(item).strip() for item in (attestation_payload.get("stale_reasons") or []) if str(item).strip()
+    ]
+    base_payload["host_transport_post_check_blocker_active"] = bool(
+        attestation_payload.get("host_transport_post_check_blocker_active", False)
+    )
+    base_payload["host_transport_post_check_runtime_scope"] = str(
+        attestation_payload.get("host_transport_post_check_runtime_scope", "")
+    ).strip()
+    base_payload["host_transport_post_check_state_write_status"] = str(
+        attestation_payload.get("host_transport_post_check_state_write_status", "")
+    ).strip()
+    base_payload["host_transport_post_check_closure_state_path"] = str(
+        attestation_payload.get("host_transport_post_check_closure_state_path", "")
+    ).strip()
+
+    if proc.returncode == 0 and attestation_status == STATUS_PASS_REQUIRED:
+        base_payload["recovery_status"] = STATUS_PASS_REQUIRED
+        base_payload["error_code"] = ""
+        base_payload["stale_reasons"] = []
+        _emit(base_payload, json_only=args.json_only)
+        return 0
+
+    base_payload["recovery_status"] = STATUS_FAIL_REQUIRED
+    base_payload["error_code"] = str(attestation_payload.get("error_code", "")).strip() or ERR_INVALID
+    base_payload["stale_reasons"] = base_payload["attestation_stale_reasons"] or ["post_check_attestation_not_pass"]
+    _emit(base_payload, json_only=args.json_only)
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

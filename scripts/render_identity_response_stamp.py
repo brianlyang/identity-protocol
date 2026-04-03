@@ -5,28 +5,252 @@ import argparse
 import json
 from pathlib import Path
 
+from actor_session_common import actor_session_path, load_actor_binding
+from headstamp_surface_semantics_common import build_headstamp_surface_semantics_payload
+from identity_runtime_authority_common import (
+    STATUS_PASS_REQUIRED,
+    validate_runtime_egress_identity_authority,
+)
+from governed_reply_observability_common import build_headstamp_consistency_projection
+from native_chat_headstamp_common import (
+    render_native_chat_failure_identity_line,
+    render_native_chat_failure_machine_line,
+    render_native_chat_success_identity_line,
+    render_native_chat_success_machine_line,
+)
+from resolve_identity_context import resolve_identity, resolve_repo_catalog_path
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
+    build_operator_machine_verification_payload,
+    DEFAULT_MACHINE_VERIFICATION_SOURCE,
+    normalize_response_stamp_profile,
+    render_machine_verification_line,
+    render_operator_headstamp_lines,
     render_external_stamp_with_layer_context,
     render_internal_stamp,
     render_structured_context,
     resolve_layer_intent,
     resolve_disclosure_level,
+    resolve_task_response_stamp_profile,
     resolve_stamp_context,
 )
+from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
+
+def _emit(payload: dict[str, object], *, json_only: bool) -> None:
+    if json_only:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def _resolve_prompt_version(catalog_path: Path, identity_id: str) -> str:
+    token = str(identity_id or "").strip()
+    if not token:
+        return "v1.6"
+    try:
+        _pack_path, task_path = resolve_pack_and_task(catalog_path, token)
+        task_doc = load_json(task_path)
+    except Exception:
+        return "v1.6"
+    agent_identity = task_doc.get("agent_identity") if isinstance(task_doc.get("agent_identity"), dict) else {}
+    for candidate in (
+        agent_identity.get("prompt_version", ""),
+        task_doc.get("prompt_version", ""),
+        task_doc.get("identity_protocol_version", ""),
+        task_doc.get("required_version_stream", ""),
+    ):
+        value = str(candidate or "").strip()
+        if value:
+            return value
+    return "v1.6"
+
+
+def _native_chat_conflict_reason(authority: dict[str, object]) -> str:
+    resolution_mode = str(authority.get("identity_authority_resolution_mode", "")).strip()
+    if resolution_mode == "actor_binding_session_context_missing":
+        return "current_turn_session_tuple_missing"
+    if resolution_mode == "actor_context_missing":
+        return "current_turn_actor_missing"
+    if resolution_mode == "actor_binding_session_binding_missing":
+        return "current_turn_tuple_unbound"
+    if resolution_mode == "actor_binding_session_primary_conflict":
+        return "current_turn_session_primary_conflict"
+    if resolution_mode.startswith("actor_binding"):
+        return "current_turn_authority_unresolved"
+    stale_reasons = [
+        str(item).strip()
+        for item in (authority.get("identity_authority_stale_reasons") or [])
+        if str(item).strip()
+    ]
+    for reason in stale_reasons:
+        if reason.startswith("identity_authority_mismatch:"):
+            return "requested_identity_mismatch"
+        if reason.startswith("session_context_missing:"):
+            return "current_turn_session_tuple_missing"
+        if reason.startswith("session_primary_identity_missing:"):
+            return "current_turn_tuple_unbound"
+        if reason.startswith("session_primary_identity_conflict:"):
+            return "current_turn_session_primary_conflict"
+    return "runtime_authority_unresolved"
+
+
+def _resolve_failure_scope_source(
+    *,
+    identity_id: str,
+    repo_catalog_path: Path,
+    catalog_path: Path,
+    explicit_source_layer: str,
+) -> tuple[str, str]:
+    source_layer = str(explicit_source_layer or "").strip().lower() or "project"
+    identity_token = str(identity_id or "").strip()
+    if not identity_token:
+        return "USER", source_layer
+    try:
+        resolved = resolve_identity(
+            identity_token,
+            repo_catalog_path.resolve(),
+            catalog_path.resolve(),
+            allow_conflict=True,
+        )
+    except Exception:
+        return "USER", source_layer
+    scope = str(resolved.get("resolved_scope", "")).strip().upper() or "USER"
+    source = str(resolved.get("source_layer", "")).strip().lower() or source_layer
+    return scope, source
+
+
+def _active_pointer_diag(catalog_path: Path) -> tuple[str, str, str]:
+    # Native-chat failure rendering must not read compatibility pointers directly.
+    # Compatibility diagnostics stay available to replay/status tooling, but strict
+    # authority consumers fail closed without consulting pointer files.
+    _ = catalog_path
+    return "", "", ""
+
+
+def _build_native_chat_payload(
+    *,
+    catalog_path: Path,
+    repo_catalog_path: Path,
+    ctx,
+    authority: dict[str, object],
+    work_layer: str,
+    source_layer: str,
+    session_id: str,
+    requested_identity_id: str,
+    machine_profile: str,
+) -> dict[str, object]:
+    binding = load_actor_binding(
+        catalog_path,
+        ctx.actor_id,
+        identity_id=ctx.identity_id,
+        session_id=session_id,
+    )
+    pointer_path = str(actor_session_path(catalog_path, ctx.actor_id))
+    prompt_version = _resolve_prompt_version(catalog_path, ctx.identity_id)
+    status = (
+        str(authority.get("identity_authority_selected_status", "")).strip()
+        or str(binding.get("status", "")).strip()
+        or "active"
+    )
+    identity_line = render_native_chat_success_identity_line(
+        actor_id=ctx.actor_id,
+        identity_id=ctx.identity_id,
+        scope=ctx.resolved_scope,
+        source_layer=source_layer,
+        work_layer=work_layer,
+        lock_state=ctx.lock_state,
+    )
+    machine_line = render_native_chat_success_machine_line(
+        actor_id=ctx.actor_id,
+        identity_id=ctx.identity_id,
+        status=status,
+        prompt_version=prompt_version,
+        source_layer=source_layer,
+        pointer_path=pointer_path,
+        catalog_path=str(catalog_path),
+        pack_path=str(ctx.pack_path),
+        binding_version=binding.get("binding_version", ""),
+        work_layer=work_layer,
+        machine_profile=machine_profile,
+    )
+    return {
+        "native_chat_surface_status": STATUS_PASS_REQUIRED,
+        "native_chat_machine_profile": machine_profile,
+        "native_chat_identity_line": identity_line,
+        "native_chat_machine_verification_line": machine_line,
+        "native_chat_visible_reply": "\n".join((identity_line, machine_line)).strip(),
+        "native_chat_prompt_version": prompt_version,
+        "native_chat_authority_resolution_mode": str(
+            authority.get("identity_authority_resolution_mode", "")
+        ).strip(),
+        "native_chat_requested_identity_id": requested_identity_id,
+    }
+
+
+def _build_native_chat_failure_payload(
+    *,
+    catalog_path: Path,
+    repo_catalog_path: Path,
+    actor_id: str,
+    requested_identity_id: str,
+    authority: dict[str, object],
+    work_layer: str,
+    source_layer: str,
+    machine_profile: str,
+) -> dict[str, object]:
+    scope, resolved_source_layer = _resolve_failure_scope_source(
+        identity_id=requested_identity_id,
+        repo_catalog_path=repo_catalog_path,
+        catalog_path=catalog_path,
+        explicit_source_layer=source_layer,
+    )
+    compatibility_pointer_identity_id, compatibility_pointer_scope, pointer_path = _active_pointer_diag(catalog_path)
+    conflict = _native_chat_conflict_reason(authority)
+    identity_line = render_native_chat_failure_identity_line(
+        actor_id=actor_id,
+        requested_identity_id=requested_identity_id,
+        conflict=conflict,
+        scope=scope,
+        source_layer=resolved_source_layer,
+        work_layer=work_layer,
+    )
+    machine_line = render_native_chat_failure_machine_line(
+        verification_source="local_runtime_recheck",
+        source_layer=resolved_source_layer,
+        compatibility_pointer_identity_id=compatibility_pointer_identity_id,
+        compatibility_pointer_scope=compatibility_pointer_scope,
+        pointer_path=pointer_path,
+        current_chat_surface_native_machine_attested=False,
+        next_hop_admission_status="FAIL_REQUIRED",
+        machine_profile=machine_profile,
+    )
+    return {
+        "native_chat_surface_status": "FAIL_REQUIRED",
+        "native_chat_machine_profile": machine_profile,
+        "native_chat_identity_line": identity_line,
+        "native_chat_machine_verification_line": machine_line,
+        "native_chat_visible_reply": "\n".join((identity_line, machine_line)).strip(),
+        "native_chat_conflict": conflict,
+        "native_chat_authority_resolution_mode": str(
+            authority.get("identity_authority_resolution_mode", "")
+        ).strip(),
+        "native_chat_requested_identity_id": requested_identity_id,
+    }
 
 def main() -> int:
+    script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(description="Render dynamic identity response stamp (external/internal).")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="", help="optional actor session selector (run:<id>) for M:N binding alignment")
     ap.add_argument("--view", choices=["external", "internal", "dual"], default="external")
     ap.add_argument("--disclosure-level", choices=["minimal", "standard", "verbose", "audit"], default="")
     ap.add_argument("--work-layer", default="", help="explicit work layer override (protocol|instance|dual)")
-    ap.add_argument("--source-layer", default="", help="explicit source layer override (project|global|env|auto)")
+    ap.add_argument("--source-layer", default="", help="explicit source layer override (project|global)")
     ap.add_argument(
         "--layer-intent-text",
         default="",
@@ -44,12 +268,39 @@ def main() -> int:
         action="store_true",
         help="disable session-trigger persistence (useful for sandbox dry-runs)",
     )
+    ap.add_argument(
+        "--machine-payload-json",
+        default="",
+        help="optional JSON object merged into Machine-Verification rendering",
+    )
+    ap.add_argument(
+        "--machine-payload-file",
+        default="",
+        help="optional path to JSON object merged into Machine-Verification rendering",
+    )
+    ap.add_argument(
+        "--render-operator-envelope",
+        action="store_true",
+        help="print Display-Headstamp + Machine-Verification lines instead of raw external/internal stamps",
+    )
+    ap.add_argument(
+        "--surface",
+        choices=["operator", "native-chat"],
+        default="operator",
+        help="render the operator envelope or the machine-attested native-chat first-two-line surface",
+    )
+    ap.add_argument(
+        "--native-chat-machine-profile",
+        choices=["mini", "standard", "audit"],
+        default="mini",
+        help="machine profile used when rendering native-chat first-two-line output",
+    )
     ap.add_argument("--out", default="", help="optional path to persist rendered stamp payload JSON")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=script_ref)
     if not catalog_path.exists():
         print(f"[FAIL] catalog not found: {catalog_path}")
         return 2
@@ -63,10 +314,57 @@ def main() -> int:
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             actor_id=args.actor_id,
+            session_id=args.session_id,
             explicit_catalog=bool(args.catalog.strip()),
         )
     except Exception as exc:
         print(f"[FAIL] unable to resolve stamp context: {exc}")
+        return 1
+
+    authority = validate_runtime_egress_identity_authority(
+        catalog_path=catalog_path,
+        identity_id=ctx.identity_id,
+        actor_id=ctx.actor_id,
+        session_id=str(args.session_id or "").strip(),
+    )
+    if str(authority.get("identity_authority_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+        payload = {
+            "identity_id": ctx.identity_id,
+            "catalog_path": str(catalog_path),
+            "pack_path": str(ctx.pack_path),
+            "view": args.view,
+            "session_id": str(args.session_id or "").strip(),
+            "work_layer": str(args.work_layer or "").strip().lower() or "instance",
+            "source_layer": str(args.source_layer or "").strip().lower() or str(ctx.source_domain or ""),
+            "layer_intent_resolution_status": "FAIL_REQUIRED",
+            "identity_authority_status": str(authority.get("identity_authority_status", "")).strip(),
+            "error_code": str(authority.get("identity_authority_error_code", "")).strip(),
+            "stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
+            "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
+        }
+        payload.update(authority)
+        if args.surface == "native-chat":
+            payload.update(
+                _build_native_chat_failure_payload(
+                    catalog_path=catalog_path,
+                    repo_catalog_path=repo_catalog_path,
+                    actor_id=ctx.actor_id,
+                    requested_identity_id=args.identity_id,
+                    authority=payload,
+                    work_layer=str(args.work_layer or "").strip().lower() or "instance",
+                    source_layer=str(args.source_layer or "").strip().lower() or "",
+                    machine_profile=str(args.native_chat_machine_profile or "mini").strip(),
+                )
+            )
+        if args.out.strip():
+            out_path = Path(args.out).expanduser().resolve()
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        if args.surface == "native-chat" and not args.json_only:
+            print(str(payload.get("native_chat_identity_line", "")).strip())
+            print(str(payload.get("native_chat_machine_verification_line", "")).strip())
+        else:
+            _emit(payload, json_only=args.json_only)
         return 1
 
     persist_session_trigger = not bool(args.no_persist_session_trigger)
@@ -78,6 +376,11 @@ def main() -> int:
         persist_session_trigger=persist_session_trigger,
     )
     disclosure_level = str(disclosure.get("disclosure_level", "standard")).strip() or "standard"
+    response_stamp_profile = resolve_task_response_stamp_profile(ctx)
+    response_stamp_profile = normalize_response_stamp_profile(
+        response_stamp_profile,
+        disclosure_level=disclosure_level,
+    )
     intent = resolve_layer_intent(
         explicit_work_layer=str(args.work_layer or "").strip(),
         explicit_source_layer=str(args.source_layer or "").strip(),
@@ -100,8 +403,11 @@ def main() -> int:
         "identity_id": ctx.identity_id,
         "catalog_path": str(ctx.catalog_path),
         "pack_path": str(ctx.pack_path),
+        "render_surface": str(args.surface or "").strip().lower() or "operator",
         "view": args.view,
         "disclosure_level": disclosure_level,
+        "response_stamp_profile": response_stamp_profile,
+        "session_id": str(args.session_id or "").strip(),
         "disclosure_source": disclosure.get("disclosure_source", ""),
         "trigger_applied": bool(disclosure.get("trigger_applied", False)),
         "trigger_scope": disclosure.get("trigger_scope", ""),
@@ -118,10 +424,24 @@ def main() -> int:
         "intent_confidence": intent.get("intent_confidence", 0.0),
         "intent_source": intent.get("intent_source", "default_fallback"),
         "fallback_reason": intent.get("fallback_reason", ""),
+        "fallback_reason_raw": intent.get("fallback_reason_raw", intent.get("fallback_reason", "")),
+        "fallback_taxonomy_class": intent.get("fallback_taxonomy_class", ""),
+        "fallback_taxonomy_version": intent.get("fallback_taxonomy_version", ""),
         "protocol_triggered": bool(intent.get("protocol_triggered", False)),
         "protocol_trigger_reasons": list(intent.get("protocol_trigger_reasons") or []),
         "protocol_trigger_confidence": float(intent.get("protocol_trigger_confidence", 0.0) or 0.0),
         "layer_intent_text": str(args.layer_intent_text or "").strip(),
+        "identity_authority_status": str(authority.get("identity_authority_status", "")).strip(),
+        "identity_authority_error_code": str(authority.get("identity_authority_error_code", "")).strip(),
+        "identity_authority_selected_identity_id": str(
+            authority.get("identity_authority_selected_identity_id", "")
+        ).strip(),
+        "identity_authority_authoritative_identity_id": str(
+            authority.get("identity_authority_authoritative_identity_id", "")
+        ).strip(),
+        "identity_authority_resolution_mode": str(authority.get("identity_authority_resolution_mode", "")).strip(),
+        "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
+        "identity_authority_stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
         "external_stamp": external,
         "internal_stamp": internal,
         "identity_context": render_structured_context(
@@ -130,6 +450,73 @@ def main() -> int:
             source_layer=source_layer,
         ),
     }
+    payload.update(
+        build_headstamp_consistency_projection(
+            display_identity_id=ctx.identity_id,
+            authoritative_identity_id=str(
+                authority.get("identity_authority_authoritative_identity_id", "")
+            ).strip()
+            or ctx.identity_id,
+        )
+    )
+
+    machine_payload: dict[str, object] = build_operator_machine_verification_payload(
+        payload,
+        verification_source=DEFAULT_MACHINE_VERIFICATION_SOURCE,
+    )
+    if str(args.machine_payload_file or "").strip():
+        extra_path = Path(args.machine_payload_file).expanduser().resolve()
+        if not extra_path.exists():
+            print(
+                f"[FAIL] machine payload file not found: {extra_path}"
+            )
+            return 2
+        extra_payload = json.loads(extra_path.read_text(encoding="utf-8"))
+        if not isinstance(extra_payload, dict):
+            print("[FAIL] machine payload file must contain a JSON object")
+            return 2
+        machine_payload.update(extra_payload)
+    if str(args.machine_payload_json or "").strip():
+        try:
+            extra_payload = json.loads(str(args.machine_payload_json or "").strip())
+        except json.JSONDecodeError as exc:
+            print(f"[FAIL] invalid --machine-payload-json: {exc}")
+            return 2
+        if not isinstance(extra_payload, dict):
+            print("[FAIL] --machine-payload-json must decode to a JSON object")
+            return 2
+        machine_payload.update(extra_payload)
+
+    operator_envelope_lines = render_operator_headstamp_lines(
+        ctx,
+        disclosure_level=disclosure_level,
+        work_layer=work_layer,
+        source_layer=source_layer,
+        machine_payload=machine_payload,
+    )
+    payload["machine_verification"] = machine_payload
+    payload["machine_verification_line"] = render_machine_verification_line(machine_payload)
+    payload["display_headstamp_line"] = operator_envelope_lines[0] if operator_envelope_lines else ""
+    payload["operator_envelope_lines"] = operator_envelope_lines
+    payload["operator_envelope"] = "\n".join(operator_envelope_lines)
+    payload["headstamp_surface_semantics"] = build_headstamp_surface_semantics_payload(
+        render_surface=str(payload.get("render_surface", "")).strip(),
+        machine_payload=machine_payload,
+    )
+    if args.surface == "native-chat":
+        payload.update(
+            _build_native_chat_payload(
+                catalog_path=catalog_path,
+                repo_catalog_path=repo_catalog_path,
+                ctx=ctx,
+                authority=authority,
+                work_layer=work_layer,
+                source_layer=source_layer,
+                session_id=str(args.session_id or "").strip(),
+                requested_identity_id=args.identity_id,
+                machine_profile=str(args.native_chat_machine_profile or "mini").strip(),
+            )
+        )
 
     if args.out.strip():
         out_path = Path(args.out).expanduser().resolve()
@@ -138,6 +525,16 @@ def main() -> int:
 
     if args.json_only:
         print(json.dumps(payload, ensure_ascii=False))
+        return 0
+
+    if args.surface == "native-chat":
+        print(str(payload.get("native_chat_identity_line", "")).strip())
+        print(str(payload.get("native_chat_machine_verification_line", "")).strip())
+        return 0
+
+    if args.render_operator_envelope:
+        for line in operator_envelope_lines:
+            print(line)
         return 0
 
     if args.view in {"external", "dual"}:

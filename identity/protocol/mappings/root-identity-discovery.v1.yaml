@@ -1,0 +1,236 @@
+schema_version: 1
+identity_discovery_family: protocol_root_identity_discovery
+identity_discovery_version: v1
+contract_file: identity/protocol/IDENTITY_DISCOVERY.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_identity_discovery.py
+probe_script: scripts/ci/run_protocol_root_identity_discovery_probes_ci.sh
+common_script: scripts/root_identity_discovery_common.py
+status_key: protocol_root_identity_discovery_status
+error_codes:
+- IP-RID-001
+- IP-RID-002
+- IP-RID-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - 'This file remains the authoritative root-domain contract for deterministic identity discovery law.'
+  - '## Deterministic identity discovery law'
+  - '## Method: `identity/list`'
+  - '## Discovery precedence'
+  - '## Activation policy contract'
+  - '## Required error reporting'
+  - '## Minimal local implementation requirements'
+  - '## Discovery-proof discipline'
+  - '## Discovery-proof limits'
+  - '## Non-compliant discovery collapses'
+  - 'Deterministic discovery law must also remain machine-readable as separate section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse row families rather than one narrative discovery claim.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Identity-discovery row-family completeness must stay explicit'
+      - 'Required section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse families must remain explicit as separate machine-readable row families.'
+      - 'README root identity-discovery completeness discipline must therefore stay congruent with admitted identity-discovery-completeness rows rather than becoming a freehand completeness summary.'
+      - 'The machine world must not finalize identity-discovery legality while required row identity drift remains known only internally.'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root identity-discovery completeness discipline'
+      - 'Identity-discovery law is not a soft prose bundle.'
+      - 'These identity-discovery-completeness rules must remain bound to canonical identity-discovery-completeness rows rather than drifting into soft summary prose.'
+      - '1. required section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root identity-discovery completeness boundary'
+      - '1. Identity-discovery law must remain machine-readable as separate section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse row families.'
+      - '4. Protocol legality must not finalize identity-discovery truth while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root identity-discovery completeness discipline rendered at protocol root must remain congruent with admitted identity-discovery-completeness rows rather than silently authoring an alternate completeness summary.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime identity-discovery consumption boundary'
+      - '1. Runtime consumes identity-discovery law as separate section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse row families rather than as undifferentiated discovery prose.'
+      - '4. Runtime must not finalize identity-discovery legality while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root identity-discovery completeness discipline as a governed completeness projection bound to admitted identity-discovery-completeness rows rather than as a freehand completeness summary.'
+identity_discovery_completeness_rows:
+  - order: 1
+    completeness_id: explicit_identity_discovery_row_families
+    contract_phrase: 'required section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - order: 2
+    completeness_id: congruent_identity_discovery_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_identity_discovery_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_identity_discovery_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize identity-discovery truth while missing or unexpected row identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_identity_discovery_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'
+required_section_rows:
+  - order: 1
+    section_id: method_identity_list
+    contract_heading: '## Method: `identity/list`'
+  - order: 2
+    section_id: discovery_precedence
+    contract_heading: '## Discovery precedence'
+  - order: 3
+    section_id: activation_policy_contract
+    contract_heading: '## Activation policy contract'
+  - order: 4
+    section_id: required_error_reporting
+    contract_heading: '## Required error reporting'
+  - order: 5
+    section_id: minimal_local_implementation_requirements
+    contract_heading: '## Minimal local implementation requirements'
+  - order: 6
+    section_id: non_compliant_discovery_collapses
+    contract_heading: '## Non-compliant discovery collapses'
+required_request_field_rows:
+  - order: 1
+    request_field_id: method
+    contract_phrase: '`method`'
+  - order: 2
+    request_field_id: id
+    contract_phrase: '`id`'
+  - order: 3
+    request_field_id: cwds
+    contract_phrase: '`cwds`'
+  - order: 4
+    request_field_id: extraRoots
+    contract_phrase: '`extraRoots`'
+  - order: 5
+    request_field_id: forceReload
+    contract_phrase: '`forceReload`'
+required_response_field_rows:
+  - order: 1
+    response_field_id: defaultIdentity
+    contract_phrase: '`defaultIdentity`'
+  - order: 2
+    response_field_id: identities
+    contract_phrase: '`identities`'
+  - order: 3
+    response_field_id: errors
+    contract_phrase: '`errors`'
+  - order: 4
+    response_field_id: packPath
+    contract_phrase: '`packPath`'
+  - order: 5
+    response_field_id: allowImplicitActivation
+    contract_phrase: '`allowImplicitActivation`'
+  - order: 6
+    response_field_id: activationPriority
+    contract_phrase: '`activationPriority`'
+  - order: 7
+    response_field_id: conflictResolution
+    contract_phrase: '`conflictResolution`'
+required_precedence_rows:
+  - order: 1
+    precedence_id: explicit_project_root
+    contract_phrase: 'Explicit project root (`cwd`)'
+  - order: 2
+    precedence_id: parent_repository_roots
+    contract_phrase: 'Parent repository roots (if configured)'
+  - order: 3
+    precedence_id: extra_roots
+    contract_phrase: '`extraRoots`'
+required_activation_rows:
+  - order: 1
+    activation_id: explicit_identity_selection
+    contract_phrase: 'explicit identity selection'
+  - order: 2
+    activation_id: runtime_pin
+    contract_phrase: 'runtime pin (`identity/PROTOCOL_PIN.yaml` and project defaults)'
+  - order: 3
+    activation_id: implicit_policy_match
+    contract_phrase: 'implicit policy match (`allow_implicit_activation=true` + objective similarity)'
+required_error_field_rows:
+  - order: 1
+    error_field_id: code
+    contract_phrase: '`code`'
+  - order: 2
+    error_field_id: path
+    contract_phrase: '`path`'
+  - order: 3
+    error_field_id: message
+    contract_phrase: '`message`'
+  - order: 4
+    error_field_id: severity
+    contract_phrase: '`severity`'
+required_implementation_rows:
+  - order: 1
+    implementation_id: resolve_identity_catalog
+    contract_phrase: 'Resolve `identity/catalog/identities.yaml`'
+  - order: 2
+    implementation_id: resolve_default_identity
+    contract_phrase: 'Resolve `default_identity`'
+  - order: 3
+    implementation_id: verify_pack_path_exists
+    contract_phrase: 'Verify each `pack_path` exists'
+  - order: 4
+    implementation_id: return_normalized_metadata_and_errors
+    contract_phrase: 'Return normalized metadata + errors'
+required_discovery_proof_rows:
+  - order: 1
+    proof_id: request_shape_proof
+    contract_heading: '### 1. Request-shape proof'
+    proof_role: request_shape_governed_discovery_proof
+  - order: 2
+    proof_id: response_shape_proof
+    contract_heading: '### 2. Response-shape proof'
+    proof_role: response_shape_governed_discovery_proof
+  - order: 3
+    proof_id: precedence_resolution_proof
+    contract_heading: '### 3. Precedence-resolution proof'
+    proof_role: precedence_resolution_governed_discovery_proof
+  - order: 4
+    proof_id: activation_resolution_proof
+    contract_heading: '### 4. Activation-resolution proof'
+    proof_role: activation_resolution_governed_discovery_proof
+  - order: 5
+    proof_id: error_reporting_proof
+    contract_heading: '### 5. Error-reporting proof'
+    proof_role: error_reporting_governed_discovery_proof
+  - order: 6
+    proof_id: implementation_compliance_proof
+    contract_heading: '### 6. Implementation-compliance proof'
+    proof_role: implementation_compliance_governed_discovery_proof
+required_discovery_limit_rows:
+  - order: 1
+    limit_id: request_not_response_shape
+    contract_phrase: 'request-shape proof is not proof of response-shape compliance;'
+  - order: 2
+    limit_id: response_shape_not_precedence
+    contract_phrase: 'response-shape proof is not proof of governed precedence resolution;'
+  - order: 3
+    limit_id: precedence_not_activation
+    contract_phrase: 'precedence-resolution proof is not proof of governed activation resolution;'
+  - order: 4
+    limit_id: activation_not_error_reporting
+    contract_phrase: 'activation-resolution proof is not proof of required error reporting;'
+  - order: 5
+    limit_id: error_reporting_not_implementation
+    contract_phrase: 'error-reporting proof is not proof of implementation compliance;'
+  - order: 6
+    limit_id: implementation_not_current_turn_legality
+    contract_phrase: 'implementation-compliance proof is not proof of current-turn resolver legality.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: cached_catalogue_as_current_turn_truth
+    contract_phrase: 'a cached catalogue snapshot is treated as current-turn governed discovery truth.'
+  - order: 2
+    collapse_id: path_presence_as_discovery_legality
+    contract_phrase: 'visible path presence or a nearby folder is treated as sufficient discovery legality.'
+  - order: 3
+    collapse_id: local_convenience_as_conflict_resolution
+    contract_phrase: 'same-id conflicts are resolved by local convenience rather than governed precedence and explicit pinning.'
+  - order: 4
+    collapse_id: missing_error_fields_as_valid_discovery
+    contract_phrase: 'discovery output is treated as valid even though required `errors[]` fields are missing.'
+  - order: 5
+    collapse_id: operator_note_as_resolver_truth
+    contract_phrase: 'an operator-facing note or summary is treated as if it were the governed resolver output.'

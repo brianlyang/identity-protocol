@@ -1,0 +1,1393 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+PROJECT_ROOT="$(cd "${REPO_ROOT}/.." && pwd)"
+DEFAULT_WORK_ROOT="${PROJECT_ROOT}/.identity/_probe/identity-host-visible-surface-probes"
+WORK_ROOT="${HOST_VISIBLE_SURFACE_PROBE_WORK_ROOT:-${DEFAULT_WORK_ROOT}}"
+FIXTURE_ROOT="${WORK_ROOT}/fixtures"
+RESULT_ROOT="${WORK_ROOT}/results"
+MANIFEST_PATH="${WORK_ROOT}/manifest.host_visible_surface_live.json"
+CANONICAL_FIXTURE_ROOT_PREFIX="${REPO_ROOT}/identity/protocol/fixtures/"
+SNAPSHOT_MODE="${HOST_VISIBLE_SURFACE_PROBE_SNAPSHOT_MODE:-}"
+if [ -z "${SNAPSHOT_MODE}" ] && [[ "${WORK_ROOT}" == "${CANONICAL_FIXTURE_ROOT_PREFIX}"* ]]; then
+  SNAPSHOT_MODE="canonical"
+fi
+REPO_CATALOG_PATH="${REPO_ROOT}/identity/catalog/identities.yaml"
+REPAIR_CONTRACT_BACKFILL="${REPO_ROOT}/scripts/repair_contract_backfill.py"
+VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION="${REPO_ROOT}/scripts/validate_host_transport_wiring_attestation.py"
+VALIDATE_SEND_TIME_REPLY_GATE="${REPO_ROOT}/scripts/validate_send_time_reply_gate.py"
+VALIDATE_REPLY_FIRST_LINE="${REPO_ROOT}/scripts/validate_reply_identity_context_first_line.py"
+VALIDATE_PROTOCOL_LANE_HEADSTAMP_CONTINUITY="${REPO_ROOT}/scripts/validate_protocol_lane_headstamp_continuity.py"
+RECOVER_HOST_VISIBLE_POST_CHECK_STATE="${REPO_ROOT}/scripts/recover_host_visible_post_check_state.py"
+SHADOW_RUNTIME_ROOT="${WORK_ROOT}/shadow-runtime"
+RECOVERY_MATERIALIZATION_SHADOW_ROOT="${SHADOW_RUNTIME_ROOT}/materialized-governed-source"
+RECOVERY_ISOLATION_SHADOW_ROOT="${SHADOW_RUNTIME_ROOT}/isolated-live-precheck"
+
+rm -rf "${WORK_ROOT}"
+mkdir -p "${FIXTURE_ROOT}" "${RESULT_ROOT}"
+
+python3 - <<'PY' "${FIXTURE_ROOT}"
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import sys
+import yaml
+
+fixture_root = Path(sys.argv[1]).resolve()
+fixture_root.mkdir(parents=True, exist_ok=True)
+identity_root = fixture_root / "identity"
+probe_pack = identity_root / "probe-visible"
+probe_pack.mkdir(parents=True, exist_ok=True)
+
+catalog = {
+    "default_identity": "probe-visible",
+    "identities": [
+        {
+            "id": "probe-visible",
+            "status": "active",
+            "pack_path": str(probe_pack),
+            "canonical_scope": "USER",
+            "profile": "runtime",
+            "runtime_mode": "local_only",
+        }
+    ],
+}
+
+task = {
+    "protocol_unique_entry_gate_contract_v1": {
+        "required": True,
+        "validator": "scripts/validate_protocol_unique_entry_gate.py",
+        "entry_script": "scripts/required_gate_bundle_runner.py",
+        "bundle_key": "required_gate_bundle_runner",
+        "scope": "all_identity_instance_actions",
+        "strict_operations": [
+            "activate",
+            "update",
+            "mutation",
+            "readiness",
+            "e2e",
+            "ci",
+            "validate",
+            "three-plane",
+        ],
+        "require_strict_operation_receipt": True,
+        "entry_receipt_state_file": "runtime/state/required_gate_bundle_entry.latest.json",
+        "entry_receipt_history_pattern": "runtime/reports/required-gate-bundle-entry/required-gate-bundle-entry-*.json",
+        "entry_receipt_required_fields": [
+            "bundle_key",
+            "bundle_contract_id",
+            "identity_id",
+            "operation",
+            "surface_label",
+            "wrapper_dispatch_required",
+            "wrapper_surface_status",
+            "wrapper_dispatch_token_status",
+            "wrapper_dispatch_proof_required",
+            "wrapper_dispatch_proof_status",
+            "run_id_binding",
+            "actor_id",
+            "session_id",
+            "bundle_status",
+            "error_code",
+        ],
+    }
+}
+
+(probe_pack / "CURRENT_TASK.json").write_text(
+    json.dumps(task, ensure_ascii=False, indent=2) + "\n",
+    encoding="utf-8",
+)
+(fixture_root / "catalog.yaml").write_text(
+    yaml.safe_dump(catalog, sort_keys=False, allow_unicode=True),
+    encoding="utf-8",
+)
+PY
+
+CATALOG_PATH="${FIXTURE_ROOT}/catalog.yaml"
+IDENTITY_ID="probe-visible"
+SEND_TIME_REPLY_FILE="${FIXTURE_ROOT}/send-time-governed-reply.txt"
+SEND_TIME_VISIBLE_REPLY_FILE="${FIXTURE_ROOT}/send-time-governed-visible-projection-reply.txt"
+MANUAL_REPLY_FILE="${FIXTURE_ROOT}/manual-display-only-reply.txt"
+
+python3 "${REPAIR_CONTRACT_BACKFILL}" \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --apply \
+  --json-only >/dev/null
+
+cat >"${SEND_TIME_REPLY_FILE}" <<'EOF'
+Identity-Context: actor_id=assistant:ci-probe; identity_id=probe-visible; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project
+SEND_TIME_GATE_PROBE_BODY
+EOF
+
+cat >"${SEND_TIME_VISIBLE_REPLY_FILE}" <<'EOF'
+Display-Headstamp: Identity-Context: actor_id=assistant:ci-probe; identity_id=probe-visible; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project
+Machine-Verification: verification_source=host_visible_surface_probe; display_headstamp_identity_id=probe-visible; authoritative_identity_id=probe-visible; headstamp_consistency_status=PASS_REQUIRED; headstamp_consistency_mode=exact_match; headstamp_consistency_reason=display_matches_authoritative_identity; current_chat_surface_native_machine_attested=false; output_governance_mode=governed; control_lane_attestation_status=PASS_REQUIRED; post_check_blocker_status=PASS_REQUIRED; next_hop_admission_status=PASS_REQUIRED
+SEND_TIME_VISIBLE_PROJECTION_BODY
+EOF
+
+cat >"${MANUAL_REPLY_FILE}" <<'EOF'
+Identity-Context: actor_id=assistant:ci-probe; identity_id=probe-visible; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project
+MANUAL_DISPLAY_ONLY_BODY
+EOF
+
+run_probe() {
+  local name="$1"
+  shift
+  local cmd=("$@")
+
+  local stdout_path="${RESULT_ROOT}/${name}.stdout.json"
+  local stderr_path="${RESULT_ROOT}/${name}.stderr.log"
+  local meta_path="${RESULT_ROOT}/${name}.meta.json"
+  local timestamp_utc
+  timestamp_utc="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+  local cmd_string
+  cmd_string="$(printf '%q ' "${cmd[@]}")"
+  cmd_string="${cmd_string% }"
+
+  set +e
+  "${cmd[@]}" >"${stdout_path}" 2>"${stderr_path}"
+  local rc=$?
+  set -e
+
+  if [ ! -s "${stderr_path}" ]; then
+    rm -f "${stderr_path}"
+  fi
+
+  python3 - <<'PY' "${name}" "${rc}" "${stdout_path}" "${REPO_ROOT}"
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+repo_root = Path(sys.argv[4]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from host_visible_surface_runtime_common import (
+    host_visible_surface_runtime_snapshot_changed_sections,
+    host_visible_surface_runtime_snapshot_unchanged,
+    snapshot_host_visible_surface_runtime,
+)
+from governed_reply_transport_lifecycle_common import (
+    REPLY_TRANSPORT_RESOLUTION_MODE_MATERIALIZE_RUNTIME_SENTINEL,
+)
+from protocol_infra_contract import HOST_VISIBLE_POST_CHECK_RECOVERY_REPLY_TRANSPORT_REF
+
+name = sys.argv[1]
+rc = int(sys.argv[2])
+stdout_path = Path(sys.argv[3])
+doc = json.loads(stdout_path.read_text(encoding="utf-8"))
+reasons = [str(x).strip() for x in (doc.get("stale_reasons") or []) if str(x).strip()]
+status = str(doc.get("host_transport_wiring_attestation_status", "")).strip().upper()
+
+
+def _write_doc(payload: dict) -> None:
+    stdout_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _load_doc(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+if name == "host_visible_contract_static":
+    if rc != 0:
+        raise SystemExit("host_visible_contract_static: expected zero rc")
+    if status != "PASS_REQUIRED":
+        raise SystemExit("host_visible_contract_static: expected PASS_REQUIRED status")
+elif name == "host_visible_live_receipts_pass":
+    if rc != 0:
+        raise SystemExit("host_visible_live_receipts_pass: expected zero rc")
+    if status != "PASS_REQUIRED":
+        raise SystemExit("host_visible_live_receipts_pass: expected PASS_REQUIRED status")
+    relay_status = str(doc.get("host_transport_wiring_attestation_final_channel_relay_status", "")).strip().upper()
+    if relay_status != "PASS_REQUIRED":
+        raise SystemExit("host_visible_live_receipts_pass: final channel relay status must be PASS_REQUIRED")
+elif name == "host_visible_final_channel_relay_missing_blocked":
+    if rc == 0:
+        raise SystemExit("host_visible_final_channel_relay_missing_blocked: expected non-zero rc")
+    token = "host_visible_surface_live_final_channel_agent_relay_final_answer_status_missing"
+    if token not in reasons:
+        raise SystemExit("host_visible_final_channel_relay_missing_blocked: expected final relay missing token")
+elif name == "host_visible_post_check_recovery_reseeds_final_channel_relay":
+    if rc != 0:
+        raise SystemExit("host_visible_post_check_recovery_reseeds_final_channel_relay: expected zero rc")
+    recovery_status = str(doc.get("recovery_status", "")).strip().upper()
+    if recovery_status != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_reseeds_final_channel_relay: recovery_status must be PASS_REQUIRED")
+    attestation_status = str(doc.get("attestation_status", "")).strip().upper()
+    if attestation_status != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_reseeds_final_channel_relay: attestation_status must be PASS_REQUIRED")
+    relay_status = str(doc.get("seeded_final_channel_relay_status", "")).strip().upper()
+    if relay_status != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_reseeds_final_channel_relay: seeded_final_channel_relay_status must be PASS_REQUIRED")
+    relay_receipt_path = str(doc.get("seeded_final_channel_relay_receipt_path", "")).strip()
+    if not relay_receipt_path:
+        raise SystemExit("host_visible_post_check_recovery_reseeds_final_channel_relay: seeded_final_channel_relay_receipt_path missing")
+    if reasons:
+        raise SystemExit("host_visible_post_check_recovery_reseeds_final_channel_relay: stale_reasons must be empty")
+elif name == "host_visible_post_check_recovery_materializes_governed_source":
+    source_path = Path(str(doc.get("reply_transport_source_path", "")).strip()).expanduser()
+    source_lines = []
+    if source_path.exists():
+        source_lines = source_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    headstamp_present = (
+        len(source_lines) >= 2
+        and source_lines[0].startswith("Identity-Context:")
+        and source_lines[1].startswith("Machine-Verification:")
+    )
+    doc["reply_transport_source_headstamp_present"] = bool(headstamp_present)
+    _write_doc(doc)
+    if rc != 0:
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: expected zero rc")
+    if str(doc.get("recovery_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: recovery_status must be PASS_REQUIRED")
+    if str(doc.get("attestation_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: attestation_status must be PASS_REQUIRED")
+    if str(doc.get("reply_transport_requested_ref", "")).strip() != HOST_VISIBLE_POST_CHECK_RECOVERY_REPLY_TRANSPORT_REF:
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: requested ref mismatch")
+    if str(doc.get("reply_transport_resolution_mode", "")).strip() != REPLY_TRANSPORT_RESOLUTION_MODE_MATERIALIZE_RUNTIME_SENTINEL:
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: resolution mode must be materialize_runtime_sentinel")
+    if not bool(doc.get("reply_transport_source_materialized", False)):
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: source must be materialized")
+    if str(doc.get("reply_transport_source_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: source status must be PASS_REQUIRED")
+    if str(doc.get("host_visible_runtime_scope", "")).strip() != "shadow":
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: runtime scope must be shadow")
+    if not headstamp_present:
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: materialized source must include governed headstamp lines")
+elif name == "host_visible_post_check_recovery_shadow_runtime_isolated":
+    baseline_path = stdout_path.with_name(f"{name}.baseline.json")
+    if not baseline_path.exists():
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: baseline snapshot missing")
+    before_doc = _load_doc(baseline_path)
+    live_state_path = Path(str(doc.get("host_visible_runtime_state_live_path", "")).strip()).expanduser()
+    live_receipt_pattern_path = Path(
+        str(doc.get("host_visible_runtime_receipt_pattern_live_path", "")).strip()
+    ).expanduser()
+    live_closure_state_path = Path(
+        str(doc.get("host_visible_runtime_post_check_closure_state_live_path", "")).strip()
+    ).expanduser()
+    after_doc = snapshot_host_visible_surface_runtime(
+        runtime_state_path=live_state_path,
+        runtime_receipt_pattern_path=live_receipt_pattern_path,
+        post_check_closure_state_path=live_closure_state_path,
+    )
+    live_unchanged = host_visible_surface_runtime_snapshot_unchanged(before_doc, after_doc)
+    changed_sections = host_visible_surface_runtime_snapshot_changed_sections(before_doc, after_doc)
+    shadow_state_path = Path(str(doc.get("host_visible_state_path", "")).strip()).expanduser()
+    shadow_receipt_pattern_path = Path(str(doc.get("host_visible_receipt_pattern", "")).strip()).expanduser()
+    shadow_closure_state_path = Path(
+        str(doc.get("host_transport_post_check_closure_state_path", "")).strip()
+    ).expanduser()
+    shadow_paths_distinct = (
+        shadow_state_path != live_state_path
+        and shadow_receipt_pattern_path != live_receipt_pattern_path
+        and shadow_closure_state_path != live_closure_state_path
+    )
+    doc["live_runtime_snapshot_before"] = before_doc
+    doc["live_runtime_snapshot_after"] = after_doc
+    doc["live_runtime_snapshot_unchanged"] = bool(live_unchanged)
+    doc["live_runtime_snapshot_changed_sections"] = changed_sections
+    doc["shadow_runtime_distinct_from_live"] = bool(shadow_paths_distinct)
+    doc["shadow_runtime_state_exists"] = shadow_state_path.exists()
+    doc["shadow_runtime_post_check_closure_state_exists"] = shadow_closure_state_path.exists()
+    doc["shadow_runtime_seeded_receipt_count"] = len(doc.get("seeded_receipt_paths") or [])
+    _write_doc(doc)
+    if rc != 0:
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: expected zero rc")
+    if str(doc.get("recovery_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: recovery_status must be PASS_REQUIRED")
+    if str(doc.get("attestation_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: attestation_status must be PASS_REQUIRED")
+    if str(doc.get("host_visible_runtime_scope", "")).strip() != "shadow":
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: runtime scope must be shadow")
+    if not shadow_paths_distinct:
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: shadow paths must differ from live paths")
+    if not live_unchanged:
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: live runtime snapshot must remain unchanged")
+    if not shadow_state_path.exists():
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: shadow runtime state file missing")
+    if not shadow_closure_state_path.exists():
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: shadow post-check closure state missing")
+    if int(doc.get("shadow_runtime_seeded_receipt_count", 0)) <= 0:
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: shadow seeded receipts missing")
+elif name == "host_visible_live_run_binding_required_blocked":
+    if rc == 0:
+        raise SystemExit("host_visible_live_run_binding_required_blocked: expected non-zero rc")
+    token = "host_visible_surface_live_run_id_required_missing"
+    if token not in reasons:
+        raise SystemExit("host_visible_live_run_binding_required_blocked: expected strict run binding token")
+elif name == "host_visible_commentary_bypass_blocked":
+    if rc == 0:
+        raise SystemExit("host_visible_commentary_bypass_blocked: expected non-zero rc")
+    token = "host_visible_surface_live_channel_status_not_pass:commentary:headstamp_first_line_status"
+    if token not in reasons:
+        raise SystemExit("host_visible_commentary_bypass_blocked: expected commentary fail-close token")
+elif name == "reply_first_line_visible_projection_default_blocked":
+    if rc == 0:
+        raise SystemExit("reply_first_line_visible_projection_default_blocked: expected non-zero rc")
+    first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
+    if first_line_status != "FAIL_REQUIRED":
+        raise SystemExit("reply_first_line_visible_projection_default_blocked: reply_first_line_status must be FAIL_REQUIRED")
+    surface_mode = str(doc.get("reply_first_line_surface_mode", "")).strip()
+    if surface_mode != "visible_projection":
+        raise SystemExit("reply_first_line_visible_projection_default_blocked: surface_mode must be visible_projection")
+    token = "reply_first_line_surface_mode_not_allowed"
+    if token not in reasons:
+        raise SystemExit("reply_first_line_visible_projection_default_blocked: expected surface-mode-not-allowed token")
+elif name == "reply_first_line_visible_projection_allowed_pass":
+    if rc != 0:
+        raise SystemExit("reply_first_line_visible_projection_allowed_pass: expected zero rc")
+    first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
+    if first_line_status != "PASS_REQUIRED":
+        raise SystemExit("reply_first_line_visible_projection_allowed_pass: reply_first_line_status must be PASS_REQUIRED")
+    surface_mode = str(doc.get("reply_first_line_surface_mode", "")).strip()
+    if surface_mode != "visible_projection":
+        raise SystemExit("reply_first_line_visible_projection_allowed_pass: surface_mode must be visible_projection")
+    if str(doc.get("reply_first_line_identity_id", "")).strip() != "probe-visible":
+        raise SystemExit("reply_first_line_visible_projection_allowed_pass: identity_id mismatch")
+elif name in {"send_time_governed_pass_headstamp_required", "send_time_governed_visible_projection_pass"}:
+    if rc != 0:
+        raise SystemExit(f"{name}: expected zero rc")
+    gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
+    if gate_status != "PASS_REQUIRED":
+        raise SystemExit(f"{name}: send_time_gate_status must be PASS_REQUIRED")
+    first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
+    if first_line_status != "PASS_REQUIRED":
+        raise SystemExit(f"{name}: reply_first_line_status must be PASS_REQUIRED")
+    if not bool(doc.get("reply_first_line_gate_executed", False)):
+        raise SystemExit(f"{name}: reply_first_line_gate_executed must be true")
+    uniqueness_contract_id = str(doc.get("chat_egress_uniqueness_contract_id", "")).strip()
+    if uniqueness_contract_id != "chat_egress_uniqueness_contract_v1":
+        raise SystemExit(f"{name}: chat_egress_uniqueness_contract_id mismatch")
+    uniqueness_status = str(doc.get("chat_egress_uniqueness_status", "")).strip().upper()
+    if uniqueness_status != "PASS_REQUIRED":
+        raise SystemExit(f"{name}: chat_egress_uniqueness_status must be PASS_REQUIRED")
+    uniqueness_reason = str(doc.get("chat_egress_uniqueness_reason", "")).strip()
+    if uniqueness_reason != "governed_single_egress_enforced":
+        raise SystemExit(f"{name}: chat_egress_uniqueness_reason mismatch")
+    observed_status = str(doc.get("chat_egress_uniqueness_observed_send_time_status", "")).strip().upper()
+    if observed_status != "PASS_REQUIRED":
+        raise SystemExit(f"{name}: chat_egress_uniqueness_observed_send_time_status mismatch")
+    next_hop_admission_status = str(doc.get("next_hop_admission_status", "")).strip().upper()
+    if next_hop_admission_status != "PASS_REQUIRED":
+        raise SystemExit(f"{name}: next_hop_admission_status must be PASS_REQUIRED")
+    output_governance_mode = str(doc.get("output_governance_mode", "")).strip()
+    if output_governance_mode != "governed":
+        raise SystemExit(f"{name}: output_governance_mode must be governed")
+    control_lane_attestation_status = str(doc.get("control_lane_attestation_status", "")).strip().upper()
+    if control_lane_attestation_status != "PASS_REQUIRED":
+        raise SystemExit(f"{name}: control_lane_attestation_status must be PASS_REQUIRED")
+    reply_transport_binding_status = str(doc.get("reply_transport_binding_status", "")).strip().upper()
+    if reply_transport_binding_status != "PASS_REQUIRED":
+        raise SystemExit(f"{name}: reply_transport_binding_status must be PASS_REQUIRED")
+    headstamp_consistency_status = str(doc.get("headstamp_consistency_status", "")).strip().upper()
+    if headstamp_consistency_status != "PASS_REQUIRED":
+        raise SystemExit(f"{name}: headstamp_consistency_status must be PASS_REQUIRED")
+    headstamp_consistency_mode = str(doc.get("headstamp_consistency_mode", "")).strip()
+    if headstamp_consistency_mode != "exact_match":
+        raise SystemExit(f"{name}: headstamp_consistency_mode mismatch")
+    surface_mode = str(doc.get("reply_first_line_surface_mode", "")).strip()
+    expected_surface_mode = "visible_projection" if name == "send_time_governed_visible_projection_pass" else "raw_canonical"
+    if surface_mode != expected_surface_mode:
+        raise SystemExit(f"{name}: reply_first_line_surface_mode mismatch")
+elif name == "protocol_lane_headstamp_continuity_live_receipt_pass":
+    if rc != 0:
+        raise SystemExit("protocol_lane_headstamp_continuity_live_receipt_pass: expected zero rc")
+    continuity_status = str(doc.get("protocol_lane_headstamp_status", "")).strip().upper()
+    if continuity_status != "PASS_REQUIRED":
+        raise SystemExit("protocol_lane_headstamp_continuity_live_receipt_pass: protocol_lane_headstamp_status must be PASS_REQUIRED")
+    lane_status = str(doc.get("protocol_lane_activation_status", "")).strip().upper()
+    if lane_status != "PASS_REQUIRED":
+        raise SystemExit("protocol_lane_headstamp_continuity_live_receipt_pass: protocol_lane_activation_status must be PASS_REQUIRED")
+    headstamp_status = str(doc.get("headstamp_continuity_status", "")).strip().upper()
+    if headstamp_status != "PASS_REQUIRED":
+        raise SystemExit("protocol_lane_headstamp_continuity_live_receipt_pass: headstamp_continuity_status must be PASS_REQUIRED")
+    live_receipt_binding_status = str(doc.get("headstamp_live_receipt_binding_status", "")).strip().upper()
+    if live_receipt_binding_status != "PASS_REQUIRED":
+        raise SystemExit("protocol_lane_headstamp_continuity_live_receipt_pass: headstamp_live_receipt_binding_status must be PASS_REQUIRED")
+    route_source_ref = str(doc.get("route_source_ref", "")).strip()
+    if route_source_ref != "host_visible_live_receipt_fallback":
+        raise SystemExit("protocol_lane_headstamp_continuity_live_receipt_pass: route_source_ref mismatch")
+elif name == "send_time_manual_reply_file_without_live_receipt_blocked":
+    if rc == 0:
+        raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: expected non-zero rc")
+    gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
+    if gate_status != "PASS_REQUIRED":
+        raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: send_time_gate_status must stay PASS_REQUIRED")
+    next_hop_admission_status = str(doc.get("next_hop_admission_status", "")).strip().upper()
+    if next_hop_admission_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: next_hop_admission_status must be FAIL_REQUIRED")
+    output_governance_mode = str(doc.get("output_governance_mode", "")).strip()
+    if output_governance_mode != "manual_headstamp":
+        raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: output_governance_mode must be manual_headstamp")
+    control_lane_attestation_status = str(doc.get("control_lane_attestation_status", "")).strip().upper()
+    if control_lane_attestation_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: control_lane_attestation_status must be FAIL_REQUIRED")
+    reply_transport_binding_status = str(doc.get("reply_transport_binding_status", "")).strip().upper()
+    if reply_transport_binding_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: reply_transport_binding_status must be FAIL_REQUIRED")
+    next_hop_admission_reason = str(doc.get("next_hop_admission_reason", "")).strip()
+    if next_hop_admission_reason != "manual_headstamp_not_next_hop_admissible":
+        raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: unexpected next_hop_admission_reason")
+elif name == "send_time_inline_reply_text_host_direct_blocked":
+    if rc == 0:
+        raise SystemExit("send_time_inline_reply_text_host_direct_blocked: expected non-zero rc")
+    gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
+    if gate_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_inline_reply_text_host_direct_blocked: send_time_gate_status must be FAIL_REQUIRED")
+    next_hop_admission_status = str(doc.get("next_hop_admission_status", "")).strip().upper()
+    if next_hop_admission_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_inline_reply_text_host_direct_blocked: next_hop_admission_status must be FAIL_REQUIRED")
+    output_governance_mode = str(doc.get("output_governance_mode", "")).strip()
+    if output_governance_mode != "host_direct":
+        raise SystemExit("send_time_inline_reply_text_host_direct_blocked: output_governance_mode must be host_direct")
+    next_hop_admission_reason = str(doc.get("next_hop_admission_reason", "")).strip()
+    if next_hop_admission_reason != "host_direct_output_not_next_hop_admissible":
+        raise SystemExit("send_time_inline_reply_text_host_direct_blocked: unexpected next_hop_admission_reason")
+    headstamp_consistency_status = str(doc.get("headstamp_consistency_status", "")).strip().upper()
+    if headstamp_consistency_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_inline_reply_text_host_direct_blocked: headstamp_consistency_status must be FAIL_REQUIRED")
+elif name == "send_time_next_hop_blocked_by_post_check":
+    if rc == 0:
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: expected non-zero rc")
+    gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
+    if gate_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: send_time_gate_status must be FAIL_REQUIRED")
+    uniqueness_contract_id = str(doc.get("chat_egress_uniqueness_contract_id", "")).strip()
+    if uniqueness_contract_id != "chat_egress_uniqueness_contract_v1":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: chat_egress_uniqueness_contract_id mismatch")
+    uniqueness_status = str(doc.get("chat_egress_uniqueness_status", "")).strip().upper()
+    if uniqueness_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: chat_egress_uniqueness_status must be FAIL_REQUIRED")
+    uniqueness_error_code = str(doc.get("chat_egress_uniqueness_error_code", "")).strip()
+    if uniqueness_error_code != "IP-HDSTAMP-003":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: chat_egress_uniqueness_error_code mismatch")
+    uniqueness_reason = str(doc.get("chat_egress_uniqueness_reason", "")).strip()
+    if uniqueness_reason != "post_check_blocker_active_next_hop_blocked":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: chat_egress_uniqueness_reason mismatch")
+    observed_status = str(doc.get("chat_egress_uniqueness_observed_send_time_status", "")).strip().upper()
+    if observed_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: chat_egress_uniqueness_observed_send_time_status mismatch")
+    next_hop_admission_status = str(doc.get("next_hop_admission_status", "")).strip().upper()
+    if next_hop_admission_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: next_hop_admission_status must be FAIL_REQUIRED")
+    next_hop_admission_reason = str(doc.get("next_hop_admission_reason", "")).strip()
+    if next_hop_admission_reason != "post_check_blocker_active":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: unexpected next_hop_admission_reason")
+    reply_transport_binding_status = str(doc.get("reply_transport_binding_status", "")).strip().upper()
+    if reply_transport_binding_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: reply_transport_binding_status must be FAIL_REQUIRED")
+    output_governance_mode = str(doc.get("output_governance_mode", "")).strip()
+    if output_governance_mode != "manual_headstamp":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: output_governance_mode must be manual_headstamp after transport binding fail-close")
+    control_lane_attestation_status = str(doc.get("control_lane_attestation_status", "")).strip().upper()
+    if control_lane_attestation_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: control_lane_attestation_status must be FAIL_REQUIRED")
+    headstamp_consistency_status = str(doc.get("headstamp_consistency_status", "")).strip().upper()
+    if headstamp_consistency_status != "PASS_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: headstamp_consistency_status must be PASS_REQUIRED")
+    first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
+    if first_line_status != "SKIPPED_NOT_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: reply_first_line_status must be SKIPPED_NOT_REQUIRED")
+    if bool(doc.get("reply_first_line_gate_executed", True)):
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: reply_first_line_gate_executed must be false")
+    block_stage = str(doc.get("send_time_block_stage", "")).strip()
+    if block_stage != "pre_first_line_post_check_blocker_active":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: unexpected send_time_block_stage")
+    if int(doc.get("reply_first_line_missing_count", 0)) != 0:
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: missing_count must be zero before first-line gate")
+    token = "host_transport_post_check_blocker_active"
+    if token not in reasons:
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: expected blocker activation reason")
+elif name == "send_time_next_hop_blocked_on_missing_post_check_state":
+    if rc == 0:
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: expected non-zero rc")
+    gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
+    if gate_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: send_time_gate_status must be FAIL_REQUIRED")
+    uniqueness_contract_id = str(doc.get("chat_egress_uniqueness_contract_id", "")).strip()
+    if uniqueness_contract_id != "chat_egress_uniqueness_contract_v1":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: chat_egress_uniqueness_contract_id mismatch")
+    uniqueness_status = str(doc.get("chat_egress_uniqueness_status", "")).strip().upper()
+    if uniqueness_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: chat_egress_uniqueness_status must be FAIL_REQUIRED")
+    uniqueness_error_code = str(doc.get("chat_egress_uniqueness_error_code", "")).strip()
+    if uniqueness_error_code != "IP-HDSTAMP-003":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: chat_egress_uniqueness_error_code mismatch")
+    uniqueness_reason = str(doc.get("chat_egress_uniqueness_reason", "")).strip()
+    if uniqueness_reason != "post_check_state_unavailable_fail_close":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: chat_egress_uniqueness_reason mismatch")
+    observed_status = str(doc.get("chat_egress_uniqueness_observed_send_time_status", "")).strip().upper()
+    if observed_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: chat_egress_uniqueness_observed_send_time_status mismatch")
+    next_hop_admission_status = str(doc.get("next_hop_admission_status", "")).strip().upper()
+    if next_hop_admission_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: next_hop_admission_status must be FAIL_REQUIRED")
+    next_hop_admission_reason = str(doc.get("next_hop_admission_reason", "")).strip()
+    if next_hop_admission_reason != "post_check_state_unavailable":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: unexpected next_hop_admission_reason")
+    headstamp_consistency_status = str(doc.get("headstamp_consistency_status", "")).strip().upper()
+    if headstamp_consistency_status != "PASS_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: headstamp_consistency_status must be PASS_REQUIRED")
+    output_governance_mode = str(doc.get("output_governance_mode", "")).strip()
+    if output_governance_mode != "governed":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: output_governance_mode must be governed")
+    first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
+    if first_line_status != "SKIPPED_NOT_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: reply_first_line_status must be SKIPPED_NOT_REQUIRED")
+    if bool(doc.get("reply_first_line_gate_executed", True)):
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: reply_first_line_gate_executed must be false")
+    block_stage = str(doc.get("send_time_block_stage", "")).strip()
+    if block_stage != "pre_first_line_post_check_state_unavailable":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: unexpected send_time_block_stage")
+    if int(doc.get("reply_first_line_missing_count", 0)) != 0:
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: missing_count must be zero before first-line gate")
+    token = "host_transport_post_check_state_unavailable"
+    if token not in reasons:
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: expected missing-state fail-close token")
+elif name == "host_visible_commentary_session_binding_blocked":
+    if rc == 0:
+        raise SystemExit("host_visible_commentary_session_binding_blocked: expected non-zero rc")
+    token = "host_visible_surface_live_channel_session_id_mismatch:commentary:expected=run:ci-probe-session:observed=run:ci-probe-session-drift"
+    if token not in reasons:
+        raise SystemExit("host_visible_commentary_session_binding_blocked: expected commentary session mismatch token")
+elif name == "host_visible_receipt_stale_blocked":
+    if rc == 0:
+        raise SystemExit("host_visible_receipt_stale_blocked: expected non-zero rc")
+    if not any(
+        token.startswith("host_visible_surface_live_channel_receipt_stale:commentary:")
+        for token in reasons
+    ):
+        raise SystemExit("host_visible_receipt_stale_blocked: expected stale receipt fail-close token")
+else:
+    raise SystemExit(f"unknown probe name: {name}")
+PY
+
+python3 - <<'PY' \
+  "${name}" "${timestamp_utc}" "${rc}" "${cmd_string}" "${stdout_path}" "${stderr_path}" "${meta_path}"
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import sys
+
+name, timestamp, rc, cmd_string, stdout_path, stderr_path, meta_path = sys.argv[1:]
+entry = {
+    "probe_name": name,
+    "timestamp_utc": timestamp,
+    "command": cmd_string,
+    "rc": int(rc),
+    "stdout_path": str(Path(stdout_path).resolve()),
+    "stderr_path": str(Path(stderr_path).resolve()) if Path(stderr_path).exists() else "",
+}
+Path(meta_path).write_text(json.dumps(entry, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+print(f"[PASS] {name} (rc={rc})")
+PY
+}
+
+capture_host_visible_live_runtime_snapshot() {
+  local out_path="$1"
+  python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}" "${out_path}"
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from host_visible_surface_runtime_common import (
+    resolve_host_visible_surface_runtime_paths,
+    snapshot_host_visible_surface_runtime,
+)
+from tool_vendor_governance_common import load_json, resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+out_path = Path(sys.argv[4]).resolve()
+pack_path, task_path = resolve_pack_and_task(catalog_path, identity_id)
+task = load_json(task_path)
+contract = task.get("host_visible_surface_contract_v1") or {}
+runtime_paths = resolve_host_visible_surface_runtime_paths(
+    pack_path=pack_path,
+    contract=contract,
+    shadow_root="",
+)
+snapshot = snapshot_host_visible_surface_runtime(
+    runtime_state_path=Path(str(runtime_paths.get("runtime_state_path", ""))).resolve(),
+    runtime_receipt_pattern_path=Path(str(runtime_paths.get("runtime_receipt_pattern_path", ""))).resolve(),
+    post_check_closure_state_path=Path(str(runtime_paths.get("post_check_closure_state_path", ""))).resolve(),
+)
+out_path.parent.mkdir(parents=True, exist_ok=True)
+out_path.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+}
+
+run_probe host_visible_contract_static \
+  python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
+    --catalog "${CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --operation ci \
+    --json-only
+
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}" "${SEND_TIME_REPLY_FILE}"
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from actor_session_common import actor_session_path, write_actor_binding_store
+from host_visible_final_channel_relay_common import (
+    build_host_visible_final_channel_relay_receipt,
+    project_host_visible_final_channel_relay_fields,
+)
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+reply_transport_ref = str(Path(sys.argv[4]).resolve())
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+receipt_dir = pack_path / "runtime" / "reports" / "host-visible-surface"
+receipt_dir.mkdir(parents=True, exist_ok=True)
+
+fields = {
+    "wrapper_surface_status": "PASS_REQUIRED",
+    "entry_receipt_tuple_status": "PASS_REQUIRED",
+    "headstamp_first_line_status": "PASS_REQUIRED",
+    "send_time_gate_status": "PASS_REQUIRED",
+    "final_emit_contract_status": "PASS_REQUIRED",
+    "reply_transport_ref": reply_transport_ref,
+}
+timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+actor_id = "assistant:ci-probe"
+session_id = "run:ci-probe-session"
+run_id = "run:ci-probe-receipt"
+
+binding_store = {
+    "schema_version": "actor_session_multibinding_v1",
+    "actor_id": actor_id,
+    "catalog_path": str(catalog_path),
+    "binding_key_mode": "actor_id+identity_id+session_id",
+    "binding_version": 1,
+    "compare_token": "1",
+    "session_entry_count": 1,
+    "bindings": [
+        {
+            "actor_id": actor_id,
+            "identity_id": identity_id,
+            "session_id": session_id,
+            "run_id": run_id,
+            "catalog_path": str(catalog_path),
+            "binding_version": 1,
+            "binding_ref": f"ci_fixture:{identity_id}:{session_id}",
+            "mutation_lane": "ci_fixture",
+            "bound_at": timestamp,
+            "updated_at": timestamp,
+        }
+    ],
+    "rebind_receipts": [],
+    "last_mutation": {
+        "mutation_lane": "ci_fixture",
+        "identity_id": identity_id,
+        "session_id": session_id,
+        "run_id": run_id,
+        "updated_at": timestamp,
+    },
+    "updated_at": timestamp,
+}
+write_actor_binding_store(actor_session_path(catalog_path, actor_id), binding_store)
+
+state_path = pack_path / "runtime" / "state" / "host_visible_surface_registry_state.json"
+state_doc = {
+    "schema_version": "v1",
+    "identity_id": identity_id,
+    "channels": {},
+    "updated_at_utc": timestamp,
+}
+relay_rc, relay_payload = build_host_visible_final_channel_relay_receipt(
+    repo_root=repo_root,
+    pack_path=pack_path,
+    identity_id=identity_id,
+    run_id=run_id,
+    reply_transport_ref=reply_transport_ref,
+    now_token=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
+)
+if relay_rc != 0:
+    raise SystemExit(f"failed to seed final channel relay receipt: {relay_payload}")
+relay_projection = project_host_visible_final_channel_relay_fields(relay_payload)
+for idx, channel in enumerate(("commentary", "approval", "status", "final"), start=1):
+    payload = {
+        "emit_channel_id": channel,
+        "created_at_utc": timestamp,
+        "receipt_source": "ci_fixture",
+        "identity_id": identity_id,
+        "actor_id": actor_id,
+        "session_id": session_id,
+        "run_id": run_id,
+    }
+    payload.update(fields)
+    if channel == "final":
+        payload.update(relay_projection)
+    path = receipt_dir / f"host-visible-surface-{idx:02d}-{channel}.json"
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    state_doc["channels"][channel] = {
+        "last_receipt_path": str(path),
+        "last_status": "PASS_REQUIRED",
+        "receipt_source": "ci_fixture",
+        "last_run_id": run_id,
+        "updated_at_utc": timestamp,
+    }
+state_path.parent.mkdir(parents=True, exist_ok=True)
+state_path.write_text(json.dumps(state_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+run_probe host_visible_live_receipts_pass \
+  python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
+    --catalog "${CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --operation ci \
+    --require-live-receipts \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --require-actor-id assistant:ci-probe \
+    --require-session-id run:ci-probe-session \
+    --require-run-id run:ci-probe-receipt \
+    --json-only
+
+run_probe host_visible_post_check_recovery_materializes_governed_source \
+  python3 "${RECOVER_HOST_VISIBLE_POST_CHECK_STATE}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --operation ci \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --run-id run:ci-probe-recovery-materialized \
+    --receipt-source runtime_dialogue \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --host-visible-shadow-root "${RECOVERY_MATERIALIZATION_SHADOW_ROOT}" \
+    --json-only
+
+capture_host_visible_live_runtime_snapshot \
+  "${RESULT_ROOT}/host_visible_post_check_recovery_shadow_runtime_isolated.baseline.json"
+
+run_probe host_visible_post_check_recovery_shadow_runtime_isolated \
+  python3 "${RECOVER_HOST_VISIBLE_POST_CHECK_STATE}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --operation ci \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --run-id run:ci-probe-recovery-shadow \
+    --receipt-source runtime_dialogue \
+    --reply-transport-ref "${SEND_TIME_REPLY_FILE}" \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --host-visible-shadow-root "${RECOVERY_ISOLATION_SHADOW_ROOT}" \
+    --json-only
+
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+path = pack_path / "runtime" / "reports" / "host-visible-surface" / "host-visible-surface-04-final.json"
+doc = json.loads(path.read_text(encoding="utf-8"))
+doc.pop("agent_relay_final_answer_status", None)
+path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+run_probe host_visible_final_channel_relay_missing_blocked \
+  python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
+    --catalog "${CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --operation ci \
+    --require-live-receipts \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --require-actor-id assistant:ci-probe \
+    --require-session-id run:ci-probe-session \
+    --require-run-id run:ci-probe-receipt \
+    --json-only
+
+run_probe host_visible_post_check_recovery_reseeds_final_channel_relay \
+  python3 "${RECOVER_HOST_VISIBLE_POST_CHECK_STATE}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --operation ci \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --run-id run:ci-probe-receipt \
+    --receipt-source runtime_dialogue \
+    --reply-transport-ref "${SEND_TIME_REPLY_FILE}" \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --json-only
+
+run_probe send_time_governed_pass_headstamp_required \
+  python3 "${VALIDATE_SEND_TIME_REPLY_GATE}" \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --operation ci \
+    --expected-work-layer protocol \
+    --expected-source-layer project \
+    --layer-intent-text "work_layer=protocol source_layer=project" \
+    --force-check \
+    --enforce-send-time-gate \
+    --reply-file "${SEND_TIME_REPLY_FILE}" \
+    --reply-transport-ref "${SEND_TIME_REPLY_FILE}" \
+    --outlet-channel-id commentary \
+    --reply-outlet-guard-applied \
+    --json-only
+
+run_probe reply_first_line_visible_projection_default_blocked \
+  python3 "${VALIDATE_REPLY_FIRST_LINE}" \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --operation ci \
+    --expected-work-layer protocol \
+    --expected-source-layer project \
+    --layer-intent-text "work_layer=protocol source_layer=project" \
+    --force-check \
+    --enforce-first-line-gate \
+    --reply-file "${SEND_TIME_VISIBLE_REPLY_FILE}" \
+    --json-only
+
+run_probe reply_first_line_visible_projection_allowed_pass \
+  python3 "${VALIDATE_REPLY_FIRST_LINE}" \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --operation ci \
+    --expected-work-layer protocol \
+    --expected-source-layer project \
+    --layer-intent-text "work_layer=protocol source_layer=project" \
+    --force-check \
+    --enforce-first-line-gate \
+    --accepted-surface-modes raw_canonical,visible_projection \
+    --reply-file "${SEND_TIME_VISIBLE_REPLY_FILE}" \
+    --json-only
+
+run_probe send_time_governed_visible_projection_pass \
+  python3 "${VALIDATE_SEND_TIME_REPLY_GATE}" \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --operation ci \
+    --expected-work-layer protocol \
+    --expected-source-layer project \
+    --layer-intent-text "work_layer=protocol source_layer=project" \
+    --force-check \
+    --enforce-send-time-gate \
+    --reply-file "${SEND_TIME_VISIBLE_REPLY_FILE}" \
+    --reply-transport-ref "${SEND_TIME_REPLY_FILE}" \
+    --outlet-channel-id commentary \
+    --reply-outlet-guard-applied \
+    --json-only
+
+run_probe protocol_lane_headstamp_continuity_live_receipt_pass \
+  python3 "${VALIDATE_PROTOCOL_LANE_HEADSTAMP_CONTINUITY}" \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --run-id run:ci-probe-receipt \
+    --operation ci \
+    --expected-work-layer protocol \
+    --expected-source-layer project \
+    --layer-intent-text "work_layer=protocol source_layer=project" \
+    --json-only
+
+run_probe send_time_manual_reply_file_without_live_receipt_blocked \
+  python3 "${VALIDATE_SEND_TIME_REPLY_GATE}" \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --operation ci \
+    --expected-work-layer protocol \
+    --expected-source-layer project \
+    --layer-intent-text "work_layer=protocol source_layer=project" \
+    --force-check \
+    --enforce-send-time-gate \
+    --reply-file "${MANUAL_REPLY_FILE}" \
+    --reply-transport-ref "${MANUAL_REPLY_FILE}" \
+    --outlet-channel-id commentary \
+    --reply-outlet-guard-applied \
+    --json-only
+
+run_probe send_time_inline_reply_text_host_direct_blocked \
+  python3 "${VALIDATE_SEND_TIME_REPLY_GATE}" \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --actor-id assistant:ci-probe \
+    --operation validate \
+    --force-check \
+    --enforce-send-time-gate \
+    --reply-text "Identity-Context: actor_id=assistant:ci-probe; identity_id=${IDENTITY_ID}; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project" \
+    --outlet-channel-id commentary \
+    --reply-outlet-guard-applied \
+    --json-only
+
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
+from __future__ import annotations
+
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+path = pack_path / "runtime" / "state" / "host_visible_surface_live_closure_state.json"
+if path.exists():
+    path.unlink()
+PY
+
+run_probe send_time_next_hop_blocked_on_missing_post_check_state \
+  python3 "${VALIDATE_SEND_TIME_REPLY_GATE}" \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --operation ci \
+    --force-check \
+    --enforce-send-time-gate \
+    --reply-file "${SEND_TIME_REPLY_FILE}" \
+    --reply-transport-ref "${SEND_TIME_REPLY_FILE}" \
+    --outlet-channel-id commentary \
+    --reply-outlet-guard-applied \
+    --json-only
+
+run_probe host_visible_live_run_binding_required_blocked \
+  python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
+    --catalog "${CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --operation ci \
+    --require-live-receipts \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --require-actor-id assistant:ci-probe \
+    --require-session-id run:ci-probe-session \
+    --json-only
+
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
+from __future__ import annotations
+
+import json
+import os
+import time
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+stale_epoch = int(time.time()) - 600
+receipt_dir = pack_path / "runtime" / "reports" / "host-visible-surface"
+for path in sorted(receipt_dir.glob("host-visible-surface*.json")):
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if str(doc.get("emit_channel_id", "")).strip() != "commentary":
+        continue
+    os.utime(path, (stale_epoch, stale_epoch))
+PY
+
+run_probe host_visible_receipt_stale_blocked \
+  python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
+    --catalog "${CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --operation ci \
+    --require-live-receipts \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --require-actor-id assistant:ci-probe \
+    --require-session-id run:ci-probe-session \
+    --require-run-id run:ci-probe-receipt \
+    --json-only
+
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+receipt_dir = pack_path / "runtime" / "reports" / "host-visible-surface"
+for path in sorted(receipt_dir.glob("host-visible-surface*.json")):
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if str(doc.get("emit_channel_id", "")).strip() != "commentary":
+        continue
+    doc["created_at_utc"] = timestamp
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+receipt_dir = pack_path / "runtime" / "reports" / "host-visible-surface"
+for path in sorted(receipt_dir.glob("host-visible-surface*.json")):
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if str(doc.get("emit_channel_id", "")).strip() != "commentary":
+        continue
+    doc["session_id"] = "run:ci-probe-session-drift"
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+run_probe host_visible_commentary_session_binding_blocked \
+  python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
+    --catalog "${CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --operation ci \
+    --require-live-receipts \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --require-actor-id assistant:ci-probe \
+    --require-session-id run:ci-probe-session \
+    --require-run-id run:ci-probe-receipt \
+    --json-only
+
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+receipt_dir = pack_path / "runtime" / "reports" / "host-visible-surface"
+timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+for path in sorted(receipt_dir.glob("host-visible-surface*.json")):
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if str(doc.get("emit_channel_id", "")).strip() != "commentary":
+        continue
+    doc["session_id"] = "run:ci-probe-session"
+    doc["created_at_utc"] = timestamp
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+receipt_dir = pack_path / "runtime" / "reports" / "host-visible-surface"
+for path in sorted(receipt_dir.glob("host-visible-surface*.json")):
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if str(doc.get("emit_channel_id", "")).strip() != "commentary":
+        continue
+    doc["headstamp_first_line_status"] = "FAIL_REQUIRED"
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+run_probe host_visible_commentary_bypass_blocked \
+  python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
+    --catalog "${CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --operation ci \
+    --require-live-receipts \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --require-actor-id assistant:ci-probe \
+    --require-session-id run:ci-probe-session \
+    --require-run-id run:ci-probe-receipt \
+    --json-only
+
+run_probe send_time_next_hop_blocked_by_post_check \
+  python3 "${VALIDATE_SEND_TIME_REPLY_GATE}" \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --operation ci \
+    --force-check \
+    --enforce-send-time-gate \
+    --reply-file "${SEND_TIME_REPLY_FILE}" \
+    --reply-transport-ref "${SEND_TIME_REPLY_FILE}" \
+    --outlet-channel-id commentary \
+    --reply-outlet-guard-applied \
+    --json-only
+
+python3 - <<'PY' "${RESULT_ROOT}" "${MANIFEST_PATH}"
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import sys
+
+result_root = Path(sys.argv[1]).resolve()
+manifest_path = Path(sys.argv[2]).resolve()
+entries = []
+for meta_path in sorted(result_root.glob("*.meta.json")):
+    entry = json.loads(meta_path.read_text(encoding="utf-8"))
+    if isinstance(entry, dict):
+        for key in ("stdout_path", "stderr_path"):
+            raw = str(entry.get(key, "")).strip()
+            if raw:
+                entry[key] = str(Path(raw).resolve().relative_to(manifest_path.parent.resolve()))
+    entries.append(entry)
+manifest = {
+    "schema_version": "v1",
+    "suite": "host_visible_surface_live_probes",
+    "results": entries,
+}
+manifest_path.parent.mkdir(parents=True, exist_ok=True)
+manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+print(f"[PASS] host visible surface probe suite wrote manifest: {manifest_path}")
+PY
+
+rm -rf "${SHADOW_RUNTIME_ROOT}"
+
+if [ "${SNAPSHOT_MODE}" = "canonical" ]; then
+  python3 - <<'PY' "${REPO_ROOT}" "${WORK_ROOT}" "${FIXTURE_ROOT}" "${RESULT_ROOT}" "${MANIFEST_PATH}"
+from __future__ import annotations
+
+import json
+import shutil
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[1]).resolve()
+work_root = Path(sys.argv[2]).resolve()
+fixture_root = Path(sys.argv[3]).resolve()
+result_root = Path(sys.argv[4]).resolve()
+manifest_path = Path(sys.argv[5]).resolve()
+manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+results = manifest.get("results") or []
+
+relay_receipt_rel = (
+    work_root.relative_to(repo_root).as_posix() + "/fixtures/receipts/agent-relay-final-answer-receipt.json"
+)
+relay_receipt_path = fixture_root / "receipts" / "agent-relay-final-answer-receipt.json"
+relay_receipt_path.parent.mkdir(parents=True, exist_ok=True)
+
+def load_result(name: str) -> tuple[dict, Path]:
+    path = result_root / f"{name}.stdout.json"
+    return json.loads(path.read_text(encoding="utf-8")), path
+
+live_doc, live_src = load_result("host_visible_live_receipts_pass")
+real_receipt_path = Path(
+    str(live_doc.get("host_transport_wiring_attestation_final_channel_relay_receipt_path", "")).strip()
+).expanduser()
+if not real_receipt_path.exists():
+    raise SystemExit("canonical snapshot export missing live relay receipt")
+shutil.copyfile(real_receipt_path, relay_receipt_path)
+
+recovery_doc, recovery_src = load_result("host_visible_post_check_recovery_reseeds_final_channel_relay")
+materialization_doc, materialization_src = load_result(
+    "host_visible_post_check_recovery_materializes_governed_source"
+)
+shadow_isolation_doc, shadow_isolation_src = load_result(
+    "host_visible_post_check_recovery_shadow_runtime_isolated"
+)
+send_time_doc, send_time_src = load_result("send_time_governed_pass_headstamp_required")
+continuity_doc, continuity_src = load_result("protocol_lane_headstamp_continuity_live_receipt_pass")
+
+minimal_outputs = {
+    "host_visible_live_receipts_pass": {
+        "host_transport_wiring_attestation_status": str(
+            live_doc.get("host_transport_wiring_attestation_status", "")
+        ).strip(),
+        "host_transport_wiring_attestation_final_channel_relay_status": str(
+            live_doc.get("host_transport_wiring_attestation_final_channel_relay_status", "")
+        ).strip(),
+        "host_transport_wiring_attestation_final_channel_relay_reason": str(
+            live_doc.get("host_transport_wiring_attestation_final_channel_relay_reason", "")
+        ).strip(),
+        "host_transport_wiring_attestation_final_channel_relay_receipt_path": relay_receipt_rel,
+    },
+    "host_visible_post_check_recovery_reseeds_final_channel_relay": {
+        "recovery_status": str(recovery_doc.get("recovery_status", "")).strip(),
+        "attestation_status": str(recovery_doc.get("attestation_status", "")).strip(),
+        "seeded_final_channel_relay_status": str(
+            recovery_doc.get("seeded_final_channel_relay_status", "")
+        ).strip(),
+        "seeded_final_channel_relay_receipt_path": relay_receipt_rel,
+    },
+    "host_visible_post_check_recovery_materializes_governed_source": {
+        "recovery_status": str(materialization_doc.get("recovery_status", "")).strip(),
+        "attestation_status": str(materialization_doc.get("attestation_status", "")).strip(),
+        "reply_transport_requested_ref": str(
+            materialization_doc.get("reply_transport_requested_ref", "")
+        ).strip(),
+        "reply_transport_resolution_mode": str(
+            materialization_doc.get("reply_transport_resolution_mode", "")
+        ).strip(),
+        "reply_transport_source_materialized": bool(
+            materialization_doc.get("reply_transport_source_materialized", False)
+        ),
+        "reply_transport_source_status": str(
+            materialization_doc.get("reply_transport_source_status", "")
+        ).strip(),
+        "reply_transport_source_headstamp_present": bool(
+            materialization_doc.get("reply_transport_source_headstamp_present", False)
+        ),
+        "host_visible_runtime_scope": str(
+            materialization_doc.get("host_visible_runtime_scope", "")
+        ).strip(),
+    },
+    "host_visible_post_check_recovery_shadow_runtime_isolated": {
+        "recovery_status": str(shadow_isolation_doc.get("recovery_status", "")).strip(),
+        "attestation_status": str(shadow_isolation_doc.get("attestation_status", "")).strip(),
+        "host_visible_runtime_scope": str(
+            shadow_isolation_doc.get("host_visible_runtime_scope", "")
+        ).strip(),
+        "live_runtime_snapshot_unchanged": bool(
+            shadow_isolation_doc.get("live_runtime_snapshot_unchanged", False)
+        ),
+        "shadow_runtime_distinct_from_live": bool(
+            shadow_isolation_doc.get("shadow_runtime_distinct_from_live", False)
+        ),
+        "shadow_runtime_state_exists": bool(
+            shadow_isolation_doc.get("shadow_runtime_state_exists", False)
+        ),
+        "shadow_runtime_post_check_closure_state_exists": bool(
+            shadow_isolation_doc.get("shadow_runtime_post_check_closure_state_exists", False)
+        ),
+        "shadow_runtime_seeded_receipt_count": int(
+            shadow_isolation_doc.get("shadow_runtime_seeded_receipt_count", 0)
+        ),
+    },
+    "send_time_governed_pass_headstamp_required": {
+        "send_time_gate_status": str(send_time_doc.get("send_time_gate_status", "")).strip(),
+        "current_surface_transport_attestation_status": str(
+            send_time_doc.get("current_surface_transport_attestation_status", "")
+        ).strip(),
+        "chat_egress_uniqueness_status": str(
+            send_time_doc.get("chat_egress_uniqueness_status", "")
+        ).strip(),
+        "next_hop_admission_status": str(send_time_doc.get("next_hop_admission_status", "")).strip(),
+        "headstamp_consistency_status": str(send_time_doc.get("headstamp_consistency_status", "")).strip(),
+        "output_governance_mode": str(send_time_doc.get("output_governance_mode", "")).strip(),
+    },
+    "protocol_lane_headstamp_continuity_live_receipt_pass": {
+        "protocol_lane_headstamp_status": str(
+            continuity_doc.get("protocol_lane_headstamp_status", "")
+        ).strip(),
+        "protocol_lane_activation_status": str(
+            continuity_doc.get("protocol_lane_activation_status", "")
+        ).strip(),
+        "headstamp_continuity_status": str(
+            continuity_doc.get("headstamp_continuity_status", "")
+        ).strip(),
+        "headstamp_live_receipt_binding_status": str(
+            continuity_doc.get("headstamp_live_receipt_binding_status", "")
+        ).strip(),
+        "route_source_ref": str(continuity_doc.get("route_source_ref", "")).strip(),
+    },
+}
+
+for probe_name, payload in minimal_outputs.items():
+    path = result_root / f"{probe_name}.stdout.json"
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+keep_stdout = {
+    "host_visible_live_receipts_pass",
+    "host_visible_post_check_recovery_reseeds_final_channel_relay",
+    "host_visible_post_check_recovery_materializes_governed_source",
+    "host_visible_post_check_recovery_shadow_runtime_isolated",
+    "send_time_governed_pass_headstamp_required",
+    "protocol_lane_headstamp_continuity_live_receipt_pass",
+}
+for row in results:
+    if not isinstance(row, dict):
+        continue
+    probe_name = str(row.get("probe_name", "")).strip()
+    row["command"] = f"fixture_snapshot:{probe_name}"
+    row["stderr_path"] = ""
+    if probe_name in keep_stdout:
+        row["stdout_path"] = f"results/{probe_name}.stdout.json"
+    else:
+        row["stdout_path"] = ""
+
+manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+for path in list(result_root.glob("*")):
+    if path.name not in {f"{name}.stdout.json" for name in keep_stdout}:
+        path.unlink()
+
+for path in fixture_root.iterdir():
+    if path.name == "receipts":
+        continue
+    if path.is_dir():
+        shutil.rmtree(path)
+    else:
+        path.unlink()
+PY
+fi

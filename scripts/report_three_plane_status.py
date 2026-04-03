@@ -4,21 +4,795 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from actor_session_common import resolve_actor_id
+from actor_session_common import load_actor_binding, resolve_actor_id
+from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
+from health_report_experience_writeback_projection_common import (
+    DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT,
+    DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT,
+    build_health_report_experience_writeback_closure_projection,
+    build_projection_profile_excluded_health_report_experience_writeback_closure,
+    default_health_report_dir,
+    resolve_identity_health_report_for_execution_report,
+)
+from primary_execution_report_common import latest_prompt_bound_primary_execution_report_from_roots
+from protocol_infra_contract import (
+    build_required_gate_bundle_cmd as build_required_gate_bundle_cmd_shared,
+    CANONICAL_FINAL_EMIT_SCRIPT,
+    CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+)
+from projection_profile_exclusion_scope_common import build_projection_profile_exclusion_payload
+from required_gate_bundle_projection_common import (
+    build_projection_profile_excluded_required_gate_bundle_target_projection,
+    build_required_gate_bundle_target_projection,
+)
+from release_cloud_evidence_projection_common import (
+    build_projection_profile_excluded_release_cloud_evidence_adapter,
+)
+from resolve_release_plane_cloud_evidence import resolve_release_plane_runtime_inputs
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import resolve_identity
+from runtime_temp_path_common import named_temp_root, runtime_temp_file
+from terminal_truth_boundary_projection_common import (
+    build_terminal_truth_boundary_projection_from_report,
+)
+from three_plane_projection_profile_common import (
+    DEFAULT_THREE_PLANE_PROJECTION_PROFILE,
+    ThreePlaneProjectionProfile,
+    resolve_three_plane_projection_profile,
+    three_plane_projection_profile_choices,
+)
 
 PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
+LOCK_PROTOCOL_PREFIX = "SESSION_LANE_LOCK_PROTOCOL_"
+LOCK_EXIT_PREFIX = "SESSION_LANE_LOCK_EXIT_"
+IP_ERROR_CODE_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
+FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
+REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
+# Strict-surface lineage refs for drift validation:
+# - scripts/required_gate_bundle_runner.py
+SESSION_ID_FALLBACK = ""
+REPORT_SELECTED_PATH_FALLBACK = ""
+
+M2M_VALIDATOR_NAMES: set[str] = {
+    "actor_session_binding",
+    "actor_session_multibinding_concurrency",
+    "no_implicit_switch",
+    "cross_actor_isolation",
+    "response_stamp_validation",
+    "reply_identity_context_first_line",
+    "send_time_reply_gate",
+    "headstamp_recurrence_closure",
+    "execution_reply_identity_coherence",
+    "required_gate_tuple_parity",
+    "execution_target_tuple_isolation",
+}
+BUNDLE_GATE_VALIDATOR_NAMES: set[str] = {
+    "required_gate_bundle_runner",
+    "required_gate_bundle_runner_shadow",
+}
+CAPABILITY_VALIDATOR_NAMES: set[str] = {
+    "capability_activation",
+    "prompt_bootstrap_capability",
+    "prompt_capability_matrix",
+    "prompt_kernel_executable_coupling",
+}
+RELEASE_ENV_VALIDATOR_NAMES: set[str] = {
+    "release_plane_cloud_evidence",
+    "run_id_report_selection",
+    "outlet_regression_matrix",
+}
+BASELINE_VALIDATOR_NAMES: set[str] = {
+    "session_refresh_status",
+    "execution_report_freshness",
+    "protocol_baseline_freshness",
+    "protocol_version_alignment",
+}
+PROTOCOL_FEEDBACK_OBS_VALIDATOR_NAMES: set[str] = {
+    "protocol_feedback_sidecar",
+    "protocol_feedback_reply_channel",
+    "protocol_feedback_bootstrap_ready",
+}
+DOWNSINK_PATH_GOVERNANCE_VALIDATOR_NAMES: set[str] = {
+    "downsink_path_immutability",
+    "downsink_path_write_guard",
+    "downsink_path_literal_lock",
+}
+EXECUTABLE_SURFACE_GOVERNANCE_VALIDATOR_NAMES: set[str] = {
+    "executable_surface_runtime_literal_lock",
+}
+VALIDATOR_ERROR_CODE_KEYS: tuple[str, ...] = (
+    "error_code",
+    "sidecar_error_code",
+    "capability_activation_error_code",
+    "pin_error_code",
+    "baseline_error_code",
+    "freshness_error_code",
+    "normalization_error_code",
+    "semantic_convergence_error_code",
+)
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
+CURRENT_CHAT_SURFACE_CLASS = "host_native_chat_panel"
+CURRENT_CHAT_SURFACE_WIRING_CAPABILITY = "unavailable"
+CURRENT_CHAT_SURFACE_EXCLUSION_SCOPE = "EXCLUDED_NON_BLOCKING"
+CURRENT_CHAT_SURFACE_CONTROL_STATE = "CONTROLLED_EXCLUSION"
+CURRENT_CHAT_SURFACE_BLOCKING_STATE = "RAW_FAIL_BLOCKING"
+TUPLE_CONTEXT_PRIMARY_MARKERS: set[str] = {
+    "entry_receipt_operation_mismatch",
+    "entry_receipt_run_id_mismatch",
+    "entry_receipt_actor_id_mismatch",
+    "entry_receipt_session_id_mismatch",
+}
+TUPLE_CONTEXT_ALLOWED_MARKERS: set[str] = {
+    *TUPLE_CONTEXT_PRIMARY_MARKERS,
+    "entry_receipt_bundle_status_not_pass",
+}
+PROJECTION_ONLY_PLANE_STATUS = "PROJECTION_ONLY"
+PROJECTION_ONLY_RELEASE_DECISION = "Projection Only"
+
 
 def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
+    run_cmd = list(cmd)
     run_cwd = cwd.resolve() if isinstance(cwd, Path) else PROTOCOL_ROOT
-    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(run_cwd))
-    return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
+    if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
+        script = str(run_cmd[1]).strip() if len(run_cmd) >= 2 else ""
+        if script in {REQUIRED_GATE_BUNDLE_SCRIPT, FINAL_EMIT_SCRIPT}:
+            run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
+    if "--report-selected-path" not in run_cmd and REPORT_SELECTED_PATH_FALLBACK:
+        script = str(run_cmd[1]).strip() if len(run_cmd) >= 2 else ""
+        if script == REQUIRED_GATE_BUNDLE_SCRIPT:
+            run_cmd.extend(["--report-selected-path", REPORT_SELECTED_PATH_FALLBACK])
+    rc, out, err = _run_gateway_wrapped_command(
+        cmd=run_cmd,
+        protocol_root=PROTOCOL_ROOT,
+        passthrough_cwd=run_cwd,
+    )
+    return rc, (out or "").strip(), (err or "").strip()
+
+
+def _build_required_gate_bundle_cmd(
+    *,
+    catalog: str,
+    identity_id: str,
+    run_id: str,
+    send_time_gate_status: str,
+    outlet_bypass_detected: str,
+    final_emit_contract_status: str,
+    final_emit_policy_mode: str,
+    final_emit_schema_status: str,
+    actor_id: str,
+    session_id: str = "",
+    resolved_work_layer: str,
+    resolved_source_layer: str,
+    lock_state: str,
+    surface_label: str,
+    operation: str,
+    target_name: str = "",
+    report_selected_path: str = "",
+    out_path: str = "",
+) -> list[str]:
+    return build_required_gate_bundle_cmd_shared(
+        catalog=catalog,
+        identity_id=identity_id,
+        run_id=run_id,
+        send_time_gate_status=send_time_gate_status,
+        outlet_bypass_detected=outlet_bypass_detected,
+        final_emit_contract_status=final_emit_contract_status,
+        final_emit_policy_mode=final_emit_policy_mode,
+        final_emit_schema_status=final_emit_schema_status,
+        actor_id=actor_id,
+        session_id=session_id,
+        resolved_work_layer=resolved_work_layer,
+        resolved_source_layer=resolved_source_layer,
+        lock_state=lock_state,
+        surface_label=surface_label,
+        operation=operation,
+        target_name=target_name,
+        report_selected_path=report_selected_path,
+        out_path=out_path,
+    )
+
+
+def _derive_run_id_from_session_id(session_id: str) -> str:
+    token = str(session_id or "").strip()
+    if not token:
+        return ""
+    if token.startswith("run:") and len(token) > 4:
+        return token.split(":", 1)[1].strip()
+    return token
+
+
+def _resolve_cli_catalog_path(catalog_input: str) -> Path:
+    return Path(str(catalog_input or "").strip()).expanduser().resolve()
+
+
+def _resolve_cli_repo_catalog_path(repo_catalog_input: str) -> Path:
+    repo_catalog_arg = Path(str(repo_catalog_input or "").strip()).expanduser()
+    if repo_catalog_arg.is_absolute():
+        return repo_catalog_arg.resolve()
+    return (PROTOCOL_ROOT / repo_catalog_arg).resolve()
+
+
+def _canonicalize_three_plane_cli_paths(args: argparse.Namespace) -> tuple[Path, Path]:
+    catalog_path = _resolve_cli_catalog_path(args.catalog)
+    repo_catalog_path = _resolve_cli_repo_catalog_path(args.repo_catalog)
+    args.catalog = str(catalog_path)
+    args.repo_catalog = str(repo_catalog_path)
+    return catalog_path, repo_catalog_path
+
+
+def _extract_error_code_from_validator(entry: dict[str, Any]) -> str:
+    payload = _parse_json_payload(str(entry.get("out", ""))) or {}
+    for key in VALIDATOR_ERROR_CODE_KEYS:
+        token = str(payload.get(key, "")).strip()
+        if token:
+            return token
+    for blob_key in ("out", "err"):
+        blob = str(entry.get(blob_key, "") or "")
+        m = IP_ERROR_CODE_RE.search(blob)
+        if m:
+            return str(m.group(1) or "").strip()
+    return ""
+
+
+def _build_current_chat_surface_exclusion_projection(
+    *,
+    args: argparse.Namespace,
+    actor_id: str,
+    layer_intent_text: str,
+    effective_work_layer: str,
+    effective_source_layer: str,
+    stamp_render_payload: dict[str, Any],
+) -> dict[str, Any]:
+    display_identity_id = str(stamp_render_payload.get("display_headstamp_identity_id", "")).strip() or str(
+        getattr(args, "identity_id", "") or ""
+    ).strip()
+    authoritative_identity_id = (
+        str(stamp_render_payload.get("authoritative_identity_id", "")).strip()
+        or str(stamp_render_payload.get("identity_authority_authoritative_identity_id", "")).strip()
+        or display_identity_id
+    )
+    headstamp_consistency_status = str(
+        stamp_render_payload.get("headstamp_consistency_status", "")
+    ).strip() or (STATUS_PASS_REQUIRED if display_identity_id == authoritative_identity_id else STATUS_FAIL_REQUIRED)
+    source_layer = (
+        str(effective_source_layer or "").strip().lower()
+        or str(stamp_render_payload.get("resolved_source_layer", "")).strip().lower()
+        or "project"
+    )
+    machine_payload = {
+        "verification_source": "not_claimed",
+        "display_headstamp_identity_id": display_identity_id,
+        "authoritative_identity_id": authoritative_identity_id,
+        "headstamp_consistency_status": headstamp_consistency_status,
+        "surface_class": CURRENT_CHAT_SURFACE_CLASS,
+        "native_attestation_wiring_capability": CURRENT_CHAT_SURFACE_WIRING_CAPABILITY,
+        "closure_blocker_scope": CURRENT_CHAT_SURFACE_EXCLUSION_SCOPE,
+        "current_chat_surface_native_machine_attested": False,
+        "next_hop_admission_status": STATUS_FAIL_REQUIRED,
+        "source_layer": source_layer,
+    }
+    envelope_artifact = str(
+        runtime_temp_file(
+            channel="three-plane",
+            operation="host-native-chat-surface-exclusion",
+            identity_id=str(getattr(args, "identity_id", "")).strip() or "identity",
+            stem=f"host-native-chat-surface-exclusion-{str(getattr(args, 'identity_id', '')).strip() or 'identity'}",
+            ext=".json",
+            run_token=_derive_run_id_from_session_id(str(getattr(args, "session_id", "") or "").strip()),
+        )
+    )
+    render_cmd = [
+        "python3",
+        "scripts/render_identity_response_stamp.py",
+        "--catalog",
+        str(args.catalog),
+        "--repo-catalog",
+        str(args.repo_catalog),
+        "--identity-id",
+        str(getattr(args, "identity_id", "")).strip(),
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        str(getattr(args, "session_id", "") or "").strip(),
+        "--view",
+        "external",
+        "--disclosure-level",
+        "standard",
+        "--machine-payload-json",
+        json.dumps(machine_payload, ensure_ascii=False, separators=(",", ":")),
+        "--out",
+        envelope_artifact,
+        "--json-only",
+    ]
+    if layer_intent_text:
+        render_cmd.extend(["--layer-intent-text", layer_intent_text])
+    if effective_work_layer:
+        render_cmd.extend(["--work-layer", effective_work_layer])
+    if effective_source_layer:
+        render_cmd.extend(["--source-layer", effective_source_layer])
+    rc_render, out_render, err_render = _run(render_cmd)
+    rendered_payload = _parse_json_payload(out_render) or {}
+    if not rendered_payload and envelope_artifact:
+        try:
+            rendered_payload = _load_json(envelope_artifact)
+        except Exception:
+            rendered_payload = {}
+
+    validator_cmd = [
+        "python3",
+        "scripts/validate_response_stamp_operator_envelope.py",
+        "--stamp-json",
+        envelope_artifact,
+        "--repo-root",
+        str(PROTOCOL_ROOT),
+        "--json-only",
+    ]
+    rc_validate, out_validate, err_validate = _run(validator_cmd)
+    validator_payload = _parse_json_payload(out_validate) or {}
+    parsed_machine = validator_payload.get("parsed_machine_verification")
+    if not isinstance(parsed_machine, dict):
+        parsed_machine = {}
+    explanatory_surface_exclusion_status = str(
+        validator_payload.get("explanatory_surface_exclusion_status", "")
+    ).strip().upper()
+    operator_headstamp_envelope_status = str(
+        validator_payload.get("operator_headstamp_envelope_status", "")
+    ).strip().upper()
+    closure_blocker_scope = str(parsed_machine.get("closure_blocker_scope", "")).strip().upper()
+    excluded_from_blockers = (
+        rc_render == 0
+        and rc_validate == 0
+        and operator_headstamp_envelope_status == STATUS_PASS_REQUIRED
+        and explanatory_surface_exclusion_status == STATUS_PASS_REQUIRED
+        and closure_blocker_scope == CURRENT_CHAT_SURFACE_EXCLUSION_SCOPE
+    )
+    stale_reasons: list[str] = []
+    for reason in list(rendered_payload.get("stale_reasons", []) or []):
+        token = str(reason).strip()
+        if token and token not in stale_reasons:
+            stale_reasons.append(token)
+    for reason in list(validator_payload.get("stale_reasons", []) or []):
+        token = str(reason).strip()
+        if token and token not in stale_reasons:
+            stale_reasons.append(token)
+    return {
+        "render_rc": rc_render,
+        "render_ok": rc_render == 0,
+        "render_stdout": out_render,
+        "render_stderr": err_render,
+        "validator_rc": rc_validate,
+        "validator_ok": rc_validate == 0,
+        "validator_stdout": out_validate,
+        "validator_stderr": err_validate,
+        "operator_headstamp_envelope_status": operator_headstamp_envelope_status,
+        "explanatory_surface_exclusion_status": explanatory_surface_exclusion_status,
+        "closure_blocker_scope": closure_blocker_scope,
+        "effective_blocker_scope": CURRENT_CHAT_SURFACE_EXCLUSION_SCOPE if excluded_from_blockers else "BLOCKING",
+        "excluded_from_blocker_aggregation": excluded_from_blockers,
+        "control_state": CURRENT_CHAT_SURFACE_CONTROL_STATE if excluded_from_blockers else CURRENT_CHAT_SURFACE_BLOCKING_STATE,
+        "display_headstamp_line": str(rendered_payload.get("display_headstamp_line", "")).strip(),
+        "machine_verification_line": str(
+            validator_payload.get("machine_verification_line", "") or rendered_payload.get("machine_verification_line", "")
+        ).strip(),
+        "parsed_machine_verification": parsed_machine,
+        "artifact_path": envelope_artifact,
+        "stale_reasons": stale_reasons,
+        "blocking_contract_failed": not excluded_from_blockers,
+    }
+
+
+def _is_m2m_error_code(error_code: str) -> bool:
+    token = str(error_code or "").strip().upper()
+    if not token:
+        return False
+    return (
+        token.startswith("IP-ASB-")
+        or token.startswith("IP-ACTOR-")
+        or token.startswith("IP-FE-")
+        or token.startswith("IP-HDSTAMP-")
+    )
+
+
+def _is_m2m_failure_row(*, validator_name: str, error_code: str) -> bool:
+    if validator_name in BUNDLE_GATE_VALIDATOR_NAMES and not _is_m2m_error_code(error_code):
+        return False
+    return validator_name in M2M_VALIDATOR_NAMES or _is_m2m_error_code(error_code)
+
+
+def _classify_m2m_projection(
+    *,
+    validators: dict[str, Any],
+    instance_status: str,
+    repo_status: str,
+    release_status: str,
+) -> dict[str, Any]:
+    failed: list[dict[str, str]] = []
+    for name, raw in (validators or {}).items():
+        entry = raw if isinstance(raw, dict) else {}
+        if bool(entry.get("ok", False)):
+            continue
+        error_code = _extract_error_code_from_validator(entry)
+        failed.append(
+            {
+                "validator": str(name),
+                "error_code": error_code,
+            }
+        )
+
+    m2m_failed = [
+        row
+        for row in failed
+        if _is_m2m_failure_row(
+            validator_name=str(row.get("validator", "")),
+            error_code=str(row.get("error_code", "")),
+        )
+    ]
+    non_m2m_failed = [row for row in failed if row not in m2m_failed]
+
+    non_m2m_scope: list[str] = []
+    if any(
+        row["validator"] in CAPABILITY_VALIDATOR_NAMES or str(row.get("error_code", "")).upper().startswith("IP-CAP-")
+        for row in non_m2m_failed
+    ):
+        non_m2m_scope.append("instance_capability")
+    if any(row["validator"] in RELEASE_ENV_VALIDATOR_NAMES for row in non_m2m_failed):
+        non_m2m_scope.append("release_env")
+    if any(
+        row["validator"] in BASELINE_VALIDATOR_NAMES or str(row.get("error_code", "")).upper().startswith("IP-PBL-")
+        for row in non_m2m_failed
+    ):
+        non_m2m_scope.append("baseline_refresh")
+    if any(row["validator"] in PROTOCOL_FEEDBACK_OBS_VALIDATOR_NAMES for row in non_m2m_failed):
+        non_m2m_scope.append("protocol_feedback_observability")
+    if any(row["validator"] in DOWNSINK_PATH_GOVERNANCE_VALIDATOR_NAMES for row in non_m2m_failed):
+        non_m2m_scope.append("downsink_path_immutability")
+    if any(row["validator"] in EXECUTABLE_SURFACE_GOVERNANCE_VALIDATOR_NAMES for row in non_m2m_failed):
+        non_m2m_scope.append("executable_surface_runtime_literals")
+    if repo_status != "CLOSED":
+        non_m2m_scope.append("repo_plane")
+    if release_status != "CLOSED":
+        non_m2m_scope.append("release_plane")
+    if instance_status != "CLOSED" and non_m2m_failed and "instance_plane" not in non_m2m_scope:
+        non_m2m_scope.append("instance_plane")
+    if non_m2m_failed and not non_m2m_scope:
+        non_m2m_scope.append("other")
+
+    return {
+        "m2m_binding_closure_status": "PASS" if not m2m_failed else "FAIL",
+        "m2m_failure_scope": "protocol_m2m" if m2m_failed else "",
+        "m2m_failed_validator_count": len(m2m_failed),
+        "m2m_failed_validators": m2m_failed,
+        "m2m_failure_reasons": [
+            f"{row['validator']}:{row.get('error_code') or 'UNKNOWN'}"
+            for row in m2m_failed
+        ],
+        "non_m2m_failed_validator_count": len(non_m2m_failed),
+        "non_m2m_failed_validators": non_m2m_failed,
+        "non_m2m_failure_scope": sorted(set(non_m2m_scope)),
+        "non_m2m_failure_reasons": [
+            f"{row['validator']}:{row.get('error_code') or 'UNKNOWN'}"
+            for row in non_m2m_failed
+        ],
+        "failed_validator_count_total": len(failed),
+    }
+
+
+def _is_tuple_context_only_stale_reasons(stale_reasons: list[str]) -> bool:
+    tokens = [str(x).strip() for x in stale_reasons if str(x).strip()]
+    if not tokens:
+        return False
+    primary_detected = False
+    for token in tokens:
+        if token in TUPLE_CONTEXT_PRIMARY_MARKERS:
+            primary_detected = True
+            continue
+        if token in TUPLE_CONTEXT_ALLOWED_MARKERS:
+            continue
+        if token.startswith("entry_receipt_required_fields_missing:"):
+            primary_detected = True
+            continue
+        return False
+    return primary_detected
+
+
+def _classify_tuple_context_projection(*, validators: dict[str, Any]) -> dict[str, Any]:
+    matches: list[dict[str, Any]] = []
+    tuple_rows: list[tuple[str, dict[str, Any], dict[str, Any]]] = []
+
+    for name, raw in (validators or {}).items():
+        entry = raw if isinstance(raw, dict) else {}
+        payload = _parse_json_payload(str(entry.get("out", ""))) or {}
+        if isinstance(payload, dict):
+            tuple_rows.append((str(name), entry, payload))
+
+    coverage_entry = (validators or {}).get("required_contract_coverage")
+    coverage_payload = _parse_json_payload(
+        str((coverage_entry or {}).get("out", "")) if isinstance(coverage_entry, dict) else ""
+    ) or {}
+    for contract_row in (coverage_payload.get("contracts") or []):
+        if not isinstance(contract_row, dict):
+            continue
+        if str(contract_row.get("name", "")).strip() != "protocol_unique_entry_gate":
+            continue
+        tail_payload = _parse_json_payload(str(contract_row.get("validator_tail", ""))) or {}
+        if not isinstance(tail_payload, dict):
+            continue
+        tuple_rows.append(
+            (
+                "protocol_unique_entry_gate:coverage",
+                {
+                    "rc": 0
+                    if str(contract_row.get("validator_status", "")).strip().upper() == STATUS_PASS_REQUIRED
+                    else 1,
+                    "ok": str(contract_row.get("validator_status", "")).strip().upper() == STATUS_PASS_REQUIRED,
+                    "out": json.dumps(tail_payload, ensure_ascii=False),
+                    "err": "",
+                    "error_code": str(tail_payload.get("error_code", "")).strip()
+                    or str(contract_row.get("reason_code", "")).strip(),
+                },
+                tail_payload,
+            )
+        )
+
+    for name, entry, payload in tuple_rows:
+        tuple_only = bool(payload.get("protocol_unique_entry_receipt_tuple_context_only_failure", False))
+        if not tuple_only:
+            tuple_status = str(
+                payload.get("protocol_unique_entry_receipt_tuple_context_status", "")
+            ).strip().upper()
+            stale_reasons = [
+                str(x).strip()
+                for x in (payload.get("stale_reasons") or [])
+                if str(x).strip()
+            ]
+            if tuple_status == STATUS_FAIL_REQUIRED and _is_tuple_context_only_stale_reasons(stale_reasons):
+                tuple_only = True
+        if not tuple_only:
+            continue
+        mismatch_fields = [
+            str(x).strip()
+            for x in (payload.get("protocol_unique_entry_receipt_tuple_context_mismatch_fields") or [])
+            if str(x).strip()
+        ]
+        matches.append(
+            {
+                "validator": str(name),
+                "error_code": _extract_error_code_from_validator(entry),
+                "mismatch_fields": sorted(set(mismatch_fields)),
+            }
+        )
+    return {
+        "tuple_context_status": STATUS_PASS_REQUIRED if not matches else STATUS_FAIL_REQUIRED,
+        "tuple_context_only_failure": bool(matches),
+        "tuple_context_only_failure_count": len(matches),
+        "tuple_context_only_failure_validators": matches,
+    }
+
+
+def _build_governance_closure_axes(
+    *,
+    instance_status: str,
+    repo_status: str,
+    release_status: str,
+    m2m_projection: dict[str, Any],
+    tuple_context_projection: dict[str, Any],
+    current_chat_surface_exclusion: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    normalized_instance = str(instance_status or "").strip().upper()
+    normalized_repo = str(repo_status or "").strip().upper()
+    normalized_release = str(release_status or "").strip().upper()
+    m2m_status = str(m2m_projection.get("m2m_binding_closure_status", "")).strip().upper()
+    current_chat_surface_exclusion = (
+        current_chat_surface_exclusion if isinstance(current_chat_surface_exclusion, dict) else {}
+    )
+    chat_surface_effective_blocker_scope = str(
+        current_chat_surface_exclusion.get("effective_blocker_scope", "")
+    ).strip().upper()
+    chat_surface_exclusion_status = str(
+        current_chat_surface_exclusion.get("explanatory_surface_exclusion_status", "")
+    ).strip().upper()
+    chat_surface_exclusion_pass = (
+        not current_chat_surface_exclusion
+        or chat_surface_effective_blocker_scope == CURRENT_CHAT_SURFACE_EXCLUSION_SCOPE
+    )
+    infra_pass = normalized_repo == "CLOSED" and m2m_status == "PASS" and chat_surface_exclusion_pass
+    runtime_pass = normalized_instance == "CLOSED"
+    release_pass = normalized_release == "CLOSED"
+    tuple_context_status = str(tuple_context_projection.get("tuple_context_status", "")).strip().upper()
+    tuple_context_pass = tuple_context_status != STATUS_FAIL_REQUIRED
+    reasons: list[str] = []
+    non_blocking_exclusions: list[str] = []
+    if normalized_repo != "CLOSED":
+        reasons.append(f"repo_plane_not_closed:{normalized_repo or 'UNKNOWN'}")
+    if m2m_status != "PASS":
+        reasons.append(f"m2m_binding_not_pass:{m2m_status or 'UNKNOWN'}")
+    if current_chat_surface_exclusion:
+        if chat_surface_effective_blocker_scope == CURRENT_CHAT_SURFACE_EXCLUSION_SCOPE:
+            non_blocking_exclusions.append(CURRENT_CHAT_SURFACE_CLASS)
+        else:
+            reasons.append(
+                "host_native_chat_surface_exclusion_not_frozen:"
+                + (chat_surface_exclusion_status or STATUS_FAIL_REQUIRED)
+            )
+    if normalized_instance != "CLOSED":
+        reasons.append(f"instance_plane_not_closed:{normalized_instance or 'UNKNOWN'}")
+    if normalized_release != "CLOSED":
+        reasons.append(f"release_plane_not_closed:{normalized_release or 'UNKNOWN'}")
+    if not tuple_context_pass:
+        tuple_validators = [
+            str(row.get("validator", "")).strip()
+            for row in (tuple_context_projection.get("tuple_context_only_failure_validators") or [])
+            if str(row.get("validator", "")).strip()
+        ]
+        reason = "tuple_context_only_failure_detected"
+        if tuple_validators:
+            reason += ":" + ",".join(sorted(set(tuple_validators)))
+        reasons.append(reason)
+    return {
+        "infrastructure_closure_status": STATUS_PASS_REQUIRED if infra_pass else STATUS_FAIL_REQUIRED,
+        "runtime_readiness_status": STATUS_PASS_REQUIRED if runtime_pass else STATUS_FAIL_REQUIRED,
+        "release_readiness_status": STATUS_PASS_REQUIRED if release_pass else STATUS_FAIL_REQUIRED,
+        "tuple_context_consistency_status": STATUS_PASS_REQUIRED if tuple_context_pass else STATUS_FAIL_REQUIRED,
+        "current_chat_surface_effective_blocker_scope": chat_surface_effective_blocker_scope,
+        "current_chat_surface_exclusion_status": chat_surface_exclusion_status,
+        "current_chat_surface_excluded_from_blocker_aggregation": bool(non_blocking_exclusions),
+        "non_blocking_exclusions": sorted(set(non_blocking_exclusions)),
+        "decision_mode": (
+            "FULL_GO" if (infra_pass and runtime_pass and release_pass and tuple_context_pass) else "CONDITIONAL_GO"
+        ),
+        "conditional_reasons": reasons,
+    }
+
+
+def _projection_skip_reason(area: str, profile: ThreePlaneProjectionProfile) -> str:
+    payload = build_projection_profile_exclusion_payload(
+        profile_id=profile.profile_id,
+        execution_mode=profile.execution_mode,
+        description=profile.description,
+        excluded_area=area,
+        owner_surface="semantic_tuple_three_plane",
+    )
+    return str(payload.get("projection_skip_reason", "")).strip()
+
+
+def _build_projection_only_plane_detail(
+    *,
+    plane_name: str,
+    projection_profile: ThreePlaneProjectionProfile,
+) -> dict[str, Any]:
+    return build_projection_profile_exclusion_payload(
+        profile_id=projection_profile.profile_id,
+        execution_mode=projection_profile.execution_mode,
+        description=projection_profile.description,
+        excluded_area=plane_name,
+        owner_surface="semantic_tuple_three_plane",
+    )
+
+
+def _build_projection_only_m2m_projection(
+    *,
+    projection_profile: ThreePlaneProjectionProfile,
+) -> dict[str, Any]:
+    return build_projection_profile_exclusion_payload(
+        profile_id=projection_profile.profile_id,
+        execution_mode=projection_profile.execution_mode,
+        description=projection_profile.description,
+        excluded_area="m2m_projection",
+        owner_surface="semantic_tuple_three_plane",
+        extra_fields={
+            "m2m_binding_closure_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "m2m_failure_scope": "",
+            "m2m_failed_validator_count": 0,
+            "m2m_failed_validators": [],
+            "m2m_failure_reasons": [],
+            "non_m2m_failed_validator_count": 0,
+            "non_m2m_failed_validators": [],
+            "non_m2m_failure_scope": [],
+            "non_m2m_failure_reasons": [],
+            "failed_validator_count_total": 0,
+        },
+    )
+
+
+def _build_projection_only_tuple_context_projection(
+    *,
+    projection_profile: ThreePlaneProjectionProfile,
+) -> dict[str, Any]:
+    return build_projection_profile_exclusion_payload(
+        profile_id=projection_profile.profile_id,
+        execution_mode=projection_profile.execution_mode,
+        description=projection_profile.description,
+        excluded_area="tuple_context_projection",
+        owner_surface="semantic_tuple_three_plane",
+        extra_fields={
+            "tuple_context_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "tuple_context_only_failure": False,
+            "tuple_context_only_failure_count": 0,
+            "tuple_context_only_failure_validators": [],
+        },
+    )
+
+
+def _build_projection_only_governance_closure_axes(
+    *,
+    projection_profile: ThreePlaneProjectionProfile,
+) -> dict[str, Any]:
+    reason = _projection_skip_reason("governance_closure_axes", projection_profile)
+    return build_projection_profile_exclusion_payload(
+        profile_id=projection_profile.profile_id,
+        execution_mode=projection_profile.execution_mode,
+        description=projection_profile.description,
+        excluded_area="governance_closure_axes",
+        owner_surface="semantic_tuple_three_plane",
+        extra_fields={
+            "infrastructure_closure_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "runtime_readiness_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "release_readiness_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "tuple_context_consistency_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "current_chat_surface_effective_blocker_scope": "",
+            "current_chat_surface_exclusion_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "current_chat_surface_excluded_from_blocker_aggregation": False,
+            "non_blocking_exclusions": [],
+            "decision_mode": PROJECTION_ONLY_PLANE_STATUS,
+            "conditional_reasons": [reason],
+        },
+    )
+
+
+def _build_projection_only_current_chat_surface_exclusion(
+    *,
+    projection_profile: ThreePlaneProjectionProfile,
+) -> dict[str, Any]:
+    return build_projection_profile_exclusion_payload(
+        profile_id=projection_profile.profile_id,
+        execution_mode=projection_profile.execution_mode,
+        description=projection_profile.description,
+        excluded_area="current_chat_surface_exclusion",
+        owner_surface="semantic_tuple_three_plane",
+        extra_fields={
+            "render_rc": 0,
+            "render_ok": True,
+            "render_stdout": "",
+            "render_stderr": "",
+            "validator_rc": 0,
+            "validator_ok": True,
+            "validator_stdout": "",
+            "validator_stderr": "",
+            "operator_headstamp_envelope_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "explanatory_surface_exclusion_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "closure_blocker_scope": "",
+            "effective_blocker_scope": "",
+            "excluded_from_blocker_aggregation": False,
+            "control_state": PROJECTION_ONLY_PLANE_STATUS,
+            "display_headstamp_line": "",
+            "machine_verification_line": "",
+            "parsed_machine_verification": {},
+            "artifact_path": "",
+            "blocking_contract_failed": False,
+        },
+    )
+
+
+def _build_projection_only_release_cloud_evidence_adapter(
+    *,
+    projection_profile: ThreePlaneProjectionProfile,
+) -> dict[str, Any]:
+    return build_projection_profile_excluded_release_cloud_evidence_adapter(
+        profile_id=projection_profile.profile_id,
+        execution_mode=projection_profile.execution_mode,
+        description=projection_profile.description,
+        owner_surface="semantic_tuple_three_plane",
+    )
 
 
 def _tracked_worktree_state() -> tuple[bool, list[str], str]:
@@ -44,7 +818,7 @@ def _resolve_applied_gate_set(*, layer_intent_text: str, expected_work_layer: st
         explicit_source_layer=str(expected_source_layer or "").strip(),
         intent_text=str(layer_intent_text or "").strip(),
         default_work_layer=DEFAULT_WORK_LAYER,
-        default_source_layer="global",
+        default_source_layer="project",
     )
     work_layer = str(resolved.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
     if work_layer == "protocol":
@@ -82,62 +856,135 @@ def _parse_json_payload(raw: str) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def _safe_json_file(path: Path) -> dict[str, Any]:
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _latest_lane_receipt(*, outbox_dir: Path, prefix: str, identity_id: str) -> Path | None:
+    if not outbox_dir.exists():
+        return None
+    rows = sorted(outbox_dir.glob(f"{prefix}*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for p in rows:
+        doc = _safe_json_file(p)
+        rid = str(doc.get("identity_id", "")).strip()
+        if rid and rid != identity_id:
+            continue
+        return p.resolve()
+    return None
+
+
+def _detect_session_lane_lock(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    actor_id: str,
+    session_id: str,
+    resolved_pack_path: Path | None,
+) -> str:
+    try:
+        binding = load_actor_binding(
+            catalog_path,
+            actor_id,
+            identity_id=identity_id,
+            session_id=session_id,
+        )
+    except Exception:
+        binding = {}
+    for key in ("session_lane_lock", "lane_lock", "work_layer_lock"):
+        token = str(binding.get(key, "")).strip().lower()
+        if token in {"protocol", "instance"}:
+            return token
+
+    if resolved_pack_path is None:
+        return ""
+    outbox_dir = (resolved_pack_path / "runtime" / "protocol-feedback" / "outbox-to-protocol").resolve()
+    lock_protocol = _latest_lane_receipt(outbox_dir=outbox_dir, prefix=LOCK_PROTOCOL_PREFIX, identity_id=identity_id)
+    lock_exit = _latest_lane_receipt(outbox_dir=outbox_dir, prefix=LOCK_EXIT_PREFIX, identity_id=identity_id)
+    if lock_protocol is None:
+        return ""
+    protocol_mtime = lock_protocol.stat().st_mtime
+    exit_mtime = lock_exit.stat().st_mtime if lock_exit is not None else -1.0
+    if exit_mtime > protocol_mtime:
+        return ""
+    return "protocol"
+
+
 def _latest_report(identity_id: str, identity_home: str = "", preferred_pack: str = "") -> Path | None:
     roots: list[Path] = []
+    explicit_pack_root: Path | None = None
     if preferred_pack.strip():
         pack = Path(preferred_pack).expanduser().resolve()
+        explicit_pack_root = pack
         roots.append(pack / "runtime" / "reports")
         roots.append(pack / "runtime")
     roots.extend(
         [
-            Path("/tmp/identity-upgrade-reports"),
-            Path("/tmp/identity-runtime"),
+            named_temp_root("identity-upgrade-reports"),
+            named_temp_root("identity-runtime"),
         ]
     )
     if identity_home.strip():
-        roots.append(Path(identity_home).expanduser().resolve())
-    candidates: list[Path] = []
-    for root in roots:
-        if not root.exists():
-            continue
-        candidates.extend(root.glob(f"**/identity-upgrade-exec-{identity_id}-*.json"))
-    filtered = [p for p in candidates if not p.name.endswith("-patch-plan.json")]
-    if not filtered:
-        return None
-    filtered.sort(key=lambda p: p.stat().st_mtime)
-    return filtered[-1]
+        identity_home_path = Path(identity_home).expanduser().resolve()
+        roots.append(identity_home_path)
+        if explicit_pack_root is None:
+            explicit_pack_root = identity_home_path
+    return latest_prompt_bound_primary_execution_report_from_roots(
+        roots,
+        identity_id,
+        explicit_pack_root=explicit_pack_root,
+    )
 
 
 def _release_plane_status(args: argparse.Namespace) -> tuple[str, dict[str, Any]]:
     checks: list[dict[str, Any]] = []
+    checks_json_supplied = bool(str(args.checks_json or "").strip())
     if args.checks_json:
         checks_doc = _load_json(args.checks_json)
         raw = checks_doc.get("required_checks_set", [])
         if isinstance(raw, list):
             checks = [x for x in raw if isinstance(x, dict)]
 
-    if not args.required_gates_run_id:
-        detail = {
-            "conditions": {
-                "target_branch_explicit": bool(args.target_branch),
-                "release_head_sha_explicit": bool(args.release_head_sha),
-                "required_gates_run_id_accessible": False,
-                "run_head_matches_release_head": False,
-                "required_checks_all_success": False,
-                "workflow_file_sha_matches": False,
-            },
-            "required_checks_set": checks,
-        }
-        return "NOT_STARTED", detail
-
+    checks_set_present = bool(checks)
+    checks_all_success = checks_set_present and all(str(x.get("status", "")).lower() == "success" for x in checks)
+    required_checks_status = (
+        "PASS"
+        if checks_all_success
+        else "EVIDENCE_MISSING"
+        if not checks_json_supplied
+        else "EMPTY_SET"
+        if not checks_set_present
+        else "FAILED"
+    )
     cond = {
         "target_branch_explicit": bool(args.target_branch),
         "release_head_sha_explicit": bool(args.release_head_sha),
+        "required_gates_run_id_present": bool(args.required_gates_run_id),
+        "run_url_present": bool(args.run_url),
         "required_gates_run_id_accessible": bool(args.required_gates_run_id and args.run_url),
         "run_head_matches_release_head": args.run_head_sha == args.release_head_sha and bool(args.run_head_sha),
-        "required_checks_all_success": bool(checks) and all(str(x.get("status", "")).lower() == "success" for x in checks),
+        "required_checks_evidence_accessible": checks_json_supplied,
+        "required_checks_set_present": checks_set_present,
+        "required_checks_status": required_checks_status,
+        "required_checks_all_success": checks_all_success,
         "workflow_file_sha_matches": args.run_workflow_file_sha == args.workflow_file_sha and bool(args.workflow_file_sha),
     }
+    has_release_baseline = any(
+        (
+            bool(args.target_branch),
+            bool(args.release_head_sha),
+            bool(args.workflow_file_sha),
+            bool(args.run_head_sha),
+            bool(args.run_workflow_file_sha),
+            bool(args.run_url),
+            bool(args.checks_json),
+        )
+    )
+    if not args.required_gates_run_id:
+        return ("BLOCKED" if has_release_baseline else "NOT_STARTED"), {"conditions": cond, "required_checks_set": checks}
     return ("CLOSED" if all(cond.values()) else "BLOCKED"), {"conditions": cond, "required_checks_set": checks}
 
 
@@ -171,10 +1018,75 @@ def _repo_plane_status(args: argparse.Namespace, resolved: dict[str, Any]) -> tu
     return status, checks
 
 
-def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -> tuple[str, dict[str, Any]]:
+def _instance_execution_closed(
+    *,
+    mandatory: bool,
+    validators_all_ok: bool,
+    capability_status: str,
+    all_ok: bool,
+    writeback_status: str,
+    permission_state: str,
+    post_execution_mandatory_status: str,
+) -> bool:
+    if not (mandatory and validators_all_ok):
+        return False
+    if capability_status not in {"ACTIVATED", "NOT_REQUIRED"}:
+        return False
+    # The post-execution validator is the closure contract authority for strict runs,
+    # including the non-upgrade path where writeback stays NOT_REQUIRED by design.
+    if post_execution_mandatory_status == "PASS_REQUIRED":
+        return True
+    return all_ok and writeback_status == "WRITTEN" and permission_state == "WRITEBACK_WRITTEN"
+
+
+def _build_three_plane_health_report_experience_writeback_closure(
+    *,
+    projection_profile: ThreePlaneProjectionProfile,
+    identity_id: str,
+    health_report_dir: str,
+    execution_report_path: Path | None,
+    boundary_repair_lane_status: str,
+    boundary_post_execution_obligation_status: str,
+    boundary_writeback_continuity_status: str,
+    boundary_experience_writeback_validation_status: str,
+    failed_scripts: list[str] | None = None,
+    first_failed_script: str = "",
+) -> dict[str, Any]:
+    if projection_profile.projection_only:
+        return build_projection_profile_excluded_health_report_experience_writeback_closure(
+            profile_id=projection_profile.profile_id,
+            execution_mode=projection_profile.execution_mode,
+            description=projection_profile.description,
+            owner_surface="semantic_tuple_three_plane",
+        )
+    return build_health_report_experience_writeback_closure_projection(
+        identity_id=identity_id,
+        health_report_dir=health_report_dir,
+        execution_report=str(execution_report_path or ""),
+        command_execution={
+            "failed_scripts": list(failed_scripts or []),
+            "first_failed_script": str(first_failed_script or "").strip(),
+        },
+        selected_check_mode="full",
+        selected_check_names=(),
+        boundary_repair_lane_status=boundary_repair_lane_status,
+        boundary_post_execution_obligation_status=boundary_post_execution_obligation_status,
+        boundary_writeback_continuity_status=boundary_writeback_continuity_status,
+        boundary_experience_writeback_validation_status=boundary_experience_writeback_validation_status,
+    )
+
+
+def _instance_plane_status(
+    args: argparse.Namespace,
+    report_path: Path | None,
+    resolved: dict[str, Any] | None = None,
+    projection_profile: ThreePlaneProjectionProfile | None = None,
+) -> tuple[str, dict[str, Any]]:
+    global REPORT_SELECTED_PATH_FALLBACK
     if report_path is None:
         return "NOT_STARTED", {"reason": "execution_report_not_found"}
 
+    REPORT_SELECTED_PATH_FALLBACK = str(report_path).strip()
     data = _load_json(str(report_path))
     ew = data.get("experience_writeback") or {}
     mandatory = all(
@@ -197,6 +1109,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     all_ok = _bool(data.get("all_ok", False))
     err_code = str((ew.get("error_code", "") or data.get("permission_error_code", ""))).strip()
     next_action = str(data.get("next_action", "")).strip()
+    report_run_id = str(data.get("run_id", "")).strip()
+    current_round_anchor_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     cap_status = str(data.get("capability_activation_status", "")).strip().upper()
     cap_error = str(data.get("capability_activation_error_code", "")).strip()
     hard_boundary = err_code.startswith("IP-PATH-") or err_code.startswith("IP-PERM-")
@@ -206,11 +1120,110 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     expected_work_layer = str(getattr(args, "expected_work_layer", "") or "").strip().lower()
     expected_source_layer = str(getattr(args, "expected_source_layer", "") or "").strip().lower()
     actor_id = resolve_actor_id(str(getattr(args, "actor_id", "") or "").strip())
+    session_id_value = str(getattr(args, "session_id", "") or "").strip()
+    session_run_id = _derive_run_id_from_session_id(session_id_value)
+    resolved_ctx = resolved or {}
+    resolved_source_hint = str(resolved_ctx.get("source_layer", "") or "").strip().lower()
+    effective_source_layer = expected_source_layer or (
+        resolved_source_hint if resolved_source_hint in {"project", "global"} else "project"
+    )
+    resolved_pack_token = str(resolved_ctx.get("resolved_pack_path") or resolved_ctx.get("pack_path") or "").strip()
+    resolved_pack_path: Path | None = None
+    if resolved_pack_token:
+        try:
+            resolved_pack_path = Path(resolved_pack_token).expanduser().resolve()
+        except Exception:
+            resolved_pack_path = None
+    lane_lock_hint = _detect_session_lane_lock(
+        catalog_path=Path(args.catalog).expanduser().resolve(),
+        identity_id=args.identity_id,
+        actor_id=actor_id,
+        session_id=session_id_value,
+        resolved_pack_path=resolved_pack_path,
+    )
+    effective_work_layer = expected_work_layer
+    if not effective_work_layer:
+        inferred = resolve_layer_intent(
+            explicit_work_layer="",
+            explicit_source_layer=effective_source_layer,
+            intent_text=layer_intent_text,
+            default_work_layer=DEFAULT_WORK_LAYER,
+            default_source_layer=effective_source_layer,
+        )
+        effective_work_layer = (
+            str(inferred.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
+        )
+    if not expected_work_layer and lane_lock_hint in {"protocol", "instance"}:
+        effective_work_layer = lane_lock_hint
+    if effective_work_layer not in {"protocol", "instance", "dual"}:
+        effective_work_layer = DEFAULT_WORK_LAYER
+
     lane_applied_gate_set = _resolve_applied_gate_set(
         layer_intent_text=layer_intent_text,
-        expected_work_layer=expected_work_layer,
-        expected_source_layer=expected_source_layer,
+        expected_work_layer=effective_work_layer,
+        expected_source_layer=effective_source_layer,
     )
+    active_projection_profile = projection_profile or resolve_three_plane_projection_profile(
+        DEFAULT_THREE_PLANE_PROJECTION_PROFILE
+    )
+    if active_projection_profile.projection_only:
+        detail = {
+            "projection_profile": active_projection_profile.profile_id,
+            "projection_profile_execution_mode": active_projection_profile.execution_mode,
+            "projection_profile_description": active_projection_profile.description,
+            "projection_only_reason": f"projection_profile_restricted:{active_projection_profile.profile_id}",
+            "report_selected_path": str(report_path),
+            "report_run_id": report_run_id,
+            "resolved_work_layer": effective_work_layer,
+            "resolved_source_layer": effective_source_layer,
+            "lane_applied_gate_set": lane_applied_gate_set,
+            "validators": {},
+            "stale_reasons": [],
+        }
+        detail["terminal_truth_boundary_projection"] = build_terminal_truth_boundary_projection_from_report(
+            report_doc=data if isinstance(data, dict) else {},
+            report_path=report_path,
+            catalog_path=Path(args.catalog).expanduser().resolve(),
+            repo_catalog_path=Path(args.repo_catalog).expanduser().resolve(),
+            identity_id=args.identity_id,
+            operation="three-plane",
+            work_layer=effective_work_layer,
+            source_layer=effective_source_layer,
+        )
+        detail["current_chat_surface_exclusion"] = _build_projection_only_current_chat_surface_exclusion(
+            projection_profile=active_projection_profile
+        )
+        detail["required_gate_bundle_target_projection"] = (
+            build_projection_profile_excluded_required_gate_bundle_target_projection(
+                profile_id=active_projection_profile.profile_id,
+                execution_mode=active_projection_profile.execution_mode,
+                description=active_projection_profile.description,
+                excluded_area="required_gate_bundle_projection",
+                owner_surface="semantic_tuple_three_plane",
+            )
+        )
+        detail["required_gate_bundle_shadow_target_projection"] = (
+            build_projection_profile_excluded_required_gate_bundle_target_projection(
+                profile_id=active_projection_profile.profile_id,
+                execution_mode=active_projection_profile.execution_mode,
+                description=active_projection_profile.description,
+                excluded_area="required_gate_bundle_projection",
+                owner_surface="semantic_tuple_three_plane_shadow",
+            )
+        )
+        detail["health_report_experience_writeback_closure"] = (
+            _build_three_plane_health_report_experience_writeback_closure(
+                projection_profile=active_projection_profile,
+                identity_id=args.identity_id,
+                health_report_dir=str(default_health_report_dir()),
+                execution_report_path=report_path,
+                boundary_repair_lane_status=STATUS_SKIPPED_NOT_REQUIRED,
+                boundary_post_execution_obligation_status=STATUS_SKIPPED_NOT_REQUIRED,
+                boundary_writeback_continuity_status=STATUS_SKIPPED_NOT_REQUIRED,
+                boundary_experience_writeback_validation_status=STATUS_SKIPPED_NOT_REQUIRED,
+            )
+        )
+        return PROJECTION_ONLY_PLANE_STATUS, detail
     # Always validate tuple and writeback linkage to keep evidence machine-checkable.
     rc_tuple, out_tuple, err_tuple = _run(
         ["python3", "scripts/validate_identity_binding_tuple.py", "--identity-id", args.identity_id, "--report", str(report_path)]
@@ -222,16 +1235,23 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "python3",
             "scripts/validate_identity_experience_writeback.py",
             "--repo-catalog",
-            "identity/catalog/identities.yaml",
+            args.repo_catalog,
             "--local-catalog",
             args.catalog,
             "--identity-id",
             args.identity_id,
             "--execution-report",
             str(report_path),
+            "--json-only",
         ]
     )
+    experience_writeback_payload = _parse_json_payload(out_wb) or {}
     validators["experience_writeback"] = {"rc": rc_wb, "ok": rc_wb == 0, "out": out_wb, "err": err_wb}
+    experience_writeback_status = str(
+        experience_writeback_payload.get("experience_writeback_validation_status", "")
+    ).strip().upper()
+    if rc_wb != 0 or experience_writeback_status == "FAIL_REQUIRED":
+        hard_boundary = True
 
     perm_cmd = ["python3", "scripts/validate_identity_permission_state.py", "--identity-id", args.identity_id, "--report", str(report_path), "--ci"]
     if all_ok and wb == "WRITTEN" and ps == "WRITEBACK_WRITTEN":
@@ -247,6 +1267,11 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            str(getattr(args, "session_id", "") or "").strip(),
+            "--strict-session-primary",
         ]
     )
     validators["session_pointer"] = {
@@ -318,6 +1343,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.catalog,
             "--actor-id",
             actor_id,
+            "--session-id",
+            str(getattr(args, "session_id", "") or "").strip(),
             "--operation",
             "three-plane",
             "--json-only",
@@ -344,6 +1371,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.catalog,
             "--actor-id",
             actor_id,
+            "--session-id",
+            str(getattr(args, "session_id", "") or "").strip(),
             "--operation",
             "three-plane",
             "--json-only",
@@ -392,6 +1421,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--catalog",
             args.catalog,
+            "--actor-id",
+            actor_id,
+            "--scope-mode",
+            "actor_primary",
             "--operation",
             "three-plane",
             "--json-only",
@@ -438,18 +1471,88 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_refresh != 0 or refresh_status == "FAIL_REQUIRED":
         hard_boundary = True
 
-    stamp_artifact = f"/tmp/identity-response-stamp-three-plane-{args.identity_id}.json"
-    stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-three-plane-{args.identity_id}.json"
-    reply_first_line_blocker_receipt = (
-        f"/tmp/identity-reply-first-line-blocker-receipt-three-plane-{args.identity_id}.json"
+    stamp_artifact = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="three-plane",
+            identity_id=args.identity_id,
+            stem=f"identity-response-stamp-three-plane-{args.identity_id}",
+            ext="json",
+        )
     )
-    send_time_reply_file = f"/tmp/identity-send-time-reply-three-plane-{args.identity_id}.txt"
-    send_time_reply_gate_blocker_receipt = (
-        f"/tmp/identity-send-time-reply-gate-blocker-receipt-three-plane-{args.identity_id}.json"
+    stamp_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="three-plane",
+            identity_id=args.identity_id,
+            stem=f"identity-stamp-blocker-receipt-three-plane-{args.identity_id}",
+            ext="json",
+        )
     )
-    execution_reply_coherence_blocker_receipt = (
-        f"/tmp/identity-execution-reply-coherence-blocker-receipt-three-plane-{args.identity_id}.json"
+    reply_first_line_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="three-plane",
+            identity_id=args.identity_id,
+            stem=f"identity-reply-first-line-blocker-receipt-three-plane-{args.identity_id}",
+            ext="json",
+        )
     )
+    send_time_reply_file = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="three-plane",
+            identity_id=args.identity_id,
+            stem=f"identity-send-time-reply-three-plane-{args.identity_id}",
+            ext="txt",
+        )
+    )
+    send_time_reply_gate_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="three-plane",
+            identity_id=args.identity_id,
+            stem=f"identity-send-time-reply-gate-blocker-receipt-three-plane-{args.identity_id}",
+            ext="json",
+        )
+    )
+    execution_reply_coherence_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="three-plane",
+            identity_id=args.identity_id,
+            stem=f"identity-execution-reply-coherence-blocker-receipt-three-plane-{args.identity_id}",
+            ext="json",
+        )
+    )
+    bundle_run_token = (
+        str(session_run_id or "").strip()
+        or str(args.required_gates_run_id or "").strip()
+        or str(report_run_id or "").strip()
+        or f"three-plane-{args.identity_id}"
+    )
+    required_gate_bundle_receipt = str(
+        runtime_temp_file(
+            channel="required-gate-bundle",
+            operation="three-plane",
+            identity_id=args.identity_id,
+            run_token=bundle_run_token,
+            stem=f"required-gate-bundle-three-plane-{args.identity_id}-{bundle_run_token}",
+            ext="json",
+        )
+    )
+    required_gate_bundle_receipt_shadow = str(
+        runtime_temp_file(
+            channel="required-gate-bundle",
+            operation="scan",
+            identity_id=args.identity_id,
+            run_token=f"{bundle_run_token}-scan-probe",
+            stem=f"required-gate-bundle-three-plane-scan-probe-{args.identity_id}-{bundle_run_token}",
+            ext="json",
+        )
+    )
+    vibe_pack_out_root = str(named_temp_root("vibe-coding-feeding-packs"))
+    capability_fit_out_root = str(named_temp_root("capability-fit-matrices"))
 
     render_cmd = [
         "python3",
@@ -460,6 +1563,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         args.repo_catalog,
         "--identity-id",
         args.identity_id,
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        str(getattr(args, "session_id", "") or "").strip(),
         "--view",
         "external",
         "--disclosure-level",
@@ -470,6 +1577,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     ]
     if layer_intent_text:
         render_cmd.extend(["--layer-intent-text", layer_intent_text])
+    if effective_work_layer:
+        render_cmd.extend(["--work-layer", effective_work_layer])
+    if effective_source_layer:
+        render_cmd.extend(["--source-layer", effective_source_layer])
     rc_stamp_render, out_stamp_render, err_stamp_render = _run(render_cmd)
     stamp_render_payload = _parse_json_payload(out_stamp_render) or {}
     validators["response_stamp_render"] = {
@@ -478,6 +1589,16 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "out": out_stamp_render,
         "err": err_stamp_render,
     }
+    current_chat_surface_exclusion = _build_current_chat_surface_exclusion_projection(
+        args=args,
+        actor_id=actor_id,
+        layer_intent_text=layer_intent_text,
+        effective_work_layer=effective_work_layer,
+        effective_source_layer=effective_source_layer,
+        stamp_render_payload=stamp_render_payload,
+    )
+    if bool(current_chat_surface_exclusion.get("blocking_contract_failed", False)):
+        hard_boundary = True
 
     rc_stamp, out_stamp, err_stamp = _run(
         [
@@ -489,6 +1610,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.repo_catalog,
             "--identity-id",
             args.identity_id,
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            str(getattr(args, "session_id", "") or "").strip(),
             "--stamp-json",
             stamp_artifact,
             "--force-check",
@@ -549,16 +1674,20 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "--enforce-first-line-gate",
         "--operation",
         "three-plane",
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        str(getattr(args, "session_id", "") or "").strip(),
         "--blocker-receipt-out",
         reply_first_line_blocker_receipt,
         "--json-only",
     ]
     if layer_intent_text:
         reply_first_line_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        reply_first_line_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        reply_first_line_cmd.extend(["--expected-source-layer", expected_source_layer])
+    if effective_work_layer:
+        reply_first_line_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        reply_first_line_cmd.extend(["--expected-source-layer", effective_source_layer])
     rc_reply_first_line, out_reply_first_line, err_reply_first_line = _run(reply_first_line_cmd)
     reply_first_line_payload = _parse_json_payload(out_reply_first_line) or {}
     validators["reply_identity_context_first_line"] = {
@@ -590,10 +1719,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     ]
     if layer_intent_text:
         layer_intent_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        layer_intent_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        layer_intent_cmd.extend(["--expected-source-layer", expected_source_layer])
+    if effective_work_layer:
+        layer_intent_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        layer_intent_cmd.extend(["--expected-source-layer", effective_source_layer])
     rc_layer_intent, out_layer_intent, err_layer_intent = _run(layer_intent_cmd)
     layer_intent_payload = _parse_json_payload(out_layer_intent) or {}
     validators["layer_intent_resolution"] = {
@@ -606,9 +1735,46 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_layer_intent != 0 or layer_intent_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    host_visible_recovery_run_id = (
+        str(session_run_id or "").strip()
+        or str(args.required_gates_run_id or "").strip()
+        or str(report_run_id or "").strip()
+        or f"three-plane-{args.identity_id}"
+    )
+    host_visible_recovery_cmd = [
+        "python3",
+        "scripts/recover_host_visible_post_check_state.py",
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--identity-id",
+        args.identity_id,
+        "--operation",
+        "three-plane",
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        session_id_value,
+        "--run-id",
+        host_visible_recovery_run_id,
+        "--json-only",
+    ]
+    rc_host_visible_recovery, out_host_visible_recovery, err_host_visible_recovery = _run(host_visible_recovery_cmd)
+    host_visible_recovery_payload = _parse_json_payload(out_host_visible_recovery) or {}
+    validators["host_visible_post_check_recovery"] = {
+        "rc": rc_host_visible_recovery,
+        "ok": rc_host_visible_recovery == 0,
+        "out": out_host_visible_recovery,
+        "err": err_host_visible_recovery,
+    }
+    host_visible_recovery_status = str(host_visible_recovery_payload.get("recovery_status", "")).strip().upper()
+    if rc_host_visible_recovery != 0 or host_visible_recovery_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     compose_send_time_cmd = [
         "python3",
-        "scripts/compose_and_validate_governed_reply.py",
+        "scripts/final_emit_governed.py",
         "--catalog",
         args.catalog,
         "--repo-catalog",
@@ -622,17 +1788,21 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "--blocker-receipt-out",
         send_time_reply_gate_blocker_receipt,
         "--outlet-channel-id",
-        "governed_adapter_v1",
+        "final_emit_governed",
         "--actor-id",
         actor_id,
+        "--session-id",
+        str(getattr(args, "session_id", "") or "").strip(),
+        "--run-id",
+        bundle_run_token,
         "--json-only",
     ]
     if layer_intent_text:
         compose_send_time_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        compose_send_time_cmd.extend(["--work-layer", expected_work_layer])
-    if expected_source_layer:
-        compose_send_time_cmd.extend(["--source-layer", expected_source_layer])
+    if effective_work_layer:
+        compose_send_time_cmd.extend(["--work-layer", effective_work_layer])
+    if effective_source_layer:
+        compose_send_time_cmd.extend(["--source-layer", effective_source_layer])
     rc_compose_send_time, out_compose_send_time, err_compose_send_time = _run(compose_send_time_cmd)
     compose_send_time_payload = _parse_json_payload(out_compose_send_time) or {}
     validators["compose_governed_reply_preflight"] = {
@@ -660,7 +1830,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "--enforce-send-time-gate",
         "--reply-outlet-guard-applied",
         "--outlet-channel-id",
-        "governed_adapter_v1",
+        "final_emit_governed",
         "--reply-transport-ref",
         send_time_reply_file,
         "--operation",
@@ -669,14 +1839,16 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         send_time_reply_gate_blocker_receipt,
         "--actor-id",
         actor_id,
+        "--session-id",
+        str(getattr(args, "session_id", "") or "").strip(),
         "--json-only",
     ]
     if layer_intent_text:
         send_time_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        send_time_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        send_time_cmd.extend(["--expected-source-layer", expected_source_layer])
+    if effective_work_layer:
+        send_time_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        send_time_cmd.extend(["--expected-source-layer", effective_source_layer])
     rc_send_time_gate, out_send_time_gate, err_send_time_gate = _run(send_time_cmd)
     send_time_gate_payload = _parse_json_payload(out_send_time_gate) or {}
     validators["send_time_reply_gate"] = {
@@ -702,6 +1874,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "three-plane",
         "--actor-id",
         actor_id,
+        "--session-id",
+        str(getattr(args, "session_id", "") or "").strip(),
         "--json-only",
     ]
     rc_headstamp, out_headstamp, err_headstamp = _run(headstamp_recurrence_cmd)
@@ -731,16 +1905,20 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "--enforce-coherence-gate",
         "--operation",
         "three-plane",
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        str(getattr(args, "session_id", "") or "").strip(),
         "--blocker-receipt-out",
         execution_reply_coherence_blocker_receipt,
         "--json-only",
     ]
     if layer_intent_text:
         reply_coherence_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        reply_coherence_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        reply_coherence_cmd.extend(["--expected-source-layer", expected_source_layer])
+    if effective_work_layer:
+        reply_coherence_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        reply_coherence_cmd.extend(["--expected-source-layer", effective_source_layer])
     rc_reply_coherence, out_reply_coherence, err_reply_coherence = _run(reply_coherence_cmd)
     reply_coherence_payload = _parse_json_payload(out_reply_coherence) or {}
     validators["execution_reply_identity_coherence"] = {
@@ -750,7 +1928,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_reply_coherence,
     }
     reply_coherence_status = str(reply_coherence_payload.get("coherence_status", "")).strip().upper()
-    if rc_reply_coherence != 0 or reply_coherence_status == "FAIL_REQUIRED":
+    if rc_reply_coherence != 0 or reply_coherence_status in {"FAIL_REQUIRED", "WARN_NON_BLOCKING"}:
         hard_boundary = True
 
     rc_prompt, out_prompt, err_prompt = _run(
@@ -843,6 +2021,642 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     )
     validators["dialogue_result_support"] = {"rc": rc_drs, "ok": rc_drs == 0, "out": out_drs, "err": err_drs}
 
+
+    rc_unlock_formula, out_unlock_formula, err_unlock_formula = _run(
+        [
+            "python3",
+            "scripts/validate_unlock_formula.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    unlock_formula_payload = _parse_json_payload(out_unlock_formula) or {}
+    validators["unlock_formula_automation"] = {
+        "rc": rc_unlock_formula,
+        "ok": rc_unlock_formula == 0,
+        "out": out_unlock_formula,
+        "err": err_unlock_formula,
+    }
+    unlock_formula_status = str(unlock_formula_payload.get("unlock_formula_status", "")).strip().upper()
+    if rc_unlock_formula != 0 or unlock_formula_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_release_cloud, out_release_cloud, err_release_cloud = _run(
+        [
+            "python3",
+            "scripts/validate_release_plane_cloud_evidence.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--target-branch",
+            str(args.target_branch or ""),
+            "--release-head-sha",
+            str(args.release_head_sha or ""),
+            "--required-gates-run-id",
+            str(args.required_gates_run_id or ""),
+            "--run-url",
+            str(args.run_url or ""),
+            "--workflow-file-sha",
+            str(args.workflow_file_sha or ""),
+            "--run-head-sha",
+            str(args.run_head_sha or ""),
+            "--run-workflow-file-sha",
+            str(args.run_workflow_file_sha or ""),
+            "--checks-json",
+            str(args.checks_json or ""),
+            "--jobs-json",
+            str(args.jobs_json or ""),
+            "--gh-runs-json",
+            str(args.gh_runs_json or ""),
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    release_cloud_payload = _parse_json_payload(out_release_cloud) or {}
+    validators["release_plane_cloud_evidence"] = {
+        "rc": rc_release_cloud,
+        "ok": rc_release_cloud == 0,
+        "out": out_release_cloud,
+        "err": err_release_cloud,
+    }
+    release_cloud_status = str(release_cloud_payload.get("release_plane_cloud_evidence_status", "")).strip().upper()
+    if rc_release_cloud != 0 or release_cloud_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_cross_cwd, out_cross_cwd, err_cross_cwd = _run(
+        [
+            "python3",
+            "scripts/validate_cross_cwd_absolute_input.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            str(Path(args.repo_catalog).resolve()),
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    cross_cwd_payload = _parse_json_payload(out_cross_cwd) or {}
+    validators["cross_cwd_absolute_input"] = {
+        "rc": rc_cross_cwd,
+        "ok": rc_cross_cwd == 0,
+        "out": out_cross_cwd,
+        "err": err_cross_cwd,
+    }
+    cross_cwd_status = str(cross_cwd_payload.get("cross_cwd_absolute_input_status", "")).strip().upper()
+    if rc_cross_cwd != 0 or cross_cwd_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_run_selector, out_run_selector, err_run_selector = _run(
+        [
+            "python3",
+            "scripts/validate_run_id_report_selection.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--run-id",
+            str(args.required_gates_run_id or ""),
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    run_selector_payload = _parse_json_payload(out_run_selector) or {}
+    validators["run_id_report_selection"] = {
+        "rc": rc_run_selector,
+        "ok": rc_run_selector == 0,
+        "out": out_run_selector,
+        "err": err_run_selector,
+    }
+    run_selector_status = str(run_selector_payload.get("run_id_report_selection_status", "")).strip().upper()
+    if rc_run_selector != 0 or run_selector_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_phase_bootstrap, out_phase_bootstrap, err_phase_bootstrap = _run(
+        [
+            "python3",
+            "scripts/validate_phase_bootstrap_before_strict.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    phase_bootstrap_payload = _parse_json_payload(out_phase_bootstrap) or {}
+    validators["phase_bootstrap_before_strict"] = {
+        "rc": rc_phase_bootstrap,
+        "ok": rc_phase_bootstrap == 0,
+        "out": out_phase_bootstrap,
+        "err": err_phase_bootstrap,
+    }
+    phase_bootstrap_status = str(phase_bootstrap_payload.get("phase_bootstrap_before_strict_status", "")).strip().upper()
+    if rc_phase_bootstrap != 0 or phase_bootstrap_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_tmp_collision, out_tmp_collision, err_tmp_collision = _run(
+        [
+            "python3",
+            "scripts/validate_tmp_collision_safety.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--run-id",
+            str(args.required_gates_run_id or ""),
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    tmp_collision_payload = _parse_json_payload(out_tmp_collision) or {}
+    validators["tmp_collision_safety"] = {
+        "rc": rc_tmp_collision,
+        "ok": rc_tmp_collision == 0,
+        "out": out_tmp_collision,
+        "err": err_tmp_collision,
+    }
+    tmp_collision_status = str(tmp_collision_payload.get("tmp_collision_safety_status", "")).strip().upper()
+    if rc_tmp_collision != 0 or tmp_collision_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_fresh_rotation, out_fresh_rotation, err_fresh_rotation = _run(
+        [
+            "python3",
+            "scripts/validate_handoff_collab_freshness_rotation.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    fresh_rotation_payload = _parse_json_payload(out_fresh_rotation) or {}
+    validators["handoff_collab_freshness_rotation"] = {
+        "rc": rc_fresh_rotation,
+        "ok": rc_fresh_rotation == 0,
+        "out": out_fresh_rotation,
+        "err": err_fresh_rotation,
+    }
+    fresh_rotation_status = str(fresh_rotation_payload.get("handoff_collab_freshness_rotation_status", "")).strip().upper()
+    if rc_fresh_rotation != 0 or fresh_rotation_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_atomic_emit, out_atomic_emit, err_atomic_emit = _run(
+        [
+            "python3",
+            "scripts/validate_protocol_feedback_atomic_emit.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    atomic_emit_payload = _parse_json_payload(out_atomic_emit) or {}
+    validators["protocol_feedback_atomic_emit"] = {
+        "rc": rc_atomic_emit,
+        "ok": rc_atomic_emit == 0,
+        "out": out_atomic_emit,
+        "err": err_atomic_emit,
+    }
+    atomic_emit_status = str(atomic_emit_payload.get("protocol_feedback_atomic_emit_status", "")).strip().upper()
+    if rc_atomic_emit != 0 or atomic_emit_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_cap_boundary, out_cap_boundary, err_cap_boundary = _run(
+        [
+            "python3",
+            "scripts/validate_capability_boundary_classification.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    cap_boundary_payload = _parse_json_payload(out_cap_boundary) or {}
+    validators["capability_boundary_classification"] = {
+        "rc": rc_cap_boundary,
+        "ok": rc_cap_boundary == 0,
+        "out": out_cap_boundary,
+        "err": err_cap_boundary,
+    }
+    cap_boundary_status = str(cap_boundary_payload.get("capability_boundary_status", "")).strip().upper()
+    if rc_cap_boundary != 0 or cap_boundary_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_promotion_pipeline, out_promotion_pipeline, err_promotion_pipeline = _run(
+        [
+            "python3",
+            "scripts/validate_promotion_pipeline.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    promotion_pipeline_payload = _parse_json_payload(out_promotion_pipeline) or {}
+    validators["promotion_evidence_pipeline"] = {
+        "rc": rc_promotion_pipeline,
+        "ok": rc_promotion_pipeline == 0,
+        "out": out_promotion_pipeline,
+        "err": err_promotion_pipeline,
+    }
+    promotion_pipeline_status = str(promotion_pipeline_payload.get("promotion_pipeline_status", "")).strip().upper()
+    if rc_promotion_pipeline != 0 or promotion_pipeline_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_outlet_matrix, out_outlet_matrix, err_outlet_matrix = _run(
+        [
+            "python3",
+            "scripts/validate_outlet_matrix.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    outlet_matrix_payload = _parse_json_payload(out_outlet_matrix) or {}
+    validators["outlet_regression_matrix"] = {
+        "rc": rc_outlet_matrix,
+        "ok": rc_outlet_matrix == 0,
+        "out": out_outlet_matrix,
+        "err": err_outlet_matrix,
+    }
+    outlet_matrix_status = str(outlet_matrix_payload.get("outlet_matrix_status", "")).strip().upper()
+    if rc_outlet_matrix != 0 or outlet_matrix_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_sidecar_cwd, out_sidecar_cwd, err_sidecar_cwd = _run(
+        [
+            "python3",
+            "scripts/validate_sidecar_cwd_parity.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    sidecar_cwd_payload = _parse_json_payload(out_sidecar_cwd) or {}
+    validators["sidecar_cwd_parity"] = {
+        "rc": rc_sidecar_cwd,
+        "ok": rc_sidecar_cwd == 0,
+        "out": out_sidecar_cwd,
+        "err": err_sidecar_cwd,
+    }
+    sidecar_cwd_status = str(sidecar_cwd_payload.get("sidecar_cwd_parity_status", "")).strip().upper()
+    if rc_sidecar_cwd != 0 or sidecar_cwd_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_docs_bridge, out_docs_bridge, err_docs_bridge = _run(
+        [
+            "python3",
+            "scripts/validate_docs_bridge_consistency.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    docs_bridge_payload = _parse_json_payload(out_docs_bridge) or {}
+    validators["docs_bridge_consistency"] = {
+        "rc": rc_docs_bridge,
+        "ok": rc_docs_bridge == 0,
+        "out": out_docs_bridge,
+        "err": err_docs_bridge,
+    }
+    docs_bridge_status = str(docs_bridge_payload.get("bridge_consistency_status", "")).strip().upper()
+    if rc_docs_bridge != 0 or docs_bridge_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_mapping_coverage, out_mapping_coverage, err_mapping_coverage = _run(
+        [
+            "python3",
+            "scripts/validate_contract_mapping_coverage.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    mapping_coverage_payload = _parse_json_payload(out_mapping_coverage) or {}
+    validators["contract_mapping_coverage"] = {
+        "rc": rc_mapping_coverage,
+        "ok": rc_mapping_coverage == 0,
+        "out": out_mapping_coverage,
+        "err": err_mapping_coverage,
+    }
+    mapping_coverage_status = str(mapping_coverage_payload.get("contract_mapping_coverage_status", "")).strip().upper()
+    if rc_mapping_coverage != 0 or mapping_coverage_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_prompt_bootstrap, out_prompt_bootstrap, err_prompt_bootstrap = _run(
+        [
+            "python3",
+            "scripts/validate_prompt_bootstrap_capability.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    prompt_bootstrap_payload = _parse_json_payload(out_prompt_bootstrap) or {}
+    validators["prompt_bootstrap_capability"] = {
+        "rc": rc_prompt_bootstrap,
+        "ok": rc_prompt_bootstrap == 0,
+        "out": out_prompt_bootstrap,
+        "err": err_prompt_bootstrap,
+    }
+    prompt_bootstrap_status = str(prompt_bootstrap_payload.get("prompt_bootstrap_contract_status", "")).strip().upper()
+    if rc_prompt_bootstrap != 0 or prompt_bootstrap_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_prompt_matrix, out_prompt_matrix, err_prompt_matrix = _run(
+        [
+            "python3",
+            "scripts/validate_prompt_capability_matrix.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    prompt_matrix_payload = _parse_json_payload(out_prompt_matrix) or {}
+    validators["prompt_capability_matrix"] = {
+        "rc": rc_prompt_matrix,
+        "ok": rc_prompt_matrix == 0,
+        "out": out_prompt_matrix,
+        "err": err_prompt_matrix,
+    }
+    prompt_matrix_status = str(prompt_matrix_payload.get("prompt_capability_matrix_status", "")).strip().upper()
+    if rc_prompt_matrix != 0 or prompt_matrix_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_interference, out_interference, err_interference = _run(
+        [
+            "python3",
+            "scripts/validate_refresh_strict_business_interference.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    interference_payload = _parse_json_payload(out_interference) or {}
+    validators["refresh_strict_business_interference"] = {
+        "rc": rc_interference,
+        "ok": rc_interference == 0,
+        "out": out_interference,
+        "err": err_interference,
+    }
+    interference_status = str(interference_payload.get("refresh_strict_business_interference_status", "")).strip().upper()
+    if rc_interference != 0 or interference_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_kernel_ssot, out_kernel_ssot, err_kernel_ssot = _run(
+        [
+            "python3",
+            "scripts/validate_kernel_ssot_source.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    kernel_ssot_payload = _parse_json_payload(out_kernel_ssot) or {}
+    validators["kernel_ssot_source"] = {
+        "rc": rc_kernel_ssot,
+        "ok": rc_kernel_ssot == 0,
+        "out": out_kernel_ssot,
+        "err": err_kernel_ssot,
+    }
+    kernel_ssot_status = str(kernel_ssot_payload.get("kernel_ssot_source_status", "")).strip().upper()
+    if rc_kernel_ssot != 0 or kernel_ssot_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_prompt_derivation, out_prompt_derivation, err_prompt_derivation = _run(
+        [
+            "python3",
+            "scripts/validate_prompt_derivation_conformance.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    prompt_derivation_payload = _parse_json_payload(out_prompt_derivation) or {}
+    validators["prompt_derivation_conformance"] = {
+        "rc": rc_prompt_derivation,
+        "ok": rc_prompt_derivation == 0,
+        "out": out_prompt_derivation,
+        "err": err_prompt_derivation,
+    }
+    prompt_derivation_status = str(prompt_derivation_payload.get("prompt_derivation_conformance_status", "")).strip().upper()
+    if rc_prompt_derivation != 0 or prompt_derivation_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_semantic_convergence, out_semantic_convergence, err_semantic_convergence = _run(
+        [
+            "python3",
+            "scripts/validate_semantic_convergence.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    semantic_convergence_payload = _parse_json_payload(out_semantic_convergence) or {}
+    validators["semantic_convergence"] = {
+        "rc": rc_semantic_convergence,
+        "ok": rc_semantic_convergence == 0,
+        "out": out_semantic_convergence,
+        "err": err_semantic_convergence,
+    }
+    semantic_convergence_status = str(semantic_convergence_payload.get("semantic_convergence_status", "")).strip().upper()
+    if rc_semantic_convergence != 0 or semantic_convergence_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_prompt_coupling, out_prompt_coupling, err_prompt_coupling = _run(
+        [
+            "python3",
+            "scripts/validate_prompt_kernel_executable_coupling.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--actor-id",
+            args.actor_id,
+            "--session-id",
+            args.session_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    prompt_coupling_payload = _parse_json_payload(out_prompt_coupling) or {}
+    validators["prompt_kernel_executable_coupling"] = {
+        "rc": rc_prompt_coupling,
+        "ok": rc_prompt_coupling == 0,
+        "out": out_prompt_coupling,
+        "err": err_prompt_coupling,
+    }
+    prompt_coupling_status = str(prompt_coupling_payload.get("prompt_kernel_executable_coupling_status", "")).strip().upper()
+    if rc_prompt_coupling != 0 or prompt_coupling_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    bundle_send_time_gate_status = compose_send_time_status or "UNKNOWN"
+    bundle_outlet_bypass_detected = "true" if bool(compose_send_time_payload.get("outlet_bypass_detected", False)) else "false"
+    bundle_final_emit_contract_status = str(compose_send_time_payload.get("final_emit_contract_status", "")).strip().upper()
+    bundle_final_emit_policy_mode = str(compose_send_time_payload.get("final_emit_policy_mode", "")).strip()
+    bundle_final_emit_schema_status = str(compose_send_time_payload.get("final_emit_schema_status", "")).strip().upper()
+    bundle_resolved_work_layer = str(
+        effective_work_layer
+        or layer_intent_payload.get("resolved_work_layer")
+        or compose_send_time_payload.get("work_layer")
+        or stamp_payload.get("work_layer")
+        or ""
+    ).strip().lower()
+    bundle_resolved_source_layer = str(
+        effective_source_layer
+        or layer_intent_payload.get("resolved_source_layer")
+        or compose_send_time_payload.get("source_layer")
+        or stamp_payload.get("source_layer")
+        or ""
+    ).strip().lower()
+    bundle_lock_state = str(
+        reply_first_line_payload.get("context_lock_state")
+        or compose_send_time_payload.get("context_lock_state")
+        or stamp_payload.get("lock_state")
+        or "LOCK_MATCH"
+    ).strip()
+    rc_required_bundle, out_required_bundle, err_required_bundle = _run(
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            out_path=required_gate_bundle_receipt,
+        )
+    )
+    required_bundle_payload = _parse_json_payload(out_required_bundle) or {}
+    validators["required_gate_bundle_runner"] = {
+        "rc": rc_required_bundle,
+        "ok": rc_required_bundle == 0,
+        "out": out_required_bundle,
+        "err": err_required_bundle,
+    }
+    required_bundle_status = str(required_bundle_payload.get("bundle_status", "")).strip().upper()
+    if rc_required_bundle != 0 or required_bundle_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_required_bundle_shadow, out_required_bundle_shadow, err_required_bundle_shadow = _run(
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="scan",
+            out_path=required_gate_bundle_receipt_shadow,
+        )
+    )
+    required_bundle_shadow_payload = _parse_json_payload(out_required_bundle_shadow) or {}
+    required_bundle_target_projection = build_required_gate_bundle_target_projection(
+        repo_root=PROTOCOL_ROOT,
+        bundle_payload=required_bundle_payload,
+    )
+    required_bundle_shadow_target_projection = build_required_gate_bundle_target_projection(
+        repo_root=PROTOCOL_ROOT,
+        bundle_payload=required_bundle_shadow_payload,
+    )
+    validators["required_gate_bundle_runner_shadow"] = {
+        "rc": rc_required_bundle_shadow,
+        "ok": rc_required_bundle_shadow == 0,
+        "out": out_required_bundle_shadow,
+        "err": err_required_bundle_shadow,
+    }
+    required_bundle_shadow_status = str(required_bundle_shadow_payload.get("bundle_status", "")).strip().upper()
+    if rc_required_bundle_shadow != 0 or required_bundle_shadow_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_cov, out_cov, err_cov = _run(
         [
             "python3",
@@ -855,6 +2669,18 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--operation",
             "three-plane",
+            "--actor-id",
+            args.actor_id,
+            "--session-id",
+            str(getattr(args, "session_id", "") or "").strip(),
+            "--run-id",
+            bundle_run_token,
+            "--report-selected-path",
+            str(report_path),
+            "--current-stamp-json",
+            stamp_artifact,
+            "--current-entry-receipt",
+            required_gate_bundle_receipt,
             "--json-only",
         ]
     )
@@ -865,6 +2691,400 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "out": out_cov,
         "err": err_cov,
     }
+
+    rc_recurrence, out_recurrence, err_recurrence = _run(
+        [
+            "python3",
+            "scripts/validate_required_gate_recurrence_escalator.py",
+            "--identity-id",
+            args.identity_id,
+            "--surface",
+            HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            "--operation",
+            "three-plane",
+            "--receipt",
+            required_gate_bundle_receipt,
+            "--enforce-blocking",
+            "--json-only",
+        ]
+    )
+    recurrence_payload = _parse_json_payload(out_recurrence) or {}
+    validators["required_gate_recurrence_escalator"] = {
+        "rc": rc_recurrence,
+        "ok": rc_recurrence == 0,
+        "out": out_recurrence,
+        "err": err_recurrence,
+    }
+    recurrence_status = str(recurrence_payload.get("required_gate_recurrence_status", "")).strip().upper()
+    if rc_recurrence != 0 or recurrence_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_tuple_parity, out_tuple_parity, err_tuple_parity = _run(
+        [
+            "python3",
+            "scripts/validate_required_gate_tuple_parity.py",
+            "--receipt",
+            required_gate_bundle_receipt,
+            "--receipt",
+            required_gate_bundle_receipt_shadow,
+            "--require-distinct-operations",
+            "--json-only",
+        ]
+    )
+    tuple_parity_payload = _parse_json_payload(out_tuple_parity) or {}
+    validators["required_gate_tuple_parity"] = {
+        "rc": rc_tuple_parity,
+        "ok": rc_tuple_parity == 0,
+        "out": out_tuple_parity,
+        "err": err_tuple_parity,
+    }
+    tuple_parity_status = str(tuple_parity_payload.get("required_gate_tuple_parity_status", "")).strip().upper()
+    if rc_tuple_parity != 0 or tuple_parity_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_cross_verify, out_cross_verify, err_cross_verify = _run(
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="cross_verification_tracks",
+            report_selected_path=str(report_path),
+        )
+    )
+    cross_verify_payload = _parse_json_payload(out_cross_verify) or {}
+    validators["cross_verification_tracks"] = {
+        "rc": rc_cross_verify,
+        "ok": rc_cross_verify == 0,
+        "out": out_cross_verify,
+        "err": err_cross_verify,
+    }
+    cross_verify_status = str(cross_verify_payload.get("cross_verification_tracks_status", "")).strip().upper()
+    if rc_cross_verify != 0 or cross_verify_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_intake_quorum, out_intake_quorum, err_intake_quorum = _run(
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="intake_evidence_quorum",
+            report_selected_path=str(report_path),
+        )
+    )
+    intake_quorum_payload = _parse_json_payload(out_intake_quorum) or {}
+    validators["intake_evidence_quorum"] = {
+        "rc": rc_intake_quorum,
+        "ok": rc_intake_quorum == 0,
+        "out": out_intake_quorum,
+        "err": err_intake_quorum,
+    }
+    intake_quorum_status = str(intake_quorum_payload.get("intake_evidence_quorum_status", "")).strip().upper()
+    if rc_intake_quorum != 0 or intake_quorum_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_route_pin, out_route_pin, err_route_pin = _run(
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="route_version_pinning",
+        )
+    )
+    route_pin_payload = _parse_json_payload(out_route_pin) or {}
+    validators["route_version_pinning"] = {
+        "rc": rc_route_pin,
+        "ok": rc_route_pin == 0,
+        "out": out_route_pin,
+        "err": err_route_pin,
+    }
+    route_pin_status = str(route_pin_payload.get("pin_status", "")).strip().upper()
+    if rc_route_pin != 0 or route_pin_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_fallback_norm, out_fallback_norm, err_fallback_norm = _run(
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="fallback_taxonomy_normalization",
+        )
+    )
+    fallback_norm_payload = _parse_json_payload(out_fallback_norm) or {}
+    validators["fallback_taxonomy_normalization"] = {
+        "rc": rc_fallback_norm,
+        "ok": rc_fallback_norm == 0,
+        "out": out_fallback_norm,
+        "err": err_fallback_norm,
+    }
+    fallback_norm_status = str(fallback_norm_payload.get("fallback_taxonomy_normalization_status", "")).strip().upper()
+    if rc_fallback_norm != 0 or fallback_norm_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_dedup_mono, out_dedup_mono, err_dedup_mono = _run(
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="dedup_monotonicity",
+        )
+    )
+    dedup_mono_payload = _parse_json_payload(out_dedup_mono) or {}
+    validators["dedup_monotonicity"] = {
+        "rc": rc_dedup_mono,
+        "ok": rc_dedup_mono == 0,
+        "out": out_dedup_mono,
+        "err": err_dedup_mono,
+    }
+    dedup_mono_status = str(dedup_mono_payload.get("monotonicity_status", "")).strip().upper()
+    if rc_dedup_mono != 0 or dedup_mono_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_xwf_schema, out_xwf_schema, err_xwf_schema = _run(
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="cross_workflow_schema",
+        )
+    )
+    xwf_schema_payload = _parse_json_payload(out_xwf_schema) or {}
+    validators["cross_workflow_schema"] = {
+        "rc": rc_xwf_schema,
+        "ok": rc_xwf_schema == 0,
+        "out": out_xwf_schema,
+        "err": err_xwf_schema,
+    }
+    xwf_schema_status = str(xwf_schema_payload.get("cross_workflow_schema_status", "")).strip().upper()
+    if rc_xwf_schema != 0 or xwf_schema_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_skill_path, out_skill_path, err_skill_path = _run(
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="skill_path_integrity",
+        )
+    )
+    skill_path_payload = _parse_json_payload(out_skill_path) or {}
+    validators["skill_path_integrity"] = {
+        "rc": rc_skill_path,
+        "ok": rc_skill_path == 0,
+        "out": out_skill_path,
+        "err": err_skill_path,
+    }
+    skill_path_status = str(skill_path_payload.get("path_integrity_status", "")).strip().upper()
+    if rc_skill_path != 0 or skill_path_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_exec_target_tuple, out_exec_target_tuple, err_exec_target_tuple = _run(
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="execution_target_tuple_isolation",
+        )
+    )
+    exec_target_tuple_payload = _parse_json_payload(out_exec_target_tuple) or {}
+    validators["execution_target_tuple_isolation"] = {
+        "rc": rc_exec_target_tuple,
+        "ok": rc_exec_target_tuple == 0,
+        "out": out_exec_target_tuple,
+        "err": err_exec_target_tuple,
+    }
+    exec_target_tuple_status = str(
+        exec_target_tuple_payload.get("execution_target_tuple_isolation_status", "")
+    ).strip().upper()
+    if rc_exec_target_tuple != 0 or exec_target_tuple_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_multimodal_plugin, out_multimodal_plugin, err_multimodal_plugin = _run(
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="multimodal_plugin_enforcement",
+            report_selected_path=str(report_path),
+        )
+    )
+    multimodal_plugin_payload = _parse_json_payload(out_multimodal_plugin) or {}
+    validators["multimodal_plugin_enforcement"] = {
+        "rc": rc_multimodal_plugin,
+        "ok": rc_multimodal_plugin == 0,
+        "out": out_multimodal_plugin,
+        "err": err_multimodal_plugin,
+    }
+    multimodal_plugin_status = str(
+        multimodal_plugin_payload.get("multimodal_plugin_enforcement_status", "")
+    ).strip().upper()
+    if rc_multimodal_plugin != 0 or multimodal_plugin_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_reasoning_plugin, out_reasoning_plugin, err_reasoning_plugin = _run(
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="reasoning_loop_failclose_enforcement",
+            report_selected_path=str(report_path),
+        )
+    )
+    reasoning_plugin_payload = _parse_json_payload(out_reasoning_plugin) or {}
+    validators["reasoning_loop_failclose_enforcement"] = {
+        "rc": rc_reasoning_plugin,
+        "ok": rc_reasoning_plugin == 0,
+        "out": out_reasoning_plugin,
+        "err": err_reasoning_plugin,
+    }
+    reasoning_plugin_status = str(
+        reasoning_plugin_payload.get("reasoning_loop_failclose_status", "")
+    ).strip().upper()
+    if rc_reasoning_plugin != 0 or reasoning_plugin_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_replay_archive, out_replay_archive, err_replay_archive = _run(
+        [
+            "python3",
+            "scripts/validate_replay_archive_contract.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    replay_archive_payload = _parse_json_payload(out_replay_archive) or {}
+    validators["replay_archive_contract"] = {
+        "rc": rc_replay_archive,
+        "ok": rc_replay_archive == 0,
+        "out": out_replay_archive,
+        "err": err_replay_archive,
+    }
+    replay_archive_status = str(replay_archive_payload.get("replay_archive_contract_status", "")).strip().upper()
+    if rc_replay_archive != 0 or replay_archive_status == "FAIL_REQUIRED":
+        hard_boundary = True
 
     rc_herm, out_herm, err_herm = _run(
         [
@@ -956,10 +3176,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     ]
     if layer_intent_text:
         lane_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        lane_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        lane_cmd.extend(["--source-layer", expected_source_layer])
+    if effective_work_layer:
+        lane_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        lane_cmd.extend(["--source-layer", effective_source_layer])
     rc_lane, out_lane, err_lane = _run(lane_cmd)
     lane_payload = _parse_json_payload(out_lane) or {}
     validators["work_layer_gate_set_routing"] = {
@@ -1014,10 +3234,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     ]
     if layer_intent_text:
         bootstrap_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        bootstrap_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        bootstrap_cmd.extend(["--source-layer", expected_source_layer])
+    if effective_work_layer:
+        bootstrap_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        bootstrap_cmd.extend(["--source-layer", effective_source_layer])
     rc_bootstrap, out_bootstrap, err_bootstrap = _run(bootstrap_cmd)
     bootstrap_payload = _parse_json_payload(out_bootstrap) or {}
     validators["protocol_feedback_bootstrap_ready"] = {
@@ -1046,10 +3266,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     ]
     if layer_intent_text:
         candidate_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        candidate_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        candidate_cmd.extend(["--source-layer", expected_source_layer])
+    if effective_work_layer:
+        candidate_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        candidate_cmd.extend(["--source-layer", effective_source_layer])
     rc_candidate, out_candidate, err_candidate = _run(candidate_cmd)
     candidate_payload = _parse_json_payload(out_candidate) or {}
     validators["protocol_entry_candidate_bridge"] = {
@@ -1078,10 +3298,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     ]
     if layer_intent_text:
         inquiry_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        inquiry_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        inquiry_cmd.extend(["--source-layer", expected_source_layer])
+    if effective_work_layer:
+        inquiry_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        inquiry_cmd.extend(["--source-layer", effective_source_layer])
     rc_inquiry, out_inquiry, err_inquiry = _run(inquiry_cmd)
     inquiry_payload = _parse_json_payload(out_inquiry) or {}
     validators["protocol_inquiry_followup_chain"] = {
@@ -1226,7 +3446,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "--operation",
             "three-plane",
             "--out-root",
-            "/tmp/vibe-coding-feeding-packs",
+            vibe_pack_out_root,
             "--json-only",
         ]
     )
@@ -1366,7 +3586,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "--operation",
             "three-plane",
             "--out-root",
-            "/tmp/capability-fit-matrices",
+            capability_fit_out_root,
             "--json-only",
         ]
     )
@@ -1402,23 +3622,24 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_namespace != 0 or namespace_status == "FAIL_REQUIRED":
         hard_boundary = True
 
-    rc_writeback, out_writeback, err_writeback = _run(
-        [
-            "python3",
-            "scripts/validate_writeback_continuity.py",
-            "--identity-id",
-            args.identity_id,
-            "--catalog",
-            args.catalog,
-            "--repo-catalog",
-            args.repo_catalog,
-            "--report",
-            str(report_path),
-            "--operation",
-            "three-plane",
-            "--json-only",
-        ]
-    )
+    writeback_cmd = [
+        "python3",
+        "scripts/validate_writeback_continuity.py",
+        "--identity-id",
+        args.identity_id,
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--run-id",
+        session_run_id,
+        "--operation",
+        "three-plane",
+        "--json-only",
+    ]
+    if str(getattr(args, "execution_report", "") or "").strip():
+        writeback_cmd.extend(["--report", str(report_path)])
+    rc_writeback, out_writeback, err_writeback = _run(writeback_cmd)
     writeback_payload = _parse_json_payload(out_writeback) or {}
     validators["writeback_continuity"] = {
         "rc": rc_writeback,
@@ -1458,23 +3679,26 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_post_exec != 0 or post_exec_status == "FAIL_REQUIRED":
         hard_boundary = True
 
-    rc_sidecar, out_sidecar, err_sidecar = _run(
-        [
-            "python3",
-            "scripts/validate_protocol_feedback_sidecar_contract.py",
-            "--identity-id",
-            args.identity_id,
-            "--catalog",
-            args.catalog,
-            "--repo-catalog",
-            args.repo_catalog,
-            "--report",
-            str(report_path),
-            "--operation",
-            "three-plane",
-            "--json-only",
-        ]
-    )
+    sidecar_cmd = [
+        "python3",
+        "scripts/validate_protocol_feedback_sidecar_contract.py",
+        "--identity-id",
+        args.identity_id,
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--report",
+        str(report_path),
+        "--current-round-anchor-utc",
+        current_round_anchor_utc,
+        "--operation",
+        "three-plane",
+        "--json-only",
+    ]
+    if report_run_id:
+        sidecar_cmd.extend(["--run-id", report_run_id])
+    rc_sidecar, out_sidecar, err_sidecar = _run(sidecar_cmd)
     sidecar_payload = _parse_json_payload(out_sidecar) or {}
     validators["protocol_feedback_sidecar"] = {
         "rc": rc_sidecar,
@@ -1538,6 +3762,107 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     }
     archival_status = str(archival_payload.get("feedback_ssot_archival_status", "")).strip().upper()
     if rc_archival != 0 or archival_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_downsink_immutability, out_downsink_immutability, err_downsink_immutability = _run(
+        [
+            "python3",
+            "scripts/validate_protocol_downsink_path_immutability.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    downsink_immutability_payload = _parse_json_payload(out_downsink_immutability) or {}
+    validators["downsink_path_immutability"] = {
+        "rc": rc_downsink_immutability,
+        "ok": rc_downsink_immutability == 0,
+        "out": out_downsink_immutability,
+        "err": err_downsink_immutability,
+    }
+    downsink_immutability_status = str(
+        downsink_immutability_payload.get("protocol_downsink_path_immutability_status", "")
+    ).strip().upper()
+    if rc_downsink_immutability != 0 or downsink_immutability_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_downsink_write_guard, out_downsink_write_guard, err_downsink_write_guard = _run(
+        [
+            "python3",
+            "scripts/validate_protocol_downsink_path_write_guard.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    downsink_write_guard_payload = _parse_json_payload(out_downsink_write_guard) or {}
+    validators["downsink_path_write_guard"] = {
+        "rc": rc_downsink_write_guard,
+        "ok": rc_downsink_write_guard == 0,
+        "out": out_downsink_write_guard,
+        "err": err_downsink_write_guard,
+    }
+    downsink_write_guard_status = str(
+        downsink_write_guard_payload.get("protocol_downsink_path_write_guard_status", "")
+    ).strip().upper()
+    if rc_downsink_write_guard != 0 or downsink_write_guard_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_downsink_literal_lock, out_downsink_literal_lock, err_downsink_literal_lock = _run(
+        [
+            "python3",
+            "scripts/validate_protocol_downsink_path_literal_lock.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    downsink_literal_lock_payload = _parse_json_payload(out_downsink_literal_lock) or {}
+    validators["downsink_path_literal_lock"] = {
+        "rc": rc_downsink_literal_lock,
+        "ok": rc_downsink_literal_lock == 0,
+        "out": out_downsink_literal_lock,
+        "err": err_downsink_literal_lock,
+    }
+    downsink_literal_lock_status = str(
+        downsink_literal_lock_payload.get("protocol_downsink_path_literal_lock_status", "")
+    ).strip().upper()
+    if rc_downsink_literal_lock != 0 or downsink_literal_lock_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_exec_surface_lock, out_exec_surface_lock, err_exec_surface_lock = _run(
+        [
+            "python3",
+            "scripts/validate_executable_surface_runtime_literal_lock.py",
+            "--catalog",
+            args.catalog,
+            "--include-active-pack-scripts",
+            "--json-only",
+        ]
+    )
+    exec_surface_lock_payload = _parse_json_payload(out_exec_surface_lock) or {}
+    validators["executable_surface_runtime_literal_lock"] = {
+        "rc": rc_exec_surface_lock,
+        "ok": rc_exec_surface_lock == 0,
+        "out": out_exec_surface_lock,
+        "err": err_exec_surface_lock,
+    }
+    exec_surface_lock_status = str(
+        exec_surface_lock_payload.get("executable_surface_runtime_literal_lock_status", "")
+    ).strip().upper()
+    if rc_exec_surface_lock != 0 or exec_surface_lock_status == "FAIL_REQUIRED":
         hard_boundary = True
 
     rc_fresh, out_fresh, err_fresh = _run(
@@ -1620,11 +3945,111 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_align != 0 or align_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    terminal_truth_boundary_projection = build_terminal_truth_boundary_projection_from_report(
+        report_doc=data if isinstance(data, dict) else {},
+        report_path=report_path,
+        catalog_path=Path(args.catalog).expanduser().resolve(),
+        repo_catalog_path=Path(args.repo_catalog).expanduser().resolve(),
+        identity_id=args.identity_id,
+        operation="three-plane",
+        work_layer=effective_work_layer,
+        source_layer=effective_source_layer,
+    )
+    health_report_dir_path = default_health_report_dir()
+    health_collect_failed_scripts: list[str] = []
+    health_first_failed_script = ""
+    health_collect_cmd = [
+        "python3",
+        DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT,
+        "--identity-id",
+        args.identity_id,
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--operation",
+        "three-plane",
+        "--execution-report",
+        str(report_path),
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        session_id_value,
+        "--out-dir",
+        str(health_report_dir_path),
+    ]
+    if str(getattr(args, "scope", "") or "").strip():
+        health_collect_cmd.extend(["--scope", str(getattr(args, "scope", "")).strip()])
+    rc_health_collect, out_health_collect, err_health_collect = _run(health_collect_cmd)
+    health_report_path = resolve_identity_health_report_for_execution_report(
+        health_report_dir_path,
+        identity_id=args.identity_id,
+        execution_report=report_path,
+    )
+    if rc_health_collect != 0:
+        health_collect_failed_scripts.append(DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT)
+        health_first_failed_script = DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT
+    elif health_report_path is None:
+        health_collect_failed_scripts.append(DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT)
+        health_first_failed_script = DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT
+
+    rc_health_contract = 0
+    out_health_contract = ""
+    err_health_contract = ""
+    if health_report_path is not None:
+        rc_health_contract, out_health_contract, err_health_contract = _run(
+            [
+                "python3",
+                DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT,
+                "--identity-id",
+                args.identity_id,
+                "--report",
+                str(health_report_path),
+            ]
+        )
+        if rc_health_contract != 0:
+            health_collect_failed_scripts.append(DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT)
+            if not health_first_failed_script:
+                health_first_failed_script = DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT
+    else:
+        rc_health_contract, out_health_contract, err_health_contract = (
+            1,
+            "",
+            "health_report_not_found_for_execution_report",
+        )
+        health_collect_failed_scripts.append(DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT)
+        if not health_first_failed_script:
+            health_first_failed_script = DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT
+
+    health_report_projection = _build_three_plane_health_report_experience_writeback_closure(
+        projection_profile=active_projection_profile,
+        identity_id=args.identity_id,
+        health_report_dir=str(health_report_dir_path),
+        execution_report_path=report_path,
+        boundary_repair_lane_status=str(
+            terminal_truth_boundary_projection.get("repair_lane_status", "")
+        ).strip().upper(),
+        boundary_post_execution_obligation_status=str(
+            terminal_truth_boundary_projection.get("post_execution_obligation_status", "")
+        ).strip().upper(),
+        boundary_writeback_continuity_status=str(
+            terminal_truth_boundary_projection.get("writeback_continuity_status", "")
+        ).strip().upper(),
+        boundary_experience_writeback_validation_status=str(
+            terminal_truth_boundary_projection.get("experience_writeback_validation_status", "")
+        ).strip().upper(),
+        failed_scripts=health_collect_failed_scripts,
+        first_failed_script=health_first_failed_script,
+    )
+
     detail = {
         "report_path": str(report_path),
         "all_ok": all_ok,
         "writeback_status": wb,
         "permission_state": ps,
+        "effective_expected_work_layer": effective_work_layer,
+        "effective_expected_source_layer": effective_source_layer,
+        "detected_session_lane_lock": lane_lock_hint,
         "capability_activation_status": cap_status,
         "capability_activation_error_code": cap_error,
         "next_action": next_action,
@@ -1639,6 +4064,46 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "prompt_runtime_state_externalization_status": data.get("prompt_runtime_state_externalization_status", ""),
             "prompt_runtime_state_externalization_error_code": data.get("prompt_runtime_state_externalization_error_code", ""),
         },
+        "experience_writeback": {
+            "experience_writeback_validation_status": experience_writeback_payload.get(
+                "experience_writeback_validation_status"
+            ),
+            "error_code": experience_writeback_payload.get("error_code", ""),
+            "report_selected_path": experience_writeback_payload.get("report_selected_path", ""),
+            "report_selection_mode": experience_writeback_payload.get("report_selection_mode", ""),
+            "report_selected_authority_class": experience_writeback_payload.get(
+                "report_selected_authority_class", ""
+            ),
+            "report_pointer_resolution_mode": experience_writeback_payload.get(
+                "report_pointer_resolution_mode", ""
+            ),
+            "report_pointer_path": experience_writeback_payload.get("report_pointer_path", ""),
+            "report_run_id": experience_writeback_payload.get("report_run_id", ""),
+            "writeback_status": experience_writeback_payload.get("writeback_status", ""),
+            "writeback_rule_id": experience_writeback_payload.get("writeback_rule_id", ""),
+            "rulebook_match_count": experience_writeback_payload.get("rulebook_match_count"),
+            "task_history_contains_run_id": experience_writeback_payload.get(
+                "task_history_contains_run_id"
+            ),
+            "stale_reasons": experience_writeback_payload.get("stale_reasons", []),
+        },
+        "health_report_experience_writeback_closure": {
+            **health_report_projection,
+            "collection_receipt": {
+                "script": DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT,
+                "rc": rc_health_collect,
+                "ok": rc_health_collect == 0,
+                "out": out_health_collect,
+                "err": err_health_collect,
+            },
+            "contract_receipt": {
+                "script": DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT,
+                "rc": rc_health_contract,
+                "ok": rc_health_contract == 0,
+                "out": out_health_contract,
+                "err": err_health_contract,
+            },
+        },
         "required_contract_coverage": {
             "required_contract_total": coverage_payload.get("required_contract_total"),
             "required_contract_passed": coverage_payload.get("required_contract_passed"),
@@ -1650,6 +4115,665 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "skipped_contract_count": coverage_payload.get("skipped_contract_count"),
             "failed_required_contract_count": coverage_payload.get("failed_required_contract_count"),
             "failed_optional_contract_count": coverage_payload.get("failed_optional_contract_count"),
+        },
+        "unlock_formula_automation": {
+            "unlock_formula_status": unlock_formula_payload.get("unlock_formula_status"),
+            "error_code": unlock_formula_payload.get("error_code", ""),
+            "required_contract": unlock_formula_payload.get("required_contract"),
+            "auto_required_signal": unlock_formula_payload.get("auto_required_signal"),
+            "unlock_allowed": unlock_formula_payload.get("unlock_allowed"),
+            "decision_gates": unlock_formula_payload.get("decision_gates", {}),
+            "p0_total": unlock_formula_payload.get("p0_total"),
+            "p0_done": unlock_formula_payload.get("p0_done"),
+            "p0_not_done_refs": unlock_formula_payload.get("p0_not_done_refs", []),
+            "audit_signoff_status": unlock_formula_payload.get("audit_signoff_status", ""),
+            "env_blockers": unlock_formula_payload.get("env_blockers", []),
+            "protocol_blockers": unlock_formula_payload.get("protocol_blockers", []),
+            "formula_input_digest": unlock_formula_payload.get("formula_input_digest", ""),
+            "stale_reasons": unlock_formula_payload.get("stale_reasons", []),
+            "evidence_ref": unlock_formula_payload.get("evidence_ref", ""),
+        },
+        "release_plane_cloud_evidence": {
+            "release_plane_cloud_evidence_status": release_cloud_payload.get("release_plane_cloud_evidence_status"),
+            "error_code": release_cloud_payload.get("error_code", ""),
+            "required_contract": release_cloud_payload.get("required_contract"),
+            "auto_required_signal": release_cloud_payload.get("auto_required_signal"),
+            "release_plane_status": release_cloud_payload.get("release_plane_status", ""),
+            "conditions": release_cloud_payload.get("conditions", {}),
+            "target_branch": release_cloud_payload.get("target_branch", ""),
+            "release_head_sha": release_cloud_payload.get("release_head_sha", ""),
+            "required_gates_run_id": release_cloud_payload.get("required_gates_run_id", ""),
+            "run_url": release_cloud_payload.get("run_url", ""),
+            "checks_json": release_cloud_payload.get("checks_json", ""),
+            "jobs_json": release_cloud_payload.get("jobs_json", ""),
+            "gh_runs_json": release_cloud_payload.get("gh_runs_json", ""),
+            "release_plane_context_requested": bool(getattr(args, "_release_plane_context_requested", False)),
+            "release_plane_context_sources": list(getattr(args, "_release_plane_context_sources", []) or []),
+            "stale_reasons": release_cloud_payload.get("stale_reasons", []),
+            "evidence_ref": release_cloud_payload.get("evidence_ref", ""),
+        },
+        "cross_cwd_absolute_input": {
+            "cross_cwd_absolute_input_status": cross_cwd_payload.get("cross_cwd_absolute_input_status"),
+            "error_code": cross_cwd_payload.get("error_code", ""),
+            "required_contract": cross_cwd_payload.get("required_contract"),
+            "auto_required_signal": cross_cwd_payload.get("auto_required_signal"),
+            "repo_catalog_input": cross_cwd_payload.get("repo_catalog_input", ""),
+            "repo_catalog_is_absolute": cross_cwd_payload.get("repo_catalog_is_absolute"),
+            "repo_cwd_resolved_repo_catalog": cross_cwd_payload.get("repo_cwd_resolved_repo_catalog", ""),
+            "tmp_cwd_resolved_repo_catalog": cross_cwd_payload.get("tmp_cwd_resolved_repo_catalog", ""),
+            "cwd_parity_status": cross_cwd_payload.get("cwd_parity_status", ""),
+            "stale_reasons": cross_cwd_payload.get("stale_reasons", []),
+            "evidence_ref": cross_cwd_payload.get("evidence_ref", ""),
+        },
+        "run_id_report_selection": {
+            "run_id_report_selection_status": run_selector_payload.get("run_id_report_selection_status"),
+            "error_code": run_selector_payload.get("error_code", ""),
+            "required_contract": run_selector_payload.get("required_contract"),
+            "auto_required_signal": run_selector_payload.get("auto_required_signal"),
+            "run_id": run_selector_payload.get("run_id", ""),
+            "selection_strategy": run_selector_payload.get("selection_strategy", ""),
+            "report_selected_path": run_selector_payload.get("report_selected_path", ""),
+            "candidate_count": run_selector_payload.get("candidate_count"),
+            "stale_reasons": run_selector_payload.get("stale_reasons", []),
+            "evidence_ref": run_selector_payload.get("evidence_ref", ""),
+        },
+        "phase_bootstrap_before_strict": {
+            "phase_bootstrap_before_strict_status": phase_bootstrap_payload.get("phase_bootstrap_before_strict_status"),
+            "error_code": phase_bootstrap_payload.get("error_code", ""),
+            "required_contract": phase_bootstrap_payload.get("required_contract"),
+            "auto_required_signal": phase_bootstrap_payload.get("auto_required_signal"),
+            "report_selected_path": phase_bootstrap_payload.get("report_selected_path", ""),
+            "report_selection_mode": phase_bootstrap_payload.get("report_selection_mode", ""),
+            "report_selected_authority_class": phase_bootstrap_payload.get(
+                "report_selected_authority_class", ""
+            ),
+            "report_pointer_resolution_mode": phase_bootstrap_payload.get(
+                "report_pointer_resolution_mode", ""
+            ),
+            "report_pointer_path": phase_bootstrap_payload.get("report_pointer_path", ""),
+            "report_path": phase_bootstrap_payload.get("report_path", ""),
+            "phase_a_refresh_applied": phase_bootstrap_payload.get("phase_a_refresh_applied"),
+            "phase_b_strict_revalidate_status": phase_bootstrap_payload.get("phase_b_strict_revalidate_status", ""),
+            "phase_trace_status": phase_bootstrap_payload.get("phase_trace_status", ""),
+            "stale_reasons": phase_bootstrap_payload.get("stale_reasons", []),
+            "evidence_ref": phase_bootstrap_payload.get("evidence_ref", ""),
+        },
+        "tmp_collision_safety": {
+            "tmp_collision_safety_status": tmp_collision_payload.get("tmp_collision_safety_status"),
+            "error_code": tmp_collision_payload.get("error_code", ""),
+            "required_contract": tmp_collision_payload.get("required_contract"),
+            "auto_required_signal": tmp_collision_payload.get("auto_required_signal"),
+            "tmp_root": tmp_collision_payload.get("tmp_root", ""),
+            "collision_count": tmp_collision_payload.get("collision_count"),
+            "unique_path_count": tmp_collision_payload.get("unique_path_count"),
+            "generated_paths": tmp_collision_payload.get("generated_paths", []),
+            "stale_reasons": tmp_collision_payload.get("stale_reasons", []),
+            "evidence_ref": tmp_collision_payload.get("evidence_ref", ""),
+        },
+        "handoff_collab_freshness_rotation": {
+            "handoff_collab_freshness_rotation_status": fresh_rotation_payload.get("handoff_collab_freshness_rotation_status"),
+            "error_code": fresh_rotation_payload.get("error_code", ""),
+            "required_contract": fresh_rotation_payload.get("required_contract"),
+            "auto_required_signal": fresh_rotation_payload.get("auto_required_signal"),
+            "rotation_applied": fresh_rotation_payload.get("rotation_applied"),
+            "freshness_age_days": fresh_rotation_payload.get("freshness_age_days"),
+            "freshness_status": fresh_rotation_payload.get("freshness_status", ""),
+            "rotation_receipt_ref": fresh_rotation_payload.get("rotation_receipt_ref", ""),
+            "stale_reasons": fresh_rotation_payload.get("stale_reasons", []),
+            "evidence_ref": fresh_rotation_payload.get("evidence_ref", ""),
+        },
+        "protocol_feedback_atomic_emit": {
+            "protocol_feedback_atomic_emit_status": atomic_emit_payload.get("protocol_feedback_atomic_emit_status"),
+            "error_code": atomic_emit_payload.get("error_code", ""),
+            "required_contract": atomic_emit_payload.get("required_contract"),
+            "auto_required_signal": atomic_emit_payload.get("auto_required_signal"),
+            "transaction_id": atomic_emit_payload.get("transaction_id", ""),
+            "batch_ref": atomic_emit_payload.get("batch_ref", ""),
+            "index_ref": atomic_emit_payload.get("index_ref", ""),
+            "receipt_ref": atomic_emit_payload.get("receipt_ref", ""),
+            "stale_reasons": atomic_emit_payload.get("stale_reasons", []),
+            "evidence_ref": atomic_emit_payload.get("evidence_ref", ""),
+        },
+        "capability_boundary_classification": {
+            "capability_boundary_status": cap_boundary_payload.get("capability_boundary_status"),
+            "error_code": cap_boundary_payload.get("error_code", ""),
+            "required_contract": cap_boundary_payload.get("required_contract"),
+            "auto_required_signal": cap_boundary_payload.get("auto_required_signal"),
+            "boundary_classification": cap_boundary_payload.get("boundary_classification", ""),
+            "classification_source": cap_boundary_payload.get("classification_source", ""),
+            "capability_activation_status": cap_boundary_payload.get("capability_activation_status", ""),
+            "capability_activation_error_code": cap_boundary_payload.get("capability_activation_error_code", ""),
+            "stale_reasons": cap_boundary_payload.get("stale_reasons", []),
+            "evidence_ref": cap_boundary_payload.get("evidence_ref", ""),
+        },
+        "promotion_evidence_pipeline": {
+            "promotion_pipeline_status": promotion_pipeline_payload.get("promotion_pipeline_status"),
+            "error_code": promotion_pipeline_payload.get("error_code", ""),
+            "required_contract": promotion_pipeline_payload.get("required_contract"),
+            "auto_required_signal": promotion_pipeline_payload.get("auto_required_signal"),
+            "promotion_evidence_selected_path": promotion_pipeline_payload.get(
+                "promotion_evidence_selected_path", ""
+            ),
+            "promotion_evidence_selection_mode": promotion_pipeline_payload.get(
+                "promotion_evidence_selection_mode", ""
+            ),
+            "promotion_evidence_selected_authority_class": promotion_pipeline_payload.get(
+                "promotion_evidence_selected_authority_class", ""
+            ),
+            "promotion_evidence_pointer_resolution_mode": promotion_pipeline_payload.get(
+                "promotion_evidence_pointer_resolution_mode", ""
+            ),
+            "promotion_evidence_pointer_path": promotion_pipeline_payload.get(
+                "promotion_evidence_pointer_path", ""
+            ),
+            "promotion_evidence_kind": promotion_pipeline_payload.get(
+                "promotion_evidence_kind", ""
+            ),
+            "decision_hash": promotion_pipeline_payload.get("decision_hash", ""),
+            "input_hash": promotion_pipeline_payload.get("input_hash", ""),
+            "reviewer_role": promotion_pipeline_payload.get("reviewer_role", ""),
+            "reviewer_signature_ref": promotion_pipeline_payload.get("reviewer_signature_ref", ""),
+            "evidence_bundle_refs": promotion_pipeline_payload.get("evidence_bundle_refs", []),
+            "receipt_path": promotion_pipeline_payload.get("receipt_path", ""),
+            "stale_reasons": promotion_pipeline_payload.get("stale_reasons", []),
+            "evidence_ref": promotion_pipeline_payload.get("evidence_ref", ""),
+        },
+        "outlet_regression_matrix": {
+            "outlet_matrix_status": outlet_matrix_payload.get("outlet_matrix_status"),
+            "error_code": outlet_matrix_payload.get("error_code", ""),
+            "required_contract": outlet_matrix_payload.get("required_contract"),
+            "auto_required_signal": outlet_matrix_payload.get("auto_required_signal"),
+            "report_selected_path": outlet_matrix_payload.get("report_selected_path", ""),
+            "report_selection_mode": outlet_matrix_payload.get("report_selection_mode", ""),
+            "report_selected_authority_class": outlet_matrix_payload.get(
+                "report_selected_authority_class", ""
+            ),
+            "report_pointer_resolution_mode": outlet_matrix_payload.get(
+                "report_pointer_resolution_mode", ""
+            ),
+            "report_pointer_path": outlet_matrix_payload.get("report_pointer_path", ""),
+            "report_path": outlet_matrix_payload.get("report_path", ""),
+            "report_run_id": outlet_matrix_payload.get("report_run_id", ""),
+            "matrix_positive_status": outlet_matrix_payload.get("matrix_positive_status", ""),
+            "matrix_negative_status": outlet_matrix_payload.get("matrix_negative_status", ""),
+            "cross_cwd_parity_status": outlet_matrix_payload.get("cross_cwd_parity_status", ""),
+            "send_time_gate_status": outlet_matrix_payload.get("send_time_gate_status", ""),
+            "governed_outlet_enforced": outlet_matrix_payload.get("governed_outlet_enforced"),
+            "outlet_channel_id": outlet_matrix_payload.get("outlet_channel_id", ""),
+            "outlet_bypass_detected": outlet_matrix_payload.get("outlet_bypass_detected"),
+            "stale_reasons": outlet_matrix_payload.get("stale_reasons", []),
+            "evidence_ref": outlet_matrix_payload.get("evidence_ref", ""),
+        },
+        "sidecar_cwd_parity": {
+            "sidecar_cwd_parity_status": sidecar_cwd_payload.get("sidecar_cwd_parity_status"),
+            "cwd_parity_status": sidecar_cwd_payload.get("cwd_parity_status", ""),
+            "error_code": sidecar_cwd_payload.get("error_code", ""),
+            "required_contract": sidecar_cwd_payload.get("required_contract"),
+            "auto_required_signal": sidecar_cwd_payload.get("auto_required_signal"),
+            "passthrough_digest": sidecar_cwd_payload.get("passthrough_digest", ""),
+            "root_digest": sidecar_cwd_payload.get("root_digest", ""),
+            "temp_digest": sidecar_cwd_payload.get("temp_digest", ""),
+            "sidecar_contract_status": sidecar_cwd_payload.get("sidecar_contract_status", ""),
+            "sidecar_error_code": sidecar_cwd_payload.get("sidecar_error_code", ""),
+            "stale_reasons": sidecar_cwd_payload.get("stale_reasons", []),
+            "evidence_ref": sidecar_cwd_payload.get("evidence_ref", ""),
+        },
+        "docs_bridge_consistency": {
+            "bridge_consistency_status": docs_bridge_payload.get("bridge_consistency_status"),
+            "error_code": docs_bridge_payload.get("error_code", ""),
+            "required_contract": docs_bridge_payload.get("required_contract"),
+            "auto_required_signal": docs_bridge_payload.get("auto_required_signal"),
+            "contradiction_pairs": docs_bridge_payload.get("contradiction_pairs", []),
+            "governance_anchor_refs": docs_bridge_payload.get("governance_anchor_refs", []),
+            "review_anchor_refs": docs_bridge_payload.get("review_anchor_refs", []),
+            "stale_reasons": docs_bridge_payload.get("stale_reasons", []),
+            "evidence_ref": docs_bridge_payload.get("evidence_ref", ""),
+        },
+        "contract_mapping_coverage": {
+            "contract_mapping_coverage_status": mapping_coverage_payload.get("contract_mapping_coverage_status"),
+            "error_code": mapping_coverage_payload.get("error_code", ""),
+            "required_contract": mapping_coverage_payload.get("required_contract"),
+            "auto_required_signal": mapping_coverage_payload.get("auto_required_signal"),
+            "total_requirements": mapping_coverage_payload.get("total_requirements"),
+            "p0_total": mapping_coverage_payload.get("p0_total"),
+            "mapped_total": mapping_coverage_payload.get("mapped_total"),
+            "p0_mapped": mapping_coverage_payload.get("p0_mapped"),
+            "coverage_rate": mapping_coverage_payload.get("coverage_rate"),
+            "p0_coverage_rate": mapping_coverage_payload.get("p0_coverage_rate"),
+            "orphan_count": mapping_coverage_payload.get("orphan_count"),
+            "unmapped_p0_requirements": mapping_coverage_payload.get("unmapped_p0_requirements", []),
+            "stale_reasons": mapping_coverage_payload.get("stale_reasons", []),
+            "evidence_ref": mapping_coverage_payload.get("evidence_ref", ""),
+        },
+        "prompt_bootstrap_capability": {
+            "prompt_bootstrap_contract_status": prompt_bootstrap_payload.get("prompt_bootstrap_contract_status"),
+            "error_code": prompt_bootstrap_payload.get("error_code", ""),
+            "required_contract": prompt_bootstrap_payload.get("required_contract"),
+            "auto_required_signal": prompt_bootstrap_payload.get("auto_required_signal"),
+            "capability_driver_required_total": prompt_bootstrap_payload.get("capability_driver_required_total"),
+            "capability_driver_present_total": prompt_bootstrap_payload.get("capability_driver_present_total"),
+            "capability_driver_coverage_rate": prompt_bootstrap_payload.get("capability_driver_coverage_rate"),
+            "missing_capability_drivers": prompt_bootstrap_payload.get("missing_capability_drivers", []),
+            "stale_reasons": prompt_bootstrap_payload.get("stale_reasons", []),
+            "evidence_ref": prompt_bootstrap_payload.get("evidence_ref", ""),
+        },
+        "prompt_capability_matrix": {
+            "prompt_capability_matrix_status": prompt_matrix_payload.get("prompt_capability_matrix_status"),
+            "error_code": prompt_matrix_payload.get("error_code", ""),
+            "required_contract": prompt_matrix_payload.get("required_contract"),
+            "auto_required_signal": prompt_matrix_payload.get("auto_required_signal"),
+            "capability_driver_required_total": prompt_matrix_payload.get("capability_driver_required_total"),
+            "capability_driver_present_total": prompt_matrix_payload.get("capability_driver_present_total"),
+            "capability_driver_coverage_rate": prompt_matrix_payload.get("capability_driver_coverage_rate"),
+            "missing_capability_drivers": prompt_matrix_payload.get("missing_capability_drivers", []),
+            "stale_reasons": prompt_matrix_payload.get("stale_reasons", []),
+            "evidence_ref": prompt_matrix_payload.get("evidence_ref", ""),
+        },
+        "refresh_strict_business_interference": {
+            "refresh_strict_business_interference_status": interference_payload.get("refresh_strict_business_interference_status"),
+            "error_code": interference_payload.get("error_code", ""),
+            "required_contract": interference_payload.get("required_contract"),
+            "auto_required_signal": interference_payload.get("auto_required_signal"),
+            "refresh_receipt_ref": interference_payload.get("refresh_receipt_ref", ""),
+            "strict_receipt_ref": interference_payload.get("strict_receipt_ref", ""),
+            "refresh_status": interference_payload.get("refresh_status", ""),
+            "strict_status": interference_payload.get("strict_status", ""),
+            "interference_row_count_refresh": interference_payload.get("interference_row_count_refresh"),
+            "interference_row_count_strict": interference_payload.get("interference_row_count_strict"),
+            "stale_reasons": interference_payload.get("stale_reasons", []),
+            "evidence_ref": interference_payload.get("evidence_ref", ""),
+        },
+        "kernel_ssot_source": {
+            "kernel_ssot_source_status": kernel_ssot_payload.get("kernel_ssot_source_status"),
+            "error_code": kernel_ssot_payload.get("error_code", ""),
+            "required_contract": kernel_ssot_payload.get("required_contract"),
+            "auto_required_signal": kernel_ssot_payload.get("auto_required_signal"),
+            "canonical_source_paths": kernel_ssot_payload.get("canonical_source_paths", []),
+            "missing_source_paths": kernel_ssot_payload.get("missing_source_paths", []),
+            "ssot_validator_rc": kernel_ssot_payload.get("ssot_validator_rc"),
+            "stale_reasons": kernel_ssot_payload.get("stale_reasons", []),
+            "evidence_ref": kernel_ssot_payload.get("evidence_ref", ""),
+        },
+        "prompt_derivation_conformance": {
+            "prompt_derivation_conformance_status": prompt_derivation_payload.get("prompt_derivation_conformance_status"),
+            "error_code": prompt_derivation_payload.get("error_code", ""),
+            "required_contract": prompt_derivation_payload.get("required_contract"),
+            "auto_required_signal": prompt_derivation_payload.get("auto_required_signal"),
+            "kernel_contract_version": prompt_derivation_payload.get("kernel_contract_version", ""),
+            "kernel_contract_digest": prompt_derivation_payload.get("kernel_contract_digest", ""),
+            "derived_from_contract_ids": prompt_derivation_payload.get("derived_from_contract_ids", []),
+            "overlay_digest": prompt_derivation_payload.get("overlay_digest", ""),
+            "stale_reasons": prompt_derivation_payload.get("stale_reasons", []),
+            "evidence_ref": prompt_derivation_payload.get("evidence_ref", ""),
+        },
+        "semantic_convergence": {
+            "semantic_convergence_status": semantic_convergence_payload.get("semantic_convergence_status"),
+            "semantic_convergence_error_code": semantic_convergence_payload.get("semantic_convergence_error_code", ""),
+            "required_contract": semantic_convergence_payload.get("required_contract"),
+            "auto_required_signal": semantic_convergence_payload.get("auto_required_signal"),
+            "lineage_ref": semantic_convergence_payload.get("lineage_ref", ""),
+            "mismatch_count": semantic_convergence_payload.get("mismatch_count"),
+            "mismatch_fields": semantic_convergence_payload.get("mismatch_fields", []),
+            "stale_reasons": semantic_convergence_payload.get("stale_reasons", []),
+            "evidence_ref": semantic_convergence_payload.get("evidence_ref", ""),
+        },
+        "prompt_kernel_executable_coupling": {
+            "prompt_kernel_executable_coupling_status": prompt_coupling_payload.get("prompt_kernel_executable_coupling_status"),
+            "error_code": prompt_coupling_payload.get("error_code", ""),
+            "required_contract": prompt_coupling_payload.get("required_contract"),
+            "auto_required_signal": prompt_coupling_payload.get("auto_required_signal"),
+            "kernel_contract_ref": prompt_coupling_payload.get("kernel_contract_ref", ""),
+            "validator_ref": prompt_coupling_payload.get("validator_ref", ""),
+            "actor_context_explicit": prompt_coupling_payload.get("actor_context_explicit"),
+            "routing_validator_rc": prompt_coupling_payload.get("routing_validator_rc"),
+            "stale_reasons": prompt_coupling_payload.get("stale_reasons", []),
+            "evidence_ref": prompt_coupling_payload.get("evidence_ref", ""),
+        },
+        "required_gate_bundle_runner": {
+            "required_gate_bundle_runner_status": required_bundle_payload.get("bundle_status"),
+            "error_code": required_bundle_payload.get("error_code", ""),
+            "bundle_contract_id": required_bundle_payload.get("bundle_contract_id", ""),
+            "bundle_key": required_bundle_payload.get("bundle_key", ""),
+            "surface_label": required_bundle_payload.get("surface_label", ""),
+            "identity_id": required_bundle_payload.get("identity_id", ""),
+            "actor_id": required_bundle_payload.get("actor_id", ""),
+            "resolved_work_layer": required_bundle_payload.get("resolved_work_layer", ""),
+            "resolved_source_layer": required_bundle_payload.get("resolved_source_layer", ""),
+            "lock_state": required_bundle_payload.get("lock_state", ""),
+            "required_contract": required_bundle_payload.get("required_contract"),
+            "failed_required_contract_count": required_bundle_payload.get("failed_required_contract_count"),
+            "row_contract_error_count": required_bundle_payload.get("row_contract_error_count"),
+            "run_id_binding": required_bundle_payload.get("run_id_binding", ""),
+            "report_selected_path": required_bundle_payload.get("report_selected_path", ""),
+            "report_selection_mode": required_bundle_payload.get("report_selection_mode", ""),
+            "report_selected_authority_class": required_bundle_payload.get(
+                "report_selected_authority_class", ""
+            ),
+            "report_pointer_resolution_mode": required_bundle_payload.get(
+                "report_pointer_resolution_mode", ""
+            ),
+            "report_pointer_path": required_bundle_payload.get("report_pointer_path", ""),
+            "send_time_gate_status": required_bundle_payload.get("send_time_gate_status", ""),
+            "outlet_bypass_detected": required_bundle_payload.get("outlet_bypass_detected"),
+            "final_emit_contract_status": required_bundle_payload.get("final_emit_contract_status", ""),
+            "final_emit_policy_mode": required_bundle_payload.get("final_emit_policy_mode", ""),
+            "final_emit_schema_status": required_bundle_payload.get("final_emit_schema_status", ""),
+            "mapping_errors": required_bundle_payload.get("mapping_errors", []),
+            "missing_targets": required_bundle_payload.get("missing_targets", []),
+            "contract_mapping": required_bundle_payload.get("contract_mapping", ""),
+            "result_rows": required_bundle_payload.get("results", []),
+            "target_projection_status": required_bundle_target_projection.get("projection_status", ""),
+            "failed_required_target_count": required_bundle_target_projection.get("failed_required_target_count", 0),
+        },
+        "required_gate_bundle_runner_shadow": {
+            "required_gate_bundle_runner_shadow_status": required_bundle_shadow_payload.get("bundle_status"),
+            "error_code": required_bundle_shadow_payload.get("error_code", ""),
+            "surface_label": required_bundle_shadow_payload.get("surface_label", ""),
+            "identity_id": required_bundle_shadow_payload.get("identity_id", ""),
+            "actor_id": required_bundle_shadow_payload.get("actor_id", ""),
+            "resolved_work_layer": required_bundle_shadow_payload.get("resolved_work_layer", ""),
+            "resolved_source_layer": required_bundle_shadow_payload.get("resolved_source_layer", ""),
+            "lock_state": required_bundle_shadow_payload.get("lock_state", ""),
+            "required_contract": required_bundle_shadow_payload.get("required_contract"),
+            "failed_required_contract_count": required_bundle_shadow_payload.get("failed_required_contract_count"),
+            "row_contract_error_count": required_bundle_shadow_payload.get("row_contract_error_count"),
+            "run_id_binding": required_bundle_shadow_payload.get("run_id_binding", ""),
+            "report_selected_path": required_bundle_shadow_payload.get("report_selected_path", ""),
+            "report_selection_mode": required_bundle_shadow_payload.get("report_selection_mode", ""),
+            "report_selected_authority_class": required_bundle_shadow_payload.get(
+                "report_selected_authority_class", ""
+            ),
+            "report_pointer_resolution_mode": required_bundle_shadow_payload.get(
+                "report_pointer_resolution_mode", ""
+            ),
+            "report_pointer_path": required_bundle_shadow_payload.get("report_pointer_path", ""),
+            "send_time_gate_status": required_bundle_shadow_payload.get("send_time_gate_status", ""),
+            "outlet_bypass_detected": required_bundle_shadow_payload.get("outlet_bypass_detected"),
+            "final_emit_contract_status": required_bundle_shadow_payload.get("final_emit_contract_status", ""),
+            "final_emit_policy_mode": required_bundle_shadow_payload.get("final_emit_policy_mode", ""),
+            "final_emit_schema_status": required_bundle_shadow_payload.get("final_emit_schema_status", ""),
+            "mapping_errors": required_bundle_shadow_payload.get("mapping_errors", []),
+            "missing_targets": required_bundle_shadow_payload.get("missing_targets", []),
+            "contract_mapping": required_bundle_shadow_payload.get("contract_mapping", ""),
+            "result_rows": required_bundle_shadow_payload.get("results", []),
+            "target_projection_status": required_bundle_shadow_target_projection.get("projection_status", ""),
+            "failed_required_target_count": required_bundle_shadow_target_projection.get("failed_required_target_count", 0),
+        },
+        "required_gate_recurrence_escalator": {
+            "required_gate_recurrence_status": recurrence_payload.get("required_gate_recurrence_status"),
+            "error_code": recurrence_payload.get("error_code", ""),
+            "escalation_level": recurrence_payload.get("escalation_level", ""),
+            "surface": recurrence_payload.get("surface", ""),
+            "operation": recurrence_payload.get("operation", ""),
+            "receipt_path": recurrence_payload.get("receipt_path", ""),
+            "state_path": recurrence_payload.get("state_path", ""),
+            "new_event_count": recurrence_payload.get("new_event_count"),
+            "tracked_event_count": recurrence_payload.get("tracked_event_count"),
+            "l1_error_families": recurrence_payload.get("l1_error_families", []),
+            "l2_error_families": recurrence_payload.get("l2_error_families", []),
+            "l3_error_families": recurrence_payload.get("l3_error_families", []),
+            "family_metrics": recurrence_payload.get("family_metrics", []),
+            "stale_reasons": recurrence_payload.get("stale_reasons", []),
+        },
+        "required_gate_tuple_parity": {
+            "required_gate_tuple_parity_status": tuple_parity_payload.get("required_gate_tuple_parity_status"),
+            "error_code": tuple_parity_payload.get("error_code", ""),
+            "tuple_fields": tuple_parity_payload.get("tuple_fields", []),
+            "core_tuple_fields": tuple_parity_payload.get("core_tuple_fields", []),
+            "conditional_tuple_fields": tuple_parity_payload.get("conditional_tuple_fields", []),
+            "receipts_checked": tuple_parity_payload.get("receipts_checked", []),
+            "surface_labels_checked": tuple_parity_payload.get("surface_labels_checked", []),
+            "min_receipts": tuple_parity_payload.get("min_receipts"),
+            "require_distinct_surface_labels": tuple_parity_payload.get("require_distinct_surface_labels"),
+            "require_distinct_operations": tuple_parity_payload.get("require_distinct_operations"),
+            "operations_checked": tuple_parity_payload.get("operations_checked", []),
+            "missing_operations": tuple_parity_payload.get("missing_operations", []),
+            "duplicate_operations": tuple_parity_payload.get("duplicate_operations", {}),
+            "parity_contract_reasons": tuple_parity_payload.get("parity_contract_reasons", []),
+            "missing_surface_labels": tuple_parity_payload.get("missing_surface_labels", []),
+            "duplicate_surface_labels": tuple_parity_payload.get("duplicate_surface_labels", {}),
+            "load_errors": tuple_parity_payload.get("load_errors", []),
+            "missing_fields": tuple_parity_payload.get("missing_fields", {}),
+            "mismatches": tuple_parity_payload.get("mismatches", {}),
+            "stale_reasons": tuple_parity_payload.get("stale_reasons", []),
+        },
+        "cross_verification_tracks": {
+            "cross_verification_tracks_status": cross_verify_payload.get("cross_verification_tracks_status"),
+            "error_code": cross_verify_payload.get("error_code", ""),
+            "required_contract": cross_verify_payload.get("required_contract"),
+            "auto_required_signal": cross_verify_payload.get("auto_required_signal"),
+            "cross_verification_bundle_id": cross_verify_payload.get("cross_verification_bundle_id", ""),
+            "source_url_set": cross_verify_payload.get("source_url_set", []),
+            "reference_timestamp_utc": cross_verify_payload.get("reference_timestamp_utc", ""),
+            "conflict_reconciliation_note": cross_verify_payload.get("conflict_reconciliation_note", ""),
+            "missing_tracks": cross_verify_payload.get("missing_tracks", []),
+            "missing_metadata_fields": cross_verify_payload.get("missing_metadata_fields", []),
+            "stale_reasons": cross_verify_payload.get("stale_reasons", []),
+            "evidence_ref": cross_verify_payload.get("evidence_ref", ""),
+        },
+        "intake_evidence_quorum": {
+            "intake_evidence_quorum_status": intake_quorum_payload.get("intake_evidence_quorum_status"),
+            "error_code": intake_quorum_payload.get("error_code", ""),
+            "required_contract": intake_quorum_payload.get("required_contract"),
+            "auto_required_signal": intake_quorum_payload.get("auto_required_signal"),
+            "cross_verification_bundle_id": intake_quorum_payload.get("cross_verification_bundle_id", ""),
+            "source_url_set": intake_quorum_payload.get("source_url_set", []),
+            "reference_timestamp_utc": intake_quorum_payload.get("reference_timestamp_utc", ""),
+            "conflict_reconciliation_note": intake_quorum_payload.get("conflict_reconciliation_note", ""),
+            "missing_tracks": intake_quorum_payload.get("missing_tracks", []),
+            "missing_metadata_fields": intake_quorum_payload.get("missing_metadata_fields", []),
+            "stale_reasons": intake_quorum_payload.get("stale_reasons", []),
+            "evidence_ref": intake_quorum_payload.get("evidence_ref", ""),
+        },
+        "route_version_pinning": {
+            "pin_status": route_pin_payload.get("pin_status"),
+            "pin_error_code": route_pin_payload.get("pin_error_code", ""),
+            "required_contract": route_pin_payload.get("required_contract"),
+            "auto_required_signal": route_pin_payload.get("auto_required_signal"),
+            "route_endpoint": route_pin_payload.get("route_endpoint", ""),
+            "workflow_id": route_pin_payload.get("workflow_id", ""),
+            "workflow_publish_version": route_pin_payload.get("workflow_publish_version", ""),
+            "pin_proof_ref": route_pin_payload.get("pin_proof_ref", ""),
+            "expected_route_endpoint": route_pin_payload.get("expected_route_endpoint", ""),
+            "expected_workflow_id": route_pin_payload.get("expected_workflow_id", ""),
+            "expected_workflow_publish_version": route_pin_payload.get("expected_workflow_publish_version", ""),
+            "mismatch_fields": route_pin_payload.get("mismatch_fields", []),
+            "receipt_path": route_pin_payload.get("receipt_path", ""),
+            "stale_reasons": route_pin_payload.get("stale_reasons", []),
+            "evidence_ref": route_pin_payload.get("evidence_ref", ""),
+        },
+        "fallback_taxonomy_normalization": {
+            "fallback_taxonomy_normalization_status": fallback_norm_payload.get("fallback_taxonomy_normalization_status"),
+            "normalization_error_code": fallback_norm_payload.get("normalization_error_code", ""),
+            "required_contract": fallback_norm_payload.get("required_contract"),
+            "auto_required_signal": fallback_norm_payload.get("auto_required_signal"),
+            "report_selected_path": fallback_norm_payload.get("report_selected_path", ""),
+            "report_selection_mode": fallback_norm_payload.get("report_selection_mode", ""),
+            "report_selected_authority_class": fallback_norm_payload.get(
+                "report_selected_authority_class", ""
+            ),
+            "report_pointer_resolution_mode": fallback_norm_payload.get(
+                "report_pointer_resolution_mode", ""
+            ),
+            "report_pointer_path": fallback_norm_payload.get("report_pointer_path", ""),
+            "report_path": fallback_norm_payload.get("report_path", ""),
+            "taxonomy_version": fallback_norm_payload.get("taxonomy_version", ""),
+            "fallback_reason_row_count": fallback_norm_payload.get("fallback_reason_row_count"),
+            "fallback_reason_rows": fallback_norm_payload.get("fallback_reason_rows", []),
+            "unmapped_fallback_reasons": fallback_norm_payload.get("unmapped_fallback_reasons", []),
+            "blocker_taxonomy_namespace_preserved": fallback_norm_payload.get("blocker_taxonomy_namespace_preserved"),
+            "stale_reasons": fallback_norm_payload.get("stale_reasons", []),
+            "evidence_ref": fallback_norm_payload.get("evidence_ref", ""),
+        },
+        "dedup_monotonicity": {
+            "monotonicity_status": dedup_mono_payload.get("monotonicity_status"),
+            "error_code": dedup_mono_payload.get("error_code", ""),
+            "required_contract": dedup_mono_payload.get("required_contract"),
+            "auto_required_signal": dedup_mono_payload.get("auto_required_signal"),
+            "run_id": dedup_mono_payload.get("run_id", ""),
+            "parallel_claims_requested": dedup_mono_payload.get("parallel_claims_requested"),
+            "claim_rows_total": dedup_mono_payload.get("claim_rows_total"),
+            "grouped_run_count": dedup_mono_payload.get("grouped_run_count"),
+            "candidate_count": dedup_mono_payload.get("candidate_count"),
+            "earliest_claim_ts": dedup_mono_payload.get("earliest_claim_ts", ""),
+            "stable_tiebreaker": dedup_mono_payload.get("stable_tiebreaker", ""),
+            "winner_id": dedup_mono_payload.get("winner_id", ""),
+            "winner_reason": dedup_mono_payload.get("winner_reason", ""),
+            "tie_candidate_count": dedup_mono_payload.get("tie_candidate_count"),
+            "claims_path": dedup_mono_payload.get("claims_path", ""),
+            "stale_reasons": dedup_mono_payload.get("stale_reasons", []),
+            "evidence_ref": dedup_mono_payload.get("evidence_ref", ""),
+        },
+        "cross_workflow_schema": {
+            "cross_workflow_schema_status": xwf_schema_payload.get("cross_workflow_schema_status"),
+            "error_code": xwf_schema_payload.get("error_code", ""),
+            "required_contract": xwf_schema_payload.get("required_contract"),
+            "auto_required_signal": xwf_schema_payload.get("auto_required_signal"),
+            "evidence_selected_path": xwf_schema_payload.get("evidence_selected_path", ""),
+            "evidence_selection_mode": xwf_schema_payload.get("evidence_selection_mode", ""),
+            "evidence_selected_authority_class": xwf_schema_payload.get(
+                "evidence_selected_authority_class", ""
+            ),
+            "evidence_pointer_resolution_mode": xwf_schema_payload.get(
+                "evidence_pointer_resolution_mode", ""
+            ),
+            "evidence_pointer_path": xwf_schema_payload.get("evidence_pointer_path", ""),
+            "evidence_kind": xwf_schema_payload.get("evidence_kind", ""),
+            "run_id": xwf_schema_payload.get("run_id", ""),
+            "route_action": xwf_schema_payload.get("route_action", ""),
+            "quality_meta_state": xwf_schema_payload.get("quality_meta_state", ""),
+            "dedup_state": xwf_schema_payload.get("dedup_state", ""),
+            "evidence_hash": xwf_schema_payload.get("evidence_hash", ""),
+            "schema_version": xwf_schema_payload.get("schema_version", ""),
+            "hash_consistency_status": xwf_schema_payload.get("hash_consistency_status", ""),
+            "stale_reasons": xwf_schema_payload.get("stale_reasons", []),
+            "evidence_ref": xwf_schema_payload.get("evidence_ref", ""),
+        },
+        "skill_path_integrity": {
+            "path_integrity_status": skill_path_payload.get("path_integrity_status"),
+            "path_integrity_error_code": skill_path_payload.get("path_integrity_error_code", ""),
+            "required_contract": skill_path_payload.get("required_contract"),
+            "auto_required_signal": skill_path_payload.get("auto_required_signal"),
+            "layout_mode": skill_path_payload.get("layout_mode", ""),
+            "active_repo_root": skill_path_payload.get("active_repo_root", ""),
+            "active_runtime_root": skill_path_payload.get("active_runtime_root", ""),
+            "required_skills": skill_path_payload.get("required_skills", []),
+            "missing_skill_paths": skill_path_payload.get("missing_skill_paths", []),
+            "out_of_layout_skill_paths": skill_path_payload.get("out_of_layout_skill_paths", []),
+            "allowed_skill_roots": skill_path_payload.get("allowed_skill_roots", []),
+            "skill_path_rows": skill_path_payload.get("skill_path_rows", []),
+            "stale_reasons": skill_path_payload.get("stale_reasons", []),
+            "evidence_ref": skill_path_payload.get("evidence_ref", ""),
+        },
+        "execution_target_tuple_isolation": {
+            "execution_target_tuple_isolation_status": exec_target_tuple_payload.get("execution_target_tuple_isolation_status"),
+            "error_code": exec_target_tuple_payload.get("error_code", ""),
+            "required_contract": exec_target_tuple_payload.get("required_contract"),
+            "auto_required_signal": exec_target_tuple_payload.get("auto_required_signal"),
+            "execution_target_kind": exec_target_tuple_payload.get("execution_target_kind", ""),
+            "execution_target_key": exec_target_tuple_payload.get("execution_target_key", ""),
+            "execution_target_ref": exec_target_tuple_payload.get("execution_target_ref", ""),
+            "route_conflict_status": exec_target_tuple_payload.get("route_conflict_status", ""),
+            "route_conflict_error_code": exec_target_tuple_payload.get("route_conflict_error_code", ""),
+            "conflict_key_mode": exec_target_tuple_payload.get("conflict_key_mode", ""),
+            "override_non_bypass_status": exec_target_tuple_payload.get("override_non_bypass_status", ""),
+            "process_call_support_status": exec_target_tuple_payload.get("process_call_support_status", ""),
+            "tuple_fields_present": exec_target_tuple_payload.get("tuple_fields_present", []),
+            "tuple_fields_missing": exec_target_tuple_payload.get("tuple_fields_missing", []),
+            "stale_reasons": exec_target_tuple_payload.get("stale_reasons", []),
+            "evidence_ref": exec_target_tuple_payload.get("evidence_ref", ""),
+        },
+        "multimodal_plugin_enforcement": {
+            "multimodal_plugin_enforcement_status": multimodal_plugin_payload.get("multimodal_plugin_enforcement_status"),
+            "multimodal_runtime_evidence_status": multimodal_plugin_payload.get("multimodal_runtime_evidence_status"),
+            "multimodal_preflight_status": multimodal_plugin_payload.get("multimodal_preflight_status", ""),
+            "error_code": multimodal_plugin_payload.get("error_code", ""),
+            "required_contract": multimodal_plugin_payload.get("required_contract"),
+            "auto_required_signal": multimodal_plugin_payload.get("auto_required_signal"),
+            "plugin_registry_status": multimodal_plugin_payload.get("plugin_registry_status", ""),
+            "plugin_naming_status": multimodal_plugin_payload.get("plugin_naming_status", ""),
+            "plugin_schema_status": multimodal_plugin_payload.get("plugin_schema_status", ""),
+            "plugin_threshold_status": multimodal_plugin_payload.get("plugin_threshold_status", ""),
+            "plugin_path_status": multimodal_plugin_payload.get("plugin_path_status", ""),
+            "plugin_copy_policy_status": multimodal_plugin_payload.get("plugin_copy_policy_status", ""),
+            "provider_config_status": multimodal_plugin_payload.get("provider_config_status", ""),
+            "provider_profile_id": multimodal_plugin_payload.get("provider_profile_id", ""),
+            "plugin_contract_owner": multimodal_plugin_payload.get("plugin_contract_owner", ""),
+            "plugin_resolution_mode": multimodal_plugin_payload.get("plugin_resolution_mode", ""),
+            "report_selected_path": multimodal_plugin_payload.get("report_selected_path", ""),
+            "runtime_report_selected_path": multimodal_plugin_payload.get(
+                "runtime_report_selected_path", ""
+            ),
+            "runtime_report_selection_mode": multimodal_plugin_payload.get(
+                "runtime_report_selection_mode", ""
+            ),
+            "runtime_report_selected_authority_class": multimodal_plugin_payload.get(
+                "runtime_report_selected_authority_class", ""
+            ),
+            "runtime_report_pointer_resolution_mode": multimodal_plugin_payload.get(
+                "runtime_report_pointer_resolution_mode", ""
+            ),
+            "runtime_report_pointer_path": multimodal_plugin_payload.get(
+                "runtime_report_pointer_path", ""
+            ),
+            "runtime_report_path": multimodal_plugin_payload.get("runtime_report_path", ""),
+            "runtime_report_run_id": multimodal_plugin_payload.get("runtime_report_run_id", ""),
+            "multimodal_calls": multimodal_plugin_payload.get("multimodal_calls"),
+            "multimodal_resolved": multimodal_plugin_payload.get("multimodal_resolved"),
+            "multimodal_unresolved": multimodal_plugin_payload.get("multimodal_unresolved"),
+            "multimodal_errors": multimodal_plugin_payload.get("multimodal_errors"),
+            "multimodal_retry_calls": multimodal_plugin_payload.get("multimodal_retry_calls"),
+            "runtime_gate_mode": multimodal_plugin_payload.get("runtime_gate_mode", ""),
+            "runtime_gate_required_confidence": multimodal_plugin_payload.get("runtime_gate_required_confidence"),
+            "multimodal_runtime_evidence_refs": multimodal_plugin_payload.get("multimodal_runtime_evidence_refs", []),
+            "forbidden_copy_refs": multimodal_plugin_payload.get("forbidden_copy_refs", []),
+            "stale_reasons": multimodal_plugin_payload.get("stale_reasons", []),
+            "evidence_ref": multimodal_plugin_payload.get("evidence_ref", ""),
+        },
+        "reasoning_loop_failclose_enforcement": {
+            "reasoning_loop_failclose_status": reasoning_plugin_payload.get("reasoning_loop_failclose_status"),
+            "reasoning_runtime_evidence_status": reasoning_plugin_payload.get("reasoning_runtime_evidence_status"),
+            "reasoning_attempt_trace_status": reasoning_plugin_payload.get("reasoning_attempt_trace_status"),
+            "no_target_done_block_status": reasoning_plugin_payload.get("no_target_done_block_status"),
+            "terminal_attempt_index": reasoning_plugin_payload.get("terminal_attempt_index"),
+            "terminal_attempt_target_reached": reasoning_plugin_payload.get("terminal_attempt_target_reached"),
+            "terminal_attempt_no_target_reached": reasoning_plugin_payload.get("terminal_attempt_no_target_reached"),
+            "no_target_completion_mode": reasoning_plugin_payload.get("no_target_completion_mode", ""),
+            "done_requires_terminal_target_reached": reasoning_plugin_payload.get("done_requires_terminal_target_reached"),
+            "reasoning_next_action_status": reasoning_plugin_payload.get("reasoning_next_action_status"),
+            "reasoning_escalation_status": reasoning_plugin_payload.get("reasoning_escalation_status"),
+            "escalation_requirement_mode": reasoning_plugin_payload.get("escalation_requirement_mode", ""),
+            "escalation_signal_accept_nonempty_ref": reasoning_plugin_payload.get("escalation_signal_accept_nonempty_ref"),
+            "escalation_signal_nonempty_fields": reasoning_plugin_payload.get("escalation_signal_nonempty_fields", []),
+            "strict_run_id_binding": reasoning_plugin_payload.get("strict_run_id_binding"),
+            "runtime_report_selection_mode": reasoning_plugin_payload.get("runtime_report_selection_mode", ""),
+            "reasoning_four_track_status": reasoning_plugin_payload.get("reasoning_four_track_status"),
+            "external_source_freshness_status": reasoning_plugin_payload.get("external_source_freshness_status"),
+            "reasoning_enforcement_level": reasoning_plugin_payload.get("reasoning_enforcement_level", ""),
+            "plugin_registry_status": reasoning_plugin_payload.get("plugin_registry_status", ""),
+            "runtime_report_path": reasoning_plugin_payload.get("runtime_report_path", ""),
+            "runtime_report_run_id": reasoning_plugin_payload.get("runtime_report_run_id", ""),
+            "runtime_report_source": reasoning_plugin_payload.get("runtime_report_source", ""),
+            "report_selected_path": reasoning_plugin_payload.get("report_selected_path", ""),
+            "reasoning_attempt_count": reasoning_plugin_payload.get("reasoning_attempt_count"),
+            "reasoning_failed_attempt_count": reasoning_plugin_payload.get("reasoning_failed_attempt_count"),
+            "no_target_reached_detected": reasoning_plugin_payload.get("no_target_reached_detected"),
+            "reasoning_runtime_evidence_refs": reasoning_plugin_payload.get("reasoning_runtime_evidence_refs", []),
+            "error_code": reasoning_plugin_payload.get("error_code", ""),
+            "required_contract": reasoning_plugin_payload.get("required_contract"),
+            "auto_required_signal": reasoning_plugin_payload.get("auto_required_signal"),
+            "stale_reasons": reasoning_plugin_payload.get("stale_reasons", []),
+            "evidence_ref": reasoning_plugin_payload.get("evidence_ref", ""),
+        },
+        "replay_archive_contract": {
+            "replay_archive_contract_status": replay_archive_payload.get("replay_archive_contract_status"),
+            "error_code": replay_archive_payload.get("error_code", ""),
+            "replay_case_total": replay_archive_payload.get("replay_case_total"),
+            "replay_case_passed": replay_archive_payload.get("replay_case_passed"),
+            "replay_case_failed": replay_archive_payload.get("replay_case_failed"),
+            "stale_reasons": replay_archive_payload.get("stale_reasons", []),
+            "evidence_ref": replay_archive_payload.get("evidence_ref", ""),
+            "out_path": replay_archive_payload.get("out_path", ""),
         },
         "e2e_hermetic_runtime_import": {
             "e2e_hermetic_runtime_status": herm_payload.get("e2e_hermetic_runtime_status"),
@@ -1994,9 +5118,24 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "sidecar_error_code": sidecar_payload.get("sidecar_error_code", ""),
             "required_contract": sidecar_payload.get("required_contract"),
             "auto_required_signal": sidecar_payload.get("auto_required_signal"),
+            "requiredization_scope_decision": sidecar_payload.get("requiredization_scope_decision", ""),
+            "requiredization_scope_reason": sidecar_payload.get("requiredization_scope_reason", ""),
+            "requiredization_current_round_linked": sidecar_payload.get("requiredization_current_round_linked"),
+            "current_round_anchor_utc": sidecar_payload.get("current_round_anchor_utc", ""),
+            "activity_correlation_status": sidecar_payload.get("activity_correlation_status", ""),
+            "activity_correlation_key": sidecar_payload.get("activity_correlation_key", ""),
+            "activity_unscoped_count": sidecar_payload.get("activity_unscoped_count"),
+            "activity_ignored_missing_correlation_key_refs": sidecar_payload.get(
+                "activity_ignored_missing_correlation_key_refs", []
+            ),
+            "activity_ignored_missing_anchor_refs": sidecar_payload.get("activity_ignored_missing_anchor_refs", []),
+            "activity_ignored_pre_round_refs": sidecar_payload.get("activity_ignored_pre_round_refs", []),
             "enforce_blocking": sidecar_payload.get("enforce_blocking"),
             "escalation_required": sidecar_payload.get("escalation_required"),
             "escalation_decision": sidecar_payload.get("escalation_decision"),
+            "observability_escalation_required": sidecar_payload.get("observability_escalation_required"),
+            "observability_alert_level": sidecar_payload.get("observability_alert_level", ""),
+            "observability_escalation_reason": sidecar_payload.get("observability_escalation_reason", ""),
             "blocking_error_codes": sidecar_payload.get("blocking_error_codes", []),
             "p0_violations": sidecar_payload.get("p0_violations", []),
             "track_a": sidecar_payload.get("track_a", {}),
@@ -2034,6 +5173,57 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "index_unlinked_batches": archival_payload.get("index_unlinked_batches", []),
             "mirror_candidate_refs": archival_payload.get("mirror_candidate_refs", []),
             "stale_reasons": archival_payload.get("stale_reasons", []),
+        },
+        "downsink_path_immutability": {
+            "protocol_downsink_path_immutability_status": downsink_immutability_payload.get(
+                "protocol_downsink_path_immutability_status"
+            ),
+            "error_code": downsink_immutability_payload.get("error_code", ""),
+            "required_contract": downsink_immutability_payload.get("required_contract"),
+            "auto_required_signal": downsink_immutability_payload.get("auto_required_signal"),
+            "contract_key": downsink_immutability_payload.get("contract_key", ""),
+            "runtime_mirror_contract_path": downsink_immutability_payload.get("runtime_mirror_contract_path", ""),
+            "required_domains": downsink_immutability_payload.get("required_domains", []),
+            "stale_reasons": downsink_immutability_payload.get("stale_reasons", []),
+        },
+        "downsink_path_write_guard": {
+            "protocol_downsink_path_write_guard_status": downsink_write_guard_payload.get(
+                "protocol_downsink_path_write_guard_status"
+            ),
+            "error_code": downsink_write_guard_payload.get("error_code", ""),
+            "required_contract": downsink_write_guard_payload.get("required_contract"),
+            "auto_required_signal": downsink_write_guard_payload.get("auto_required_signal"),
+            "checked_candidate_count": downsink_write_guard_payload.get("checked_candidate_count"),
+            "checked_candidates": downsink_write_guard_payload.get("checked_candidates", []),
+            "registry_rule_count": downsink_write_guard_payload.get("registry_rule_count"),
+            "stale_reasons": downsink_write_guard_payload.get("stale_reasons", []),
+        },
+        "downsink_path_literal_lock": {
+            "protocol_downsink_path_literal_lock_status": downsink_literal_lock_payload.get(
+                "protocol_downsink_path_literal_lock_status"
+            ),
+            "error_code": downsink_literal_lock_payload.get("error_code", ""),
+            "required_contract": downsink_literal_lock_payload.get("required_contract"),
+            "auto_required_signal": downsink_literal_lock_payload.get("auto_required_signal"),
+            "scan_file_count": downsink_literal_lock_payload.get("scan_file_count"),
+            "scan_files": downsink_literal_lock_payload.get("scan_files", []),
+            "scan_globs": downsink_literal_lock_payload.get("scan_globs", []),
+            "registry_rule_count": downsink_literal_lock_payload.get("registry_rule_count"),
+            "stale_reasons": downsink_literal_lock_payload.get("stale_reasons", []),
+        },
+        "executable_surface_runtime_literal_lock": {
+            "executable_surface_runtime_literal_lock_status": exec_surface_lock_payload.get(
+                "executable_surface_runtime_literal_lock_status"
+            ),
+            "error_code": exec_surface_lock_payload.get("error_code", ""),
+            "repo_root": exec_surface_lock_payload.get("repo_root", ""),
+            "catalog_path": exec_surface_lock_payload.get("catalog_path", ""),
+            "include_active_pack_scripts": exec_surface_lock_payload.get("include_active_pack_scripts"),
+            "active_pack_identity_ids": exec_surface_lock_payload.get("active_pack_identity_ids", []),
+            "scan_file_count": exec_surface_lock_payload.get("scan_file_count"),
+            "violation_count": exec_surface_lock_payload.get("violation_count"),
+            "violations": exec_surface_lock_payload.get("violations", []),
+            "stale_reasons": exec_surface_lock_payload.get("stale_reasons", []),
         },
         "identity_home_catalog_alignment": {
             "path_governance_status": home_align_payload.get("path_governance_status"),
@@ -2085,7 +5275,13 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "cross_actor_isolation": {
             "cross_actor_isolation_status": cross_actor_payload.get("cross_actor_isolation_status"),
             "error_code": cross_actor_payload.get("error_code", ""),
+            "actor_id": cross_actor_payload.get("actor_id", ""),
+            "scope_mode_effective": cross_actor_payload.get("scope_mode_effective", ""),
             "actor_binding_count": cross_actor_payload.get("actor_binding_count"),
+            "actor_binding_count_total": cross_actor_payload.get("actor_binding_count_total"),
+            "actor_binding_count_non_target": cross_actor_payload.get("actor_binding_count_non_target"),
+            "global_observation_status": cross_actor_payload.get("global_observation_status", ""),
+            "global_observation_stale_reasons": cross_actor_payload.get("global_observation_stale_reasons", []),
             "active_identities": cross_actor_payload.get("active_identities", []),
             "stale_reasons": cross_actor_payload.get("stale_reasons", []),
         },
@@ -2107,6 +5303,17 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "lag_commits": refresh_payload.get("lag_commits"),
             "report_selected_path": refresh_payload.get("report_selected_path", ""),
             "stale_reasons": refresh_payload.get("stale_reasons", []),
+        },
+        "host_visible_post_check_recovery": {
+            "recovery_status": host_visible_recovery_payload.get("recovery_status"),
+            "error_code": host_visible_recovery_payload.get("error_code", ""),
+            "operation": host_visible_recovery_payload.get("operation", ""),
+            "run_id": host_visible_recovery_payload.get("run_id", ""),
+            "receipt_source": host_visible_recovery_payload.get("receipt_source", ""),
+            "allowed_live_receipt_sources": host_visible_recovery_payload.get("allowed_live_receipt_sources", ""),
+            "attestation_status": host_visible_recovery_payload.get("attestation_status", ""),
+            "attestation_error_code": host_visible_recovery_payload.get("attestation_error_code", ""),
+            "stale_reasons": host_visible_recovery_payload.get("stale_reasons", []),
         },
         "response_identity_stamp": {
             "render_status": "PASS" if rc_stamp_render == 0 else "FAIL",
@@ -2133,6 +5340,11 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "send_time_gate_error_code": send_time_gate_payload.get("error_code", ""),
             "governed_outlet_enforced": send_time_gate_payload.get("governed_outlet_enforced", False),
             "outlet_channel_id": send_time_gate_payload.get("outlet_channel_id", ""),
+            "final_emit_channel_id": send_time_gate_payload.get("final_emit_channel_id", ""),
+            "final_emit_policy_mode": send_time_gate_payload.get("final_emit_policy_mode", ""),
+            "final_emit_schema_id": send_time_gate_payload.get("final_emit_schema_id", ""),
+            "final_emit_schema_status": send_time_gate_payload.get("final_emit_schema_status", ""),
+            "final_emit_contract_status": send_time_gate_payload.get("final_emit_contract_status", ""),
             "outlet_preflight_receipt": send_time_gate_payload.get("outlet_preflight_receipt", ""),
             "outlet_bypass_detected": send_time_gate_payload.get("outlet_bypass_detected", False),
             "send_time_reply_evidence_mode": send_time_gate_payload.get("reply_evidence_mode", ""),
@@ -2150,12 +5362,23 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "reply_coherence_catalog_ref": reply_coherence_payload.get("reply_catalog_ref", ""),
             "reply_coherence_blocker_receipt_path": reply_coherence_payload.get("blocker_receipt_path", ""),
             "external_stamp": stamp_render_payload.get("external_stamp"),
+            "current_chat_surface_explanatory_exclusion_status": current_chat_surface_exclusion.get(
+                "explanatory_surface_exclusion_status", ""
+            ),
+            "current_chat_surface_effective_blocker_scope": current_chat_surface_exclusion.get(
+                "effective_blocker_scope", ""
+            ),
+            "current_chat_surface_excluded_from_blocker_aggregation": current_chat_surface_exclusion.get(
+                "excluded_from_blocker_aggregation", False
+            ),
+            "current_chat_surface_control_state": current_chat_surface_exclusion.get("control_state", ""),
             "stale_reasons": stamp_payload.get("stale_reasons", []),
             "first_line_stale_reasons": reply_first_line_payload.get("stale_reasons", []),
             "layer_intent_stale_reasons": layer_intent_payload.get("stale_reasons", []),
             "send_time_stale_reasons": send_time_gate_payload.get("stale_reasons", []),
             "coherence_stale_reasons": reply_coherence_payload.get("stale_reasons", []),
         },
+        "current_chat_surface_exclusion": current_chat_surface_exclusion,
         "execution_report_freshness": {
             "freshness_status": freshness_payload.get("freshness_status"),
             "freshness_error_code": freshness_payload.get("freshness_error_code"),
@@ -2185,12 +5408,23 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "tuple_checks": align_payload.get("tuple_checks", {}),
             "stale_reasons": align_payload.get("stale_reasons", []),
         },
+        "required_gate_bundle_target_projection": required_bundle_target_projection,
+        "required_gate_bundle_shadow_target_projection": required_bundle_shadow_target_projection,
         "validators": validators,
     }
 
+    detail["terminal_truth_boundary_projection"] = terminal_truth_boundary_projection
+
     validators_all_ok = all(v.get("ok", False) for v in validators.values())
-    capability_strict_ok = cap_status in {"ACTIVATED", "NOT_REQUIRED"}
-    if all_ok and wb == "WRITTEN" and ps == "WRITEBACK_WRITTEN" and mandatory and validators_all_ok and capability_strict_ok:
+    if _instance_execution_closed(
+        mandatory=mandatory,
+        validators_all_ok=validators_all_ok,
+        capability_status=cap_status,
+        all_ok=all_ok,
+        writeback_status=wb,
+        permission_state=ps,
+        post_execution_mandatory_status=post_exec_status,
+    ):
         return "CLOSED", detail
     if hard_boundary:
         return "BLOCKED", detail
@@ -2214,6 +5448,7 @@ def _git_head_sha() -> str:
 
 
 def main() -> int:
+    global SESSION_ID_FALLBACK
     ap = argparse.ArgumentParser(description="Emit unified three-plane status for identity governance.")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", default=os.environ.get("IDENTITY_CATALOG", ""))
@@ -2229,29 +5464,44 @@ def main() -> int:
     ap.add_argument("--run-head-sha", default="")
     ap.add_argument("--run-workflow-file-sha", default="")
     ap.add_argument("--checks-json", default="")
+    ap.add_argument("--jobs-json", default="")
+    ap.add_argument("--gh-runs-json", default="")
+    ap.add_argument(
+        "--projection-profile",
+        choices=three_plane_projection_profile_choices(),
+        default=os.environ.get(
+            "THREE_PLANE_PROJECTION_PROFILE",
+            DEFAULT_THREE_PLANE_PROJECTION_PROFILE,
+        ),
+        help=(
+            "governed three-plane projection profile; full=complete cross-plane verdict, "
+            "terminal_truth_boundary_projection=bounded outer-surface terminal-truth projection"
+        ),
+    )
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passed to stamp render/reply gates")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
     ap.add_argument(
         "--actor-id",
-        default=os.environ.get("CODEX_ACTOR_ID", "assistant:codex"),
+        default="",
         help=(
             "explicit actor id for strict governed-outlet/headstamp recurrence closure checks. "
-            "Defaults to CODEX_ACTOR_ID; falls back to assistant:codex."
+            "required for strict three-plane execution (no implicit fallback)."
         ),
+    )
+    ap.add_argument(
+        "--session-id",
+        default="",
+        help="explicit actor session id for strict three-plane execution (e.g., run:<run_id>)",
     )
     ap.add_argument("--out", default="")
     args = ap.parse_args()
+    projection_profile = resolve_three_plane_projection_profile(args.projection_profile)
 
     if not args.catalog:
         print("[FAIL] --catalog is required (or export IDENTITY_CATALOG first).")
         return 2
-    catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_arg = Path(args.repo_catalog).expanduser()
-    if repo_catalog_arg.is_absolute():
-        repo_catalog_path = repo_catalog_arg.resolve()
-    else:
-        repo_catalog_path = (PROTOCOL_ROOT / repo_catalog_arg).resolve()
+    catalog_path, repo_catalog_path = _canonicalize_three_plane_cli_paths(args)
     if not catalog_path.exists():
         print(f"[FAIL] catalog not found: {catalog_path}")
         return 2
@@ -2261,7 +5511,48 @@ def main() -> int:
             f"{repo_catalog_path} (hint: pass explicit --repo-catalog <absolute-path>)"
         )
         return 2
-    args.repo_catalog = str(repo_catalog_path)
+    actor_id_input = str(args.actor_id or "").strip()
+    if not actor_id_input:
+        print(
+            "[FAIL] IP-ACTOR-ENTRY-001 explicit --actor-id is required for strict three-plane execution "
+            f"(identity_id={args.identity_id})"
+        )
+        return 1
+    args.actor_id = actor_id_input
+    session_id_input = str(args.session_id or "").strip()
+    if not session_id_input:
+        print(
+            "[FAIL] IP-ASB-SESSION-ENTRY-001 explicit --session-id is required for strict three-plane execution "
+            f"(identity_id={args.identity_id}, actor_id={actor_id_input})"
+        )
+        return 1
+    args.session_id = session_id_input
+    SESSION_ID_FALLBACK = session_id_input
+
+    mode_guard_cmd = [
+        "python3",
+        "scripts/validate_identity_runtime_mode_guard.py",
+        "--identity-id",
+        args.identity_id,
+        "--catalog",
+        str(catalog_path),
+        "--repo-catalog",
+        str(repo_catalog_path),
+        "--expect-mode",
+        "auto",
+        "--operation",
+        "three-plane",
+    ]
+    if str(args.scope or "").strip():
+        mode_guard_cmd.extend(["--scope", str(args.scope).strip()])
+    rc_mode_guard, out_mode_guard, err_mode_guard = _run(mode_guard_cmd)
+    if rc_mode_guard != 0:
+        print("[FAIL] runtime mode guard preflight blocked three-plane execution")
+        if out_mode_guard:
+            print(out_mode_guard)
+        if err_mode_guard:
+            print(err_mode_guard)
+        return rc_mode_guard or 2
 
     try:
         resolved = resolve_identity(
@@ -2274,10 +5565,35 @@ def main() -> int:
         print(f"[FAIL] unable to resolve identity context: {exc}")
         return 2
 
-    if not args.target_branch:
-        args.target_branch = _git_current_branch()
-    if not args.release_head_sha:
-        args.release_head_sha = _git_head_sha()
+    release_runtime_inputs = resolve_release_plane_runtime_inputs(
+        identity_id=args.identity_id,
+        operation="three-plane",
+        explicit_target_branch=str(args.target_branch or "").strip(),
+        explicit_release_head_sha=str(args.release_head_sha or "").strip(),
+        explicit_required_gates_run_id=str(args.required_gates_run_id or "").strip(),
+        explicit_run_url=str(args.run_url or "").strip(),
+        explicit_workflow_file_sha=str(args.workflow_file_sha or "").strip(),
+        explicit_run_head_sha=str(args.run_head_sha or "").strip(),
+        explicit_run_workflow_file_sha=str(args.run_workflow_file_sha or "").strip(),
+        explicit_checks_json=str(args.checks_json or "").strip(),
+        explicit_jobs_json=str(args.jobs_json or "").strip(),
+        explicit_gh_runs_json=str(args.gh_runs_json or "").strip(),
+        default_target_branch=_git_current_branch(),
+        default_release_head_sha=_git_head_sha(),
+    )
+    adapter_payload = dict(release_runtime_inputs.get("release_adapter_payload") or {})
+    args.target_branch = str(release_runtime_inputs.get("target_branch", "") or "").strip()
+    args.release_head_sha = str(release_runtime_inputs.get("release_head_sha", "") or "").strip()
+    args.required_gates_run_id = str(release_runtime_inputs.get("required_gates_run_id", "") or "").strip()
+    args.run_url = str(release_runtime_inputs.get("run_url", "") or "").strip()
+    args.workflow_file_sha = str(release_runtime_inputs.get("workflow_file_sha", "") or "").strip()
+    args.run_head_sha = str(release_runtime_inputs.get("run_head_sha", "") or "").strip()
+    args.run_workflow_file_sha = str(release_runtime_inputs.get("run_workflow_file_sha", "") or "").strip()
+    args.checks_json = str(release_runtime_inputs.get("checks_json", "") or "").strip()
+    args.jobs_json = str(release_runtime_inputs.get("jobs_json", "") or "").strip()
+    args.gh_runs_json = str(release_runtime_inputs.get("gh_runs_json", "") or "").strip()
+    setattr(args, "_release_plane_context_requested", bool(release_runtime_inputs.get("release_plane_context_requested", False)))
+    setattr(args, "_release_plane_context_sources", list(release_runtime_inputs.get("release_plane_context_sources") or []))
 
     preferred_pack = str(resolved.get("resolved_pack_path") or resolved.get("pack_path") or "")
     report_path = Path(args.execution_report).expanduser().resolve() if args.execution_report else _latest_report(
@@ -2285,16 +5601,46 @@ def main() -> int:
         os.environ.get("IDENTITY_HOME", ""),
         preferred_pack,
     )
-    instance_status, instance_detail = _instance_plane_status(args, report_path)
-    repo_status, repo_detail = _repo_plane_status(args, resolved)
-    release_status, release_detail = _release_plane_status(args)
+    instance_status, instance_detail = _instance_plane_status(
+        args,
+        report_path,
+        resolved,
+        projection_profile=projection_profile,
+    )
+    if projection_profile.projection_only:
+        repo_status, repo_detail = (
+            STATUS_SKIPPED_NOT_REQUIRED,
+            _build_projection_only_plane_detail(
+                plane_name="repo_plane",
+                projection_profile=projection_profile,
+            ),
+        )
+        release_status, release_detail = (
+            STATUS_SKIPPED_NOT_REQUIRED,
+            _build_projection_only_plane_detail(
+                plane_name="release_plane",
+                projection_profile=projection_profile,
+            ),
+        )
+    else:
+        repo_status, repo_detail = _repo_plane_status(args, resolved)
+        release_status, release_detail = _release_plane_status(args)
 
     payload = {
+        "projection_profile": projection_profile.profile_id,
+        "projection_profile_execution_mode": projection_profile.execution_mode,
+        "projection_profile_description": projection_profile.description,
+        "projection_excluded_areas": list(projection_profile.excluded_areas),
         "target_branch": args.target_branch,
         "release_head_sha": args.release_head_sha,
         "required_gates_run_id": args.required_gates_run_id,
         "run_url": args.run_url,
         "workflow_file_sha": args.workflow_file_sha,
+        "checks_json": args.checks_json,
+        "jobs_json": args.jobs_json,
+        "gh_runs_json": args.gh_runs_json,
+        "release_plane_context_requested": bool(release_runtime_inputs.get("release_plane_context_requested", False)),
+        "release_plane_context_sources": list(release_runtime_inputs.get("release_plane_context_sources") or []),
         "required_checks_set": release_detail.get("required_checks_set", []),
         "instance_plane_status": instance_status,
         "repo_plane_status": repo_status,
@@ -2311,10 +5657,83 @@ def main() -> int:
         "instance_plane_detail": instance_detail,
         "repo_plane_detail": repo_detail,
         "release_plane_detail": release_detail,
+        "current_chat_surface_exclusion": (
+            instance_detail.get("current_chat_surface_exclusion", {}) if isinstance(instance_detail, dict) else {}
+        ),
+        "release_cloud_evidence_adapter": (
+            _build_projection_only_release_cloud_evidence_adapter(projection_profile=projection_profile)
+            if projection_profile.projection_only
+            else {
+                "release_cloud_evidence_adapter_status": adapter_payload.get(
+                    "release_cloud_evidence_adapter_status", ""
+                ),
+                "adapter_source_kind": adapter_payload.get("adapter_source_kind", ""),
+                "adapter_http_status": adapter_payload.get("adapter_http_status", ""),
+                "github_rate_limit_remaining": adapter_payload.get("github_rate_limit_remaining", ""),
+                "github_rate_limit_reset_epoch": adapter_payload.get("github_rate_limit_reset_epoch", ""),
+                "stale_reasons": adapter_payload.get("stale_reasons", []),
+                "checks_json_path": adapter_payload.get("checks_json_path", ""),
+            }
+        ),
+        "required_gate_bundle_target_projection": (
+            instance_detail.get("required_gate_bundle_target_projection", {}) if isinstance(instance_detail, dict) else {}
+        ),
+        "required_gate_bundle_shadow_target_projection": (
+            instance_detail.get("required_gate_bundle_shadow_target_projection", {})
+            if isinstance(instance_detail, dict)
+            else {}
+        ),
     }
+    from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
 
-    overall = "Conditional Go"
-    if instance_status == "CLOSED" and repo_status == "CLOSED" and release_status == "CLOSED":
+    payload["surface_governance"] = build_governed_runtime_summary_surface_payload("semantic_tuple_three_plane")
+    if projection_profile.projection_only:
+        m2m_projection = _build_projection_only_m2m_projection(projection_profile=projection_profile)
+        tuple_context_projection = _build_projection_only_tuple_context_projection(
+            projection_profile=projection_profile
+        )
+    else:
+        m2m_projection = _classify_m2m_projection(
+            validators=instance_detail.get("validators", {}) if isinstance(instance_detail, dict) else {},
+            instance_status=instance_status,
+            repo_status=repo_status,
+            release_status=release_status,
+        )
+        tuple_context_projection = _classify_tuple_context_projection(
+            validators=instance_detail.get("validators", {}) if isinstance(instance_detail, dict) else {},
+        )
+    payload["m2m_projection"] = m2m_projection
+    payload["tuple_context_projection"] = tuple_context_projection
+    if isinstance(instance_detail, dict):
+        instance_detail["m2m_projection"] = m2m_projection
+        instance_detail["tuple_context_projection"] = tuple_context_projection
+    if projection_profile.projection_only:
+        payload["governance_closure_axes"] = _build_projection_only_governance_closure_axes(
+            projection_profile=projection_profile
+        )
+    else:
+        payload["governance_closure_axes"] = _build_governance_closure_axes(
+            instance_status=instance_status,
+            repo_status=repo_status,
+            release_status=release_status,
+            m2m_projection=m2m_projection,
+            tuple_context_projection=tuple_context_projection,
+            current_chat_surface_exclusion=payload.get("current_chat_surface_exclusion", {}),
+        )
+    payload["terminal_truth_boundary_projection"] = (
+        instance_detail.get("terminal_truth_boundary_projection", {}) if isinstance(instance_detail, dict) else {}
+    )
+    payload["health_report_experience_writeback_closure"] = (
+        instance_detail.get("health_report_experience_writeback_closure", {}) if isinstance(instance_detail, dict) else {}
+    )
+
+    overall = PROJECTION_ONLY_RELEASE_DECISION if projection_profile.projection_only else "Conditional Go"
+    if (
+        not projection_profile.projection_only
+        and instance_status == "CLOSED"
+        and repo_status == "CLOSED"
+        and release_status == "CLOSED"
+    ):
         overall = "Full Go"
     payload["overall_release_decision"] = overall
     if args.out:

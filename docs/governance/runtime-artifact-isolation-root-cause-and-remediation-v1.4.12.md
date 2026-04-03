@@ -24,7 +24,7 @@ This was not user-error only; it was primarily a **default path design issue**.
   - Introduced runtime output root resolver with writable fallback chain:
     1) `IDENTITY_RUNTIME_OUTPUT_ROOT`
     2) `<resolved_pack_path>/runtime`
-    3) `<repo>/.codex/identity/runtime/<identity-id>`
+    3) `<repo>/.codex/.identity/runtime/<identity-id>`
     4) `/tmp/identity-runtime/<identity-id>`
   - Upgrade reports/logs/arbitration artifacts now write to runtime output root.
 

@@ -1,0 +1,9 @@
+error_codes:
+  - code: IP-SPATH-001
+    description: required skill command target is missing under active skill roots
+  - code: IP-SPATH-002
+    description: resolved skill path is outside active repo/runtime layout
+  - code: IP-SPATH-003
+    description: explicit skill path override format is invalid
+  - code: IP-SPATH-004
+    description: required skill declarations are missing from contract and capability routing

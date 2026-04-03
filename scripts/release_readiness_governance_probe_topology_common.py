@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+from release_readiness_governance_probe_projection_common import (
+    RELEASE_READINESS_GOVERNANCE_PROBE_PROJECTION_MARKER,
+)
+
+
+RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_VALIDATOR = (
+    "scripts/validate_release_readiness_governance_probe_topology.py"
+)
+RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROBE = (
+    "scripts/ci/run_release_readiness_governance_probe_topology_probes_ci.sh"
+)
+RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_VALIDATOR_COMMAND: tuple[str, ...] = (
+    "python3",
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_VALIDATOR,
+    "--json-only",
+)
+RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROBE_COMMAND: tuple[str, ...] = (
+    "bash",
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROBE,
+)
+RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROOF_LANES: tuple[str, ...] = (
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_VALIDATOR,
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_PROBE,
+)
+RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_SUMMARY_KEY = (
+    "release_readiness_governance_probe_topology_probe"
+)
+RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_ONE_LOOK_FIELD = (
+    "release_readiness_governance_probe_topology_probe_status"
+)
+RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_POSITIVE_OUTPUT_REL = (
+    ".tmp/release-readiness-probe-outputs/"
+    "release-readiness-governance-probe-topology-positive.json"
+)
+RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_STATUS_FIELDS: tuple[str, ...] = (
+    RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_ONE_LOOK_FIELD,
+)
+RELEASE_READINESS_GOVERNANCE_PROBE_TOPOLOGY_SELF_KEEP_FIELDS: tuple[str, ...] = (
+    "positive_validator_output",
+)
+RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_MARKER = (
+    RELEASE_READINESS_GOVERNANCE_PROBE_PROJECTION_MARKER
+)

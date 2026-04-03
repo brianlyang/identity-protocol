@@ -194,7 +194,7 @@ dependencies:
 observability:
   event_topics: []
   required_artifacts:
-    - "resource/reports/*.json"
+    - "runtime/reports/*.json"
 META
 
 cat > "identity/runtime/examples/protocol-baseline-review-${IDENTITY_ID}-sample.json" <<JSON

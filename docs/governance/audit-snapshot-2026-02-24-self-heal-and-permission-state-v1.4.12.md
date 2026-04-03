@@ -60,7 +60,7 @@ This closure records the transition from “manual troubleshooting” to protoco
 ### 2) base-repo-architect (legacy debt sample identity)
 - initial self-heal failed due semantic evidence debt (protocol/replay/install/feedback/arbitration)
 - after auto-repair extension, `identity_creator validate` passes:
-  - `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --scope USER --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml`
+  - `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --scope USER --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml`
 
 ## Remaining release blocker
 - Cloud required-gates evidence chain (latest run-id on release head) still required for Full Go.

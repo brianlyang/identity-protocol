@@ -5,7 +5,11 @@ import argparse
 import json
 from pathlib import Path
 
+from primary_execution_report_common import latest_prompt_bound_primary_execution_report_from_roots
+from runtime_temp_path_common import runtime_temp_root
+
 ALLOWED_STATES = {
+    "BLOCKED",
     "PRECHECK",
     "RUN_READONLY",
     "NEEDS_ESCALATION",
@@ -17,28 +21,55 @@ ALLOWED_STATES = {
     "WRITEBACK_FAILED",
     "DONE",
 }
-ALLOWED_CODES = {
+ALLOWED_CODE_PREFIXES = (
     "",
-    "IP-PERM-001",
-    "IP-PERM-002",
-    "IP-PERM-003",
-    "IP-PATH-001",
-    "IP-CI-001",
-    "IP-REC-001",
-    "IP-UPG-001",
-}
+    "IP-PERM-",
+    "IP-PATH-",
+    "IP-CI-",
+    "IP-REC-",
+    "IP-UPG-",
+    "IP-EXEC-ORDER-",
+    "IP-SAFEAUTO-",
+)
+
+
+def _is_allowed_code(code: str) -> bool:
+    if not code:
+        return True
+    return any(code.startswith(prefix) for prefix in ALLOWED_CODE_PREFIXES if prefix)
+
+
+def _state_matches_writeback(state: str, writeback_status: str) -> bool:
+    if writeback_status == "WRITTEN":
+        return state == "WRITEBACK_WRITTEN"
+    if writeback_status.startswith("DEFERRED_"):
+        return state in {"PRECHECK", "BLOCKED", "WRITEBACK_DEFERRED", "ESCALATION_DENIED"}
+    if writeback_status == "NOT_REQUIRED":
+        return state in {"PRECHECK", "DONE", "WRITEBACK_WRITTEN"}
+    if writeback_status == "MISSING":
+        return state in {"PRECHECK", "BLOCKED"}
+    return True
+
+
+def _writeback_code_matches(writeback_status: str, code: str) -> bool:
+    if writeback_status == "DEFERRED_PERMISSION_BLOCKED":
+        return code.startswith("IP-PERM-")
+    if writeback_status == "DEFERRED_POLICY_BLOCKED":
+        return code.startswith("IP-UPG-") or code.startswith("IP-SAFEAUTO-")
+    if writeback_status == "DEFERRED_VALIDATION_FAILED":
+        return (not code) or code.startswith("IP-UPG-") or code.startswith("IP-EXEC-ORDER-")
+    return True
 
 
 def _latest(identity_id: str, report_dir: Path) -> Path | None:
-    rows = sorted(report_dir.glob(f"identity-upgrade-exec-{identity_id}-*.json"), key=lambda p: p.stat().st_mtime)
-    return rows[-1] if rows else None
+    return latest_prompt_bound_primary_execution_report_from_roots([report_dir], identity_id)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate permission-state contract in identity upgrade report.")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
-    ap.add_argument("--report-dir", default="/tmp/identity-upgrade-reports")
+    ap.add_argument("--report-dir", default=str(runtime_temp_root() / "identity-upgrade-reports"))
     ap.add_argument("--require-written", action="store_true")
     ap.add_argument("--ci", action="store_true")
     args = ap.parse_args()
@@ -60,15 +91,19 @@ def main() -> int:
     if state not in ALLOWED_STATES:
         print(f"[FAIL] invalid permission_state: {state}")
         return 1
-    if code not in ALLOWED_CODES:
+    if not _is_allowed_code(code):
         print(f"[FAIL] invalid permission_error_code: {code}")
         return 1
     if not isinstance(pre, dict) or "all_writable" not in pre:
         print("[FAIL] writeback_precheck missing required fields")
         return 1
 
-    if wb == "DEFERRED_PERMISSION_BLOCKED" and code not in {"IP-PERM-001", "IP-PERM-002", "IP-PERM-003"}:
-        print("[FAIL] deferred permission block must include IP-PERM-00x code")
+    if not _state_matches_writeback(state, wb):
+        print(f"[FAIL] permission_state/writeback_status mismatch: {state} vs {wb}")
+        return 1
+
+    if not _writeback_code_matches(wb, code):
+        print(f"[FAIL] writeback_status/code mismatch: {wb} vs {code}")
         return 1
 
     if args.ci and wb == "DEFERRED_PERMISSION_BLOCKED":

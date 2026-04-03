@@ -8,11 +8,13 @@ from pathlib import Path
 from typing import Any
 
 from tool_vendor_governance_common import (
+    build_identity_upgrade_report_selection_projection,
     contract_required,
-    latest_identity_upgrade_report,
     load_json,
+    resolve_identity_upgrade_report_selection,
     resolve_pack_and_task,
 )
+from execution_report_selection_common import report_run_id as resolve_execution_report_run_id
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -60,12 +62,15 @@ def _bool(v: Any) -> bool:
     return str(v).strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
-def _resolve_report(identity_id: str, pack_path: Path, explicit: str) -> Path | None:
-    if explicit.strip():
-        p = Path(explicit).expanduser().resolve()
-        return p if p.exists() else None
-    return latest_identity_upgrade_report(identity_id, pack_path)
-
+def _resolve_report_selection(identity_id: str, pack_path: Path, explicit: str) -> dict[str, Any]:
+    resolution = resolve_identity_upgrade_report_selection(
+        identity_id,
+        pack_path,
+        explicit_report=explicit,
+    )
+    payload = build_identity_upgrade_report_selection_projection(resolution, field_prefix="report")
+    payload["_selected_report_path"] = resolution.selected_report
+    return payload
 
 def _required_contract(task: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
     contract: dict[str, Any] = {}
@@ -118,6 +123,7 @@ def main() -> int:
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--report", default="")
+    ap.add_argument("--run-id", default="")
     ap.add_argument(
         "--operation",
         choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
@@ -151,6 +157,13 @@ def main() -> int:
         "required_contract": required_contract,
         "contract_ref": "writeback_continuity_contract_v1" if contract_doc else "",
         "report_selected_path": "",
+        "report_selection_mode": "",
+        "report_selected_authority_class": "",
+        "report_pointer_resolution_mode": "",
+        "report_pointer_path": "",
+        "requested_run_id": str(args.run_id or "").strip(),
+        "report_run_id": "",
+        "requiredization_current_round_linked": False,
         "writeback_continuity_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
         "writeback_mode": "",
@@ -168,10 +181,16 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
 
-    report_path = _resolve_report(args.identity_id, pack_path, args.report)
+    report_selection = _resolve_report_selection(args.identity_id, pack_path, args.report)
+    payload.update({k: v for k, v in report_selection.items() if not k.startswith("_")})
+    report_path = report_selection.get("_selected_report_path")
     if report_path is None:
         payload["error_code"] = ERR_MISSING_WRITEBACK
-        payload["stale_reasons"] = ["execution_report_not_found"]
+        payload["stale_reasons"] = [
+            "required_contract_not_applicable_no_current_round_evidence_source"
+            if args.operation in INSPECTION_OPERATIONS
+            else "execution_report_not_found"
+        ]
         if args.operation in INSPECTION_OPERATIONS:
             payload["writeback_continuity_status"] = STATUS_SKIPPED_NOT_REQUIRED
             _emit(payload, json_only=args.json_only)
@@ -179,8 +198,6 @@ def main() -> int:
         payload["writeback_continuity_status"] = STATUS_FAIL_REQUIRED
         _emit(payload, json_only=args.json_only)
         return 1
-
-    payload["report_selected_path"] = str(report_path)
 
     ok_path, path_error = _path_contract_ok(args.identity_id, catalog_path, repo_catalog_path, report_path)
     if not ok_path:
@@ -198,6 +215,22 @@ def main() -> int:
         payload["stale_reasons"] = [f"execution_report_invalid_json:{exc}"]
         _emit(payload, json_only=args.json_only)
         return 1
+
+    report_run_id = resolve_execution_report_run_id(report_path, report)
+    requested_run_id = str(args.run_id or "").strip()
+    payload["report_run_id"] = report_run_id
+    payload["requiredization_current_round_linked"] = bool(args.report.strip()) or bool(
+        requested_run_id and report_run_id and requested_run_id == report_run_id
+    )
+    if args.operation in INSPECTION_OPERATIONS and not payload["requiredization_current_round_linked"]:
+        payload["writeback_continuity_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["stale_reasons"] = [
+            "required_contract_not_applicable_current_round_unlinked"
+            if requested_run_id
+            else "required_contract_not_applicable_no_current_round_evidence_source"
+        ]
+        _emit(payload, json_only=args.json_only)
+        return 0
 
     upgrade_required = _bool(report.get("upgrade_required"))
     all_ok = _bool(report.get("all_ok"))

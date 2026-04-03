@@ -1,0 +1,160 @@
+schema_version: 1
+matrix_version: v1
+stream_version: v1.6
+updated_at_utc: "2026-03-24T00:00:00Z"
+
+streams:
+  - stream_version: v1.6.1
+    scope_topic: headstamp_egress_governance
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.2
+    scope_topic: multimodal_plugin_enforcement
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.3
+    scope_topic: github_native_control_plane_specialization
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.4
+    scope_topic: failclose_monotonicity
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.5
+    scope_topic: no_rebound_absorber_and_control_plane_alignment
+    allowed_requirement_ids:
+      - ASB16-RQ-039
+      - ASB16-RQ-040
+      - ASB16-RQ-041
+    forbidden_path_tokens:
+      - "identity-runtime-file-governance-control-plane-v1.6.10"
+
+  - stream_version: v1.6.6
+    scope_topic: host_visible_unique_channel_governance
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.7
+    scope_topic: cross_layer_runtime_uniqueness
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.8
+    scope_topic: downsink_path_immutability
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.10
+    scope_topic: runtime_dynamic_file_governance
+    allowed_requirement_ids: []
+    forbidden_requirement_ids:
+      - ASB16-RQ-039
+      - ASB16-RQ-040
+      - ASB16-RQ-041
+    forbidden_path_tokens:
+      - "validate_skill_frontmatter.py"
+      - "validate_skill_installation_supply_chain.py"
+      - "validate_skill_sync_drift_guard.py"
+      - "run_skill_supply_chain_probes_ci.sh"
+
+  - stream_version: v1.6.11
+    scope_topic: agent_relay_final_answer
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.12
+    scope_topic: native_chat_bootstrap_entry
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.11
+    scope_topic: outer_agent_final_answer_relay
+    allowed_requirement_ids:
+      - ASB16-RQ-042
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.12
+    scope_topic: native_chat_bootstrap_entry
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.13
+    scope_topic: identity_instance_pack_topology
+    allowed_requirement_ids:
+      - ASB16-RQ-043
+    forbidden_requirement_ids: []
+    forbidden_path_tokens:
+      - "runtime/scripts"
+
+  - stream_version: v1.6.14
+    scope_topic: identity_codex_launcher_governance
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.15
+    scope_topic: identity_instance_script_orchestration
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.16
+    scope_topic: identity_context_continuity
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.17
+    scope_topic: identity_routing_learning_strengthening
+    allowed_requirement_ids:
+      - ASB16-RQ-048
+      - ASB16-RQ-049
+      - ASB16-RQ-050
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.18
+    scope_topic: identity_artifact_family_routing
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.19
+    scope_topic: identity_weak_live_linkage
+    allowed_requirement_ids:
+      - ASB16-RQ-055
+    forbidden_requirement_ids: []
+    forbidden_path_tokens:
+      - "runtime/memory-absorption"
+
+  - stream_version: v1.6.20
+    scope_topic: identity_broadcast_delivery_communication_transport_convergence
+    allowed_requirement_ids:
+      - ASB16-RQ-053
+      - ASB16-RQ-054
+    forbidden_requirement_ids: []
+    forbidden_path_tokens:
+      - "runtime/memory-absorption"
+
+  - stream_version: v1.6.21
+    scope_topic: identity_terminal_truth_cleanliness
+    allowed_requirement_ids:
+      - ASB16-RQ-056
+    forbidden_requirement_ids: []
+    forbidden_path_tokens:
+      - "runtime/memory-absorption"

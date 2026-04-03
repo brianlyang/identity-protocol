@@ -1,0 +1,173 @@
+schema_version: 1
+entry_family: protocol_root_entry_surface_legitimacy
+entry_version: v1
+contract_file: identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_entry_surface_legitimacy.py
+probe_script: scripts/ci/run_protocol_root_entry_surface_legitimacy_probes_ci.sh
+common_script: scripts/root_entry_surface_legitimacy_common.py
+status_key: protocol_root_entry_surface_legitimacy_status
+error_codes:
+- IP-ESL-001
+- IP-ESL-002
+- IP-ESL-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Entry-surface legitimacy law'
+  - Entry-surface legitimacy law must also remain machine-readable as separate
+    entry-class, differentiation, proof, limit, and collapse row families rather
+    than one narrative legitimacy claim.
+  - '## Six entry classes'
+  - '## Required entry differentiations'
+  - '## Entry-admission proof discipline'
+  - '## Entry-admission proof limits'
+  - '## Non-compliant entry collapses'
+  - 'Only governed entry surfaces admitted by law may drive active execution.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Entry-surface legitimacy row-family completeness must stay explicit'
+      - "Required entry-class, differentiation, proof, limit, and collapse\nfamilies must remain explicit as separate machine-readable row families."
+      - "README root entry-surface legitimacy completeness discipline must\ntherefore stay congruent with admitted\nentry-surface-legitimacy-completeness rows rather than becoming a freehand\ncompleteness summary."
+      - The machine world must not finalize entry-surface legitimacy while required
+        row identity drift remains known only internally.
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root entry-surface legitimacy completeness discipline'
+      - Entry-surface legitimacy law is not a soft prose bundle.
+      - 'These entry-surface-legitimacy-completeness rules must remain bound to canonical entry-surface-legitimacy-completeness rows rather than drifting into soft summary prose.'
+      - '1. required entry-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root entry-surface legitimacy completeness boundary'
+      - '1. Entry-surface legitimacy law must remain machine-readable as separate entry-class, differentiation, proof, limit, and collapse row families.'
+      - '4. Protocol legality must not finalize entry-surface legitimacy truth while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root entry-surface legitimacy completeness discipline rendered at protocol root must remain congruent with admitted entry-surface-legitimacy-completeness rows rather than silently authoring an alternate completeness summary.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime entry-surface legitimacy consumption boundary'
+      - '1. Runtime consumes entry-surface legitimacy law as separate entry-class, differentiation, proof, limit, and collapse row families rather than as undifferentiated legitimacy prose.'
+      - '4. Runtime must not finalize entry-surface legitimacy while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root entry-surface legitimacy completeness discipline as a governed completeness projection bound to admitted entry-surface-legitimacy-completeness rows rather than as a freehand completeness summary.'
+required_entry_class_rows:
+  - order: 1
+    entry_class_id: frozen_entry_definition
+    contract_heading: '### 1. Frozen entry definition'
+    entry_role: frozen_entry_definition
+  - order: 2
+    entry_class_id: natural_language_collaboration_entry_surface
+    contract_heading: '### 2. Natural-language collaboration entry surface'
+    entry_role: natural_language_collaboration_entry_surface
+  - order: 3
+    entry_class_id: governed_execution_entry_surface
+    contract_heading: '### 3. Governed execution entry surface'
+    entry_role: governed_execution_entry_surface
+  - order: 4
+    entry_class_id: governed_recovery_only_entry_surface
+    contract_heading: '### 4. Governed recovery-only entry surface'
+    entry_role: governed_recovery_only_entry_surface
+  - order: 5
+    entry_class_id: discoverability_helper_surface
+    contract_heading: '### 5. Discoverability-helper surface'
+    entry_role: discoverability_helper_surface
+  - order: 6
+    entry_class_id: demoted_support_or_non_entry_surface
+    contract_heading: '### 6. Demoted support or non-entry surface'
+    entry_role: demoted_support_or_non_entry_surface
+required_differentiation_rows:
+  - order: 1
+    differentiation_id: frozen_vs_live_execution_entry
+    contract_phrase: 'frozen law-defined entry is separated from live governed execution entry;'
+  - order: 2
+    differentiation_id: operator_vs_machine_execution_entry
+    contract_phrase: 'natural-language collaboration entry is separated from machine execution entry;'
+  - order: 3
+    differentiation_id: execution_vs_recovery_entry
+    contract_phrase: 'governed execution entry is separated from governed recovery-only entry;'
+  - order: 4
+    differentiation_id: helper_vs_canonical_execution_entry
+    contract_phrase: 'discoverability-helper surface is separated from canonical execution entry;'
+  - order: 5
+    differentiation_id: support_vs_active_entry_surface
+    contract_phrase: 'demoted support or non-entry surface is separated from any active entry surface;'
+  - order: 6
+    differentiation_id: visibility_vs_entry_admission
+    contract_phrase: 'visible installation or discoverability is separated from lawful entry admission.'
+required_entry_admission_proof_rows:
+  - order: 1
+    proof_id: frozen_definition_entry_admission_proof
+    contract_heading: '### 1. Frozen-definition entry-admission proof'
+    proof_role: frozen_definition_entry_admission_proof
+  - order: 2
+    proof_id: collaboration_boundary_entry_admission_proof
+    contract_heading: '### 2. Collaboration-boundary entry-admission proof'
+    proof_role: collaboration_boundary_entry_admission_proof
+  - order: 3
+    proof_id: governed_execution_entry_admission_proof
+    contract_heading: '### 3. Governed-execution entry-admission proof'
+    proof_role: governed_execution_entry_admission_proof
+  - order: 4
+    proof_id: recovery_confinement_entry_admission_proof
+    contract_heading: '### 4. Recovery-confinement entry-admission proof'
+    proof_role: recovery_confinement_entry_admission_proof
+  - order: 5
+    proof_id: helper_support_demotion_entry_admission_proof
+    contract_heading: '### 5. Helper/support-demotion entry-admission proof'
+    proof_role: helper_support_demotion_entry_admission_proof
+required_entry_admission_limit_rows:
+  - order: 1
+    limit_id: frozen_definition_not_collaboration_boundary
+    contract_phrase: 'frozen-definition entry-admission proof is not proof of collaboration-boundary preservation;'
+  - order: 2
+    limit_id: collaboration_boundary_not_governed_execution
+    contract_phrase: 'collaboration-boundary entry-admission proof is not proof of governed execution entry;'
+  - order: 3
+    limit_id: governed_execution_not_recovery_confinement
+    contract_phrase: 'governed-execution entry-admission proof is not proof of recovery confinement;'
+  - order: 4
+    limit_id: recovery_confinement_not_helper_support_demotion
+    contract_phrase: 'recovery-confinement entry-admission proof is not proof of helper or support demotion;'
+  - order: 5
+    limit_id: helper_support_demotion_not_lawful_active_execution_entry
+    contract_phrase: 'helper/support-demotion entry-admission proof is not proof of lawful active execution entry.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: declared_entry_as_live_execution_entry
+    contract_phrase: 'a law-defined or declared entry surface is treated as if it were already live governed execution entry.'
+  - order: 2
+    collapse_id: operator_surface_as_machine_execution_entry
+    contract_phrase: 'the operator collaboration surface is treated as if it were sufficient machine execution entry.'
+  - order: 3
+    collapse_id: recovery_entry_as_primary_execution_entry
+    contract_phrase: 'a recovery, replay, diagnostics, or repair entry surface is treated as if it were the canonical primary execution entry.'
+  - order: 4
+    collapse_id: helper_surface_as_canonical_entry
+    contract_phrase: 'a helper path, discoverability aid, or installation alias is treated as if it were canonical execution entry.'
+  - order: 5
+    collapse_id: support_surface_as_active_entry
+    contract_phrase: 'a demoted support or non-entry surface is treated as if it were active execution entry.'
+  - order: 6
+    collapse_id: installation_visibility_as_entry_legality
+    contract_phrase: 'visibility, installation presence, or easy discovery is treated as if it proved lawful entry admission.'
+entry_surface_legitimacy_completeness_rows:
+  - order: 1
+    completeness_id: explicit_entry_surface_legitimacy_row_families
+    contract_phrase: 'required entry-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - order: 2
+    completeness_id: congruent_entry_surface_legitimacy_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_entry_surface_legitimacy_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_entry_surface_legitimacy_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize entry-surface legitimacy truth while missing or unexpected row identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_entry_surface_legitimacy_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'

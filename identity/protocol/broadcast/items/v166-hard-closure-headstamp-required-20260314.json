@@ -1,0 +1,28 @@
+{
+  "broadcast_id": "v166-hard-closure-headstamp-required-20260314",
+  "created_at_utc": "2026-03-14T05:10:00Z",
+  "expire_at_utc": "2026-03-28T05:10:00Z",
+  "title": "[通知标准][v1.6.6] 硬收口升级：头显首行必检（必须ACK）",
+  "message": "【通知编号】v166-hard-closure-headstamp-required-20260314\\n【适用范围】all runtime identities\\n【执行模式】串行（禁止并行）\\n\\n【目标】\\n- 所有实例对话链路按 wrapper-only 运行。\\n- session-chain 正向输出必须具备头显首行（Identity-Context）。\\n\\n【标准动作（必须按顺序执行）】\\n1) 回填实例合同与 wrapper 运行态\\n   python3 scripts/repair_contract_backfill.py --catalog <runtime_catalog> --identity-id <identity_id> --apply --json-only\\n2) 校验唯一出入口合同\\n   python3 scripts/validate_protocol_unique_entry_gate.py --catalog <runtime_catalog> --identity-id <identity_id> --force-check --require-entry-receipt --json-only\\n3) 运行 trust-boundary 探针（已包含 headstamp 首行必检）\\n   bash scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh\\n4) 自测试 5 轮（串行）\\n   - 正向：session-chain wrapper 必须 PASS_REQUIRED\\n   - 负向：direct runner / direct final_emit 必须 FAIL_REQUIRED\\n5) 深扫 5 轮（串行）\\n   - drift/invariants/status sync 必须持续通过\\n6) 完成后 ACK\\n   python3 scripts/identity_broadcast_ack.py --catalog <runtime_catalog> --identity-id <identity_id> --ack-all-pending --actor-id <actor_id> --session-id <session_id> --json-only\\n\\n【验收标准】\\n- trust-boundary 探针通过，且包含 `session_chain_headstamp_first_line_required` 成功。\\n- 自测试 5/5 全部通过。\\n- 深扫 5/5 全部通过。\\n\\n【禁止事项】\\n- 禁止绕过 wrapper 直连入口/出口脚本。\\n- 禁止并行执行测试轮次。\\n- 禁止跳过 ACK。",
+  "severity": "critical",
+  "requires_ack": true,
+  "scope": "all",
+  "tags": [
+    "v1.6.6",
+    "hard-closure",
+    "wrapper-only",
+    "headstamp-required",
+    "serial-5x5"
+  ],
+  "metadata": {
+    "stream_version": "v1.6.6",
+    "governance_doc": "docs/governance/identity-host-unique-channel-governance-v1.6.6.md",
+    "review_doc": "docs/review/protocol-remediation-audit-ledger-v1.6.6.md",
+    "required_actor_session_binding": true,
+    "notes": [
+      "Headstamp first line is now required by trust-boundary probe.",
+      "Upgrade must be verified in serial loops only.",
+      "ACK is required for closure tracking."
+    ]
+  }
+}

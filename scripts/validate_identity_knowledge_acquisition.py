@@ -2,12 +2,22 @@
 from __future__ import annotations
 
 import argparse
-import glob
 import json
 from pathlib import Path
 from typing import Any
 
-import yaml
+from strict_live_evidence_resolution_common import (
+    STATUS_FAIL_REQUIRED,
+    STATUS_PASS_REQUIRED,
+    apply_strict_live_required_gate,
+    canonicalize_strict_live_contract_paths,
+    derive_strict_live_evidence_projection,
+    derive_strict_live_operational_projection,
+    emit_payload,
+    resolve_preferred_strict_live_report,
+    resolve_strict_live_glob_paths,
+    resolve_strict_live_pack_task,
+)
 
 REQ_KEYS = [
     "required",
@@ -18,13 +28,9 @@ REQ_KEYS = [
     "high_frequency_domains",
 ]
 REQ_EVIDENCE_FIELDS = ["claim", "source", "source_level", "confidence", "expiry", "applies_to"]
-
-
-def _load_yaml(path: Path) -> dict[str, Any]:
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(data, dict):
-        raise ValueError(f"YAML root must be object: {path}")
-    return data
+STATUS_FIELD = "knowledge_acquisition_status"
+ERR_TASK = "IP-KNOW-001"
+ERR_REPORT = "IP-KNOW-002"
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -32,50 +38,117 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
-    catalog = _load_yaml(catalog_path)
-    identities = catalog.get("identities") or []
-    target = next((x for x in identities if str((x or {}).get("id", "")).strip() == identity_id), None)
-    if not target:
-        raise FileNotFoundError(f"identity id not found in catalog: {identity_id}")
-    pack_path = str((target or {}).get("pack_path", "")).strip()
-    if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
-        if p.exists():
-            return p
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
-    raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
+    _, task_path = resolve_strict_live_pack_task(catalog_path, identity_id)
+    return task_path
 
 
 def _glob_paths(pattern: str, *, pack_root: Path) -> list[Path]:
-    raw = str(pattern or "").strip()
-    if not raw:
-        return []
-    p = Path(raw).expanduser()
-    has_magic = any(ch in raw for ch in ["*", "?", "["])
-    if p.is_absolute():
-        if has_magic:
-            return sorted(Path(x).resolve() for x in glob.glob(str(p)))
-        return [p.resolve()] if p.exists() else []
-    preferred = sorted(pack_root.glob(raw))
-    if preferred:
-        return preferred
-    return sorted(Path(".").glob(raw))
+    return resolve_strict_live_glob_paths(
+        pattern,
+        pack_root=pack_root,
+        identity_id=pack_root.name,
+    )
+
+
+def _build_payload(
+    *,
+    identity_id: str,
+    task_path: Path | None,
+    pack_root: Path | None,
+    contract_doc: dict[str, Any] | None,
+    report_path: Path | None,
+    report_doc: dict[str, Any] | None,
+    selection_meta: dict[str, Any] | None,
+    status: str,
+    stale_reasons: list[str],
+    error_code: str,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "identity_id": identity_id,
+        "task_path": str(task_path) if task_path is not None else "",
+        STATUS_FIELD: status,
+        "error_code": error_code,
+    }
+    if pack_root is not None:
+        if isinstance(selection_meta, dict):
+            payload.update(
+                {
+                    "report_selection_mode": str(selection_meta.get("report_selection_mode", "")).strip() or "missing",
+                    "live_candidate_paths": list(selection_meta.get("live_candidate_paths") or []),
+                    "live_candidate_selected_path": str(selection_meta.get("live_candidate_selected_path", "")).strip(),
+                }
+            )
+        evidence_projection = derive_strict_live_evidence_projection(
+            pack_root=pack_root,
+            contract_doc=contract_doc if isinstance(contract_doc, dict) else {},
+            selected_report_path=report_path,
+            report_doc=report_doc if isinstance(report_doc, dict) else {},
+        )
+        payload.update(evidence_projection)
+        payload.update(
+            derive_strict_live_operational_projection(
+                semantic_status=status,
+                evidence_projection=payload,
+            )
+        )
+    else:
+        payload.update(
+            {
+                "selected_report_path": str(report_path) if report_path is not None else "",
+                "current_run_pointer": "",
+                "current_run_report_path": "",
+                "current_run_id": "",
+                "report_selection_mode": "missing",
+                "live_candidate_paths": [],
+                "live_candidate_selected_path": "",
+                "evidence_origin": "missing",
+                "report_freshness_status": STATUS_FAIL_REQUIRED,
+                "run_id_binding_status": STATUS_FAIL_REQUIRED,
+                "strict_live_proof_status": STATUS_FAIL_REQUIRED,
+                "selected_report_run_ids": [],
+                "selected_report_age_seconds": None,
+            }
+        )
+        payload.update(
+            derive_strict_live_operational_projection(
+                semantic_status=status,
+                evidence_projection=payload,
+            )
+        )
+    payload["stale_reasons"] = sorted(
+        set([str(item).strip() for item in stale_reasons if str(item).strip()] + list(payload.pop("stale_reasons", [])))
+    )
+    return payload
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate knowledge acquisition contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
     try:
         task_path = _resolve_current_task(Path(args.catalog), args.identity_id)
     except Exception as e:
-        print(f"[FAIL] {e}")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=None,
+            pack_root=None,
+            contract_doc=None,
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=[str(e)],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print(f"[FAIL] {e}")
         return 1
 
     print(f"[INFO] validate knowledge acquisition for identity: {args.identity_id}")
@@ -84,27 +157,108 @@ def main() -> int:
 
     task = _load_json(task_path)
     c = task.get("knowledge_acquisition_contract") or {}
+    if isinstance(c, dict):
+        c = canonicalize_strict_live_contract_paths(
+            c,
+            pack_root=pack_root,
+            identity_id=args.identity_id,
+        )
     if not isinstance(c, dict) or not c:
-        print("[FAIL] missing knowledge_acquisition_contract")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc={},
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["missing_knowledge_acquisition_contract"],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] missing knowledge_acquisition_contract")
         return 1
 
     missing = [k for k in REQ_KEYS if k not in c]
     if missing:
-        print(f"[FAIL] knowledge_acquisition_contract missing fields: {missing}")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=[f"knowledge_acquisition_contract_missing_fields:{','.join(missing)}"],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print(f"[FAIL] knowledge_acquisition_contract missing fields: {missing}")
         return 1
 
     if c.get("required") is not True:
-        print("[FAIL] knowledge_acquisition_contract.required must be true")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["knowledge_acquisition_contract_not_required"],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] knowledge_acquisition_contract.required must be true")
         return 1
 
     src_pri = c.get("source_priority") or []
     if src_pri[:2] != ["official_spec", "repo_contract"]:
-        print("[FAIL] source_priority must prioritize official_spec and repo_contract")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["knowledge_source_priority_mismatch"],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] source_priority must prioritize official_spec and repo_contract")
         return 1
 
     ef = c.get("evidence_fields") or []
     if any(x not in ef for x in REQ_EVIDENCE_FIELDS):
-        print("[FAIL] evidence_fields missing required knowledge evidence fields")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["knowledge_evidence_fields_missing"],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] evidence_fields missing required knowledge evidence fields")
         return 1
 
     pattern = c.get("sample_report_path_pattern")
@@ -118,14 +272,52 @@ def main() -> int:
         files = _glob_paths(str(pattern or ""), pack_root=pack_root)
         if files:
             report_path = files[-1]
+    selection_meta = resolve_preferred_strict_live_report(
+        pack_root=pack_root,
+        contract_doc=c,
+        fallback_report_path=report_path,
+        explicit_report_path=Path(args.report).expanduser().resolve() if args.report else None,
+    )
+    selected_report_path = selection_meta.get("selected_report_path")
+    if isinstance(selected_report_path, Path):
+        report_path = selected_report_path
     if not report_path.exists():
         print(f"[FAIL] missing knowledge acquisition sample report: {report_path}")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=report_path,
+            report_doc=None,
+            selection_meta=selection_meta,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["knowledge_acquisition_report_missing"],
+            error_code=ERR_REPORT,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
         return 1
 
     report = _load_json(report_path)
     records = report.get("records") or []
     if not isinstance(records, list) or not records:
-        print("[FAIL] report.records must be a non-empty array")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=report_path,
+            report_doc=report,
+            selection_meta=selection_meta,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["knowledge_records_missing"],
+            error_code=ERR_REPORT,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] report.records must be a non-empty array")
         return 1
 
     allowed_levels = set(src_pri)
@@ -186,6 +378,48 @@ def main() -> int:
                 return 1
         print("[OK] knowledge self-test passed")
 
+    status = STATUS_PASS_REQUIRED if rc == 0 else STATUS_FAIL_REQUIRED
+    payload = _build_payload(
+        identity_id=args.identity_id,
+        task_path=task_path,
+        pack_root=pack_root,
+        contract_doc=c,
+        report_path=report_path,
+        report_doc=report,
+        selection_meta=selection_meta,
+        status=status,
+        stale_reasons=[] if rc == 0 else ["knowledge_acquisition_contract_validation_failed"],
+        error_code="" if rc == 0 else ERR_TASK,
+    )
+    payload = apply_strict_live_required_gate(
+        payload,
+        contract_doc=c,
+        status_field=STATUS_FIELD,
+        strict_live_error_code=ERR_REPORT,
+    )
+    if rc:
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        return 1
+
+    if str(payload.get(STATUS_FIELD, "")).strip().upper() != STATUS_PASS_REQUIRED:
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] strict-live current-run evidence required but unproven for knowledge acquisition")
+        return 1
+
+    if args.json_only:
+        emit_payload(payload, json_only=True)
+        return 0
+
+    print(
+        "[INFO] strict-live projection: "
+        f"evidence_origin={payload['evidence_origin']} "
+        f"report_freshness_status={payload['report_freshness_status']} "
+        f"run_id_binding_status={payload['run_id_binding_status']} "
+        f"strict_live_proof_status={payload['strict_live_proof_status']}"
+    )
     print("Knowledge acquisition contract validation PASSED")
     return 0
 

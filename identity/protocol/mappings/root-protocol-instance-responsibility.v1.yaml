@@ -1,0 +1,165 @@
+schema_version: 1
+responsibility_family: protocol_root_protocol_instance_responsibility
+responsibility_version: v1
+contract_file: identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_protocol_instance_responsibility.py
+probe_script: scripts/ci/run_protocol_root_protocol_instance_responsibility_probes_ci.sh
+common_script: scripts/root_protocol_instance_responsibility_common.py
+status_key: protocol_root_protocol_instance_responsibility_status
+error_codes:
+- IP-RPIR-001
+- IP-RPIR-002
+- IP-RPIR-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Four-layer relation'
+  - '## Responsibility law'
+  - Protocol-instance responsibility law must also remain machine-readable as separate
+    layer, responsibility, escalation-trigger, escalation-proof,
+    escalation-limit, and boundary-collapse row families rather than one
+    narrative ownership claim.
+  - '## Escalation admission law'
+  - '## Escalation-proof discipline'
+  - '## Escalation-proof limits'
+  - '## Non-compliant boundary collapses'
+  - 'The protocol defines the law of the world; the instance converges its runtime back to that law.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Protocol-instance responsibility row-family completeness must stay explicit'
+      - "Required layer, responsibility, escalation-trigger, escalation-proof,\nescalation-limit, and boundary-collapse families must remain explicit as\nseparate machine-readable row families."
+      - "README root protocol-instance responsibility completeness discipline must\ntherefore stay congruent with admitted\nprotocol-instance-responsibility-completeness rows rather than becoming a\nfreehand completeness summary."
+      - 'The machine world must not finalize protocol-instance responsibility legality while required row identity drift remains known only internally.'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root protocol-instance responsibility completeness discipline'
+      - 'Protocol-instance responsibility law is not a soft prose bundle.'
+      - 'These protocol-instance-responsibility-completeness rules must remain bound to canonical protocol-instance-responsibility-completeness rows rather than drifting into soft summary prose.'
+      - '1. required layer, responsibility, escalation-trigger, escalation-proof, escalation-limit, and boundary-collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root protocol-instance responsibility completeness boundary'
+      - '1. Protocol-instance responsibility law must remain machine-readable as separate layer, responsibility, escalation-trigger, escalation-proof, escalation-limit, and boundary-collapse row families.'
+      - '4. Protocol legality must not finalize protocol-instance responsibility legality while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root protocol-instance responsibility completeness discipline rendered at protocol root must remain congruent with admitted protocol-instance-responsibility-completeness rows rather than silently authoring an alternate completeness summary.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime protocol-instance responsibility consumption boundary'
+      - '1. Runtime consumes protocol-instance responsibility law as separate layer, responsibility, escalation-trigger, escalation-proof, escalation-limit, and boundary-collapse row families rather than as undifferentiated ownership prose.'
+      - '4. Runtime must not finalize protocol-instance responsibility legality while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root protocol-instance responsibility completeness discipline as a governed completeness projection bound to admitted protocol-instance-responsibility-completeness rows rather than as a freehand completeness summary.'
+required_layer_rows:
+  - order: 1
+    layer_id: standard_codex
+    contract_heading: '### 1. Standard Codex layer'
+    layer_role: general_execution_substrate
+  - order: 2
+    layer_id: identity_protocol
+    contract_heading: '### 2. Identity protocol layer'
+    layer_role: machine_governance_law_layer
+  - order: 3
+    layer_id: identity_instance
+    contract_heading: '### 3. Identity instance layer'
+    layer_role: embodied_role_runtime
+  - order: 4
+    layer_id: operator
+    contract_heading: '### 4. Operator layer'
+    layer_role: natural_language_collaboration_entry
+required_responsibility_rows:
+  - order: 1
+    owner_id: protocol_layer
+    contract_heading: '### 1. Protocol-layer obligations'
+    responsibility_role: defines_the_law_of_the_world
+  - order: 2
+    owner_id: instance_layer
+    contract_heading: '### 2. Instance-layer obligations'
+    responsibility_role: continuous_convergence_under_law
+  - order: 3
+    owner_id: operator_surface
+    contract_heading: '### 3. Operator-surface compression boundary'
+    responsibility_role: stable_answer_surface_without_memory_burden
+required_escalation_rows:
+  - order: 1
+    trigger_id: protocol_semantics_not_unambiguous
+    contract_phrase: 'protocol semantics themselves are not unambiguous.'
+  - order: 2
+    trigger_id: shared_implementation_contradicts_shared_law
+    contract_phrase: 'shared implementation contradicts shared documentation or shared law.'
+  - order: 3
+    trigger_id: multi_instance_structural_gap
+    contract_phrase: 'multiple instances will reliably hit the same structural gap.'
+  - order: 4
+    trigger_id: machine_truth_incomplete
+    contract_phrase: 'machine truth itself is incomplete, so no amount of instance self-repair can achieve alignment.'
+required_escalation_proof_rows:
+  - order: 1
+    proof_id: semantic_ambiguity_proof
+    contract_heading: '### 1. Semantic-ambiguity proof'
+    proof_role: shared_law_semantic_ambiguity_proof
+  - order: 2
+    proof_id: shared_law_contradiction_proof
+    contract_heading: '### 2. Shared-law contradiction proof'
+    proof_role: shared_law_implementation_contradiction_proof
+  - order: 3
+    proof_id: multi_instance_structural_gap_proof
+    contract_heading: '### 3. Multi-instance structural-gap proof'
+    proof_role: cross_instance_structural_gap_proof
+  - order: 4
+    proof_id: machine_truth_incompleteness_proof
+    contract_heading: '### 4. Machine-truth incompleteness proof'
+    proof_role: machine_truth_incompleteness_proof
+required_escalation_limit_rows:
+  - order: 1
+    limit_id: semantic_ambiguity_not_shared_contradiction
+    contract_phrase: 'semantic-ambiguity proof is not proof of shared implementation contradiction;'
+  - order: 2
+    limit_id: shared_contradiction_not_multi_instance_gap
+    contract_phrase: 'shared-law contradiction proof is not proof of multi-instance structural gap;'
+  - order: 3
+    limit_id: multi_instance_gap_not_machine_truth_incomplete
+    contract_phrase: 'multi-instance structural-gap proof is not proof of machine-truth incompleteness;'
+  - order: 4
+    limit_id: machine_truth_incomplete_not_instance_amnesty
+    contract_phrase: 'machine-truth incompleteness proof is not proof that instance convergence duty disappears;'
+  - order: 5
+    limit_id: escalation_proof_not_protocol_debt_laundering
+    contract_phrase: 'no escalation proof may launder unproved local residue into protocol debt.'
+required_boundary_collapse_rows:
+  - order: 1
+    collapse_id: instance_residue_laundering
+    contract_phrase: 'instance residue is relabeled as protocol debt without responsibility proof.'
+  - order: 2
+    collapse_id: protocol_backstop_laundering
+    contract_phrase: 'the protocol is treated as a shelter for unresolved instance convergence debt.'
+  - order: 3
+    collapse_id: operator_memory_dumping
+    contract_phrase: 'low-level protocol burden is pushed directly onto the operator instead of being compressed by the governed instance surface.'
+  - order: 4
+    collapse_id: runtime_authorship_inversion
+    contract_phrase: 'runtime evidence or current vividness is treated as if it authored the upstream law that interprets it.'
+  - order: 5
+    collapse_id: local_vividness_promotion
+    contract_phrase: 'one local pressure point is treated as sufficient proof of shared-law promotion.'
+protocol_instance_responsibility_completeness_rows:
+  - order: 1
+    completeness_id: explicit_protocol_instance_responsibility_row_families
+    contract_phrase: 'required layer, responsibility, escalation-trigger, escalation-proof, escalation-limit, and boundary-collapse rows must remain explicit as separate machine-readable families;'
+  - order: 2
+    completeness_id: congruent_protocol_instance_responsibility_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_protocol_instance_responsibility_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_protocol_instance_responsibility_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize protocol-instance responsibility legality while missing or unexpected row identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_protocol_instance_responsibility_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'

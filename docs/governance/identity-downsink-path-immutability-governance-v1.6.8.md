@@ -1,0 +1,652 @@
+# Identity Downsink Path Immutability Governance (v1.6.8)
+
+Status: Active (implementation landed + serial replay verified, 2026-03-14)  
+Layer: protocol  
+Scope: all protocol-governed downsink assets (runtime gate / runtime broadcast / runtime protocol-feedback / future governed domains)
+
+Execution mode: topic-level canonical SSOT for v1.6.8 path immutability closure.
+
+## 0) State interpretation guard (mandatory)
+
+1. This document is the active governance source for v1.6.8 downsink path immutability.
+2. v1.6.6 and v1.6.7 remain valid and are inherited unless explicitly superseded by this stream.
+3. Current-state judgment must prioritize machine outputs from:
+   - `python3 scripts/validate_control_plane_invariants.py --json-only`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - `python3 scripts/validate_protocol_unique_entry_gate.py --catalog <catalog> --identity-id <id> --operation validate --json-only`
+   - `python3 scripts/docs_command_contract_check.py`
+4. Temporary runtime paths and ad-hoc logs are replay evidence only; they are never normative path contracts.
+5. Canonical mapping entrypoints are current-pointer files only:
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+   - `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
+
+## 0.1) Terminology and boundary lock (mandatory)
+
+1. Protocol base repository: `identity-protocol-local`.
+2. Business project repository: `<project>` (example: `weixinstore`).
+3. Identity runtime layers:
+   - project layer instance: `<project>/.identity/<identity_id>/...`
+   - global layer instance: `${CODEX_HOME}/.identity/<identity_id>/...`
+4. This stream governs **path immutability of protocol-governed downsink assets**.
+5. This stream does not change business logic ownership and does not authorize instance-side free-form path rewiring.
+
+## 1) Why v1.6.8 is required
+
+v1.6.6 closed wrapper channel routing (ingress/egress/session-chain).  
+v1.6.7 closed dual-active cross-layer runtime ownership ambiguity.
+
+Remaining closure gap:
+
+1. Some protocol-governed paths are still “contract-consistent but mutable” instead of “immutably fixed”.
+2. Runtime assets can remain machine-pass while drifting to non-canonical instance paths.
+3. Protocol-feedback and future governed domains can fragment if path authority is not centralized.
+
+v1.6.8 closes this by freezing a single rule:
+
+1. Any protocol-governed downsink asset path must be declared in one core contract registry.
+2. Runtime writes must resolve through that registry only.
+3. Non-registry path writes are invalid and fail-close.
+
+## 2) Non-negotiable contracts (no ambiguity)
+
+### 2.1 Core contract (new mandatory)
+
+Each runtime identity must declare:
+
+- `protocol_downsink_path_immutability_contract_v1`
+
+Minimum fields:
+
+1. `required: true`
+2. `contract_id: protocol_downsink_path_immutability_contract_v1`
+3. `validator_id: validate_protocol_downsink_path_immutability`
+4. `write_guard_validator_id: validate_protocol_downsink_path_write_guard`
+5. `path_registry` (mandatory registry map, see 2.2)
+6. `anchor_policy`:
+   - `protocol_repo_root_ref`
+   - `identity_pack_root_ref`
+   - `allow_parent_escape: false`
+   - `allow_symlink_escape: false`
+7. `schema_policy`:
+   - `reject_additional_properties: true`
+   - `require_all_declared_paths_present_in_runtime_contract: true`
+8. `operation_enforcement`:
+   - `strict_operations`
+   - `light_operations`
+   - `strict_fail_mode: fail_required`
+   - `light_fail_mode: fail_required`
+
+### 2.2 Path registry model (new mandatory)
+
+`path_registry` is the only authority for protocol-governed downsink paths.
+
+#### 2.2.1 Required domains (v1.6.8 baseline)
+
+1. `runtime_gate`
+   - `runtime/gate/protocol_ingress_wrapper.py`
+   - `runtime/gate/protocol_egress_wrapper.py`
+   - `runtime/gate/protocol_session_chain_wrapper.py`
+   - `runtime/gate/protocol_gateway_contract.json`
+2. `runtime_broadcast`
+   - `runtime/state/broadcast_state.json`
+   - `runtime/reports/broadcast/broadcast-receipt-*.json`
+   - `runtime/reports/broadcast/broadcast-ack-*.json`
+3. `runtime_protocol_feedback`
+   - `runtime/protocol-feedback/outbox-to-protocol/`
+   - canonical outbox summary mirrors:
+     - `runtime/protocol-feedback/outbox-to-protocol/SUMMARY_*.json`
+   - canonical inbox summary mirrors:
+     - `runtime/protocol-feedback/inbox-from-protocol/INBOX_SUMMARY_*.json`
+   - `runtime/protocol-feedback/evidence-index/INDEX.md`
+   - `runtime/protocol-feedback/upgrade-proposals/`
+4. `protocol_broadcast_source`
+   - `identity/protocol/broadcast/items/`
+   - `identity/protocol/broadcast/index.json`
+   - `identity/protocol/broadcast/schema/broadcast-item.v1.json`
+
+#### 2.2.2 Registry expansion rule
+
+1. Any new protocol-governed downsink asset must first add a `path_id` entry in `path_registry`.
+2. Runtime write logic must reference `path_id`, not free-form path literals.
+3. Unregistered paths are write-blocked by policy.
+
+### 2.3 Path resolution and hardening policy
+
+1. All runtime path resolution must be anchor-based (`protocol_repo_root_ref` or `identity_pack_root_ref`).
+2. User-specific absolute path literals are forbidden in protocol source contracts.
+3. Runtime absolute paths may exist only as resolved mirrors generated from anchors.
+4. Parent traversal (`../`) escape is forbidden.
+5. Symlink escape outside anchor roots is forbidden.
+
+### 2.4 CURRENT_TASK ↔ runtime contract parity policy
+
+1. `CURRENT_TASK` is declaration source.
+2. Runtime mirror contract must preserve field-level parity for `path_registry`, `anchor_policy`, and enforcement policies.
+3. Any parity drift is `FAIL_REQUIRED`.
+
+### 2.5 Protocol-feedback special hardening policy
+
+1. `runtime/protocol-feedback` is governed runtime space, not a free-form scratch directory.
+2. Outbox/index/proposal paths are mandatory fixed registry entries.
+3. Any protocol-feedback emission outside registered paths is `FAIL_REQUIRED`.
+4. Mirror-only evidence without canonical outbox linkage remains invalid.
+
+### 2.6 Anti-forget protocol law lock (mandatory)
+
+1. Path governance must be machine-enforced, not memory-enforced.
+2. Source code introducing governed runtime path literals without registry linkage is `FAIL_REQUIRED`.
+3. Inline bypass is forbidden by default and only allowed with explicit marker:
+   - `downsink-path-lock: allow-nonregistry-literal`
+4. The marker is governance-audited and does not relax runtime write-guard policy.
+
+## 3) CI and validator closure model (mandatory)
+
+### 3.1 New required validators
+
+1. `validate_protocol_downsink_path_immutability` (planned validator entrypoint)
+   - validates contract presence, schema strictness, required domains, path canonicality, anchor containment.
+2. `validate_protocol_downsink_path_write_guard` (planned validator entrypoint)
+   - validates writes/receipts/acks/outbox artifacts are inside registered path targets.
+3. `validate_protocol_downsink_path_literal_lock` (planned validator entrypoint)
+   - validates protocol source path literals are registry-bound and fail-close on unregistered governed literals.
+
+### 3.2 New required CI probes (negative)
+
+`required` pipeline must include fixed negative probes:
+
+1. mutate one registry path to non-canonical sibling => must fail.
+2. attempt parent-escape path (`../`) => must fail.
+3. attempt symlink escape outside anchor => must fail.
+4. write protocol-feedback batch to non-registry directory => must fail.
+5. write broadcast receipt to non-registry directory => must fail.
+6. introduce unregistered governed runtime path literal => must fail.
+
+### 3.3 New required CI probes (positive)
+
+1. canonical registry + canonical writes => pass.
+2. CURRENT_TASK/runtime parity => pass.
+3. gate/broadcast/feedback all resolve via registry path IDs => pass.
+
+## 4) Reference implementation contract (for code landing)
+
+v1.6.8 implementation must land with the following minimum code surfaces:
+
+1. contract skeleton generation in `create_identity_pack.py`.
+2. auto-backfill in `repair_contract_backfill.py`.
+3. immutability validator(s) + write-guard validator(s).
+4. CI job integration into required workflow.
+5. negative probe script with deterministic JSON outputs.
+6. source literal lock validator wired into validate/update/scan/three-plane flows.
+
+No stream closure claim is valid without all six.
+
+## 5) Acceptance gates (v1.6.8)
+
+### 5.1 Policy acceptance
+
+1. Governance + review docs registered in stream registry.
+2. Evidence allowlist updated with v1.6.8 strict doc patterns.
+3. `docs_command_contract_check` and `validate_doc_evidence_persistence` pass.
+
+### 5.2 Implementation acceptance
+
+1. At least 5 serial positive rounds on canonical paths pass.
+2. At least 5 serial negative rounds (path drift/escape probes) fail as expected.
+3. `Policy PASS / Implementation PASS` allowed only when both sets are satisfied.
+4. Before that state, status remains `Implementation CONDITIONAL_PASS`.
+
+## 6) Cross-verification synthesis (roundtable + vendor + network + reference)
+
+This stream baseline is cross-checked against external and internal references:
+
+1. MCP security principles (`consent`, boundary control, safe tool invocation) support explicit boundary enforcement and non-implicit path trust.
+2. OPA CI/CD policy-as-code model supports fail-close pipeline checks for path policy violations.
+3. OpenAI strict schema guidance supports rejecting unknown fields (`additionalProperties` hardening) for machine-stable contracts.
+4. Agent Skills/Codex skills structure supports deterministic directory contracts and progressive-disclosure boundaries.
+5. JSON Schema object validation references support strict object envelopes for contract/registry validation.
+
+References:
+
+- https://modelcontextprotocol.io/specification/latest
+- https://www.openpolicyagent.org/docs/latest/cicd/
+- https://developers.openai.com/api/docs/guides/function-calling/#strict-mode
+- https://agentskills.io/specification
+- https://developers.openai.com/codex/skills/
+- https://json-schema.org/understanding-json-schema/reference/object
+
+### 6.1 Cross-verification evidence capture contract (roundtable/vendor/context7/openai-doc)
+
+To prevent “reference drift by memory”, v1.6.8 requires machine-citable cross-verification artifacts:
+
+1. Roundtable/internal synthesis must be captured in the paired review ledger section for the same stream.
+2. Vendor/reference anchors must include stable URL pointers (no screenshot-only evidence).
+3. Context7 retrieval (library-doc alignment) and OpenAI official doc retrieval are treated as distinct evidence tracks:
+   - Context7 track: dependency/library behavior references used by governance design.
+   - OpenAI-doc track: official OpenAI platform/codex policy references.
+4. Any stream claiming cross-verification completion without ledger-citable evidence refs is `Implementation CONDITIONAL_PASS`.
+5. This contract is version-agnostic and must remain alias/registry-driven (no fixed stream hardcoding).
+
+## 7) Broadcast directive template (for downstream identity rollout)
+
+Protocol broadcast item for v1.6.8 must include:
+
+1. required migration objective: “all protocol-governed downsink paths must be registry-fixed”.
+2. required self-check commands:
+   - `identity_creator update`
+   - `downsink_path_immutability validator`
+   - `downsink_path_write_guard validator`
+   - `downsink_path_literal_lock validator`
+3. required return payload fields:
+   - `identity_id`, `source_layer`, `path_registry_status`, `negative_probe_status`, `error_code`, `stale_reasons`.
+4. required receipt location pattern under canonical outbox path.
+
+## 8) Stream posture (2026-03-14 closure)
+
+1. Policy posture: `PASS` (governance baseline frozen and registry-anchored).
+2. Implementation posture: `PASS` (immutability + write-guard + literal-lock validators, CI probe matrix, serial replay evidence landed).
+3. Canonical evidence root:
+   - `activity/evidence/v168-path-immutability/2026-03-14/EVIDENCE_MANIFEST.v168.20260314.json`
+
+## 9) Stream continuity alias pointers
+
+1. `identity/protocol/mappings/contract-binding.current.yaml`
+2. `identity/protocol/mappings/control-plane-invariants.current.yaml`
+3. `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
+4. `identity/protocol/mappings/stream-doc-registry.current.yaml`
+
+## 10) Requirement mapping motherline integration (v1.6.8)
+
+v1.6.8 is no longer allowed to exist as a “side-chain script bundle”.
+It must be integrated into the v1.6 motherline row mapping (`contract-binding.current.yaml`)
+and enforced through the unified execution bus (`required_gate_bundle_runner`).
+
+| Requirement ID | Mapping Key | Target Name | Validator | Priority | Gate Surfaces |
+| --- | --- | --- | --- | --- | --- |
+| ASB16-RQ-036 | asb16-rq-036 | downsink_path_immutability | scripts/validate_protocol_downsink_path_immutability.py | P0 | creator/readiness/e2e/full-scan/three-plane/ci |
+| ASB16-RQ-037 | asb16-rq-037 | downsink_path_write_guard | scripts/validate_protocol_downsink_path_write_guard.py | P0 | creator/readiness/e2e/full-scan/three-plane/ci |
+| ASB16-RQ-038 | asb16-rq-038 | downsink_path_literal_lock | scripts/validate_protocol_downsink_path_literal_lock.py | P0 | creator/readiness/e2e/full-scan/three-plane/ci |
+
+Closure requirements (all must hold simultaneously):
+
+1. All three requirement rows must exist in the active file pointed to by `contract-binding.current.yaml`.
+2. `required_gate_bundle_runner` must include key + target/status mappings for all three rows.
+3. `validate_control_plane_invariants` must report bundle-mapping parity with zero gap.
+4. Non-`*.current.*` alias files must never become governance entrypoints (no direct version-file wiring).
+
+## 11) Anti-forget baseline for future streams (no version hardcode)
+
+1. Stream discovery and validation must be dynamically resolved from `stream-doc-registry.current.yaml`.
+2. `stream_version` must match regex `^v\\d+\\.\\d+\\.\\d+$`.
+3. Coverage validation must not hardcode a single governance doc (for example, v1.6.0 only); it must resolve all active stream docs from current aliases.
+4. For any new stream (for example, v1.6.9 or v1.7.3), it is forbidden to land “side-route validators not integrated into motherline row mapping.”
+
+### 11.1 Governance handbook binding contract (mandatory)
+
+To prevent future stream memory drift, onboarding/readiness guidance must be machine-linked instead of human-memory-only:
+
+1. Canonical handbook pointer must remain alias-driven:
+   - `identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md`
+2. Handbook policy must remain contract-controlled:
+   - `identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml`
+3. Required docs lane must verify handbook token linkage (no prose-only updates):
+   - `python3 scripts/docs_command_contract_check.py`
+4. Any new stream that modifies governance wiring without updating the handbook linkage contract is `FAIL_REQUIRED`.
+5. This rule is version-agnostic and cannot be hardcoded to a fixed stream list.
+
+## 12) Serial verification interpretation for motherline integration
+
+For v1.6.8 motherline integration, serial replay interpretation is split into two dimensions:
+
+1. **Infrastructure closure dimension (must pass)**  
+   - control-plane invariants  
+   - required gate surface drift  
+   - contract-binding reference integrity  
+   - docs/evidence contract gates  
+   - contract mapping coverage (`--force-required`)  
+2. **Runtime readiness dimension (monitored, may remain conditional)**  
+   - deep-scan target identity P0/P1 state is reported and tracked, but does not invalidate already-closed infrastructure wiring by itself.
+
+## 13) One-stream-per-PR governance boundary (mandatory, fail-close)
+
+This section upgrades PR discipline from convention to required enforcement and is part of the v1.6.8 closure baseline.
+
+### 13.1 Policy objective
+
+1. Every governance-changing PR must be anchored to exactly one `stream_version` in the active stream registry.
+2. A stream anchor is complete only when both documents change in the same PR range:
+   - governance doc
+   - review ledger doc
+3. Core protocol changes (scripts, protocol mappings, CI workflow) without a stream-doc anchor are rejected.
+4. This policy must not rely on hardcoded version literals; stream discovery is always alias-driven.
+
+### 13.2 Enforcement mechanism
+
+Required validator:
+
+- `scripts/validate_stream_version_pr_boundary.py`
+
+Required CI wiring:
+
+- `.github/workflows/_identity-required-gates.yml`
+
+The validator resolves stream coverage from:
+
+- `identity/protocol/mappings/stream-doc-registry.current.yaml`
+
+and validates each range (`--base`, `--head`) against dynamic registry entries.
+
+### 13.3 Fail-close error model
+
+1. `IP-STREAM-PR-001`: core protocol changes exist but no stream-doc anchor exists in the same range.
+2. `IP-STREAM-PR-002`: more than one stream version is changed in one PR range.
+3. `IP-STREAM-PR-003`: governance/review pair is incomplete for the resolved stream.
+4. `IP-STREAM-PR-004`: stream registry entrypoint is missing or structurally invalid.
+
+Any of the above statuses is `FAIL_REQUIRED` and blocks merge.
+
+### 13.4 Anti-forget continuity contract
+
+1. Future streams (for example `v1.6.9`, `v1.7.3`) are automatically covered when added to the active stream registry.
+2. No script or workflow is allowed to pin enforcement to a fixed stream list.
+3. PR governance remains stable even when stream versions evolve, because enforcement binds to the current alias and schema, not to remembered version names.
+
+This rule prevents false negatives where governance motherline closure is complete, while target instance business/runtime debt still exists and is tracked separately.
+
+## 13) Host-visible receipt provenance hardening (2026-03-14)
+
+### 13.1 Objective
+
+1. Prevent “receipt file exists” from being treated as sufficient proof when source/state parity is not attested.
+2. Bind live host-visible coverage to canonical runtime registry state.
+3. Keep CI probes deterministic while preserving production default trust boundary.
+
+### 13.2 Governance requirements
+
+1. Live receipt validation must check both:
+   - receipt payload fields, and
+   - runtime state mirror (`runtime/state/host_visible_surface_registry_state.json`) parity for each channel.
+2. Live receipt source must be explicitly validated through `receipt_source` allowlist.
+3. Production default allowlist remains strict:
+   - `runtime_dialogue`.
+4. CI probe suites may extend allowlist with fixture source:
+   - `ci_fixture`.
+5. Session-chain runtime emission must fail-close if host-visible live receipt write/update does not reach `PASS_REQUIRED`.
+
+## 14) Active-runtime unique-entry migration preflight binding (2026-03-15)
+
+This checkpoint closes the last-mile gap between CI probe success and local active-runtime reality.
+
+Mandatory rules:
+
+1. `identity_creator validate` must execute active-runtime migration closure check before required validator bundle execution:
+   - `scripts/check_unique_entry_contract_migration_closure.py --repo-catalog <...> --catalog <...> --json-only`
+2. `identity_creator update` must run the same preflight and apply protocol-tool repair when violations exist:
+   - violating identities are repaired via `scripts/repair_contract_backfill.py --apply`
+   - closure check is re-run; non-pass result remains fail-close.
+3. No identity-specific hardcoded list is allowed; violating identities are discovered dynamically from checker payload rows.
+4. This preflight is catalog-driven and applies to all active runtime identities in the selected runtime source layer.
+
+Interpretation lock:
+
+1. Per-identity success is insufficient for “global active-runtime closed” claims.
+2. Global closure claims require migration checker pass across active runtime rows, not fixture-only probe pass.
+3. A migration-checker result of `PASS_REQUIRED` is strong active-runtime proof only when checked active runtime rows are present; `checked_identity_count=0` is closure-wiring sanity, not fleet-closure evidence.
+4. Current-state note (2026-03-22): replaying `python3 scripts/check_unique_entry_contract_migration_closure.py --catalog <project-local absolute catalog> --json-only` against the current workspace runtime surface returned `PASS_REQUIRED` with `checked_identity_count=4`; this is the current non-empty active-runtime migration proof and does not replace the standing empty-scan caveat above.
+
+### 13.3 Non-hardcode guarantee
+
+1. Source keys and receipt path patterns are centralized in protocol infra constants.
+2. Validator behavior is parameterized (`--allowed-live-receipt-sources`) and not tied to identity IDs.
+3. Runtime and fixture modes share one contract surface; only source allowlist differs by lane.
+
+## 14) Protocol-feedback index auto-closure for SSOT continuity (2026-03-14)
+
+### 14.1 Objective
+
+1. Remove manual index-linking debt for `runtime/protocol-feedback/evidence-index/INDEX.md`.
+2. Ensure outbox SSOT remains machine-linked whenever new `FEEDBACK_BATCH_*.md` files exist.
+3. Keep path and linkage governance under protocol tooling (not manual instance edits).
+
+### 14.2 Governance rules
+
+1. Repair tooling must resolve paths via runtime contract + pack root; no absolute user-specific literals.
+2. Auto-linking may append missing markdown links only; it must not rewrite unrelated index history blocks.
+3. Any remaining unlinked batch after repair attempt is fail-close (`IP-GOV-FEEDBACK-002` family).
+4. Update path must invoke protocol-feedback SSOT index repair in-band before mutation execution.
+
+### 14.3 Required tooling surfaces
+
+1. `scripts/repair_protocol_feedback_ssot_index.py` (new)
+   - contract-driven index link backfill.
+2. `scripts/identity_creator.py` update path
+   - mandatory in-band `--apply` invocation of the repair tool.
+
+### 14.4 Expected result
+
+1. Full-scan `protocol_feedback_ssot_archival` no longer depends on ad-hoc manual index maintenance.
+2. Custom/runtime identities can self-heal linkage drift via protocol tools only.
+
+## 15) Observability segregation rule for deep-scan summaries (2026-03-14)
+
+1. Full-scan output must expose summary buckets separately:
+   - `summary_runtime_active`
+   - `summary_fixture_or_demo`
+   - `summary_non_active_or_non_runtime`
+2. Session-binding enforcement (`requested_session_binding`) is strict-required only for active runtime rows.
+3. This prevents inactive/global or fixture rows from polluting active-runtime closure narratives while keeping visibility intact.
+
+## 16) Version-baseline SSOT hardening (2026-03-15)
+
+### 16.1 Objective
+
+1. Remove scaffold-version drift caused by generator/installer hardcoded literals.
+2. Convert "remember to update versions" into alias-driven fail-close governance.
+3. Keep future upgrades (`v1.6.9`, `v1.7.3`, ...) non-hardcoded and dynamically resolvable.
+
+### 16.2 Mandatory contract
+
+1. Version baseline must be resolved from alias pointer (never hardcoded in scripts):
+   - `identity/protocol/mappings/version-baseline.current.yaml`
+2. Active baseline file is stream-bound and replaceable without script edits:
+   - `identity/protocol/mappings/version-baseline.v1.6.yaml`
+3. Runtime scaffolds must align with baseline tuple fields:
+   - `agent_identity.methodology_version/prompt_version/json_version`
+   - `scaffold_metadata.protocol_contract_version/required_version_stream/required_gate_bundle_contract_version/identity_protocol_version`
+   - catalog `methodology_version`
+   - `META.yaml` `methodology_version`
+
+### 16.3 Required enforcement surfaces
+
+1. Baseline resolver utility:
+   - `scripts/version_baseline_common.py`
+2. Generator/installer/backfill consume baseline dynamically:
+   - `scripts/create_identity_pack.py`
+   - `scripts/identity_installer.py`
+   - `scripts/repair_contract_backfill.py`
+3. Version-alignment validator adds scaffold-baseline gate:
+   - `scripts/validate_identity_protocol_version_alignment.py`
+   - fail-close code: `IP-PVA-002` (scaffold-baseline branch)
+4. Active-runtime migration closure checker:
+   - `scripts/check_version_baseline_migration_closure.py`
+
+### 16.4 Fail-close interpretation
+
+1. Baseline pointer missing/invalid => `FAIL_REQUIRED`.
+2. Any tuple mismatch against active baseline => `IP-PVA-002` (scaffold-baseline branch).
+3. Auto-repair is protocol-tool driven only (no manual per-identity edits):
+   - `repair_contract_backfill.py --apply`
+
+### 16.5 Anti-forget continuity
+
+1. Stream evolution is handled by alias switch (`*.current.yaml` -> new `active_file`).
+2. Enforcement scripts must not pin fixed stream literals in code paths.
+3. This closure is infrastructure-first: humans do not need to remember version tuples for correctness.
+4. Current-state note (2026-03-22): replaying `python3 scripts/check_version_baseline_migration_closure.py --catalog <project-local absolute catalog> --json-only` against the current workspace runtime surface returned `PASS_REQUIRED` with `checked_identity_count=4`; this is the current non-empty version-baseline migration proof for the workspace.
+
+### 16.5.1 Active-runtime pack-scan convergence freeze (2026-03-26)
+
+This checkpoint freezes the **shared scan layer** behind version-baseline migration closure without
+changing v1.6.8 semantic ownership of scaffold-baseline law.
+
+Mandatory rules:
+
+1. `scripts/check_version_baseline_migration_closure.py` must keep owning version-baseline semantics only.
+2. Active-runtime pack-path resolution, catalog selection, and checked-row aggregation are now shared infrastructure because the same pack universe is also scanned by `scripts/check_unique_entry_contract_migration_closure.py`.
+3. The shared projection is frozen as:
+   - `scripts/runtime_pack_closure_common.py`
+   - `active_runtime_pack_closure_scan_v1`
+4. `workspace_runtime_only` remains the bounded workspace replay mode.
+5. `repo_catalog_inclusive` remains the explicit wider replay mode and must fail closed on stray repo runtime identities instead of silently reusing the workspace-only scan surface.
+
+Implementation anchors:
+
+1. `scripts/runtime_pack_closure_common.py`
+2. `scripts/check_version_baseline_migration_closure.py`
+3. `scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh`
+
+Interpretation lock:
+
+1. This checkpoint does **not** move unique-entry semantics into v1.6.8.
+2. It freezes that shared pack-scan mechanics are protocol-owned infrastructure, not duplicated script-local logic.
+3. Workspace creator/update admission must now consume version-baseline migration closure through the same bounded workspace-runtime command surface rather than leaving v1.6.8 pack closure outside instance preflight.
+4. Current-state note (2026-03-26): replaying `bash scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh` returned `PASS`, and replaying `python3 scripts/check_version_baseline_migration_closure.py --catalog <project-local absolute catalog> --workspace-runtime-only --json-only` returned `PASS_REQUIRED` with `checked_identity_count=4`, `catalog_selection_mode=workspace_runtime_only`, and `pack_scan_policy_id=active_runtime_pack_closure_scan_v1`.
+
+## 17) Installer atomic baseline closure + report selector isolation (2026-03-16)
+
+### 17.1 Problem statement
+
+1. Legacy source packs could be installed with catalog row upgraded but `CURRENT_TASK.json` / `META.yaml` still stale.
+2. This created a non-atomic drift window where migration closure required post-install manual backfill.
+3. Execution report auto-selection could pick cross-identity artifacts and pollute freshness/baseline interpretation.
+
+### 17.2 Mandatory installer contract
+
+1. `identity_installer install/adopt` must apply baseline SSOT atomically across:
+   - `CURRENT_TASK.json`
+   - `META.yaml`
+   - runtime catalog row
+2. Activation (`--activate`) is allowed only after baseline verification pass.
+3. Baseline precheck failure is fail-close and must block:
+   - activation
+   - host gateway downsink continuation.
+
+### 17.3 Mandatory probe/CI closure
+
+1. Required CI must run installer baseline probes:
+   - `scripts/ci/run_installer_version_baseline_probes_ci.sh`
+2. Probe suite must contain:
+   - `install_legacy_pack_version_drift_blocked`
+   - `install_then_migration_closure_pass`
+3. Surface drift validator must enforce probe wiring presence and required delegated scripts.
+
+### 17.4 Report selector isolation rule
+
+1. `validate_execution_report_freshness.py` auto mode must select from strict identity tuple candidates only:
+   - `identity_id`
+   - `resolved_pack_path`
+   - `identity_prompt_path`
+2. If no strict tuple candidate exists, validator must fail-close with explicit selector reason.
+3. `validate_identity_protocol_baseline_freshness.py` must follow the same tuple-isolated auto-selection semantics.
+
+### 17.5 Non-hardcode guarantee
+
+1. Installer and probe logic remain alias-driven and identity-agnostic.
+2. No identity allowlist or stream literal pinning is permitted in closure code paths.
+
+## 18) Skill path integrity root-binding hardening (2026-03-16)
+
+### 18.1 Scope and rationale
+
+1. `skill_path_integrity` is a required bundle target (`ASB16-RQ-020`) and must not degrade to cwd-dependent root inference under strict operations.
+2. Instance-layer orchestration may omit `--active-repo-root`; protocol layer must provide deterministic fallback from runtime catalog/pack context.
+3. Fail-close semantics must distinguish:
+   - true skill path missing/out-of-layout
+   - root-binding ambiguity.
+
+### 18.2 Mandatory protocol behavior
+
+1. `validate_skill_path_integrity.py` must resolve `active_repo_root` in this order:
+   - explicit `--active-repo-root`
+   - catalog/pack-derived project root
+   - cwd-derived fallback (only allowed outside strict fail-close branch)
+2. Strict operations (`activate/update/readiness/e2e/ci/validate/scan/three-plane/inspection/mutation`) must fail-close when root resolution is ambiguous cwd fallback and no explicit root is supplied.
+3. Dedicated error family:
+   - `IP-SPATH-005` (`active_repo_root` strict binding incomplete/ambiguous)
+4. Receipts must expose root resolution provenance:
+   - `active_repo_root_resolution_source`
+   - `active_repo_root_explicit`
+
+### 18.3 Required bundle runner wiring
+
+1. `required_gate_bundle_runner.py` must always inject `--active-repo-root` for target `skill_path_integrity`.
+2. When caller omits root, bundle runner must derive deterministic root from catalog/pack (non-hardcoded).
+3. Surface drift validator must enforce this wiring and fail-close when tokens are missing.
+
+### 18.4 Governance compatibility
+
+1. No user absolute-path literals are introduced.
+2. No identity-specific branching is introduced.
+3. Existing path immutability and installer atomic baseline closure semantics remain unchanged.
+
+## 19) Context-timeout fail-close governance (2026-03-16)
+
+### 19.1 Problem statement
+
+1. Tooling-layer blocking (for example occasional wrapper/session call stalls) is not equivalent to protocol logic failure, but can contaminate strict freshness windows and generate noisy false-fail outcomes.
+2. Prior behavior lacked a machine-stable timeout marker, making “real stale” vs “precheck timeout” hard to separate in governance outputs.
+3. Required CI had no deterministic negative probe proving timeout fail-close semantics.
+
+### 19.2 Mandatory protocol behavior
+
+1. Wrapper command execution must enforce bounded timeout with alias-driven defaults:
+   - generic command timeout default: `GATEWAY_WRAPPER_SUBPROCESS_TIMEOUT_SECONDS_DEFAULT`
+   - context resolve timeout default: `GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT`
+2. Timeout events must emit structured fail-close evidence:
+   - error code: `IP-CTX-TOOL-001`
+   - marker: `CTX_TOOL_TIMEOUT`
+   - stale reason token prefixed with `context_tool_timeout`.
+3. Strict scan precheck must stop downstream strict chain when context resolve timeout marker is present; no “continue and guess” behavior is allowed.
+4. Timeout governance must remain non-hardcoded:
+   - no identity allowlist
+   - no user-path literals
+   - env override allowed only through canonical timeout env keys.
+
+### 19.3 Required CI proof
+
+1. `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh` must include:
+   - `run_probe resolve_context_timeout_guard`
+   - `python3 scripts/probe_gateway_timeout_guard.py --timeout-seconds 1 --sleep-seconds 2 --json-only`
+2. `validate_required_gate_surface_drift.py` must enforce timeout-probe wiring tokens and delegated script lineage.
+
+### 19.4 Acceptance criteria
+
+1. `probe_gateway_timeout_guard.py` returns `gateway_timeout_guard_probe_status=PASS_REQUIRED`.
+2. Gateway trust-boundary suite remains green with timeout probe enabled.
+3. Control-plane quartet remains `PASS_REQUIRED` after timeout governance landing.
+
+## 20) Full-scan strict summary coherence + timeout profile governance (2026-03-16)
+
+### 20.1 Problem statement
+
+1. `full_identity_protocol_scan` previously allowed an active-runtime row to remain `severity=OK` while `checks.three_plane` had timeout fail-close payloads.
+2. Prompt activation/lifecycle checks used report roots derived from unresolved relative catalog row paths, which could miss real runtime reports under project-layer packs.
+3. A single generic timeout default increased false timeout risk for long-running control-plane/status scans.
+
+### 20.2 Mandatory behavior
+
+1. Active runtime severity projection must treat `three_plane` failure as core failure (cannot remain `OK`).
+2. Runtime report discovery in full scan must bind to resolved identity pack root (from resolved context), not unresolved relative catalog literals.
+3. Timeout governance must support command-class profile windows:
+   - `report_three_plane_status` and `validate_control_plane_status_sync` use extended bounded profiles;
+   - context resolve path keeps short bounded timeout with explicit retry envelope.
+4. Fail-close semantics remain strict:
+   - timeout still emits `IP-CTX-TOOL-001` + `CTX_TOOL_TIMEOUT`;
+   - profile extension reduces false positives but does not suppress timeout failures.
+
+### 20.3 Required regression gate
+
+1. `validate_full_scan_target_regression.py` must fail-close when:
+   - active runtime row has `three_plane` failure while summary severity remains `OK`.
+2. This gate is infrastructure-level and identity-agnostic; no per-identity exception paths are allowed.

@@ -27,6 +27,248 @@ This system is intentionally designed to solve three recurring failure modes:
 - Lower audit cost: every key decision can be traced to report fields and validator outputs.
 - Continuous identity evolution: prompt/rulebook/task-history can evolve with explicit evidence and replayability.
 
+## Identity launcher quickstart (one-shot copyable commands)
+
+`v1.6.14` freezes launcher command discovery as a protocol-owned surface, so operators should not manually assemble
+identity startup/resume commands in chat.
+
+Preferred primary operator surface when the ambient catalog already matches the resolved identity catalog:
+
+- short launcher: `id-<identity-id>`
+
+Explicit generic surface:
+
+- `identity-codex --identity-id <identity-id> -- <codex args>`
+
+If command discovery detects `ambient_catalog_mismatch_requires_explicit_catalog`, the preferred primary
+surface must switch to the explicit generic launcher carrying `--catalog <resolved-catalog>`; any short
+launcher surface may remain visible only as a convenience/reference surface, not as the preferred command.
+The installed short launcher still stays execution-stable under that mismatch because the generated shim
+forwards its governed install catalog internally via explicit `--catalog <resolved-catalog>`; that hidden
+catalog pinning is for fail-close execution stability only and does not move the short launcher back onto
+the preferred discovery lane.
+
+Critical `v1.6.14` boundary:
+
+- `installed` and `discoverable in the current shell` are separate facts.
+- `installed` means the governed launcher file exists under `${CODEX_HOME}/bin/` and passes install validation.
+- `discoverable` means the current operator shell can actually resolve the bare command through its live `PATH`.
+- Shell `command not found: id-<identity-id>` happens **before** launcher logic starts, so the protocol must
+  detect and project that boundary, but it must not misdescribe it as a runtime resume failure that the launcher
+  itself can recover after the fact.
+- Therefore `preferred_start_command` / `preferred_resume_command` may use bare `id-<identity-id>` only when
+  `shortcut_shell_discoverability_status=PASS_REQUIRED`; otherwise the preferred lane must downgrade to a
+  discoverability-safe generic or absolute launcher surface.
+
+Print the full copyable command bundle for any governed identity:
+
+```bash
+identity-codex commands --identity-id <identity-id>
+```
+
+If the per-identity short launcher is already installed, the even shorter surface is:
+
+```bash
+id-<identity-id> commands
+```
+
+If you want the bundle to evaluate resume readiness, pass the host thread UUID explicitly:
+
+```bash
+identity-codex commands --identity-id <identity-id> --thread-id <host-thread-uuid>
+```
+
+If you are running the discovery flow outside the currently authoritative identity session binding,
+seed the run tuple explicitly so the bundle can still produce a fresh-shell-executable resume command:
+
+```bash
+identity-codex commands --identity-id <identity-id> --thread-id <host-thread-uuid> --session-id <run:session-id>
+```
+
+If the operator goal is not “resume this transcript in-place” but rather “open a fresh window / clear and then
+rejoin with governed continuity”, make that goal explicit on the launcher command-discovery surface:
+
+```bash
+identity-codex commands --identity-id <identity-id> --continuity-intent migrate_new_window --thread-id <host-thread-uuid> --session-id <run:session-id>
+```
+
+Under explicit `--continuity-intent migrate_new_window|reload_after_clear`, the launcher bundle must keep two
+operator goals separate instead of collapsing them:
+
+- `resume <host-thread-uuid>` remains the Codex transcript recovery target
+- `recommended_user_command` must promote the fresh-start launcher surface, not transcript resume
+- the governed follow-up reentry task block remains owned by `v1.6.16`
+- if the bridged governed reentry answer is blocked, the launcher bundle must not misreport a bare fresh start as
+  equivalent to continuity closure
+
+That rule is now frozen as a general governed-answer bridge admission law for any stream-A consumer of a stream-B
+governed answer bundle:
+
+- bridge integrity requires owner bundle status `PASS_REQUIRED`, exact owner-stream identity, exact question-family
+  identity, and an admitted `bridge_admission_contract`; consumer-side default injection of missing owner fields is
+  forbidden
+- bridge integrity, owner semantic answer status, and operator projection are three different machine facts and must
+  remain separately visible rather than being collapsed into one “bridge succeeded” summary
+- if bridge integrity is not admitted, the consumer surface must fail-close the operator projection even when the owner
+  row itself still renders a semantic answer
+
+Critical semantic boundary:
+
+- `resume <host-thread-uuid>` is still the **Codex transcript recovery target**.
+- `--session-id run:<...>` is only the launcher-side identity session tuple closure.
+- `--session-id` does **not** replace `resume <host-thread-uuid>`.
+- the host thread UUID must **never** be reinterpreted as the identity session tuple.
+
+What this prints:
+
+- preferred start command for operator use; when the ambient catalog already matches the resolved
+  identity catalog it stays on the short-launcher lane only if the current shell can actually resolve that
+  command, and under catalog mismatch or current-shell short-launcher undiscoverability it upgrades to the
+  canonical explicit/generic or absolute primary surface
+- absolute-path fallback start command under `${CODEX_HOME}/bin/`
+- protocol-owned fresh-shell env loaders keep `${CODEX_HOME}/bin` on `PATH` idempotently, so short-launcher discovery is not left to manual shell edits
+- preferred resume command for the current shell; under catalog mismatch it must collapse to the same
+  fresh-shell executable canonical resume command as the recommended surface, and when the short launcher is
+  not discoverable in the current shell it must also collapse away from the bare shortcut
+- `copyable_commands.start.shortcut` / `copyable_commands.resume.shortcut` retain the short-launcher
+  reference surface when the preferred surface has to switch to the explicit generic launcher
+- generic `identity-codex --identity-id ...` equivalents for repair/documentation flows
+- all commands are terminal-native direct commands; shell-wrapped `zsh -lic '...'` surfaces are non-canonical
+- `recommended_user_command` is selected by fresh-shell executability, not by host-thread UUID presence alone
+- when the ambient shell catalog does not match the resolved identity catalog, the recommended command carries explicit `--catalog <resolved-catalog>`
+- the installed short launcher remains pinned to its governed install catalog even if ambient `IDENTITY_CATALOG` drifts, so convenience execution cannot silently hop to another catalog
+- when resume needs identity-session tuple closure, the recommended resume command carries explicit `--session-id run:<...>`
+- `resume_status` can be `PASS_REQUIRED` only when both the host thread UUID and the authoritative identity session tuple are resolved
+- when no fresh-shell resume command is available, `recommended_user_command` falls back to the start command instead of promoting a stale shortcut
+
+For identity instances and other protocol consumers, use the structured surface:
+
+```bash
+identity-codex commands --identity-id <identity-id> --json-only
+```
+
+That JSON is the protocol-owned guidance bundle. It now carries:
+
+- `recommended_user_command`
+- `recommended_user_command_kind`
+- `recommended_user_command_reason`
+- `catalog_context_status`
+- `host_thread_id_status`
+- `identity_session_tuple_status`
+- `resume_command_fresh_shell_executable_status`
+- `shortcut_install_status`
+- `shortcut_shell_discoverability_status`
+- `generic_launcher_install_status`
+- `generic_launcher_shell_discoverability_status`
+- `continuity_intent`
+- `continuity_intent_status`
+- `continuity_reentry_answer_bundle_status`
+- `recommended_followup_reentry_task_block`
+- `shortcut_start_command`
+- `shortcut_resume_command`
+- `copyable_commands.start`
+- `copyable_commands.resume`
+- `instance_answer_guidance`
+- `continuity_support` for launcher/instance internal consumers only
+
+So the protocol provides the structured command bundle, while the identity instance gives the concrete final answer to the user.
+
+Operational rule:
+
+- if someone asks “`identity_id=XXX` 如何启动 / 如何续接”, the answer should come from this protocol-owned command bundle,
+  not from manual command拼接, python helper invocation, or workspace-specific wrapper folklore.
+
+## Identity continuity recovery quickstart (v1.6.16 ask/answer surface)
+
+`v1.6.16` is independent from launcher startup, but it now freezes a protocol-owned answer surface for
+identity-visible continuity questions such as:
+
+- “开一个新窗口，怎么把我迁过去？”
+- “clear 之后，怎么再加入记忆恢复任务？”
+
+Operator rule:
+
+- the operator should ask the identity instance directly;
+- the identity instance should answer from the governed reentry answer bundle;
+- launcher start/resume command lookup still belongs to `v1.6.14`.
+
+Protocol/internal renderer for that answer surface:
+
+```bash
+python3 scripts/render_identity_context_reentry_answers.py --identity-id <identity-id> --json-only
+```
+
+That bundle returns structured facts such as:
+
+- `overall_reentry_readiness_status`
+- `live_reentry_consumption_proof_status`
+- `recommended_reentry_answer_mode`
+- `intent_answers.migrate_new_window`
+- `intent_answers.reload_after_clear`
+- `copyable_reentry_task_block`
+
+Operational rule for identity instances:
+
+- when asked about new-window migration or clear-after-reset recovery, return the concrete governed reentry task block from this bundle;
+- do **not** manually assemble recovery payloads from transcript memory;
+- do **not** inject or hardcode thread UUIDs on the continuity surface;
+- if readiness is not `PASS_REQUIRED`, do **not** claim memory recovery is ready;
+- if readiness is `PASS_REQUIRED` but live proof is not yet observed, you may return the governed reentry task block, but must explicitly state that successful recovery is only proven after `instance_reentry_consumption_receipt` is emitted.
+- if readiness and live proof are both `PASS_REQUIRED`, you may state that governed recovery is live-proven, but launcher start/resume command lookup still remains delegated to `v1.6.14`.
+Executable-surface hard rule:
+
+- protocol executable surfaces (`scripts/**/*.py`, `scripts/**/*.sh`, `.github/workflows/*.yml`) and active pack-local `scripts/**` lanes scanned through the local runtime catalog must never embed fixed thread/session UUID literals or fixed `rollout-YYYY-...` sidecar literals;
+- those identifiers must always be generated dynamically at execution time;
+- the hard gate is `scripts/validate_executable_surface_runtime_literal_lock.py`, with negative probes in `scripts/ci/run_executable_surface_runtime_literal_lock_probes_ci.sh`.
+
+- continuity outputs must land only in these fixed runtime families:
+  - `runtime/reports/context-continuity/continuity-rolling-*.json`
+  - `runtime/reports/context-continuity/continuity-stage-*.json`
+  - `runtime/reports/context-continuity/continuity-migration-*.json`
+  - `runtime/state/context-continuity/active-reentry-brief.json`
+  - `runtime/reports/context-continuity/*-receipt.json`
+- treat `runtime/memory-absorption/**` as legacy absorption/quarantine only; canonical outputs must be re-materialized into their governed lane paths rather than consumed there.
+- live adoption is a **hard-downsink/template-materialization** requirement, not a chat convention:
+  - pack-local `scripts/` must contain these exact files: `run_identity_context_continuity_guard.sh`, `emit_identity_context_checkpoint.py`, `materialize_identity_reentry_brief.py`, and `emit_identity_reentry_consumption_receipt.py`;
+  - the shell guard is the proactive cadence/trigger dispatcher; the Python scripts are deterministic payload emitters;
+  - the shell guard must persist `runtime/state/context-continuity/guard-state.json` and write `runtime/reports/context-continuity/guard-*.json`;
+  - those `guard-*.json` files are auxiliary protocol-owned control receipts and are explicitly outside the four-role `RQ-046` receipt-family join; they may coexist under the same report root without invalidating receipt-family closure;
+  - they must be registered in `scripts/INSTANCE_SCRIPT_MANIFEST.json`;
+  - they must write only to `runtime/reports/context-continuity/continuity-rolling-*.json`, `runtime/reports/context-continuity/continuity-stage-*.json`, `runtime/reports/context-continuity/continuity-migration-*.json`, `runtime/state/context-continuity/active-reentry-brief.json`, and the corresponding receipt files under `runtime/reports/context-continuity/`.
+- required-coverage semantics for this family are also frozen:
+  - once `context_continuity_contract_v1` / `reentry_brief_consumption_contract_v1` are required in `CURRENT_TASK.json` and the canonical continuity runtime surfaces are materialized, `validate_required_contract_coverage.py` must count `identity_context_continuity`, `identity_reentry_brief`, `identity_reentry_consumption`, and `identity_context_continuity_receipts` as instance-adopted protocol targets;
+  - they must not be silently demoted back to lane-excluded `SKIPPED_NOT_REQUIRED` merely because generic current-round protocol-entry correlation is absent.
+
+### Artifact-family routing quick reference (v1.6.18)
+
+`memory` is not a canonical protocol sink. Inside identity protocol scope, every persisted artifact must resolve to one exact governed family:
+
+- pack rulebook family -> `RULEBOOK.jsonl`
+- pack task-history family -> `TASK_HISTORY.md`
+- runtime dialogue-retention family -> `runtime/reports/dialogue-retention/**`, `runtime/state/dialogue-retention/**`
+- runtime dialogue-governance family -> `runtime/reports/dialogue-content-synthesis-<identity-id>-*.json`, `runtime/reports/dialogue-cross-validation-matrix-<identity-id>-*.json`, `runtime/reports/dialogue-result-support-<identity-id>-*.json`
+- runtime experience-feedback family -> `runtime/rulebooks/positive.jsonl`, `runtime/rulebooks/negative.jsonl`, `runtime/examples/*experience-feedback*.json`, `runtime/logs/feedback/*.json`
+- runtime protocol-feedback family -> `runtime/protocol-feedback/**`
+- runtime continuity/reentry family -> `runtime/reports/context-continuity/**`, `runtime/state/context-continuity/**`
+- runtime memory-absorption family -> `runtime/memory-absorption/**` (quarantine/re-materialization only)
+
+Hard routing rules:
+
+- `RULEBOOK.jsonl` and `runtime/rulebooks/*.jsonl` are not the same object.
+- `TASK_HISTORY.md` is chronology, not continuity.
+- `runtime/reports/dialogue-retention/**` and `runtime/state/dialogue-retention/**` are governed raw-dialogue mirrors plus receipts/supplements, not continuity or dialogue-governance summaries.
+- `runtime/protocol-feedback/**` is governance communication, not generic learning/continuity storage.
+- `runtime/memory-absorption/**` cannot satisfy active continuity, dialogue, learning, or protocol-feedback obligations.
+- declaration keys and gates such as `reject_memory_gate`, `dialogue_retention_contract_v1`, `dialogue_governance_contract`, `experience_feedback_contract`, `context_continuity_contract_v1`, and `reentry_brief_consumption_contract_v1` are control-plane declarations, not artifact sinks.
+
+### Broadcast delivery + communication transport quick reference (v1.6.20)
+
+- broadcast delivery -> dedicated runtime adoption/projection lane for host-gateway broadcast truth
+- identity communication transport -> aggregate convergence surface across agent handoff, collaboration trigger, protocol-feedback reply/inbox, protocol-feedback atomic emit, and broadcast delivery
+- transport remains broader than strict identity-to-identity-only messaging
+- transport is not a new artifact family and not a memory sink
+- canonical convergence order -> broadcast-delivery sync -> protocol-feedback atomic bootstrap emit -> aggregate transport validator replay
+
 ### Protocol SSOT governance (canonical source + coupling)
 
 - Canonical protocol-strengthening source:
@@ -69,6 +311,10 @@ Rollout semantics are contract-driven:
 - `required=true` + `rollout_mode=warn`: issues are reported but non-blocking.
 - `required=true` + `rollout_mode=enforce`: violations fail with deterministic codes
   (`IP-DCIC-001..004`).
+- dialogue synthesis belongs under governed dialogue report paths:
+  - `runtime/reports/dialogue-content-synthesis-<identity-id>-*.json`
+  - `runtime/reports/dialogue-cross-validation-matrix-<identity-id>-*.json`
+  - `runtime/reports/dialogue-result-support-<identity-id>-*.json`
 
 Scaffold default:
 
@@ -187,22 +433,21 @@ Enforcement:
 Governance record:
 - `docs/governance/local-instance-persistence-boundary-v1.4.6.md`
 
-### IDENTITY_HOME resolution order (canonical)
+### IDENTITY_HOME resolution order (canonical, v1.6)
 
-All creator/installer/runtime context resolution follows the same order:
+All creator/installer/runtime context resolution follows canonical two-layer path governance:
 
 1. If environment variable `IDENTITY_HOME` is set, use it.
 2. Otherwise, if shared config file exists, use it:
-   - `${CODEX_HOME:-~/.codex}/identity/config/runtime-paths.env`
+   - `${CODEX_HOME:-~/.codex}/.identity/config/runtime-paths.env`
    - key: `IDENTITY_HOME=...`
-3. Otherwise, if `CODEX_HOME` is set, use `${CODEX_HOME}/identity`.
-4. Otherwise default to `~/.codex/identity`.
-5. If creating that directory fails, fallback to current workspace local path: `./.codex/identity`.
+3. Otherwise, if `CODEX_HOME` is set, use `${CODEX_HOME}/.identity`.
+4. Otherwise default to `~/.codex/.identity`.
 
-Compatibility note:
-- legacy runtime locations remain readable only inside `IDENTITY_HOME`
-  (`${IDENTITY_HOME}/identity`, `${IDENTITY_HOME}/identities`, `${IDENTITY_HOME}/instances`).
-- there is no implicit fallback to `~/.identity`; migrate old instances explicitly to `$CODEX_HOME/identity`.
+Fail-close rule:
+
+- no implicit runtime fallback to `./.codex/.identity` or `/tmp`.
+- non-canonical runtime roots are migration-only signals and must not drive strict runtime decisions.
 
 This behavior is implemented in `scripts/resolve_identity_context.py::default_identity_home()`
 and consumed by `create_identity_pack.py`, `identity_installer.py`, `identity_creator.py`,
@@ -210,15 +455,15 @@ and migration tooling.
 
 ### Identity scope resolution (governance uplift)
 
-To align with skills-style discovery while preserving runtime safety, identity execution now carries an explicit scope interpretation:
+Identity strict execution now carries exactly two runtime source layers:
 
-1. CLI explicit (`--catalog`, `--target-root`, `--scope`)
-2. environment/runtime config (`IDENTITY_HOME`, `runtime-paths.env`)
-3. repo scope (`<repo>/.agents/identity`) when present
-4. user scope (`${CODEX_HOME:-~/.codex}/identity`)
-5. fallback scope (`./.codex/identity`, recovery-only)
+1. `project` => `<project>/.identity`
+2. `global` => `${CODEX_HOME:-~/.codex}/.identity`
 
-If one `identity_id` resolves to multiple pack paths across layers, tooling now fails by default until explicit arbitration (`--scope`) is provided. This prevents silent cross-scope contamination.
+Legacy labels (`local/repo/env/auto`) are compatibility metadata only and must not be used as strict
+release/readiness/update gating semantics.
+
+If one `identity_id` resolves to multiple pack paths across layers, tooling fails by default until explicit arbitration (`--scope`) is provided. This prevents silent cross-scope contamination.
 
 Operational governance commands:
 
@@ -293,12 +538,12 @@ To avoid per-shell drift, configure shared defaults once:
 
 ```bash
 python3 scripts/configure_identity_runtime_paths.py \
-  --identity-home "${IDENTITY_HOME:-${CODEX_HOME:-$HOME/.codex}/identity}" \
+  --identity-home "${IDENTITY_HOME:-${CODEX_HOME:-$HOME/.codex}/.identity}" \
   --protocol-home "${IDENTITY_PROTOCOL_HOME:-$(pwd)}"
 ```
 
 This writes:
-- `${CODEX_HOME:-$HOME/.codex}/identity/config/runtime-paths.env`
+- `${CODEX_HOME:-$HOME/.codex}/.identity/config/runtime-paths.env`
   - `IDENTITY_HOME=...`
   - `IDENTITY_PROTOCOL_HOME=...`
 
@@ -309,7 +554,7 @@ This writes:
 
 Implementation note:
 - `scripts/configure_identity_runtime_paths.py` defaults are now machine-portable:
-  - `IDENTITY_HOME` default derives from `${CODEX_HOME:-~/.codex}/identity`
+  - `IDENTITY_HOME` default derives from `${CODEX_HOME:-~/.codex}/.identity`
   - `IDENTITY_PROTOCOL_HOME` default derives from current repo root/cwd
   - no user-specific absolute path is hardcoded
 
@@ -368,7 +613,7 @@ For runtime operations (validate/activate/update/install/writeback), always use 
 ### State consistency gate
 
 - Active status source-of-truth: catalog (`catalog.local.yaml` for runtime).
-- Session pointer canonical path: `<catalog_dir>/session/active_identity.json`
+- Session pointer compatibility path: `<catalog_dir>/session/active_identity.json`
 - Session pointer mirror path (default): `<catalog_dir>/session/mirror/current.json`
   (legacy `/tmp/identity-session/current.json` is compatibility-only and opt-in).
 - Strategy selected in v1.4.x hardening: **dual-write + strong consistency**.
@@ -377,6 +622,9 @@ For runtime operations (validate/activate/update/install/writeback), always use 
   - activation transaction must sync canonical session pointer and rollback on
     canonical sync failure.
   - activation transaction must keep catalog + META synchronized.
+  - compatibility pointers are non-authoritative mirrors; governed reply/headstamp
+    authority must come from explicit actor/session binding (or explicit legacy mode),
+    not from silent pointer fallback.
 - Validator: `scripts/validate_identity_state_consistency.py`
   + `scripts/validate_identity_session_pointer_consistency.py`
 
@@ -668,6 +916,6 @@ This is enforced by contract + validators:
 
 ## Status
 
-- Protocol version: `v1.4.10` (draft)
+- Protocol version: `v1.6.14` (draft)
 - Discovery contract: `identity/protocol/IDENTITY_DISCOVERY.md`
 - Creator skill: `identity-creator` (create + update validators)

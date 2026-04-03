@@ -9,7 +9,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task, resolve_report_path
+from tool_vendor_governance_common import (
+    build_report_path_resolution_projection,
+    contract_required,
+    load_json,
+    resolve_pack_and_task,
+    resolve_report_path_selection,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -28,6 +34,7 @@ DEFAULT_DENY_PREFIXES = (
     "identity/protocol/",
 )
 DEFAULT_IGNORE_PREFIXES = (
+    ".identity/",
     ".agents/identity/",
     "identity/runtime/",
 )
@@ -247,10 +254,38 @@ def main() -> int:
 
     report_glob = str(args.report_glob or contract.get("report_glob") or f"runtime/reports/identity-upgrade-exec-{args.identity_id}-*.json").strip()
     report_path: Path | None = None
+    report_resolution_projection = build_report_path_resolution_projection(
+        resolve_report_path_selection(
+            report="",
+            pattern="",
+            pack_root=pack_path,
+            identity_id=args.identity_id,
+        )
+    )
     if args.report.strip():
-        report_path = resolve_report_path(report=args.report, pattern=report_glob, pack_root=pack_path)
+        report_resolution = resolve_report_path_selection(
+            report=args.report,
+            pattern=report_glob,
+            pack_root=pack_path,
+            identity_id=args.identity_id,
+        )
+        report_path = report_resolution.selected_path
+        report_resolution_projection = build_report_path_resolution_projection(
+            report_resolution,
+            field_prefix="report",
+        )
     elif not args.check_git_diff:
-        report_path = resolve_report_path(report="", pattern=report_glob, pack_root=pack_path)
+        report_resolution = resolve_report_path_selection(
+            report="",
+            pattern=report_glob,
+            pack_root=pack_path,
+            identity_id=args.identity_id,
+        )
+        report_path = report_resolution.selected_path
+        report_resolution_projection = build_report_path_resolution_projection(
+            report_resolution,
+            field_prefix="report",
+        )
     if (not required) and report_path is not None:
         required = True
         auto_required_signal = True
@@ -264,7 +299,7 @@ def main() -> int:
         "auto_required_signal": auto_required_signal,
         "base_repo_write_boundary_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
-        "report_selected_path": str(report_path) if report_path else "",
+        **report_resolution_projection,
         "source_mode": "none",
         "allowlist_prefixes": [],
         "denylist_prefixes": [],

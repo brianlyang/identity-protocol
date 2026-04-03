@@ -1,0 +1,214 @@
+schema_version: 1
+admissibility_family: protocol_root_corpus_gateway_admissibility
+admissibility_version: v1
+root_dir: identity/protocol
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+transition_current_file: identity/protocol/mappings/root-corpus-transition.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+validator_script: scripts/validate_protocol_root_corpus_gateway_admissibility.py
+probe_script: scripts/ci/run_protocol_root_corpus_gateway_admissibility_probes_ci.sh
+common_script: scripts/root_corpus_gateway_admissibility_common.py
+status_key: protocol_root_corpus_gateway_admissibility_status
+error_codes:
+- IP-RGA-001
+- IP-RGA-002
+- IP-RGA-003
+validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
+validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
+gateway_anchor_checks:
+- rel_path: identity/protocol/README.md
+  required_markers:
+  - '## Root gateway-admissibility discipline'
+  - gateway admission decides which non-origin surfaces may legally motivate each
+    root gateway;
+  - admission only permits governed re-entry at that gateway's own effect scope and
+    effect target class;
+  - gateway effect target stays fixed by gateway class itself; incoming motivation
+    may not choose a different root output class;
+  - gateway effect target also keeps the question class governed for that target layer;
+    incoming motivation may not retag gateway output as a different answer class;
+  - gateway admission does not let an incoming surface inherit the gateway's authorship.
+  - 'The governed re-entry chain stays explicit as: constitution -> runtime constitution -> root contract -> machine-registry.'
+  - '## Root gateway-admissibility completeness discipline'
+  - These gateway-admissibility-completeness rules must remain bound to canonical
+    gateway-admissibility-completeness rows rather than drifting into soft summary
+    prose.
+  - '1. required gateway-order, gateway-effect-target, and gateway-profile rows
+    must remain explicit as separate machine-readable row families;'
+- rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+  required_markers:
+  - '### Gateway admission must preserve source order'
+  - a gateway is a legal re-entry port, not an origin substitute;
+  - entering a gateway does not let an incoming surface inherit bottom-theory or constitutional
+    authorship;
+  - gateway effect target stays fixed by gateway kind; entering one gateway does not
+    let incoming motivation choose a different downstream root class;
+  - gateway output must also retain the question class governed for that target layer,
+    rather than inheriting a new answer class from incoming motivation;
+  - 'The governed re-entry chain must stay explicit as: constitution -> runtime constitution -> root contract -> machine-registry.'
+  - '### Gateway-admissibility row-family completeness must stay explicit'
+  - README root gateway-admissibility completeness discipline must therefore stay
+    congruent with admitted gateway-admissibility-completeness rows rather than
+    becoming a freehand completeness summary.
+  - The machine world must not finalize gateway-admissibility legality while required
+    gateway identity drift remains known only internally.
+- rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+  required_markers:
+  - '## Root gateway-admissibility boundary'
+  - Gateway admission is narrower than general motivation to strengthen.
+  - Gateway effect target is fixed by gateway class itself; gateway admission cannot
+    directly emit a different root target class than the one governed for that gateway.
+  - Gateway effect target also retains the question class governed for that target
+    layer rather than inheriting a new answer class from incoming motivation.
+  - Machine-registry gateway may terminate current-turn legality, but that does not
+    let incoming motivation surfaces author upstream law.
+  - '   - governed re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry'
+  - '## Root gateway-admissibility completeness boundary'
+  - '1. Gateway-admissibility law must remain machine-readable as separate gateway-order,
+    gateway-effect-target, and gateway-profile row families.'
+  - '4. Protocol legality must not finalize gateway-admissibility legality while
+    missing or unexpected gateway identities remain known only inside validator
+    logic.'
+  - '6. README root gateway-admissibility completeness discipline rendered at protocol
+    root must remain congruent with admitted gateway-admissibility-completeness
+    rows rather than silently authoring an alternate completeness summary.'
+- rel_path: identity/protocol/IDENTITY_RUNTIME.md
+  required_markers:
+  - '## Runtime-origin gateway-admissibility boundary'
+  - Runtime-origin material may motivate only the gateways whose admissibility contract
+    explicitly allows it;
+  - Runtime-origin admission cannot choose a different gateway effect target than
+    the class governed for that gateway.
+  - Runtime-origin admission also cannot retag gateway output into a different question
+    class than the one governed for that target layer.
+  - Runtime motivation entering a gateway still requires governed refreezing or governed
+    projection before it becomes shared law.
+  - 'Runtime-origin gateway progression still follows the explicit re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry.'
+  - '## Runtime gateway-admissibility consumption boundary'
+  - '1. Runtime consumes gateway-admissibility law as separate gateway-order, gateway-effect-target,
+    and gateway-profile row families rather than as undifferentiated gateway prose.'
+  - '4. Runtime must not finalize gateway-admissibility legality while missing or
+    unexpected gateway identities remain known only inside validator machinery.'
+  - '6. Runtime consumes README root gateway-admissibility completeness discipline
+    as a governed completeness projection bound to admitted gateway-admissibility-completeness
+    rows rather than as a freehand completeness summary.'
+gateway_admissibility_completeness_rows:
+- order: 1
+  completeness_id: explicit_gateway_admissibility_row_families
+  contract_phrase: 'required gateway-order, gateway-effect-target, and gateway-profile rows must remain explicit as separate machine-readable row families;'
+- order: 2
+  completeness_id: congruent_gateway_admissibility_row_family_totals
+  contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+- order: 3
+  completeness_id: explicit_gateway_admissibility_row_identity_sets
+  contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+- order: 4
+  completeness_id: hidden_gateway_admissibility_identity_drift_forbidden
+  contract_phrase: 'runtime or validator code must not finalize gateway-admissibility legality while missing or unexpected gateway identities remain known only internally;'
+- order: 5
+  completeness_id: fail_close_preserves_gateway_admissibility_identity_projection
+  contract_phrase: fail-close machine output must preserve missing/unexpected row identity
+    projection rather than hiding drift behind row-count shorthand or generic structure
+    failure.
+gateway_order:
+- order: 1
+  gateway_class: constitution
+- order: 2
+  gateway_class: runtime_constitution
+- order: 3
+  gateway_class: root_contract
+- order: 4
+  gateway_class: machine_registry_directory
+gateway_effect_targets:
+- gateway_class: constitution
+  effect_target_class: constitution
+  effect_target_transition_mode: constitutional_freeze
+  effect_target_authority_mode: frozen_law_only
+  effect_target_question_class: frozen_protocol_law
+  effect_target_answer_mode: frozen_law_answer
+- gateway_class: runtime_constitution
+  effect_target_class: runtime_constitution
+  effect_target_transition_mode: runtime_constitutional_freeze
+  effect_target_authority_mode: frozen_law_only
+  effect_target_question_class: frozen_runtime_law
+  effect_target_answer_mode: frozen_law_answer
+- gateway_class: root_contract
+  effect_target_class: root_contract
+  effect_target_transition_mode: domain_contract_freeze
+  effect_target_authority_mode: frozen_law_only
+  effect_target_question_class: frozen_domain_contract_law
+  effect_target_answer_mode: frozen_law_answer
+- gateway_class: machine_registry_directory
+  effect_target_class: machine_registry_directory
+  effect_target_transition_mode: machine_registry_projection
+  effect_target_authority_mode: machine_consumed_family
+  effect_target_question_class: registry_resolution
+  effect_target_answer_mode: machine_registry_answer
+gateway_profiles:
+- gateway_class: constitution
+  gateway_scope: root
+  admissibility_mode: governed_refreeze_gateway
+  gateway_effect_scope: constitutional_law_refreeze
+  current_turn_legality_terminal: false
+  admissible_nonorigin_surface_classes:
+  - root_index
+  - machine_registry_directory
+  - governed_subdomain_extension
+  - demoted_support_directory
+  - outer_governance_surface
+  - outer_review_surface
+  - outer_workbook_surface
+  - outer_evidence_surface
+- gateway_class: runtime_constitution
+  gateway_scope: root
+  admissibility_mode: governed_refreeze_gateway
+  gateway_effect_scope: runtime_constitutional_law_refreeze
+  current_turn_legality_terminal: false
+  admissible_nonorigin_surface_classes:
+  - root_index
+  - machine_registry_directory
+  - governed_subdomain_extension
+  - demoted_support_directory
+  - outer_governance_surface
+  - outer_review_surface
+  - outer_workbook_surface
+  - outer_evidence_surface
+  - outer_runtime_state_surface
+- gateway_class: root_contract
+  gateway_scope: root
+  admissibility_mode: governed_refreeze_gateway
+  gateway_effect_scope: root_contract_law_refreeze
+  current_turn_legality_terminal: false
+  admissible_nonorigin_surface_classes:
+  - root_index
+  - machine_registry_directory
+  - governed_subdomain_extension
+  - demoted_support_directory
+  - outer_governance_surface
+  - outer_review_surface
+  - outer_workbook_surface
+  - outer_reference_surface
+  - outer_evidence_surface
+  - outer_runtime_state_surface
+  - outer_receipt_surface
+  - outer_implementation_surface
+- gateway_class: machine_registry_directory
+  gateway_scope: root
+  admissibility_mode: governed_projection_gateway
+  gateway_effect_scope: machine_registry_projection
+  current_turn_legality_terminal: true
+  admissible_nonorigin_surface_classes:
+  - root_index
+  - governed_subdomain_extension
+  - demoted_support_directory
+  - outer_governance_surface
+  - outer_review_surface
+  - outer_workbook_surface
+  - outer_reference_surface
+  - outer_evidence_surface
+  - outer_runtime_state_surface
+  - outer_receipt_surface
+  - outer_implementation_surface

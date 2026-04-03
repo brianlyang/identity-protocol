@@ -1,0 +1,588 @@
+schema_version: 1
+version: v1.6
+description: >
+  Single-source stream document registry for v1.6.x governance/review lanes.
+  Validators must consume this file instead of hardcoding stream doc paths.
+
+stream_docs:
+  - stream_version: v1.6.1
+    governance_doc: docs/governance/identity-headstamp-egress-governance-v1.6.1.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md
+  - stream_version: v1.6.2
+    governance_doc: docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.2.md
+  - stream_version: v1.6.3
+    governance_doc: docs/governance/github-native-control-plane-specialization-v1.6.3.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.3.md
+  - stream_version: v1.6.4
+    governance_doc: docs/governance/identity-failclose-monotonic-governance-v1.6.4.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.4.md
+  - stream_version: v1.6.5
+    governance_doc: docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.5.md
+  - stream_version: v1.6.6
+    governance_doc: docs/governance/identity-host-unique-channel-governance-v1.6.6.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.6.md
+  - stream_version: v1.6.7
+    governance_doc: docs/governance/identity-cross-layer-runtime-uniqueness-governance-v1.6.7.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.7.md
+  - stream_version: v1.6.8
+    governance_doc: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.8.md
+  - stream_version: v1.6.10
+    governance_doc: docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md
+  - stream_version: v1.6.11
+    governance_doc: docs/governance/agent-relay-final-answer-governance-v1.6.11.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.11-agent-relay-final-answer.md
+  - stream_version: v1.6.12
+    governance_doc: docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.12-native-chat-bootstrap-entry.md
+  - stream_version: v1.6.13
+    governance_doc: docs/governance/identity-instance-pack-topology-governance-v1.6.13.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.13-instance-pack-topology.md
+  - stream_version: v1.6.14
+    governance_doc: docs/governance/identity-codex-launcher-governance-v1.6.14.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md
+  - stream_version: v1.6.15
+    governance_doc: docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md
+  - stream_version: v1.6.16
+    governance_doc: docs/governance/identity-context-continuity-governance-v1.6.16.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md
+  - stream_version: v1.6.17
+    governance_doc: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md
+  - stream_version: v1.6.18
+    governance_doc: docs/governance/identity-artifact-family-routing-governance-v1.6.18.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md
+  - stream_version: v1.6.19
+    governance_doc: docs/governance/identity-weak-live-linkage-governance-v1.6.19.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.19-weak-live-linkage.md
+  - stream_version: v1.6.20
+    governance_doc: docs/governance/identity-broadcast-communication-convergence-governance-v1.6.20.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.20-broadcast-communication-convergence.md
+  - stream_version: v1.6.21
+    governance_doc: docs/governance/identity-terminal-truth-cleanliness-governance-v1.6.21.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.21-terminal-truth-cleanliness.md
+
+mandatory_static_docs:
+  - docs/governance/AUDIT_SNAPSHOT_INDEX.md
+  - docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md
+  - docs/governance/identity-actor-session-binding-governance-v1.5.0.md
+  - docs/review/protocol-remediation-audit-ledger-v1.5.md
+  - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+  - identity/protocol/mappings/workbook-registry.current.yaml
+  - docs/governance/identity-actor-session-binding-governance-v1.6.0.md
+  - docs/review/protocol-remediation-audit-ledger-v1.6.md
+  - docs/governance/identity-instance-script-orchestration-roadmap-2026-03-21.md
+  - docs/governance/identity-post-closure-governance-mode-v1.6.14.md
+  - docs/governance/identity-v1.6x-release-closure-governance.md
+  - docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md
+  - docs/release/identity-v1.6x-release-closure-summary.md
+  - docs/governance/identity-terminal-truth-cleanliness-governance-v1.6.21.md
+  - docs/review/protocol-remediation-audit-ledger-v1.6.21-terminal-truth-cleanliness.md
+  - docs/references/README.md
+  - docs/references/INDEX.md
+  - docs/references/identity-protocol-loop-visual-atlas-v1.6.md
+  - docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md
+  - docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md
+  - identity/protocol/mappings/reference-visual-atlas-registry.current.yaml
+  - identity/protocol/mappings/reference-visual-atlas-registry.v1.6.yaml
+  - docs/governance/identity-codex-launcher-workspace-convergence-roundtable-v1.6.14.md
+  - docs/governance/identity-workbook-governance-v1.6.md
+  - identity/protocol/mappings/workbook-registry.v1.6.yaml
+  - docs/workbook/README.md
+  - docs/workbook/templates/README.md
+  - docs/workbook/templates/protocol-issue-register.template.md
+  - docs/workbook/templates/protocol-deep-audit-workbook.template.md
+  - docs/workbook/protocol-issue-register-v1.6.md
+  - docs/workbook/protocol-deep-audit-workbook-v1.6.md
+  - docs/governance/branch-protection-required-checks-v1.2.8.md
+  - identity/protocol/plugins/README.md
+  - identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md
+  - identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.v1.6.2.md
+  - identity/protocol/mappings/layer-targeted-gate-profile.current.yaml
+  - CHANGELOG.md
+  - VERSIONING.md
+
+stream_doc_required_alias_refs:
+  - stream_version: v1.6.1
+    governance_doc: docs/governance/identity-headstamp-egress-governance-v1.6.1.md
+    governance_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md
+    review_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - stream_version: v1.6.2
+    governance_doc: docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md
+    governance_alias_refs:
+      - identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
+      - identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.2.md
+    review_alias_refs:
+      - identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
+      - identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+  - stream_version: v1.6.3
+    governance_doc: docs/governance/github-native-control-plane-specialization-v1.6.3.md
+    governance_alias_refs:
+      - identity/protocol/mappings/github-control-plane-offload.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.3.md
+    review_alias_refs:
+      - identity/protocol/mappings/github-control-plane-offload.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+  - stream_version: v1.6.4
+    governance_doc: docs/governance/identity-failclose-monotonic-governance-v1.6.4.md
+    governance_alias_refs:
+      - identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/layer-targeted-gate-profile.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.4.md
+    review_alias_refs:
+      - identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/layer-targeted-gate-profile.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - stream_version: v1.6.5
+    governance_doc: docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md
+    governance_alias_refs:
+      - identity/protocol/mappings/github-control-plane-offload.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.5.md
+    review_alias_refs:
+      - identity/protocol/mappings/github-control-plane-offload.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - stream_version: v1.6.6
+    governance_doc: docs/governance/identity-host-unique-channel-governance-v1.6.6.md
+    governance_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.6.md
+    review_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - stream_version: v1.6.7
+    governance_doc: docs/governance/identity-cross-layer-runtime-uniqueness-governance-v1.6.7.md
+    governance_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.7.md
+    review_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - stream_version: v1.6.8
+    governance_doc: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md
+    governance_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.8.md
+    review_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - stream_version: v1.6.10
+    governance_doc: docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md
+    governance_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md
+    review_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+  - stream_version: v1.6.11
+    governance_doc: docs/governance/agent-relay-final-answer-governance-v1.6.11.md
+    governance_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.11-agent-relay-final-answer.md
+    review_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - stream_version: v1.6.12
+    governance_doc: docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md
+    governance_alias_refs:
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.12-native-chat-bootstrap-entry.md
+    review_alias_refs:
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - stream_version: v1.6.13
+    governance_doc: docs/governance/identity-instance-pack-topology-governance-v1.6.13.md
+    governance_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.13-instance-pack-topology.md
+    review_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+  - stream_version: v1.6.14
+    governance_doc: docs/governance/identity-codex-launcher-governance-v1.6.14.md
+    governance_alias_refs:
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md
+    review_alias_refs:
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+  - stream_version: v1.6.15
+    governance_doc: docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md
+    governance_alias_refs:
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md
+    review_alias_refs:
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+  - stream_version: v1.6.16
+    governance_doc: docs/governance/identity-context-continuity-governance-v1.6.16.md
+    governance_alias_refs:
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md
+    review_alias_refs:
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+  - stream_version: v1.6.17
+    governance_doc: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md
+    governance_alias_refs:
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md
+    review_alias_refs:
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+  - stream_version: v1.6.18
+    governance_doc: docs/governance/identity-artifact-family-routing-governance-v1.6.18.md
+    governance_alias_refs:
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md
+    review_alias_refs:
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+  - stream_version: v1.6.19
+    governance_doc: docs/governance/identity-weak-live-linkage-governance-v1.6.19.md
+    governance_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.19-weak-live-linkage.md
+    review_alias_refs:
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+  - stream_version: v1.6.20
+    governance_doc: docs/governance/identity-broadcast-communication-convergence-governance-v1.6.20.md
+    governance_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.20-broadcast-communication-convergence.md
+    review_alias_refs:
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+  - stream_version: v1.6.21
+    governance_doc: docs/governance/identity-terminal-truth-cleanliness-governance-v1.6.21.md
+    governance_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.21-terminal-truth-cleanliness.md
+    review_alias_refs:
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+
+static_doc_required_alias_refs:
+  - doc: docs/governance/AUDIT_SNAPSHOT_INDEX.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - doc: docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+  - doc: docs/governance/identity-actor-session-binding-governance-v1.5.0.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/control-plane-budget.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/github-control-plane-offload.current.yaml
+  - doc: docs/review/protocol-remediation-audit-ledger-v1.5.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/control-plane-budget.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/github-control-plane-offload.current.yaml
+  - doc: docs/governance/identity-actor-session-binding-governance-v1.6.0.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/control-plane-budget.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/github-control-plane-offload.current.yaml
+  - doc: docs/review/protocol-remediation-audit-ledger-v1.6.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/control-plane-budget.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/github-control-plane-offload.current.yaml
+  - doc: docs/governance/identity-post-closure-governance-mode-v1.6.14.md
+    alias_refs:
+      - identity/protocol/mappings/workbook-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+  - doc: docs/governance/identity-v1.6x-release-closure-governance.md
+    alias_refs:
+      - identity/protocol/mappings/workbook-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/control-plane-budget.current.yaml
+  - doc: docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md
+    alias_refs:
+      - identity/protocol/mappings/workbook-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/control-plane-budget.current.yaml
+  - doc: docs/release/identity-v1.6x-release-closure-summary.md
+    alias_refs:
+      - identity/protocol/mappings/workbook-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/control-plane-budget.current.yaml
+  - doc: docs/governance/identity-terminal-truth-cleanliness-governance-v1.6.21.md
+    alias_refs:
+      - identity/protocol/mappings/workbook-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+  - doc: docs/review/protocol-remediation-audit-ledger-v1.6.21-terminal-truth-cleanliness.md
+    alias_refs:
+      - identity/protocol/mappings/workbook-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+  - doc: docs/references/README.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/reference-visual-atlas-registry.current.yaml
+  - doc: docs/references/INDEX.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/reference-visual-atlas-registry.current.yaml
+  - doc: docs/references/identity-protocol-loop-visual-atlas-v1.6.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+  - doc: docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/reference-visual-atlas-registry.current.yaml
+  - doc: docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/reference-visual-atlas-registry.current.yaml
+  - doc: docs/governance/identity-codex-launcher-workspace-convergence-roundtable-v1.6.14.md
+    alias_refs:
+      - identity/protocol/mappings/workbook-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+  - doc: docs/governance/identity-workbook-governance-v1.6.md
+    alias_refs:
+      - identity/protocol/mappings/workbook-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+  - doc: docs/workbook/README.md
+    alias_refs:
+      - identity/protocol/mappings/workbook-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+  - doc: docs/workbook/templates/README.md
+    alias_refs:
+      - identity/protocol/mappings/workbook-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+  - doc: docs/workbook/templates/protocol-issue-register.template.md
+    alias_refs:
+      - identity/protocol/mappings/workbook-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+  - doc: docs/workbook/templates/protocol-deep-audit-workbook.template.md
+    alias_refs:
+      - identity/protocol/mappings/workbook-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+  - doc: docs/workbook/protocol-issue-register-v1.6.md
+    alias_refs:
+      - identity/protocol/mappings/workbook-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+  - doc: docs/workbook/protocol-deep-audit-workbook-v1.6.md
+    alias_refs:
+      - identity/protocol/mappings/workbook-registry.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+  - doc: docs/governance/identity-instance-script-orchestration-roadmap-2026-03-21.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+  - doc: docs/governance/branch-protection-required-checks-v1.2.8.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/github-control-plane-offload.current.yaml
+  - doc: identity/protocol/plugins/README.md
+    alias_refs:
+      - identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
+      - identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/layer-targeted-gate-profile.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - doc: identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md
+    alias_refs:
+      - identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
+      - identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+      - identity/protocol/mappings/layer-targeted-gate-profile.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - doc: identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.v1.6.2.md
+    alias_refs:
+      - identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
+      - identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/layer-targeted-gate-profile.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+
+canonical_release_summary_doc: docs/release/identity-v1.6x-release-closure-summary.md
+
+release_archival_docs:
+  - docs/release/v1-roadmap.md
+  - docs/release/v1.0.0-release-notes.md
+
+legacy_archival_docs:
+  - docs/governance/audit-snapshot-2026-02-21-control-loop-v1.4.0.md
+  - docs/governance/audit-snapshot-2026-02-21-release-closure-v1.4.2.md
+  - docs/governance/audit-snapshot-2026-02-22-release-closure-v1.4.4.md
+  - docs/governance/audit-snapshot-2026-02-23-release-closure-v1.4.7.md
+  - docs/governance/audit-snapshot-2026-02-24-identity-path-governance-final-closure-v1.4.12.md
+  - docs/governance/audit-snapshot-2026-02-24-release-doc-governance-closure-v1.4.12.md
+  - docs/governance/audit-snapshot-2026-02-24-self-heal-and-permission-state-v1.4.12.md
+  - docs/governance/audit-snapshot-2026-02-25-protocol-runtime-boundary-closure-v1.4.12.md
+  - docs/governance/audit-snapshot-2026-02-25-readme-core-goal-alignment-v1.4.13.md
+  - docs/governance/audit-snapshot-policy-v1.2.11.md
+  - docs/governance/audit-unified-result-package-v1.4.12.md
+  - docs/governance/ci-required-gates-release-hotfix-v1.5.0.md
+  - docs/governance/identity-base-protocol-runtime-retro-and-governance-feedback-v1.4.13.md
+  - docs/governance/identity-headstamp-last-hop-closure-governance-v1.6.9.md
+  - docs/governance/identity-environment-path-deep-audit-and-self-drive-upgrade-v1.4.13.md
+  - docs/governance/identity-instance-closure-checklist-v1.4.12.md
+  - docs/governance/identity-instance-self-driven-upgrade-and-base-feedback-design-v1.4.6.md
+  - docs/governance/identity-context-continuity-preflight-v1.6.16.md
+  - docs/governance/identity-runtime-path-selection-governance-v1.4.12.md
+  - docs/governance/local-instance-persistence-boundary-v1.4.6.md
+  - docs/governance/office-ops-expert-instance-runtime-retro-and-protocol-feedback-v1.4.13.md
+  - docs/governance/roundtable-multi-agent-multi-identity-binding-governance-v1.4.12.md
+  - docs/governance/roundtable-multi-vendor-discussion-playbook-v1.4.12.md
+  - docs/governance/roundtable-protocol-root-dual-mode-convergence-v1.4.9.md
+  - docs/governance/runtime-artifact-isolation-root-cause-and-remediation-v1.4.12.md

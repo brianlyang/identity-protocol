@@ -1,0 +1,76 @@
+schema_version: 1
+governance_version: v1.6.2
+last_updated_utc: "2026-03-24T00:00:00Z"
+
+docs:
+  canonical_playbook: identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md
+  root_readme: identity/protocol/plugins/README.md
+  playbook_link_token: PLUGIN_WIRING_PLAYBOOK.current.md
+  playbook_required_tokens:
+    - PLUGIN_REGISTRY.current.yaml
+    - FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+    - PROVIDER_PROFILES.current.yaml
+    - contract-binding.current.yaml
+    - scripts/required_gate_bundle_runner.py
+    - scripts/validate_required_gate_surface_drift.py
+    - scripts/report_three_plane_status.py
+    - scripts/full_identity_protocol_scan.py
+  root_required_tokens:
+    - identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    - identity/protocol/IDENTITY_RUNTIME.md
+    - Foundational philosophy inheritance
+    - Runtime adjudication boundary
+    - current-turn legality
+    - machine-consumed enforcement surfaces
+    - truth_exists
+    - truth_discoverable
+    - truth_admissible
+    - truth_bound
+    - truth_consumed
+    - FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+    - PLUGIN_REGISTRY.current.yaml
+    - PROVIDER_PROFILES.current.yaml
+    - contract-binding.current.yaml
+    - layer-targeted-gate-profile.current.yaml
+    - stream-doc-registry.current.yaml
+    - Plugin Join Flow (config-first, fail-close)
+    - integration_kind
+    - protocol_contract_root
+    - instance_runtime_root
+    - identity/protocol/plugins/skill
+    - identity/protocol/plugins/mcp
+    - .identity/{identity_id}/runtime/plugins/skills
+    - .identity/{identity_id}/runtime/plugins/mcp
+    - .identity/{identity_id}/runtime/plugins/api
+
+plugin_docs:
+  - plugin_id: ai-folder-governance-enforcement
+    readme: identity/protocol/plugins/skill/ai-folder-governance-enforcement/README.md
+    required_tokens:
+      - asb16-rq-020
+      - skill_path_integrity
+      - scripts/validate_skill_path_integrity.py
+      - identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+      - Runtime adjudication boundary
+      - truth_exists
+      - truth_consumed
+  - plugin_id: multimodal-vision-enforcement
+    readme: identity/protocol/plugins/multimodal-vision-enforcement/README.md
+    required_tokens:
+      - asb16-rq-034
+      - multimodal_plugin_enforcement
+      - scripts/validate_multimodal_plugin_enforcement.py
+      - identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+      - Runtime adjudication boundary
+      - truth_exists
+      - truth_consumed
+  - plugin_id: reasoning-loop-enforcement
+    readme: identity/protocol/plugins/reasoning-loop-enforcement/README.md
+    required_tokens:
+      - asb16-rq-035
+      - reasoning_loop_failclose_enforcement
+      - scripts/validate_reasoning_loop_failclose.py
+      - identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+      - Runtime adjudication boundary
+      - truth_exists
+      - truth_consumed

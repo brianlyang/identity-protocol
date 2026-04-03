@@ -1,57 +1,123 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
+import json
 import re
 from pathlib import Path
+from typing import Any
+
+from repo_root_resolution_common import resolve_repo_root
+
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+ERR_RELEASE_METADATA = "IP-RMETA-001"
+
+PROTOCOL_PATH = "identity/protocol/IDENTITY_PROTOCOL.md"
+README_PATH = "README.md"
+VERSIONING_PATH = "VERSIONING.md"
+REQUIREMENTS_PATH = "requirements-dev.txt"
 
 
-def _read(path: str) -> str:
-    return Path(path).read_text(encoding="utf-8")
+def _read(repo_root: Path, rel_path: str) -> str:
+    return (repo_root / rel_path).read_text(encoding="utf-8")
 
 
 def _extract(pattern: str, text: str, label: str) -> str:
-    m = re.search(pattern, text, flags=re.MULTILINE)
-    if not m:
+    match = re.search(pattern, text, flags=re.MULTILINE)
+    if not match:
         raise ValueError(f"cannot extract {label} using pattern: {pattern}")
-    return m.group(1)
+    return str(match.group(1)).strip()
+
+
+def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    text = json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2)
+    print(text)
+
+
+def _classify_protocol_root_version_mode(text: str) -> tuple[str, str]:
+    versioned = re.search(
+        r"^#\s+Identity Protocol\s+v(\d+\.\d+\.\d+)\s+\(draft\)",
+        text,
+        flags=re.MULTILINE,
+    )
+    if versioned:
+        return "versioned_root_header", str(versioned.group(1)).strip()
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    first_line = lines[0] if lines else ""
+    if first_line == "# Identity Protocol":
+        return "non_versioned_root_constitution", ""
+    raise ValueError(
+        "protocol root header must be either a versioned draft header or the non-versioned '# Identity Protocol' constitution header"
+    )
 
 
 def main() -> int:
-    protocol = _read("identity/protocol/IDENTITY_PROTOCOL.md")
-    readme = _read("README.md")
-    versioning = _read("VERSIONING.md")
-    req = _read("requirements-dev.txt")
+    parser = argparse.ArgumentParser(description="Validate release metadata version synchronization.")
+    parser.add_argument("--repo-root", default="")
+    parser.add_argument("--json-only", action="store_true")
+    args = parser.parse_args()
+
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
+    payload: dict[str, Any] = {
+        "release_metadata_sync_status": STATUS_FAIL_REQUIRED,
+        "error_code": "",
+        "repo_root": str(repo_root),
+        "tracked_files": [PROTOCOL_PATH, README_PATH, VERSIONING_PATH, REQUIREMENTS_PATH],
+        "tracked_versioned_files": [README_PATH, VERSIONING_PATH, REQUIREMENTS_PATH],
+        "versions": {},
+        "release_metadata_mode": "active_draft_head_alignment",
+        "stale_reasons": [],
+    }
 
     try:
-        protocol_v = _extract(r"^#\s+Identity Protocol\s+v(\d+\.\d+\.\d+)\s+\(draft\)", protocol, "protocol version")
-        readme_v = _extract(r"Protocol version:\s+`v(\d+\.\d+\.\d+)`\s+\(draft\)", readme, "README protocol version")
+        protocol = _read(repo_root, PROTOCOL_PATH)
+        readme = _read(repo_root, README_PATH)
+        versioning = _read(repo_root, VERSIONING_PATH)
+        requirements = _read(repo_root, REQUIREMENTS_PATH)
+        protocol_root_version_mode, protocol_v = _classify_protocol_root_version_mode(protocol)
+        readme_v = _extract(
+            r"Protocol version:\s+`v(\d+\.\d+\.\d+)`\s+\(draft\)",
+            readme,
+            "README protocol version",
+        )
         versioning_v = _extract(
             r"^##\s+Release metadata synchronization\s+\(v(\d+\.\d+\.\d+)\+\)",
             versioning,
             "VERSIONING release sync version",
         )
-        req_v = _extract(r"release metadata synchronized in v(\d+\.\d+\.\d+)\s+draft", req, "requirements baseline version")
-    except Exception as e:
-        print(f"[FAIL] {e}")
+        requirements_v = _extract(
+            r"release metadata synchronized in v(\d+\.\d+\.\d+)\s+draft",
+            requirements,
+            "requirements baseline version",
+        )
+    except Exception as exc:
+        payload["error_code"] = ERR_RELEASE_METADATA
+        payload["stale_reasons"] = [str(exc)]
+        _emit(payload, json_only=args.json_only)
         return 1
 
     versions = {
-        "IDENTITY_PROTOCOL.md": protocol_v,
-        "README.md": readme_v,
-        "VERSIONING.md": versioning_v,
-        "requirements-dev.txt": req_v,
+        README_PATH: readme_v,
+        VERSIONING_PATH: versioning_v,
+        REQUIREMENTS_PATH: requirements_v,
     }
-    base = protocol_v
-    mismatch = {k: v for k, v in versions.items() if v != base}
+    payload["protocol_root_version_mode"] = protocol_root_version_mode
+    payload["protocol_root_header_version"] = protocol_v
+    payload["protocol_root_non_versioned"] = protocol_root_version_mode == "non_versioned_root_constitution"
+    payload["versions"] = versions
+    baseline = readme_v
+    payload["baseline_version"] = baseline
+    mismatch = {path: version for path, version in versions.items() if version != baseline}
     if mismatch:
-        print("[FAIL] release metadata version drift detected")
-        print(f"       expected all files aligned to v{base}")
-        for k, v in versions.items():
-            print(f"       - {k}: v{v}")
+        payload["error_code"] = ERR_RELEASE_METADATA
+        payload["version_mismatches"] = mismatch
+        payload["stale_reasons"] = [f"version_mismatch:{path}:v{version}" for path, version in mismatch.items()]
+        _emit(payload, json_only=args.json_only)
         return 1
 
-    print(f"[OK] release metadata synchronized to v{base}")
-    print("validate_release_metadata_sync PASSED")
+    payload["release_metadata_sync_status"] = STATUS_PASS_REQUIRED
+    _emit(payload, json_only=args.json_only)
     return 0
 
 

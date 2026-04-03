@@ -1,0 +1,1460 @@
+# Identity Protocol Root Reading Order
+
+## Purpose
+
+This file is the root index for `identity/protocol/`.
+
+It exists to make the protocol-root reading order explicit for the machine world:
+
+- identity instances;
+- launchers;
+- validators;
+- probes;
+- runtime gates;
+- protocol maintainers;
+- reviewers and auditors acting on behalf of machine truth.
+
+This file is not a runtime truth source, not a machine-consumed contract row, and not a substitute for governance/review docs, mappings, validators, runtime state, or receipts.
+
+---
+
+## Root reading order
+
+When entering `identity/protocol/`, read in this order:
+This root reading order must remain bound to canonical root-reading-order stage rows rather than becoming a freehand alternate entry ladder.
+
+1. **`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`**
+   - the bottom theory;
+   - the generative reason the identity protocol exists at all;
+   - the interpretive source for machine-law priorities, semantic singularity, fail-close preference, lifecycle closure, and shared-law vs instance-adaptation boundaries.
+2. **`IDENTITY_PROTOCOL.md`**
+   - the protocol-law constitution;
+   - the root protocol boundary, governance stack, and active stream framing.
+3. **`IDENTITY_RUNTIME.md`**
+   - the runtime constitution;
+   - how protocol law is embodied in runtime integration, startup, execution checks, and active-runtime boundaries.
+4. **root contract files**
+   - `MACHINE_LAW_PRIMACY_CONTRACT.md`
+   - `MACHINE_WORLD_ONTOLOGY_CONTRACT.md`
+   - `CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md`
+   - `DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md`
+   - `SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md`
+   - `ENTRY_SURFACE_LEGITIMACY_CONTRACT.md`
+   - `ERROR_TERMINALITY_CONTRACT.md`
+   - `ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md`
+   - `IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`
+   - `IDENTITY_DISCOVERY.md`
+   - `AGENT_HANDOFF_CONTRACT.md`
+   - `IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md`
+   - `PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`
+   - `STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`
+   - `TRUTH_LIFECYCLE_CONTRACT.md`
+   - `OPERATOR_ANSWER_SURFACE_CONTRACT.md`
+   - this manual root-contract index is explanatory only and must remain congruent with the admitted `reading_order` root-contract sequence rather than becoming an independently authored alternate order.
+   - explanatory root-contract summaries rendered elsewhere in the root corpus must remain congruent with admitted root-contract projection labels rather than relabeling domain law.
+   - these freeze concrete contract law for their specific domains.
+5. **machine-consumed registries and mappings**
+   - `mappings/`
+   - these freeze machine-facing rows, bindings, and registry truth.
+6. **specialized subdomain protocol packs**
+   - `broadcast/`
+   - `plugins/`
+   - these extend the root protocol into narrower governed surfaces.
+7. **non-runtime or support material**
+   - `IDENTITY_CONTROL_PLANE_MVP.md`
+   - `LANE_HANDOFF_CONTRACT.md`
+   - `fixtures/`
+   - these are never active-runtime truth.
+
+---
+
+## What belongs at protocol root
+
+`identity/protocol/` is the law-bearing root corpus of the identity protocol
+for the machine world.
+
+The following classes belong here:
+
+1. **bottom theory / interpretive source**
+   - `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
+2. **constitutions**
+   - `IDENTITY_PROTOCOL.md`
+   - `IDENTITY_RUNTIME.md`
+3. **root contract law**
+   - machine-law primacy, machine-world ontology, current-truth epistemology, decision-evidence admissibility, success-path state admissibility, entry-surface legitimacy, error terminality, artifact-family admissibility, prompt bootstrap, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth lifecycle, operator answer surface, and other root-domain contracts
+4. **machine-consumed registries and mappings**
+   - canonical bindings, term registries, stream registries, scope matrices, and related SSOT rows
+5. **governed subdomain protocol extensions**
+   - subdirectories such as `broadcast/` and `plugins/`
+6. **clearly demoted support material**
+   - only when it is explicit that the material is not active-runtime truth
+   - `IDENTITY_CONTROL_PLANE_MVP.md` and `LANE_HANDOFF_CONTRACT.md` remain admitted only under this demoted-support boundary
+
+The root directory should remain sparse, law-bearing, and semantically stable.
+
+---
+
+## What must not be treated as protocol-root law
+
+The following do **not** belong in `identity/protocol/` as law-bearing root
+material:
+
+1. stream-local closure chatter or temporary remediation narration;
+2. workbook issue projections or cross-stream cleanup ledgers;
+3. workspace-specific convenience notes;
+4. business strategy, domain tactics, or scenario heuristics;
+5. instance-local residue diaries, one-off troubleshooting notes, or operator memory aids;
+6. temporary persuasion text that is not part of bottom theory, constitutional law, contract law, or machine-consumed registry truth.
+
+When such material is valuable, it should live in the appropriate outer surface
+instead:
+
+- `docs/governance/`
+- `docs/review/`
+- `docs/workbook/`
+- `activity/evidence/`
+- runtime-pack or instance-local governed roots
+
+---
+
+## Why philosophy comes first
+
+In philosophical order, the identity protocol exists because `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` exists first.
+These philosophy-first rules must remain bound to canonical philosophy-primacy rows rather than drifting into motivational prose.
+
+1. **protocol and runtime are not self-originating law**
+   - the protocol does not invent its own reason for being at the contract layer;
+   - runtime integration does not create its own reason for being independently of protocol philosophy.
+2. **bottom theory is formalized downstream**
+   - the protocol formalizes, freezes, and operationalizes the machine-world bottom theory defined there;
+   - runtime inherits and operationalizes that bottom theory rather than declaring an independent semantic constitution.
+3. **constitutions and contracts are downstream freezings**
+   - every root constitution or contract file in this directory should be interpreted as a more concrete freezing of those bottom-theory commitments.
+4. **philosophical primacy is not runtime-source primacy**
+   - Philosophical primacy, however, is not the same as runtime-source primacy.
+   - philosophy-first law remains philosophically generative but not runtime-terminal.
+
+---
+
+## Authority layering
+
+The authority order is layered, not flattened:
+This authority layering must remain bound to canonical authority-layer stage rows rather than becoming a freehand alternate authority ladder.
+
+1. **bottom-theory primacy**
+   - `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
+   - explains *why* protocol law has the shape it has.
+2. **constitutional / contract authority**
+   - `IDENTITY_PROTOCOL.md`
+   - `IDENTITY_RUNTIME.md`
+   - root contract files such as machine-law primacy, machine-world ontology, current-truth epistemology, decision-evidence admissibility, success-path state admissibility, entry-surface legitimacy, error terminality, artifact-family admissibility, prompt bootstrap, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth-lifecycle, and operator answer-surface contracts
+   - these define *what law is concretely frozen*.
+3. **machine-consumed enforcement authority**
+   - governance/review docs
+   - mappings
+   - validators
+   - probes
+   - runtime state
+   - receipts
+   - these determine *current machine truth and pass/fail authority*.
+
+So the reading rule is:
+
+- philosophy first for interpretation;
+- constitution and contracts next for frozen law;
+- machine-consumed truth last for current authority and runtime verdict.
+
+---
+
+## Source-order, reading-order, and adjudication-order
+
+These three orders must remain distinct for the machine world:
+These order distinctions must remain bound to canonical order-plane stage rows rather than becoming a freehand semantic triad.
+
+1. **source-order / generative-order**
+   - `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
+   - `IDENTITY_PROTOCOL.md` / `IDENTITY_RUNTIME.md`
+   - root contract files
+   - machine-consumed enforcement surfaces
+   - answers: where protocol law comes from.
+2. **root reading-order**
+   - the entry sequence defined at the top of this file
+   - the README entry ladder must remain congruent with admitted root-reading-order stage rows rather than becoming a freehand alternate order
+   - answers: how to enter the root corpus without semantic confusion.
+3. **adjudication-order**
+   - governance/review docs, mappings, validators, probes, runtime state, and receipts
+   - the terminal machine chain stays explicit as mappings → validators → probes → runtime state → receipts
+   - answers: how current-turn legality and machine verdict are determined.
+
+Do not collapse these orders:
+
+- a stream, checker, validator, or runtime verdict is not the source of bottom theory;
+- this README's reading order is not itself the origin of protocol law;
+- philosophy explains why law exists in its current shape, but does not replace machine adjudication.
+
+---
+
+## Root constitutional-spine discipline
+
+Root entry, bottom theory, protocol constitution, and runtime constitution do
+not form a lawful spine by rhetorical proximity alone.
+
+Constitutional-entry rows and spine-bridge rows must remain explicit as
+separate machine-governed families.
+
+Expected row-family total and emitted row-family total must remain congruent
+under machine-readable coverage completeness rather than collapsing into one
+aggregate spine count.
+
+Expected entry rel-path identity set and expected bridge-id identity set must
+also remain explicit rather than being inferred from generic structure failure
+or remembered ordering.
+
+Validator or runtime code must not finalize constitutional-spine truth while
+missing or unexpected entry rel-paths or bridge ids remain known only inside
+local machinery.
+
+## Root constitutional-spine completeness discipline
+
+Constitutional-spine law is not a soft prose bundle.
+These constitutional-spine-completeness rules must remain bound to canonical constitutional-spine-completeness rows rather than drifting into soft summary prose.
+
+1. required constitutional-entry, spine-bridge, philosophy-primacy, and philosophy-primacy-surface rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each constitutional-spine family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize constitutional-spine truth while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root adjudication-surface discipline
+
+Current-turn legality must not flatten the machine surfaces that participate in adjudication.
+
+1. mappings admit applicable machine law and registry truth for current-turn legality;
+2. validators test legality against that admitted law rather than inventing new origin law;
+3. probes negate drift by fail-closing weakened or hidden legality assumptions;
+4. runtime state binds live current-turn truth only after prior legality phases have remained lawful;
+5. receipts close the adjudicated verdict and must not back-author earlier legality phases.
+
+That also means runtime-state binding evidence is not the same as receipt-closure evidence:
+
+- runtime state proves live lawful binding;
+- receipts prove lawful closure of an already-valid chain.
+
+So the terminal chain is ordered and phase-governed at the same time:
+
+- mappings are admissible-law resolution;
+- validators are governed legality evaluation;
+- probes are fail-close drift negation;
+- runtime state is live-truth binding;
+- receipts are adjudicated verdict closure.
+
+No machine surface in that chain may silently inherit another surface's role merely because it is later, more vivid, or closer to operator visibility.
+
+Operator-facing compression must preserve that discipline as well: a realized-effect
+answer claim cannot borrow the backing stratum of a live-bound status claim, and
+neither may borrow the backing stratum of frozen law or discovery.
+
+Operator-facing compression must preserve epistemic posture as well: realized-effect
+projection cannot borrow the current-truth posture of source grounding, governed
+resolution, fail-close admissibility, or live-bound status.
+
+Current-truth justification itself must preserve commitment-specific proof
+posture as well: source grounding, governed resolution, present-turn authority,
+derivational provenance, and fail-close justification do not share one generic
+epistemic proof layer.
+
+Success-path state handling must preserve state-class proof posture as well:
+defined, admissible, bound-active, optional, recovery, and demoted-support
+state classes do not share one generic state-admission proof layer.
+
+Decision-evidence handling must preserve evidence-class proof posture as well:
+frozen-law, registry, validator-verdict, bound-runtime, closure, and
+demoted-support evidence classes do not share one generic decision-evidence
+proof layer.
+
+---
+
+## One-way derivation discipline
+
+The root corpus must also preserve one-way derivation.
+
+1. bottom theory may ground constitutions, root contracts, registries, and governed extensions;
+2. constitutions and root contracts may freeze that grounding into more concrete law;
+3. machine-consumed registries and runtime adjudication may operationalize and test that law;
+4. a later enforcement verdict may expose incompleteness, but it must not become the semantic parent of the earlier layer it tests.
+
+Explanatory or evidence surfaces may motivate strengthening, but they must re-enter root law only through governed refreezing at the proper layer.
+
+So:
+
+- root navigation may summarize root law, but it does not reverse-author it;
+- support material may assist understanding, but it does not become a law-bearing parent of protocol meaning;
+- current-turn evidence may justify strengthening, but it does not become generative source law by itself.
+
+---
+
+## Root promotion-demotion discipline
+
+Promotion, demotion, and re-entry across protocol surfaces must remain governed.
+
+1. outer governance, review, workbook, reference, evidence, runtime, receipt, and implementation surfaces may motivate strengthening, but they do not directly promote themselves into root law;
+2. demoted support material cannot directly climb back into law-bearing root status;
+3. root navigation may summarize root law, but it does not promote itself into constitutional or contract authorship;
+4. runtime or receipt evidence may expose a real gap, but the gap re-enters root law only through governed refreezing at an allowed root gateway;
+5. machine-registry and governed-extension surfaces may expose the need for upstream strengthening, but they do not reverse-author bottom theory or constitutions.
+
+The allowed re-entry gateways for non-origin surfaces are narrower than the full root corpus:
+
+- constitutional law;
+- runtime constitutional law;
+- root contract law;
+- machine-registry law.
+
+The governed re-entry chain stays explicit as: constitution -> runtime constitution
+-> root contract -> machine-registry.
+
+No outer or demoted surface may directly self-promote into root law without that governed re-entry path.
+
+---
+
+## Root gateway-admissibility discipline
+
+Gateway admission must stay narrower than general motivation to strengthen.
+
+1. gateway admission decides which non-origin surfaces may legally motivate each root gateway;
+2. a gateway is not an origin substitute; admission only permits governed re-entry at that gateway's own effect scope and effect target class;
+3. gateway effect target stays fixed by gateway class itself; incoming motivation may not choose a different root output class;
+4. gateway effect target also keeps the question class governed for that target layer; incoming motivation may not retag gateway output as a different answer class;
+5. constitutional, runtime-constitutional, and root-contract gateways refreeze law at their own layer;
+6. machine-registry gateway projects machine-consumable registry truth and may terminate current-turn legality, but it does not let incoming motivation surfaces author upstream law;
+7. gateway admission does not let an incoming surface inherit the gateway's authorship.
+
+So the protocol must preserve two distinctions at once:
+
+- a surface may be strong enough to motivate a gateway without becoming the semantic author of the gateway output;
+- current-turn legality may terminate at machine-registry law while still preserving philosophy, constitution, and root-contract source order above it.
+
+---
+
+## Root conflict-precedence discipline
+
+Conflict precedence must stay scoped to the kind of conflict being resolved.
+
+1. semantic-meaning conflict resolves by source order, not by convenience, recency, or current checker vividness;
+2. current-turn legality conflict resolves at machine-consumed enforcement terminals, not at philosophy prose, README text, or frozen contract prose alone;
+3. gateway-authorship conflict resolves by gateway effect scope, preserved target question class, preserved answer mode, and source order, not by the identity of the incoming motivating surface;
+4. demotion-status conflict resolves by governed reclassification, not by later reuse, copying, or local familiarity.
+
+So the protocol must reject these precedence collapses:
+
+- a current validator result being treated as if it rewrote bottom theory;
+- a motivating runtime artifact being treated as if gateway admission made it the author of gateway output;
+- a reused demoted support artifact being treated as if it automatically recovered law-bearing status.
+
+---
+
+## Root question-routing discipline
+
+Different root entries answer different classes of machine-world questions.
+This question-routing discipline must remain bound to canonical root-question-discipline stage rows rather than becoming a freehand alternate question ladder.
+
+1. **generative why-question**
+   - `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
+   - why identity protocol law exists in this shape at all.
+2. **root-entry question**
+   - `README.md`
+   - how to enter the root corpus without semantic confusion.
+3. **constitutional law question**
+   - `IDENTITY_PROTOCOL.md`
+   - `IDENTITY_RUNTIME.md`
+   - what protocol-law and runtime-law are concretely frozen.
+4. **domain-law question**
+   - root contract files.
+   - what concrete root-domain contract law is frozen.
+5. **machine-registry question**
+   - `mappings/`
+   - which aliases, active files, bindings, and registry rows are machine-consumed truth.
+6. **governed extension question**
+   - `broadcast/`
+   - `plugins/`
+   - what narrower subdomain law is frozen under the root corpus.
+7. **support-material question**
+   - `IDENTITY_CONTROL_PLANE_MVP.md`
+   - `LANE_HANDOFF_CONTRACT.md`
+   - `fixtures/`
+   - what demoted support material exists without becoming runtime truth.
+8. **gateway target question class preserved**
+   - gateway-mediated refreezing or projection keeps the question class governed by the gateway target layer.
+   - it does not inherit a new answer class from incoming motivation or local convenience.
+
+The most important prohibition is strict:
+
+- current-turn legality question must never terminate in philosophy text, README text, or frozen contract prose alone.
+
+Current-turn legality must instead resolve from machine-consumed enforcement surfaces such as:
+
+1. mappings and active-file aliases;
+2. validators and probes;
+3. runtime state and receipts.
+
+---
+
+## Root machine-registry completeness discipline
+
+`identity/protocol/mappings/` is not a loose storage folder.
+
+1. a law-bearing root mapping family does not gain canonical status from on-disk presence alone;
+2. a governed root mapping family must appear in the admitted machine-registry child set, normally as a current file plus its active versioned file;
+3. if a root mapping family exists on disk but is absent from that admitted child set, registry completeness has failed and current-turn consumption must fail-close.
+4. an admitted root mapping family must disclose its validator, probe, shared-common, emitted status-key, and emitted error-code enforcement surfaces to the machine world;
+5. an admitted root mapping family must also disclose its validator root-doc-anchor and row-projection contract surfaces as machine-readable surface rows;
+5a. an admitted root mapping family must also disclose its probe shadow-bootstrap contract surfaces as machine-readable surface rows;
+
+Registered-complete root-mapping-family total and family-status-row total
+must also remain congruent under machine-readable coverage completeness
+rather than being left implicit.
+
+Registered complete family identity set must also remain
+machine-readable rather than being collapsed into the emitted
+family-status-row subset.
+
+Runtime or validator code may not finalize machine-registry completeness
+truth on partial family-status-row coverage when the registered complete
+family set remains known.
+
+Structure, completeness, and anchor violations discovered by
+machine-registry completeness must also be projected into stale reasons
+before final status.
+
+Projected violation-reason total and violation-row total must also
+remain congruent under machine-readable projection completeness rather
+than being left implicit.
+
+Runtime or validator code may consume only admitted root mapping families, not
+the most convenient file discovered on disk.
+
+Hidden enforcement knowledge does not satisfy registry completeness.
+
+These machine-registry-completeness rules must remain bound to canonical machine-registry-completeness rows rather than drifting into soft summary prose.
+
+1. required registered-complete-root-mapping-family, family-status-row, family-validator-surface-contract-row, and family-probe-surface-contract-row rows must remain explicit as separate machine-readable row families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize machine-registry completeness truth while missing or unexpected family or contract-row identities remain known only internally;
+5. fail-close machine output must preserve violation-reason projection and row-identity drift rather than hiding registry completeness drift behind shorthand counts or generic structure failure.
+
+Repo-relative descriptor surfaces must also stay repo-root relative and
+repo-contained; absolute paths and parent-escape paths are non-compliant even
+if they exist locally.
+
+Repo-relative descriptor surfaces must also remain role-typed; validator,
+probe, and shared-common paths are not interchangeable repo files.
+
+Those role-typed surfaces must also remain cross-role coherent; validator,
+probe, and shared-common paths for one admitted family may not silently point
+at different root surface stems.
+
+Those cross-role coherent descriptor surfaces must also remain family-congruent;
+if an admitted family borrows another family's coherent descriptor stem, that
+binding must be explicitly declared in registry completeness law.
+
+---
+
+## Root governance completeness discipline
+
+Governance law is not a soft prose bundle.
+These governance-completeness rules must remain bound to canonical governance-completeness rows rather than drifting into soft summary prose.
+
+1. required registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class rows must remain explicit as separate machine-readable row families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, root-maintenance-guardrail, or forbidden-content-class identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root gateway-admissibility completeness discipline
+
+Gateway-admissibility law is not a soft prose bundle.
+These gateway-admissibility-completeness rules must remain bound to canonical gateway-admissibility-completeness rows rather than drifting into soft summary prose.
+
+1. required gateway-order, gateway-effect-target, and gateway-profile rows must remain explicit as separate machine-readable row families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize gateway-admissibility legality while missing or unexpected gateway identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root derivation completeness discipline
+
+Derivation law is not a soft prose bundle.
+These derivation-completeness rules must remain bound to canonical derivation-completeness rows rather than drifting into soft summary prose.
+
+1. required derivation-class-profile rows must remain explicit as a separate machine-readable row family;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for that family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize derivation legality while missing or unexpected corpus-class identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root transition completeness discipline
+
+Transition law is not a soft prose bundle.
+These transition-completeness rules must remain bound to canonical transition-completeness rows rather than drifting into soft summary prose.
+
+1. required surface-class-profile, direct-root-target-edge, and strengthening-gateway-edge rows must remain explicit as separate machine-readable row families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize transition legality while missing or unexpected surface, promotion-edge, or re-entry-gateway identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root authority completeness discipline
+
+Authority law is not a soft prose bundle.
+These authority-completeness rules must remain bound to canonical authority-completeness rows rather than drifting into soft summary prose.
+
+1. required authority-class-profile, entry-authority-projection, authority-layer-stage, and authority-layer-stage-surface rows must remain explicit as separate machine-readable row families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize authority legality while missing or unexpected corpus-class, entry, or authority-layer-stage identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root conflict-precedence completeness discipline
+
+Conflict-precedence law is not a soft prose bundle.
+These conflict-precedence-completeness rules must remain bound to canonical conflict-precedence-completeness rows rather than drifting into soft summary prose.
+
+1. required precedence-profile, gateway-authorship-projection, conflict-handling-rule, and conflict-handling-rule-surface rows must remain explicit as separate machine-readable row families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize conflict-precedence legality while missing or unexpected conflict-class, gateway, or conflict-handling-rule identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root ordering completeness discipline
+
+Ordering law is not a soft prose bundle.
+These ordering-completeness rules must remain bound to canonical ordering-completeness rows rather than drifting into soft summary prose.
+
+1. required source-order, reading-order, root-reading-order-stage, root-reading-order-stage-surface, order-plane-stage, order-plane-stage-surface, explanatory root-contract index/projection, adjudication-order, and adjudication-surface-profile rows must remain explicit as separate machine-readable row families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize ordering legality while missing or unexpected source, entry, root-reading-order-stage, order-plane-stage, manual-root-contract, or adjudication-surface identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root question-routing completeness discipline
+
+Question-routing law is not a soft prose bundle.
+These question-routing-completeness rules must remain bound to canonical question-routing-completeness rows rather than drifting into soft summary prose.
+
+1. required question-class-profile, root-entry-question-projection, root-question-discipline-stage, root-question-discipline-stage-surface, entry-summary-stage, entry-summary-stage-surface, and gateway-question-projection rows must remain explicit as separate machine-readable row families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize question-routing legality while missing or unexpected question-class, root-question-discipline-stage, entry-summary-stage, or route identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root design-question closure completeness discipline
+
+Design-question closure law is not a soft cross-reference bundle.
+These design-question-closure-completeness rules must remain bound to canonical design-question-closure-completeness rows rather than drifting into soft summary prose.
+
+1. required question-closure rows and emitted question-status rows must remain explicit as separate machine-readable row families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize design-question closure legality while missing or unexpected question identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected question identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root machine-law primacy completeness discipline
+
+Machine-law primacy law is not a soft prose bundle.
+These machine-law-primacy-completeness rules must remain bound to canonical machine-law-primacy-completeness rows rather than drifting into soft summary prose.
+
+1. required commitment, anchor, primacy-proof, primacy-limit, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize machine-law primacy legality while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root machine-world ontology completeness discipline
+
+Machine-world ontology law is not a soft prose bundle.
+These machine-world-ontology-completeness rules must remain bound to canonical machine-world-ontology-completeness rows rather than drifting into soft summary prose.
+
+1. required strata, object, ontology-proof, ontology-limit, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize machine-world ontology legality while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root stream-design admissibility completeness discipline
+
+Stream-design admissibility law is not a soft prose bundle.
+These stream-design-admissibility-completeness rules must remain bound to canonical stream-design-admissibility-completeness rows rather than drifting into soft summary prose.
+
+1. required question, admissibility-proof, admissibility-limit, outcome-class, and projection-surface rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize stream-design admissibility legality while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root prompt-bootstrap completeness discipline
+
+Prompt-bootstrap law is not a soft prose bundle.
+These prompt-bootstrap-completeness rules must remain bound to canonical prompt-bootstrap-completeness rows rather than drifting into soft summary prose.
+
+1. required anchor, output-field, binding-field, proof, limit, and native-literal rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize prompt-bootstrap truth while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root entry-surface legitimacy completeness discipline
+
+Entry-surface legitimacy law is not a soft prose bundle.
+These entry-surface-legitimacy-completeness rules must remain bound to canonical entry-surface-legitimacy-completeness rows rather than drifting into soft summary prose.
+
+1. required entry-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize entry-surface legitimacy truth while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root identity-discovery completeness discipline
+
+Identity-discovery law is not a soft prose bundle.
+These identity-discovery-completeness rules must remain bound to canonical identity-discovery-completeness rows rather than drifting into soft summary prose.
+
+1. required section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize identity-discovery truth while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root agent-handoff completeness discipline
+
+`AGENT_HANDOFF_CONTRACT.md` freezes governed handoff law as root-domain contract law rather than informal collaboration guidance.
+These agent-handoff-completeness rules must remain bound to canonical agent-handoff-completeness rows rather than drifting into soft summary prose.
+
+1. required role, payload, anchor, handoff-proof, handoff-limit, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected role, payload, anchor, proof, limit, and collapse row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root error-terminality completeness discipline
+
+Error-terminality law is not a soft prose bundle.
+These error-terminality-completeness rules must remain bound to canonical error-terminality-completeness rows rather than drifting into soft summary prose.
+
+1. required error-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize error-terminality truth while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root truth-lifecycle completeness discipline
+
+Truth-lifecycle law is not a soft prose bundle.
+These truth-lifecycle-completeness rules must remain bound to canonical truth-lifecycle-completeness rows rather than drifting into soft summary prose.
+
+1. required lifecycle-stage, memory-strata, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize truth-lifecycle legality while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root artifact-family admissibility completeness discipline
+
+Artifact-family admissibility law is not a soft prose bundle.
+These artifact-family-admissibility-completeness rules must remain bound to canonical artifact-family-admissibility-completeness rows rather than drifting into soft summary prose.
+
+1. required family-admission-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize artifact-family admissibility while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root current-truth epistemology completeness discipline
+
+Current-truth epistemology law is not a soft prose bundle.
+These current-truth-epistemology-completeness rules must remain bound to canonical current-truth-epistemology-completeness rows rather than drifting into soft summary prose.
+
+1. required commitment, differentiation, epistemic-proof, commitment-proof-alignment, epistemic-limit, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize current-truth epistemology while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root success-path state admissibility completeness discipline
+
+Success-path state admissibility law is not a soft prose bundle.
+These success-path-state-admissibility-completeness rules must remain bound to canonical success-path-state-admissibility-completeness rows rather than drifting into soft summary prose.
+
+1. required state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize success-path state admissibility while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root decision-evidence admissibility completeness discipline
+
+Decision-evidence admissibility law is not a soft prose bundle.
+These decision-evidence-admissibility-completeness rules must remain bound to canonical decision-evidence-admissibility-completeness rows rather than drifting into soft summary prose.
+
+1. required evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize decision-evidence admissibility while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+## Root operator answer-surface discipline
+
+Operator-facing collaboration does not flatten every surface into one prose blob.
+This root operator answer-surface discipline must remain bound to canonical answer-surface-stage rows rather than becoming a freehand delivery ladder.
+
+1. **operator entry surface**
+   - `natural_language_collaboration_entry`
+   - natural-language collaboration entry.
+2. **stable instance answer surface**
+   - `law_compressed_operator_answer`
+   - law-compressed operator answer.
+3. **supporting machine-truth surface**
+   - `supporting_machine_truth_surface`
+   - supporting machine-truth surface that may back the answer without replacing it.
+4. **terminal machine-enforcement surface**
+   - `current_turn_legality_terminal`
+   - current-turn legality terminal that constrains the answer without becoming answer prose itself.
+
+---
+
+## Root operator answer-surface completeness discipline
+
+Operator answer-surface law is not a soft prose bundle.
+These operator-answer-surface-completeness rules must remain bound to canonical operator-answer-surface-completeness rows rather than drifting into soft summary prose.
+
+1. required surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize operator answer-surface legality while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root protocol-instance responsibility completeness discipline
+
+Protocol-instance responsibility law is not a soft prose bundle.
+These protocol-instance-responsibility-completeness rules must remain bound to canonical protocol-instance-responsibility-completeness rows rather than drifting into soft summary prose.
+
+1. required layer, responsibility, escalation-trigger, escalation-proof, escalation-limit, and boundary-collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize protocol-instance responsibility legality while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root identity-instance self-judgement completeness discipline
+
+Identity-instance self-judgement law is not a soft prose bundle.
+These identity-instance-self-judgement-completeness rules must remain bound to canonical identity-instance-self-judgement-completeness rows rather than drifting into soft summary prose.
+
+1. required question, anchor, self-judgement-proof, self-judgement-limit, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize identity-instance self-judgement legality while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root law-bundle component-row completeness discipline
+
+Root-law bundle coherence is not a soft prose bundle.
+These law-bundle-component-row-completeness rules must remain bound to canonical law-bundle-component-row-completeness rows rather than drifting into soft summary prose.
+
+1. required component-row and component-status-row rows must remain explicit as separate machine-readable row families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize root-law bundle legality while missing or unexpected component identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
+## Root-law bundle discipline
+
+The root corpus is not governed by one monolithic text or one isolated
+validator.
+
+Constitutional spine, root admission/governance, source-order, authority
+layering, question-routing, derivation, promotion/demotion transition,
+gateway-admissibility, machine-registry completeness, and conflict precedence
+must stay explicit and machine-governed together.
+
+No single slice is sufficient by itself; the machine world must preserve them
+as one governed root-law bundle.
+
+If one slice drifts while the others stay green, the root corpus is not
+partially healthy; it has a coherence failure that must fail-close and be
+repaired at the matching root-law layer.
+
+Bundle membership must also remain descriptor-concordant with the admitted
+component families it binds.
+
+Local waiver of descriptor concordance must remain forbidden inside the
+bundle.
+
+A bundle row may not silently drift from a component family's own disclosed
+validator, probe, shared-common, emitted status-key, or emitted error-code
+surfaces.
+
+Nor may the bundle silently drift descriptor-field mode:
+
+- repo-relative paths must remain repo-relative paths;
+- validator-emitted status keys must remain validator-emitted status keys;
+- validator-emitted error-code families must remain validator-emitted
+  error-code families.
+
+The bundle may not locally reauthor that descriptor schema either; the field
+set and field-mode law used by the root-law bundle must stay aligned with the
+admitted machine-registry completeness law for self-describing mapping
+families.
+
+The bundle's descriptor schema must remain source-singular as well.
+
+It may not substitute a different source component/current mapping pair or
+fallback source for convenience.
+
+Local reauthoring of descriptor schema governance must remain forbidden
+inside the bundle.
+
+If that admitted source is unavailable or invalid, the machine world must
+fail-close rather than locally reconstructing descriptor schema.
+
+The bundle must also inherit machine-registry completeness
+self-describing-family requirement law.
+
+The admitted requirement that root mapping families stay self-describing may
+not be silently redeclared, weakened, or guessed inside the bundle.
+
+If the admitted source does not disclose that self-describing-family
+requirement law, the machine world must fail-close rather than locally
+reconstructing self-describing-family legality.
+
+Local redeclaration of self-describing-family requirement governance must
+remain forbidden inside the bundle.
+
+The bundle must also inherit machine-registry completeness family-surface
+binding law.
+
+If the admitted source does not disclose that family-surface binding law, the
+machine world must fail-close rather than locally reconstructing
+descriptor-family binding legality.
+
+Local redeclaration of family-surface binding governance must remain
+forbidden inside the bundle.
+
+If machine-registry completeness explicitly declares a cross-family
+descriptor-stem binding, the bundle must not locally override or suppress that
+binding.
+
+The bundle must also inherit machine-registry completeness repo-relative
+descriptor path-pattern law.
+
+It must inherit those repo-relative path patterns rather than locally
+redeclaring, loosening, or guessing descriptor-stem capture from naming
+convention.
+
+If the admitted source does not disclose those patterns, the machine world
+must fail-close rather than locally reconstructing descriptor-stem capture
+law.
+
+The bundle must also inherit machine-registry completeness repo-relative
+descriptor discipline law.
+
+Repo-root-relative scope, parent-escape rejection, role-typed path law, and
+cross-role surface-stem coherence may not be silently redeclared or weakened
+inside the bundle.
+
+Local redeclaration of repo-relative discipline governance must remain
+forbidden inside the bundle.
+
+If the admitted source does not disclose that repo-relative discipline, the
+machine world must fail-close rather than locally reconstructing descriptor
+path legality.
+
+The bundle must also inherit machine-registry completeness current/version
+naming law.
+
+Root family prefix, current-entry suffix, active-version regex, and the
+requirement that admitted mapping families remain current/version paired may
+not be silently redeclared or weakened inside the bundle.
+
+Local redeclaration of current/version naming governance must remain
+forbidden inside the bundle.
+
+If the admitted source does not disclose that naming law, the machine world
+must fail-close rather than locally reconstructing current/version mediation.
+
+The bundle must also inherit machine-registry completeness registry-child
+admission law.
+
+The canonical registry directory, the admitted registry-current entry, and
+the registered child set that legalizes component current/version files may
+not be silently redeclared or weakened inside the bundle.
+
+Local redeclaration of registry-child admission governance must remain
+forbidden inside the bundle.
+
+If the admitted source does not disclose that registry-child admission law,
+the machine world must fail-close rather than locally reconstructing
+component admission.
+
+Bundle component descriptors must also remain current-entry mediated.
+
+The bundle must point to admitted component current rows and resolve active
+version truth through those rows, not pin directly to version files.
+
+If a component current row is absent or invalid, the machine world must
+fail-close rather than bypassing current mediation.
+
+Bundle component legality must also remain validator-live.
+
+Each bound component validator must execute through its disclosed validator
+surface and emit `PASS_REQUIRED` through its disclosed status key.
+
+Descriptor concordance and file presence are not enough if that validator
+fails execution or emits a weaker verdict.
+
+Bundle component validator execution-failure handling must also stay
+fail-closed.
+
+If a bound validator cannot execute, exits nonzero, emits invalid machine
+output, or omits its disclosed status key, runtime may not synthesize a
+passing verdict from surrounding bundle metadata.
+
+Bundle component validators must also keep returncode-observation contract
+explicit.
+
+The admitted validator returncode-observation contract is nonzero returncode
+observed without host exception overlay.
+
+Runtime may not let a host-language subprocess helper raise on nonzero exit,
+bypass the governed execution-failure policy, or convert host exception
+convenience into validator truth.
+
+Bundle component validators must also remain machine-readable.
+
+Runtime consumes them through structured machine output carrying the disclosed
+status key, not by scraping prose, logs, or incidental terminal text.
+
+Bundle component descriptors must also keep probe shadow-bootstrap contract
+explicit.
+
+The admitted component probe shadow-bootstrap contract is
+`probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings`.
+
+Runtime may not suppress bootstrap/mirror probe law or reconstruct it from
+shell convention.
+
+Bundle component validators must also keep their invocation contract explicit.
+
+Bundle legality invokes them as `python3 <validator_script> --repo-root
+<repo_root> --json-only`.
+
+Runtime may not swap interpreter, omit repo-root binding, or omit compact
+machine-output mode.
+
+Bundle component validators must also keep output-channel contract explicit.
+
+The verdict-bearing machine-output channel is stdout only.
+
+stderr diagnostics do not become an alternate status-bearing channel and may
+not replace missing stdout truth.
+
+Bundle component validators must also keep stderr-isolation contract explicit.
+
+The admitted stderr channel remains separately captured from verdict-bearing
+stdout.
+
+Runtime may not merge stderr into stdout or treat a mixed stream as admitted
+validator truth.
+
+Bundle component validators must also keep stdio text-decoding contract
+explicit.
+
+The admitted validator stdio text-decoding contract is utf-8 strict text
+decode with no locale overlay.
+
+Runtime may not let ambient locale choose the decoder, substitute an
+alternate codec or replacement policy, or treat locale-shaped text coercion
+as admitted validator truth.
+
+Bundle component validators must also keep stdout-normalization contract
+explicit.
+
+The admitted validator stdout-normalization contract is outer-whitespace trim
+only before JSON decode.
+
+Runtime may not line-scrape, select a preferred line, trim inner content, or
+reconstruct JSON from mixed stdout.
+
+Bundle component validators must also keep stdout-presence contract explicit.
+
+The admitted validator stdout-presence contract is nonempty after
+outer-whitespace trim.
+
+Runtime may not treat empty or whitespace-only stdout as implicit success, an
+invented empty object, or an advisory no-op verdict surface.
+
+Bundle component validators must also keep stdout-framing contract explicit.
+
+The verdict-bearing machine output occupies whole stdout as a single JSON
+object.
+
+Runtime may not line-scrape, trailer-strip, or extract a JSON fragment from
+mixed stdout preamble, trailer, or incidental shell text.
+
+Bundle component validators must also keep status-key resolution contract
+explicit.
+
+The disclosed status key is resolved only as a direct top-level member of the
+verdict-bearing JSON object.
+
+Runtime may not search nested objects, alias keys, pointer paths, or other
+local convenience structures to recover missing status truth.
+
+Bundle component validators must also keep status-literal contract explicit.
+
+The disclosed status value is admitted only as the exact canonical string
+literal.
+
+Runtime may not trim whitespace, fold case, coerce non-string values, or map
+alternate literals into admitted status truth.
+
+Bundle component validators must also keep execution-input contract explicit.
+
+The admitted validator execution input is devnull-backed noninteractive stdin.
+
+Runtime may not let bound validators inherit ambient stdin, wait for operator
+keystrokes, or convert interactive prompt dialogue into validator truth.
+
+Bundle component validators must also keep verdict-admission timing contract
+explicit.
+
+The admitted validator verdict is consumed only after completed process exit.
+
+Runtime may not stream partial stdout into verdict truth, parse pre-exit
+fragments, or treat background-launched validators as already admitted.
+
+Bundle component validators must also keep execution-timeout contract
+explicit.
+
+The admitted validator execution-timeout contract is no local timeout overlay.
+
+Runtime may not inject a bundle-local deadline, kill-after policy, or timeout
+overlay and then treat timeout-shaped termination as admitted validator truth.
+
+Bundle component validators must also keep working-directory contract explicit.
+
+The admitted validator execution working directory is repo_root.
+
+Runtime may not substitute arbitrary cwd or ambient shell location for that
+governed execution context.
+
+Bundle component validators must also keep execution-environment contract
+explicit.
+
+The admitted validator execution environment is the inherited parent-process
+environment with no local overlay.
+
+Runtime may not inject a local env map, scrub inherited variables, or
+substitute a shadow environment overlay for that governed execution context.
+
+Bundle component validators must also keep execution-transport contract
+explicit.
+
+The admitted transport is local direct subprocess vector execution.
+
+Runtime may not substitute shell mediation, remote hop, or other ambient
+transport for that governed execution path.
+
+Bundle component validators must also keep contract-drift execution policy
+explicit.
+
+The admitted validator policy is execute under canonical contract and
+fail-closed on drift.
+
+Runtime may not obey a drifted disclosed contract row during validator
+execution or treat drift-shaped execution as admitted validator truth.
+
+Bundle component validators must also keep contract-surface projection policy
+explicit.
+
+The admitted validator surface split is disclosed bundle summary plus
+effective component execution rows.
+
+Runtime may not hide disclosed drift by rewriting summary to canonical values
+or project drifted declared rows as applied execution truth.
+
+Bundle component validators must also keep observation-continuity policy
+explicit.
+
+The admitted runtime policy is continue bound component observation under
+canonical surface before final fail-close.
+
+Runtime may not use bundle drift as a reason to suppress otherwise bindable
+component observation before final verdict.
+
+Bundle component status-row coverage policy must also stay explicit.
+
+The admitted runtime policy is every bound component emits one status row
+before final status.
+
+Bound component total and component-status-row total must remain
+congruent under machine-readable coverage completeness rather than being
+left implicit.
+
+Runtime may not finalize on partial component-row coverage when the bound
+component set is already known.
+
+Bundle violation-projection policy must also stay explicit.
+
+The admitted runtime policy is all structure, bundle, and anchor violations
+are projected into stale reasons before final status.
+
+Runtime may not keep violation rows private while presenting a final verdict
+surface that withholds their stale-reason projection.
+
+Projected stale-reason total and violation-row total must remain congruent
+under machine-readable projection completeness rather than being left
+implicit.
+
+Bundle final-status derivation policy must also stay explicit.
+
+The admitted runtime policy is `PASS_REQUIRED` if and only if stale reasons
+remain empty after violation projection; otherwise final status is
+`FAIL_REQUIRED`.
+
+Runtime may not derive a clean final verdict from pre-projection
+convenience, raw green component counts, or any alternate local verdict
+path.
+
+Bundle error-code precedence policy must also stay explicit.
+
+The admitted runtime policy is registry-class failure preempts
+structure-class failure, structure-class failure preempts bundle-class
+failure, and pass-state emits empty error code.
+
+Runtime may not derive failure code from first local convenience, last
+mutation side effect, or any alternate precedence order.
+
+Bundle failure-classification policy must also stay explicit.
+
+The admitted runtime policy is registry class derives from direct stale
+reasons present before violation projection, structure class derives from
+structure violations, bundle class derives from bundle and anchor
+violations, and otherwise failure class is pass.
+
+Runtime may not invent an anchor-only failure class, bypass direct stale
+reasons, or classify failure from local convenience surfaces.
+
+Bundle registry-class admission policy must also stay explicit.
+
+The admitted runtime policy is only direct stale reasons already present
+before violation projection may admit registry failure class.
+
+Projected structure, bundle, and anchor stale reasons must not
+retroactively upgrade failure class to registry.
+
+Bundle registry direct-stale-reason origin policy must also stay explicit.
+
+The admitted runtime origins are alias error, document invalidity,
+canonical contract-row invalidity, and required-surface absence, all
+before violation projection.
+
+Bundle registry direct-stale-reason alias origin policy must also stay
+explicit.
+
+The admitted runtime alias direct stale reasons are rows containing the
+`_alias_error:` marker before document, required-surface, and
+contract-row classification.
+
+Bundle registry direct-stale-reason document origin policy must also
+stay explicit.
+
+The admitted runtime document direct stale reasons are rows ending with
+`_empty_or_invalid` after alias exclusion and before required-surface
+and contract-row classification.
+
+Bundle registry direct-stale-reason required-surface origin policy must
+also stay explicit.
+
+The admitted runtime required-surface direct stale reasons are
+required-component-descriptor-fields missing, surface-missing rows,
+anchor-checks missing, and components missing before violation
+projection.
+
+Bundle registry direct-stale-reason contract-row origin policy must also
+stay explicit.
+
+The admitted runtime contract-row direct stale reasons are
+root-corpus-law-bundle prefixed rows and
+root-machine-registry-completeness prefixed rows that remain after
+alias, document, and required-surface classification.
+
+Bundle registry direct-stale-reason source policy must also stay
+explicit.
+
+The admitted runtime source is local stale reasons already present before
+violation projection.
+
+Projected structure, bundle, and anchor stale reasons do not become
+substitute direct stale-reason source.
+
+Runtime direct-stale source total and local stale-reason total must
+remain congruent under machine-readable source completeness rather than
+being left implicit.
+
+If completeness fails, runtime must still preserve the pre-fail mismatch
+as machine-readable evidence rather than repairing totals first and only
+reporting a derived failure flag.
+
+Bundle registry direct-stale-reason partition policy must also stay
+explicit.
+
+Each local stale reason present before violation projection must classify
+exactly once as alias, document, contract-row, required-surface, or
+unknown ontology drift.
+
+Bundle registry direct-stale-reason origin-classifier precedence policy
+must also stay explicit.
+
+Alias runtime classification preempts document classification, document
+classification preempts required-surface classification, required-surface
+classification preempts contract-row classification, and otherwise
+runtime origin remains unknown.
+
+Bundle registry direct-stale-reason residual-unknown policy must also
+stay explicit.
+
+Only local stale reasons that remain non-alias, non-document,
+non-required-surface, and non-contract-row after alias, document,
+required-surface, and contract-row resolution may remain unknown.
+
+Bundle registry direct-stale-reason unclassified policy must also stay
+explicit.
+
+The admitted runtime policy is fail-closed on unclassified direct
+stale-reason origin.
+
+Runtime must fail-close on unclassified direct stale-reason origin rather
+than silently expanding registry ontology.
+
+Bundle component-validator observation-reason policy must also stay
+explicit.
+
+The admitted runtime observation reasons are parse/status failure,
+nonzero returncode after admitted parse/status resolution, and non-pass
+component status, all before bundle-violation projection.
+
+Bundle component-validator parse/status origin policy must also stay
+explicit.
+
+The admitted runtime parse/status reasons are validator-output missing,
+validator-output invalid-json, validator-output not-json-object,
+validator-status-key missing, and validator-status-literal not-string,
+all before nonzero returncode, non-pass component status, explicit
+non-execution exclusion, and bundle-violation projection.
+
+Bundle component-validator nonzero-returncode origin policy must also
+stay explicit.
+
+The admitted runtime nonzero-returncode reason is component-validator
+nonzero returncode only, after admitted parse/status resolution and
+before non-pass component status, explicit non-execution exclusion, and
+bundle-violation projection.
+
+Bundle component-validator non-pass-status origin policy must also stay
+explicit.
+
+The admitted runtime non-pass-status reason is component-status
+not-pass-required only, after admitted parse/status and nonzero
+returncode resolution and before explicit non-execution exclusion and
+bundle-violation projection.
+
+Bundle component-validator prefixed ontology-drift origin policy must
+also stay explicit.
+
+The admitted runtime prefixed ontology-drift rows are validator-output,
+validator-status, component-status, and component-validator prefixed
+rows only, after admitted parse/status, nonzero returncode,
+non-pass-status, and exclusion-origin resolution and before
+not-applicable classification.
+
+Bundle component-validator residual not-applicable policy must also stay
+explicit.
+
+The admitted runtime residual not-applicable rows are only
+nonprefixed, nonadmitted, nonexcluded rows after parse-status, nonzero
+returncode, non-pass-status, exclusion-origin, and prefixed
+ontology-drift resolution.
+
+Bundle component-validator observation-reason classifier precedence
+policy must also stay explicit.
+
+Parse/status runtime classification preempts nonzero returncode
+classification, nonzero returncode classification preempts non-pass
+component-status classification, non-pass component-status
+classification preempts explicit non-execution row exclusion, explicit
+non-execution row exclusion preempts prefixed observation-family
+ontology drift, and otherwise runtime classification remains
+not-applicable.
+
+Bundle component-validator observation-reason exclusion-origin policy
+must also stay explicit.
+
+The admitted excluded runtime non-observation rows are
+component-validator missing, component-status-row coverage
+incomplete, component-validator contract-surface reasons, and
+component-probe surface-contract reasons, all before
+bundle-violation projection.
+
+Runtime observation reasons and prefixed observation-family ontology
+drift must not be silently re-bucketed as excluded non-observation
+rows.
+
+Non-execution bundle rows must remain outside component-validator
+observation ontology rather than being silently re-bucketed as runtime
+observation reasons.
+
+Bundle component-validator observation-reason source policy must also
+stay explicit.
+
+The admitted runtime observation source is bundle-violation rows only,
+before violation projection.
+
+Direct stale reasons, structure violations, anchor violations, and
+projected stale-reason strings do not become substitute runtime
+observation source.
+
+Runtime observation-source total and bundle-violation total must remain
+congruent under machine-readable source completeness rather than being
+left implicit.
+
+If completeness fails, runtime must still preserve the pre-fail mismatch
+as machine-readable evidence rather than repairing totals first and only
+reporting a derived failure flag.
+
+Bundle component-validator observation-reason partition policy must also
+stay explicit.
+
+Each bundle-violation row must classify exactly once as admitted runtime
+observation reason, excluded non-observation row, or unknown ontology
+drift, all before violation projection.
+
+Bundle component-validator observation-reason unclassified policy must
+also stay explicit.
+
+The admitted runtime policy is fail-closed on unclassified
+component-validator observation reason.
+
+Runtime must fail-close on unclassified component-validator observation
+reason rather than silently expanding bundle observation ontology.
+
+---
+
+## Conflict-handling rule
+
+If two layers seem to disagree, resolve them with the following discipline:
+
+These conflict-handling rules must remain bound to canonical conflict-handling rows rather than drifting into convenience-only advice.
+
+1. do not use local convenience or historical familiarity to override protocol law;
+2. do not use philosophy text to override a concrete contract row or runtime truth source;
+3. do use philosophy text to interpret why a contract should be strengthened, split, or fail-closed;
+4. do use machine-consumed sources to determine current-turn truth, validation status, and active-runtime legality.
+
+---
+
+## Root maintenance guardrails
+
+When root protocol files are authored or updated, the following guardrails must remain explicit:
+
+1. **stream/version is manifestation, not origin**
+   - stream or release labels mark governed freeze history;
+   - they do not become the philosophical source of protocol existence;
+   - no root contract should be written as if a stream label were prior to bottom theory.
+2. **machine verdict is adjudication, not philosophy source**
+   - validators, probes, mappings, runtime state, and receipts determine current machine verdict;
+   - they do not retroactively define the meaning of design philosophy;
+   - philosophy explains why law has the shape it has, while machine-consumed surfaces decide current-turn legality.
+3. **root contracts must preserve layer clarity**
+   - each root contract should state what bottom-theory commitments it inherits;
+   - each root contract should also state which concrete law it freezes;
+   - no root contract should blur philosophical grounding, contract freezing, and runtime-source authority into one layer.
+4. **root corpus admission must stay law-bearing**
+   - the root directory should accept only bottom theory, constitutions, root contracts, machine-consumed registries/mappings, governed subdomain protocol packs, and clearly demoted support material;
+   - stream-local commentary, workbook material, business strategy, or workspace residue must not be promoted into protocol-root law-bearing position.
+5. **root-corpus admission must be machine-governed**
+   - law-bearing admission, classification, and exclusion at `identity/protocol/` should be mirrored in protocol-owned registry / validator / probe surfaces rather than left to reviewer taste or oral memory;
+   - if root purity depends only on human recollection, the root corpus has already started to drift away from machine law.
+6. **protocol repo authority is exclusive**
+   - protocol cleanliness, audit, commit admission, and release readiness for identity law must resolve only from the `identity-protocol-local` repository root;
+   - an enclosing workspace repo, instance repo, or other host container may physically contain the protocol checkout, but it remains non-authoritative for protocol-law verdicts;
+   - outer git dirty/clean state, top-level resolution, or history must not be projected as protocol repo truth.
+
+---
+
+## Machine-world entry summary
+
+If a machine-governed participant enters `identity/protocol/` and needs the minimum correct path:
+This minimum-correct-path summary must remain bound to canonical entry-summary-stage rows rather than becoming oral navigation advice.
+
+1. **bottom theory first**
+   - read `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` to understand the bottom theory.
+2. **constitutions next**
+   - read `IDENTITY_PROTOCOL.md` and `IDENTITY_RUNTIME.md` to understand protocol and runtime constitutions.
+3. **relevant root contract after that**
+   - read the relevant root contract file for the concrete domain being executed.
+4. **machine-consumed verdict surfaces last**
+   - read mappings, validators, probes, runtime state, and receipts for the final machine-consumed verdict.
+
+That is the canonical reading order for this directory.

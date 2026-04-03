@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$REPO_ROOT"
+source "${REPO_ROOT}/scripts/shell_strict_entry_common.sh"
 
 if [ -n "${PYTHONPATH:-}" ]; then
   export PYTHONPATH="${SCRIPT_DIR}:${REPO_ROOT}:${PYTHONPATH}"
@@ -56,7 +57,7 @@ intent = resolve_layer_intent(
     intent_text=str(sys.argv[1] or "").strip(),
     explicit_source_layer=str(sys.argv[2] or "").strip(),
     default_work_layer=DEFAULT_WORK_LAYER,
-    default_source_layer="global",
+    default_source_layer="project",
 )
 print(str(intent.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER)
 PY
@@ -67,6 +68,17 @@ if [ -z "$E2E_WORK_LAYER" ]; then
 fi
 BASE_SHA_GLOBAL="$(git rev-parse HEAD~1)"
 HEAD_SHA_GLOBAL="$(git rev-parse HEAD)"
+TMP_ROOT="${IDENTITY_RUNTIME_TMP_ROOT:-${RUNNER_TEMP:-${TMPDIR:-$(python3 - <<'PY'\nimport tempfile\nprint(tempfile.gettempdir())\nPY\n)}}}"
+E2E_RUN_TOKEN="${E2E_RUN_TOKEN:-$(date -u +%Y%m%dT%H%M%SZ)-$$}"
+E2E_RUNTIME_ROOT="${TMP_ROOT%/}/identity-runtime/e2e/${E2E_RUN_TOKEN}"
+HEALTH_REPORT_DIR="${E2E_RUNTIME_ROOT}/identity-health-reports"
+COMPILED_TMP_DIR="${E2E_RUNTIME_ROOT}/identity-compiled-runtime"
+DISCOVERY_CONTRACT_REPORT="${E2E_RUNTIME_ROOT}/identity_discovery_contract.protocol_repo.json"
+VIBE_PACK_OUT_ROOT="${E2E_RUNTIME_ROOT}/vibe-coding-feeding-packs"
+CAPABILITY_FIT_OUT_ROOT="${E2E_RUNTIME_ROOT}/capability-fit-matrices"
+UPGRADE_REPORT_ROOT_A="${E2E_RUNTIME_ROOT}/identity-upgrade-reports"
+UPGRADE_REPORT_ROOT_B="${E2E_RUNTIME_ROOT}/identity-runtime"
+mkdir -p "$HEALTH_REPORT_DIR" "$COMPILED_TMP_DIR" "$VIBE_PACK_OUT_ROOT" "$CAPABILITY_FIT_OUT_ROOT" "$UPGRADE_REPORT_ROOT_A" "$UPGRADE_REPORT_ROOT_B"
 
 echo "[1/30] validate protocol"
 python3 scripts/validate_identity_protocol.py
@@ -80,8 +92,7 @@ python3 scripts/validate_identity_creation_boundary.py
 echo "[2.5/30] validate identity state consistency (catalog vs META)"
 python3 scripts/validate_identity_state_consistency.py --catalog "$CATALOG_PATH"
 
-echo "[2.55/30] validate session pointer consistency (catalog-scoped canonical + legacy mirror)"
-python3 scripts/validate_identity_session_pointer_consistency.py --catalog "$CATALOG_PATH"
+echo "[2.55/30] defer session pointer consistency to per-identity actor/session phase"
 
 echo "[3/30] validate governance snapshot index"
 python3 scripts/validate_audit_snapshot_index.py
@@ -118,11 +129,42 @@ if [ -z "$IDS" ]; then
   exit 1
 fi
 
-SESSION_ACTOR_ID="${HEADSTAMP_ACTOR_ID:-${CODEX_ACTOR_ID:-assistant:codex}}"
+SESSION_ACTOR_ID="$(protocol_shell_entry_require_actor_id "${HEADSTAMP_ACTOR_ID:-}")"
+SESSION_ACTOR_SESSION_ID="${HEADSTAMP_SESSION_ID:-}"
+
+resolve_identity_session_id() {
+  local target_identity_id="$1"
+  python3 - "$CATALOG_PATH" "$SESSION_ACTOR_ID" "$target_identity_id" "$SESSION_ACTOR_SESSION_ID" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str((Path.cwd() / "scripts").resolve()))
+from actor_session_common import load_actor_binding
+
+catalog = Path(sys.argv[1]).expanduser().resolve()
+actor_id = str(sys.argv[2] or "").strip()
+identity_id = str(sys.argv[3] or "").strip()
+explicit_session_id = str(sys.argv[4] or "").strip()
+
+if explicit_session_id:
+    print(explicit_session_id)
+    raise SystemExit(0)
+
+session_id = ""
+try:
+    binding = load_actor_binding(catalog, actor_id, identity_id=identity_id)
+    if isinstance(binding, dict):
+        session_id = str(binding.get("session_id", "")).strip()
+except Exception:
+    session_id = ""
+
+print(session_id)
+PY
+}
 
 echo "[10.15/30] validate runtime mode/catalog binding guard (for each target identity)"
 for ID in $IDS; do
-  python3 scripts/validate_identity_runtime_mode_guard.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --expect-mode auto
+  python3 scripts/validate_identity_runtime_mode_guard.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --expect-mode auto --operation e2e
 done
 
 echo "[10.16/30] validate identity_home/catalog alignment gate (for each target identity)"
@@ -135,12 +177,19 @@ for ID in $IDS; do
   python3 scripts/validate_fixture_runtime_boundary.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e
 done
 
+echo "[10.175/30] validate session pointer consistency (per identity, actor/session scoped)"
+for ID in $IDS; do
+  TARGET_SESSION_ID="$(resolve_identity_session_id "$ID")"
+  python3 scripts/validate_identity_session_pointer_consistency.py --catalog "$CATALOG_PATH" --identity-id "$ID" --actor-id "$SESSION_ACTOR_ID" --session-id "$TARGET_SESSION_ID"
+done
+
 echo "[10.18/30] validate actor-scoped session isolation gates (for each target identity)"
 for ID in $IDS; do
-  python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog "$CATALOG_PATH" --actor-id "$SESSION_ACTOR_ID" --operation e2e
+  TARGET_SESSION_ID="$(resolve_identity_session_id "$ID")"
+  python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog "$CATALOG_PATH" --actor-id "$SESSION_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --operation e2e
   python3 scripts/validate_no_implicit_switch.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
-  python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
-  python3 scripts/validate_actor_session_multibinding_concurrency.py --identity-id "$ID" --catalog "$CATALOG_PATH" --actor-id "$SESSION_ACTOR_ID" --operation e2e --json-only
+  python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog "$CATALOG_PATH" --actor-id "$SESSION_ACTOR_ID" --scope-mode actor_primary --operation e2e
+  python3 scripts/validate_actor_session_multibinding_concurrency.py --identity-id "$ID" --catalog "$CATALOG_PATH" --actor-id "$SESSION_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --operation e2e --json-only
 done
 
 echo "[10.19/30] validate anytime session refresh status contract (for each target identity)"
@@ -170,7 +219,7 @@ for ID in $IDS; do
   "${lane_cmd[@]}"
 done
 
-if [[ "$CATALOG_PATH" == "$HOME/.codex/identity/"* ]]; then
+if [[ "$CATALOG_PATH" == "$HOME/.codex/.identity/"* ]]; then
   echo "[10.2/30] preflight writeability probe for global runtime targets"
   if ! python3 - "$CATALOG_PATH" "$IDS" <<'PY'
 import os
@@ -216,16 +265,16 @@ for ID in $IDS; do
 done
 echo "[2.4/30] validate identity scope resolution/isolation/persistence + health (for each target identity)"
 for ID in $IDS; do
+  TARGET_SESSION_ID="$(resolve_identity_session_id "$ID")"
   python3 scripts/validate_identity_scope_resolution.py --catalog "$CATALOG_PATH" --identity-id "$ID"
   python3 scripts/validate_identity_scope_isolation.py --catalog "$CATALOG_PATH" --identity-id "$ID"
   python3 scripts/validate_identity_scope_persistence.py --catalog "$CATALOG_PATH" --identity-id "$ID"
-  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --out-dir /tmp/identity-health-reports --enforce-pass
-  python3 scripts/validate_identity_health_contract.py --identity-id "$ID" --report-dir /tmp/identity-health-reports --require-pass
-  python3 scripts/validate_identity_actor_health_profile.py --identity-id "$ID" --report-dir /tmp/identity-health-reports --operation e2e --json-only
+  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --actor-id "$SESSION_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --out-dir "$HEALTH_REPORT_DIR" --enforce-pass
+  python3 scripts/validate_identity_health_contract.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --require-pass
+  python3 scripts/validate_identity_actor_health_profile.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --operation e2e --json-only
 done
 
 echo "[7/30] compile runtime brief (for each target identity)"
-COMPILED_TMP_DIR="/tmp/identity-compiled-runtime"
 mkdir -p "$COMPILED_TMP_DIR"
 for ID in $IDS; do
   python3 scripts/compile_identity_runtime.py --catalog "$CATALOG_PATH" --identity-id "$ID" --output "${COMPILED_TMP_DIR}/${ID}.md"
@@ -235,9 +284,12 @@ echo "[8/30] validate manifest semantics"
 python3 scripts/validate_identity_manifest.py
 
 echo "[9/30] test discovery contract"
-python3 scripts/test_identity_discovery_contract.py >/tmp/identity_discovery_contract.protocol_repo.json
+python3 scripts/test_identity_discovery_contract.py >"$DISCOVERY_CONTRACT_REPORT"
 
 for ID in $IDS; do
+  TARGET_SESSION_ID="$(resolve_identity_session_id "$ID")"
+  echo "[INFO][$ID] actor session selector: ${TARGET_SESSION_ID:-<auto>}"
+
   echo "[10.5/32][$ID] validate identity instance isolation boundary"
   python3 scripts/validate_identity_instance_isolation.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
@@ -248,9 +300,9 @@ for ID in $IDS; do
   python3 scripts/validate_identity_scope_persistence.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
   echo "[10.8/32][$ID] collect + validate health report"
-  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --out-dir /tmp/identity-health-reports --enforce-pass
-  python3 scripts/validate_identity_health_contract.py --identity-id "$ID" --report-dir /tmp/identity-health-reports --require-pass
-  python3 scripts/validate_identity_actor_health_profile.py --identity-id "$ID" --report-dir /tmp/identity-health-reports --operation e2e --json-only
+  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --actor-id "$SESSION_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --out-dir "$HEALTH_REPORT_DIR" --enforce-pass
+  python3 scripts/validate_identity_health_contract.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --require-pass
+  python3 scripts/validate_identity_actor_health_profile.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --operation e2e --json-only
 
   echo "[11/30][$ID] validate runtime ORRLC contract"
   python3 scripts/validate_identity_runtime_contract.py --catalog "$CATALOG_PATH" --identity-id "$ID"
@@ -258,29 +310,42 @@ for ID in $IDS; do
   echo "[12/30][$ID] validate role-binding contract"
   python3 scripts/validate_identity_role_binding.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
-  STAMP_JSON="/tmp/identity-response-stamp-${ID}.json"
-  STAMP_BLOCKER_RECEIPT="/tmp/identity-stamp-blocker-receipt-${ID}.json"
-  REPLY_FIRST_LINE_BLOCKER_RECEIPT="/tmp/identity-reply-first-line-blocker-receipt-${ID}.json"
-  SEND_TIME_REPLY_FILE="/tmp/identity-send-time-reply-${ID}.txt"
-  SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT="/tmp/identity-send-time-reply-gate-blocker-receipt-${ID}.json"
-  EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT="/tmp/identity-execution-reply-coherence-blocker-receipt-${ID}.json"
+  STAMP_DIR="${E2E_RUNTIME_ROOT}/response-stamp/${ID}"
+  mkdir -p "$STAMP_DIR"
+  STAMP_JSON="${STAMP_DIR}/identity-response-stamp-${ID}.json"
+  STAMP_BLOCKER_RECEIPT="${STAMP_DIR}/identity-stamp-blocker-receipt-${ID}.json"
+  REPLY_FIRST_LINE_BLOCKER_RECEIPT="${STAMP_DIR}/identity-reply-first-line-blocker-receipt-${ID}.json"
+  SEND_TIME_REPLY_FILE="${STAMP_DIR}/identity-send-time-reply-${ID}.txt"
+  SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT="${STAMP_DIR}/identity-send-time-reply-gate-blocker-receipt-${ID}.json"
+  EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT="${STAMP_DIR}/identity-execution-reply-coherence-blocker-receipt-${ID}.json"
+  BUNDLE_RUN_TOKEN="${REQUIRED_GATES_RUN_ID:-local-e2e}"
+  BUNDLE_RECEIPT_DIR="${E2E_RUNTIME_ROOT}/required-gate-bundle/${ID}/${BUNDLE_RUN_TOKEN}"
+  mkdir -p "$BUNDLE_RECEIPT_DIR"
+  REQUIRED_GATE_BUNDLE_RECEIPT="${BUNDLE_RECEIPT_DIR}/required-gate-bundle-e2e-${ID}-${BUNDLE_RUN_TOKEN}.json"
+  REQUIRED_GATE_BUNDLE_RECEIPT_SHADOW="${BUNDLE_RECEIPT_DIR}/required-gate-bundle-e2e-scan-probe-${ID}-${BUNDLE_RUN_TOKEN}.json"
   HEADSTAMP_ACTOR_ID="${SESSION_ACTOR_ID}"
 
   echo "[12.2/30][$ID] render dynamic response identity stamp"
-  render_cmd=(python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --view external --disclosure-level standard --out "$STAMP_JSON" --json-only)
+  render_cmd=(python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --view external --disclosure-level standard --out "$STAMP_JSON" --json-only)
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     render_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
+  fi
+  if [ -n "$EXPECTED_WORK_LAYER" ]; then
+    render_cmd+=(--work-layer "$EXPECTED_WORK_LAYER")
+  fi
+  if [ -n "$EXPECTED_SOURCE_LAYER" ]; then
+    render_cmd+=(--source-layer "$EXPECTED_SOURCE_LAYER")
   fi
   "${render_cmd[@]}"
 
   echo "[12.3/30][$ID] validate response identity stamp hard gate (user-visible channel)"
-  python3 scripts/validate_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-user-visible-gate --operation e2e --blocker-receipt-out "$STAMP_BLOCKER_RECEIPT"
+  python3 scripts/validate_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --stamp-json "$STAMP_JSON" --force-check --enforce-user-visible-gate --operation e2e --blocker-receipt-out "$STAMP_BLOCKER_RECEIPT"
 
   echo "[12.4/30][$ID] validate response stamp blocker receipt schema"
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$STAMP_BLOCKER_RECEIPT"
 
   echo "[12.45/30][$ID] validate reply first-line Identity-Context hard gate (HOTFIX-P0-004)"
-  first_line_cmd=(python3 scripts/validate_reply_identity_context_first_line.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-first-line-gate --operation e2e --blocker-receipt-out "$REPLY_FIRST_LINE_BLOCKER_RECEIPT")
+  first_line_cmd=(python3 scripts/validate_reply_identity_context_first_line.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-first-line-gate --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --blocker-receipt-out "$REPLY_FIRST_LINE_BLOCKER_RECEIPT")
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     first_line_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -309,7 +374,7 @@ for ID in $IDS; do
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$REPLY_FIRST_LINE_BLOCKER_RECEIPT"
 
   echo "[12.465/30][$ID] compose governed send-time reply sample + preflight"
-  compose_cmd=(python3 scripts/compose_and_validate_governed_reply.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --body-text "E2E_SEND_TIME_REPLY_BODY" --out-reply-file "$SEND_TIME_REPLY_FILE" --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --outlet-channel-id governed_adapter_v1 --actor-id "$HEADSTAMP_ACTOR_ID" --json-only)
+  compose_cmd=(python3 scripts/final_emit_governed.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --body-text "E2E_SEND_TIME_REPLY_BODY" --out-reply-file "$SEND_TIME_REPLY_FILE" --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --outlet-channel-id final_emit_governed --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --run-id "$BUNDLE_RUN_TOKEN" --json-only)
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     compose_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -322,7 +387,7 @@ for ID in $IDS; do
   "${compose_cmd[@]}"
 
   echo "[12.466/30][$ID] validate send-time unified reply gate (real dialogue outlet)"
-  send_time_cmd=(python3 scripts/validate_send_time_reply_gate.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --reply-file "$SEND_TIME_REPLY_FILE" --force-check --enforce-send-time-gate --reply-outlet-guard-applied --outlet-channel-id governed_adapter_v1 --reply-transport-ref "$SEND_TIME_REPLY_FILE" --operation e2e --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --actor-id "$HEADSTAMP_ACTOR_ID")
+  send_time_cmd=(python3 scripts/validate_send_time_reply_gate.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --reply-file "$SEND_TIME_REPLY_FILE" --force-check --enforce-send-time-gate --reply-outlet-guard-applied --outlet-channel-id final_emit_governed --reply-transport-ref "$SEND_TIME_REPLY_FILE" --operation e2e --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID")
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     send_time_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -338,10 +403,10 @@ for ID in $IDS; do
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT"
 
   echo "[12.468/30][$ID] validate headstamp recurrence closure matrix (v1.5.x hotfix)"
-  python3 scripts/validate_headstamp_recurrence_closure.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --json-only
+  python3 scripts/validate_headstamp_recurrence_closure.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --json-only
 
   echo "[12.47/30][$ID] validate execution/reply tuple coherence hard gate (HOTFIX-P0-009)"
-  coherence_cmd=(python3 scripts/validate_execution_reply_identity_coherence.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-coherence-gate --operation e2e --blocker-receipt-out "$EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT")
+  coherence_cmd=(python3 scripts/validate_execution_reply_identity_coherence.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-coherence-gate --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --blocker-receipt-out "$EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT")
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     coherence_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -439,7 +504,7 @@ for ID in $IDS; do
   python3 scripts/validate_discovery_requiredization.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --operation e2e --json-only
 
   echo "[23.4297/30][$ID] build vibe-coding feeding pack (P1-E non-blocking)"
-  python3 scripts/build_vibe_coding_feeding_pack.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e --out-root /tmp/vibe-coding-feeding-packs
+  python3 scripts/build_vibe_coding_feeding_pack.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e --out-root "$VIBE_PACK_OUT_ROOT"
 
   echo "[23.4298/30][$ID] validate capability-fit optimization matrix contract (P1-F)"
   python3 scripts/validate_identity_capability_fit_optimization.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
@@ -457,17 +522,241 @@ for ID in $IDS; do
   python3 scripts/trigger_capability_fit_review.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
 
   echo "[23.4303/30][$ID] build capability-fit matrix artifact (P1-H non-blocking)"
-  python3 scripts/build_capability_fit_matrix.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e --out-root /tmp/capability-fit-matrices
+  python3 scripts/build_capability_fit_matrix.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e --out-root "$CAPABILITY_FIT_OUT_ROOT"
 
   echo "[23.43/30][$ID] validate vendor namespace separation contract (Track-B)"
   python3 scripts/validate_vendor_namespace_separation.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
 
-  echo "[23.45/30][$ID] summarize required-contract coverage semantics (PASS_REQUIRED/SKIPPED_NOT_REQUIRED)"
-  python3 scripts/validate_required_contract_coverage.py \
+
+  echo "[23.4505/30][$ID] validate release unlock formula contract (RQ-001)"
+  python3 scripts/validate_unlock_formula.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45055/30][$ID] validate release-plane cloud evidence contract (RQ-006)"
+  python3 scripts/validate_release_plane_cloud_evidence.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --target-branch "${TARGET_BRANCH:-main}" \
+    --release-head-sha "${RELEASE_HEAD_SHA:-$(git rev-parse HEAD)}" \
+    --required-gates-run-id "${REQUIRED_GATES_RUN_ID:-local-e2e}" \
+    --run-url "${RUN_URL:-local://e2e}" \
+    --workflow-file-sha "${WORKFLOW_FILE_SHA:-$(git rev-parse HEAD)}" \
+    --run-head-sha "${RUN_HEAD_SHA:-$(git rev-parse HEAD)}" \
+    --run-workflow-file-sha "${RUN_WORKFLOW_FILE_SHA:-$(git rev-parse HEAD)}" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45056/30][$ID] validate cross-cwd absolute-input contract (RQ-007)"
+  python3 scripts/validate_cross_cwd_absolute_input.py \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog "$(python3 -c 'from pathlib import Path;print(Path(\"identity/catalog/identities.yaml\").resolve())')" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45057/30][$ID] validate run-id anchored report selection contract (RQ-009)"
+  python3 scripts/validate_run_id_report_selection.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --run-id "${RUN_ID:-}" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45058/30][$ID] validate phase-A bootstrap before strict contract (RQ-010)"
+  python3 scripts/validate_phase_bootstrap_before_strict.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45059/30][$ID] validate tmp collision-safe allocator contract (RQ-011)"
+  python3 scripts/validate_tmp_collision_safety.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --run-id "${RUN_ID:-e2e}" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.450595/30][$ID] materialize required contract bootstrap emitters before strict runtime proof"
+  python3 scripts/materialize_contract_bootstrap_emitters.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --apply \
+    --json-only
+
+  echo "[23.45060/30][$ID] validate handoff/collab freshness autorotation contract (RQ-012)"
+  python3 scripts/validate_handoff_collab_freshness_rotation.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45061/30][$ID] validate protocol-feedback atomic emit contract (RQ-013)"
+  python3 scripts/validate_protocol_feedback_atomic_emit.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.4506/30][$ID] validate capability boundary classification contract (RQ-002)"
+  python3 scripts/validate_capability_boundary_classification.py \
     --catalog "$CATALOG_PATH" \
     --repo-catalog identity/catalog/identities.yaml \
     --identity-id "$ID" \
-    --operation e2e
+    --operation e2e \
+    --json-only
+
+  echo "[23.4507/30][$ID] validate promotion evidence pipeline contract (RQ-003)"
+  python3 scripts/validate_promotion_pipeline.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.4508/30][$ID] validate outlet regression matrix contract (RQ-004)"
+  python3 scripts/validate_outlet_matrix.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.4509/30][$ID] validate sidecar cwd parity contract (RQ-005)"
+  python3 scripts/validate_sidecar_cwd_parity.py \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.4510/30][$ID] validate docs bridge consistency contract (RQ-008)"
+  python3 scripts/validate_docs_bridge_consistency.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.4511/30][$ID] validate contract mapping coverage contract (RQ-026)"
+  python3 scripts/validate_contract_mapping_coverage.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45115/30][$ID] validate prompt bootstrap capability contract (RQ-014)"
+  python3 scripts/validate_prompt_bootstrap_capability.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45116/30][$ID] validate prompt capability matrix contract (RQ-015)"
+  python3 scripts/validate_prompt_capability_matrix.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45117/30][$ID] validate refresh->strict business interference contract (RQ-016)"
+  python3 scripts/validate_refresh_strict_business_interference.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45118/30][$ID] validate kernel canonical source contract (RQ-025)"
+  python3 scripts/validate_kernel_ssot_source.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45119/30][$ID] validate derived prompt conformance contract (RQ-027)"
+  python3 scripts/validate_prompt_derivation_conformance.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45120/30][$ID] validate semantic convergence contract (RQ-029)"
+  python3 scripts/validate_semantic_convergence.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45121/30][$ID] validate prompt-kernel executable coupling contract (RQ-031)"
+  python3 scripts/validate_prompt_kernel_executable_coupling.py \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --identity-id "$ID" \
+    --actor-id "$SESSION_ACTOR_ID" \
+    --session-id "$TARGET_SESSION_ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.451/30][$ID] validate required gate bundle runner (RQ-017/018/019/020/021/022/030/033)"
+  python3 scripts/required_gate_bundle_runner.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --run-id "$BUNDLE_RUN_TOKEN" \
+    --send-time-gate-status "NOT_APPLICABLE" \
+    --outlet-bypass-detected "false" \
+    --final-emit-contract-status "NOT_APPLICABLE" \
+    --final-emit-policy-mode "tool_choice_required" \
+    --final-emit-schema-status "NOT_APPLICABLE" \
+    --actor-id "$SESSION_ACTOR_ID" \
+    --resolved-work-layer "${E2E_WORK_LAYER:-instance}" \
+    --resolved-source-layer "${EXPECTED_SOURCE_LAYER:-project}" \
+    --lock-state "LOCK_MATCH" \
+    --surface-label "e2e" \
+    --operation e2e \
+    --out "$REQUIRED_GATE_BUNDLE_RECEIPT" \
+    --json-only
+
+  python3 scripts/required_gate_bundle_runner.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --run-id "$BUNDLE_RUN_TOKEN" \
+    --send-time-gate-status "NOT_APPLICABLE" \
+    --outlet-bypass-detected "false" \
+    --final-emit-contract-status "NOT_APPLICABLE" \
+    --final-emit-policy-mode "tool_choice_required" \
+    --final-emit-schema-status "NOT_APPLICABLE" \
+    --actor-id "$SESSION_ACTOR_ID" \
+    --resolved-work-layer "${E2E_WORK_LAYER:-instance}" \
+    --resolved-source-layer "${EXPECTED_SOURCE_LAYER:-project}" \
+    --lock-state "LOCK_MATCH" \
+    --surface-label "e2e_scan_probe" \
+    --operation scan \
+    --out "$REQUIRED_GATE_BUNDLE_RECEIPT_SHADOW" \
+    --json-only
+
+  echo "[23.4511/30][$ID] validate required-gate recurrence escalator (UCG L1/L2/L3)"
+  python3 scripts/validate_required_gate_recurrence_escalator.py \
+    --identity-id "$ID" \
+    --surface e2e \
+    --operation e2e \
+    --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT" \
+    --enforce-blocking \
+    --json-only
+
+  echo "[23.4512/30][$ID] validate required-gate tuple parity receipt"
+  python3 scripts/validate_required_gate_tuple_parity.py \
+    --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT" \
+    --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT_SHADOW" \
+    --require-distinct-operations \
+    --json-only
+
+  echo "[23.458/30][$ID] validate Batch-6/7 deterministic replay archive gate (RQ-017..022/030)"
+  python3 scripts/validate_replay_archive_contract.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
 
   echo "[24/30][$ID] validate experience feedback governance"
   python3 scripts/validate_identity_experience_feedback_governance.py --catalog "$CATALOG_PATH" --identity-id "$ID"
@@ -479,45 +768,28 @@ for ID in $IDS; do
 
   echo "[26/30][$ID] execute identity upgrade cycle via identity-creator (review-required)"
   set +e
-  CI=true python3 scripts/identity_creator.py update --catalog "$CATALOG_PATH" --identity-id "$ID" --mode review-required --actor-id "$SESSION_ACTOR_ID"
+  CI=true python3 scripts/identity_creator.py update --catalog "$CATALOG_PATH" --identity-id "$ID" --mode review-required --actor-id "$SESSION_ACTOR_ID" --run-id "${REQUIRED_GATES_RUN_ID:-$E2E_RUN_TOKEN}" --session-id "$TARGET_SESSION_ID"
   UPDATE_RC=$?
+  SEARCH_ROOT_ARGS=()
+  if [ -n "${UPGRADE_REPORT_ROOT_A:-}" ]; then
+    SEARCH_ROOT_ARGS+=(--search-root "$UPGRADE_REPORT_ROOT_A")
+  fi
+  if [ -n "${UPGRADE_REPORT_ROOT_B:-}" ]; then
+    SEARCH_ROOT_ARGS+=(--search-root "$UPGRADE_REPORT_ROOT_B")
+  fi
+  if [ -n "${IDENTITY_HOME:-}" ]; then
+    SEARCH_ROOT_ARGS+=(--search-root "${IDENTITY_HOME}")
+  fi
+  UPGRADE_REPORT="$(
+    python3 scripts/resolve_latest_identity_upgrade_report.py \
+      --identity-id "$ID" \
+      --catalog "$CATALOG_PATH" \
+      "${SEARCH_ROOT_ARGS[@]}" \
+      --print-path-only
+  )"
+  RESOLVE_REPORT_RC=$?
   set -e
-  UPGRADE_REPORT=$(python3 - "$ID" "$CATALOG_PATH" "${IDENTITY_HOME:-}" <<'PY'
-import glob,os,sys
-from pathlib import Path
-import yaml
-
-identity_id=sys.argv[1]
-catalog_path=Path(sys.argv[2]).expanduser().resolve()
-identity_home=sys.argv[3].strip()
-
-roots=[]
-if catalog_path.exists():
-    try:
-        doc=yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
-        rows=[x for x in (doc.get("identities") or []) if isinstance(x, dict)]
-        row=next((x for x in rows if str(x.get("id","")).strip()==identity_id), None)
-        if row:
-            pack=Path(str((row or {}).get("pack_path","")).strip()).expanduser().resolve()
-            if pack.exists():
-                roots.append(str(pack / "runtime" / "reports"))
-                roots.append(str(pack / "runtime"))
-    except Exception:
-        pass
-roots.extend(["/tmp/identity-upgrade-reports","/tmp/identity-runtime"])
-if identity_home:
-    roots.append(identity_home)
-cands=[]
-for r in roots:
-    cands.extend(glob.glob(os.path.join(r,"**",f"identity-upgrade-exec-{identity_id}-*.json"),recursive=True))
-cands=[p for p in cands if not p.endswith("-patch-plan.json")]
-if not cands:
-    sys.exit(1)
-cands.sort(key=lambda p: os.path.getmtime(p))
-print(cands[-1])
-PY
-)
-  if [ -z "${UPGRADE_REPORT:-}" ] || [ ! -f "$UPGRADE_REPORT" ]; then
+  if [ "${RESOLVE_REPORT_RC}" -ne 0 ] || [ -z "${UPGRADE_REPORT:-}" ] || [ ! -f "$UPGRADE_REPORT" ]; then
     echo "[FAIL] unable to locate latest upgrade report for $ID"
     exit 1
   fi
@@ -570,13 +842,15 @@ PY
     --repo-catalog identity/catalog/identities.yaml \
     --operation e2e \
     --execution-report "$UPGRADE_REPORT" \
-    --out-dir /tmp/identity-health-reports \
+    --actor-id "$SESSION_ACTOR_ID" \
+    --session-id "$TARGET_SESSION_ID" \
+    --out-dir "$HEALTH_REPORT_DIR" \
     --enforce-pass
 
   echo "[26.31/30][$ID] validate actor-risk health profile coverage/binding"
   python3 scripts/validate_identity_actor_health_profile.py \
     --identity-id "$ID" \
-    --report-dir /tmp/identity-health-reports \
+    --report-dir "$HEALTH_REPORT_DIR" \
     --execution-report "$UPGRADE_REPORT" \
     --operation e2e \
     --enforce-bound-report \
@@ -654,13 +928,26 @@ PY
     --repo-catalog identity/catalog/identities.yaml \
     --operation e2e
 
+  echo "[26.15/30][$ID] summarize required-contract coverage semantics (PASS_REQUIRED/SKIPPED_NOT_REQUIRED)"
+  python3 scripts/validate_required_contract_coverage.py \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --identity-id "$ID" \
+    --actor-id "$HEADSTAMP_ACTOR_ID" \
+    --session-id "$TARGET_SESSION_ID" \
+    --run-id "$BUNDLE_RUN_TOKEN" \
+    --report-selected-path "$UPGRADE_REPORT" \
+    --operation e2e
+
   UPG_META_LINE=$(python3 - "$UPGRADE_REPORT" <<'PY'
 import json,sys
+sys.path.insert(0, "scripts")
+from capability_activation_projection_common import CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS
 p=sys.argv[1]
 d=json.load(open(p))
 ew=d.get("experience_writeback") or {}
 mandatory = all(
-    k in d for k in ("permission_state","writeback_status","next_action","skills_used","mcp_tools_used","tool_calls_used","capability_activation_status","capability_activation_error_code")
+    k in d for k in ("permission_state","writeback_status","next_action", *CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS)
 ) and isinstance(ew, dict) and ("status" in ew) and ("error_code" in ew)
 vals = [
     str(bool(d.get("all_ok", False))).lower(),
@@ -730,6 +1017,9 @@ PY
     CAP_ARGS+=(--require-activated)
   fi
   python3 scripts/validate_identity_capability_activation.py "${CAP_ARGS[@]}"
+
+  echo "[27.95/30][$ID] refresh route quality metrics before arbitration linkage"
+  python3 scripts/export_route_quality_metrics.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
   echo "[28/30][$ID] validate capability arbitration contract (self-test + upgrade linkage)"
   python3 scripts/validate_identity_capability_arbitration.py --catalog "$CATALOG_PATH" --identity-id "$ID" --self-test --upgrade-report "$UPGRADE_REPORT"

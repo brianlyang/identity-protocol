@@ -1,0 +1,194 @@
+schema_version: 1
+governance_version: v1.6.4
+last_updated_utc: "2026-03-11T00:00:00Z"
+plugins:
+  - plugin_id: ai-folder-governance-enforcement
+    integration_kind: skill
+    protocol_contract_root: identity/protocol/plugins/skill
+    instance_runtime_root: .identity/{identity_id}/runtime/plugins/skills
+    requirement_key: asb16-rq-020
+    bundle_target_name: skill_path_integrity
+    gate_mode: fail_close_strict
+    ssot_mapping_ref: identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-020
+    contract_file: identity/protocol/plugins/skill/ai-folder-governance-enforcement/plugin.contract.yaml
+    validator_script: scripts/validate_skill_path_integrity.py
+    provider_profiles: []
+    status: active
+    strict_surfaces:
+      - scripts/identity_creator.py
+      - scripts/release_readiness_check.py
+      - scripts/report_three_plane_status.py
+      - scripts/full_identity_protocol_scan.py
+      - scripts/e2e_smoke_test.sh
+      - .github/workflows/_identity-required-gates.yml
+    required_gate_surfaces:
+      - creator
+      - readiness
+      - e2e
+      - full-scan
+      - three-plane
+      - ci
+    required_report_fields:
+      - active_repo_root
+      - active_runtime_root
+      - layout_mode
+      - path_integrity_status
+      - path_integrity_error_code
+    error_code_refs: []
+    monotonic_policy:
+      strict_skip_policy: fail_close
+      strict_skip_allowed_reasons:
+        - fixture_profile_scope
+        - contract_not_required
+        - scan_probe_profile_filtered_not_required
+  - plugin_id: multimodal-vision-enforcement
+    integration_kind: api
+    protocol_contract_root: identity/protocol/plugins
+    instance_runtime_root: .identity/{identity_id}/runtime/plugins/api
+    requirement_key: asb16-rq-034
+    bundle_target_name: multimodal_plugin_enforcement
+    gate_mode: fail_close_strict
+    ssot_mapping_ref: identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-034
+    contract_file: identity/protocol/plugins/multimodal-vision-enforcement/plugin.contract.yaml
+    validator_script: scripts/validate_multimodal_plugin_enforcement.py
+    provider_profiles:
+      - glm46v_vision_prod
+      - openai_vision_prod
+    status: active
+    strict_surfaces:
+      - scripts/identity_creator.py
+      - scripts/release_readiness_check.py
+      - scripts/report_three_plane_status.py
+      - scripts/full_identity_protocol_scan.py
+      - scripts/e2e_smoke_test.sh
+      - .github/workflows/_identity-required-gates.yml
+    required_gate_surfaces:
+      - creator
+      - readiness
+      - e2e
+      - full-scan
+      - three-plane
+      - ci
+    required_report_fields:
+      - multimodal_plugin_enforcement_status
+      - multimodal_runtime_evidence_status
+      - multimodal_preflight_status
+      - plugin_registry_status
+      - plugin_naming_status
+      - plugin_schema_status
+      - plugin_threshold_status
+      - plugin_path_status
+      - plugin_copy_policy_status
+      - provider_config_status
+      - runtime_report_path
+      - runtime_report_run_id
+      - multimodal_calls
+      - multimodal_resolved
+      - multimodal_unresolved
+      - multimodal_errors
+      - multimodal_retry_calls
+      - runtime_gate_mode
+      - runtime_gate_required_confidence
+      - multimodal_runtime_evidence_refs
+      - multimodal_strict_skip_policy_status
+      - error_code
+      - evidence_ref
+    error_code_refs:
+      - IP-MM-REG-001
+      - IP-MM-NAME-001
+      - IP-MM-THR-001
+      - IP-MM-PATH-001
+      - IP-MM-COPY-001
+      - IP-MM-CONF-001
+      - IP-MM-CONF-005
+    monotonic_policy:
+      strict_skip_policy: fail_close
+      strict_skip_allowed_reasons:
+        - fixture_profile_scope
+        - contract_not_required
+        - scan_probe_profile_filtered_not_required
+        - runtime_report_not_current_round_deferred_pre_execution
+        - runtime_stage_missing_input_gate_deferred_legacy_report
+        - runtime_stage_missing_input_gate_deferred_from_report
+  - plugin_id: reasoning-loop-enforcement
+    integration_kind: api
+    protocol_contract_root: identity/protocol/plugins
+    instance_runtime_root: .identity/{identity_id}/runtime/plugins/api
+    requirement_key: asb16-rq-035
+    bundle_target_name: reasoning_loop_failclose_enforcement
+    gate_mode: fail_close_strict
+    ssot_mapping_ref: identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-035
+    contract_file: identity/protocol/plugins/reasoning-loop-enforcement/plugin.contract.yaml
+    validator_script: scripts/validate_reasoning_loop_failclose.py
+    provider_profiles: []
+    status: active
+    strict_surfaces:
+      - scripts/identity_creator.py
+      - scripts/release_readiness_check.py
+      - scripts/report_three_plane_status.py
+      - scripts/full_identity_protocol_scan.py
+      - scripts/e2e_smoke_test.sh
+      - .github/workflows/_identity-required-gates.yml
+    required_gate_surfaces:
+      - creator
+      - readiness
+      - e2e
+      - full-scan
+      - three-plane
+      - ci
+    required_report_fields:
+      - reasoning_loop_failclose_status
+      - reasoning_runtime_evidence_status
+      - reasoning_enforcement_level
+      - reasoning_configured_level
+      - reasoning_effective_level
+      - reasoning_minimum_enforcement_level
+      - reasoning_upgrade_only
+      - reasoning_allow_self_upgrade
+      - reasoning_allow_downgrade
+      - reasoning_downgrade_block_status
+      - reasoning_attempt_trace_status
+      - no_target_done_block_status
+      - terminal_attempt_index
+      - terminal_attempt_target_reached
+      - terminal_attempt_no_target_reached
+      - no_target_completion_mode
+      - done_requires_terminal_target_reached
+      - reasoning_next_action_status
+      - reasoning_escalation_status
+      - escalation_requirement_mode
+      - escalation_signal_accept_nonempty_ref
+      - escalation_signal_nonempty_fields
+      - strict_run_id_binding
+      - runtime_report_selection_mode
+      - reasoning_four_track_status
+      - external_source_freshness_status
+      - plugin_registry_status
+      - runtime_report_path
+      - runtime_report_run_id
+      - reasoning_attempt_count
+      - reasoning_failed_attempt_count
+      - no_target_reached_detected
+      - reasoning_runtime_evidence_refs
+      - error_code
+      - evidence_ref
+    error_code_refs:
+      - IP-RL-REG-001
+      - IP-RL-CONF-001
+      - IP-RL-RUN-001
+      - IP-RL-RUN-002
+      - IP-RL-RUN-003
+      - IP-RL-RUN-004
+      - IP-RL-RUN-005
+      - IP-RL-RUN-006
+      - IP-RL-RUN-007
+      - IP-RL-RUN-008
+    monotonic_policy:
+      minimum_enforcement_level: L3
+      allow_self_upgrade: true
+      allow_downgrade: false
+      strict_skip_policy: fail_close
+      strict_skip_allowed_reasons:
+        - fixture_profile_scope
+        - contract_not_required
+        - scan_probe_profile_filtered_not_required

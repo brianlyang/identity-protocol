@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="980" viewBox="0 0 1500 980">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#faf8ff"/>
+      <stop offset="100%" stop-color="#fff7ed"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.14"/>
+    </filter>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626"/>
+    </marker>
+    <style>
+      .title { font: 700 30px Inter, Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 15px Inter, Arial, sans-serif; fill: #334155; }
+      .boxTitle { font: 700 20px Inter, Arial, sans-serif; fill: #0f172a; }
+      .boxSub { font: 600 13px Inter, Arial, sans-serif; fill: #7c3aed; }
+      .text { font: 400 13px Inter, Arial, sans-serif; fill: #1e293b; }
+      .tiny { font: 400 12px Inter, Arial, sans-serif; fill: #475569; }
+      .chip { font: 700 12px Inter, Arial, sans-serif; fill: #0f172a; }
+      .decision { font: 700 15px Inter, Arial, sans-serif; fill: #0f172a; }
+      .footer { font: 600 13px Inter, Arial, sans-serif; fill: #7c2d12; }
+    </style>
+  </defs>
+  <rect width="1500" height="980" fill="url(#bg)"/>
+  <text x="50" y="54" class="title">4→1 Bounded Loopback Adjudication</text>
+  <text x="50" y="84" class="subtitle">The bridge returns only a governed preflight aid. First-loop revalidation stays authoritative; conflict must demote / rollback + write back.</text>
+
+  <rect x="50" y="140" width="300" height="180" rx="24" fill="#dcfce7" stroke="#4ade80" stroke-width="2" filter="url(#shadow)"/>
+  <text x="74" y="176" class="boxTitle">Source from Loop 4</text>
+  <text x="74" y="199" class="boxSub">feedback_operational_prompt_contract_v1</text>
+  <text x="74" y="228" class="text">• operational_prompt_ref</text>
+  <text x="74" y="252" class="text">• replay_status</text>
+  <text x="74" y="276" class="text">• rollback_prompt_ref</text>
+  <text x="74" y="300" class="text">• ttl_rounds / negative_rulebook_path</text>
+
+  <rect x="430" y="120" width="640" height="360" rx="28" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="460" y="160" class="boxTitle">Bounded bridge</text>
+  <text x="460" y="183" class="boxSub">feedback_to_judgement_loopback_contract_v1</text>
+  <text x="460" y="216" class="text">• loopback_scope = next_round_preflight_only</text>
+  <text x="460" y="240" class="text">• first_loop_revalidation_required = true</text>
+  <text x="460" y="264" class="text">• adoption_decision = first_loop_revalidate_before_adopt</text>
+  <text x="460" y="288" class="text">• conflict_with_current_evidence = demote_or_rollback_required</text>
+  <text x="460" y="312" class="text">• demotion_or_rollback_action = rollback_prompt_ref_and_negative_feedback_writeback</text>
+  <text x="460" y="336" class="text">• negative_feedback_ref must remain preserved</text>
+  <text x="460" y="368" class="tiny">Canonical validator: scripts/validate_feedback_to_judgement_loopback.py</text>
+
+  <rect x="460" y="388" width="214" height="28" rx="14" fill="#ffffff" stroke="#c4b5fd"/><text x="475" y="407" class="chip">feedback_to_judgement_loopback_status</text>
+  <rect x="692" y="388" width="166" height="28" rx="14" fill="#ffffff" stroke="#c4b5fd"/><text x="710" y="407" class="chip">loopback_roundtrip_status</text>
+  <rect x="876" y="388" width="164" height="28" rx="14" fill="#ffffff" stroke="#c4b5fd"/><text x="894" y="407" class="chip">live_roundtrip_proof_status</text>
+  <rect x="460" y="426" width="170" height="28" rx="14" fill="#ffffff" stroke="#c4b5fd"/><text x="477" y="445" class="chip">first_loop_revalidation_status</text>
+  <rect x="648" y="426" width="152" height="28" rx="14" fill="#ffffff" stroke="#c4b5fd"/><text x="673" y="445" class="chip">conflict_demotion_status</text>
+  <rect x="818" y="426" width="200" height="28" rx="14" fill="#ffffff" stroke="#c4b5fd"/><text x="836" y="445" class="chip">negative_feedback_writeback_status</text>
+
+  <rect x="1150" y="140" width="290" height="180" rx="24" fill="#dbeafe" stroke="#60a5fa" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1174" y="176" class="boxTitle">Destination at Loop 1</text>
+  <text x="1174" y="199" class="boxSub">Accurate judgement remains authoritative</text>
+  <text x="1174" y="228" class="text">• Reentry does not become current-round truth automatically</text>
+  <text x="1174" y="252" class="text">• Multimodal evidence still decides whether the promoted artifact survives</text>
+
+  <path d="M 350 230 C 380 230, 395 230, 430 230" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#arrowBlue)"/>
+  <path d="M 1070 230 C 1100 230, 1115 230, 1150 230" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#arrowBlue)"/>
+
+  <polygon points="760,560 920,640 760,720 600,640" fill="#ffffff" stroke="#7c3aed" stroke-width="3" filter="url(#shadow)"/>
+  <text x="690" y="622" class="decision">Current first-loop evidence</text>
+  <text x="717" y="646" class="decision">consistent after reentry?</text>
+
+  <rect x="1090" y="560" width="300" height="150" rx="24" fill="#ecfdf5" stroke="#22c55e" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1115" y="596" class="boxTitle">If consistent</text>
+  <text x="1115" y="622" class="text">• accept only as next-round preflight aid</text>
+  <text x="1115" y="646" class="text">• retain bounded scope / TTL</text>
+  <text x="1115" y="670" class="text">• never retroactively rewrite current-round truth</text>
+
+  <rect x="90" y="560" width="340" height="180" rx="24" fill="#fef2f2" stroke="#ef4444" stroke-width="2" filter="url(#shadow)"/>
+  <text x="115" y="596" class="boxTitle">If conflict appears</text>
+  <text x="115" y="622" class="text">• demote / rollback required</text>
+  <text x="115" y="646" class="text">• write back negative feedback</text>
+  <text x="115" y="670" class="text">• prevent stale prompt residue from surviving on the success path</text>
+  <text x="115" y="694" class="tiny">This is why the bridge is bounded and cannot collapse into first-loop truth.</text>
+
+  <path d="M 600 640 C 540 640, 500 640, 430 640" fill="none" stroke="#dc2626" stroke-width="5" marker-end="url(#arrowRed)"/>
+  <path d="M 920 640 C 980 640, 1020 640, 1090 640" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#arrowBlue)"/>
+
+  <rect x="50" y="800" width="1390" height="130" rx="24" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+  <text x="76" y="838" class="boxTitle">Adjudication freeze for the bounded bridge</text>
+  <text x="76" y="868" class="footer">1. The bridge is protocol-closed only because it stays subordinate to first-loop revalidation.</text>
+  <text x="76" y="894" class="footer">2. Loopback artifacts may accelerate the next round, but cannot become first-loop truth by narrative convenience.</text>
+  <text x="76" y="920" class="footer">3. Conflict is not a warning; it is an explicit demotion / rollback + negative-feedback writeback control-plane action.</text>
+</svg>

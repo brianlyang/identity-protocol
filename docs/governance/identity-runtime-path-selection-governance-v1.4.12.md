@@ -12,7 +12,7 @@ Owner: Base-repo architect + Audit expert
 Repeated upgrade loops showed the same root issue:
 
 - operators do not make runtime path mode explicit before running identity commands;
-- identity may run against global runtime by accident (`~/.codex/identity`);
+- identity may run against global runtime by accident (`~/.codex/.identity`);
 - in sandboxed sessions this often triggers deferred writeback / escalation;
 - teams then retry ad hoc, causing governance churn.
 
@@ -31,8 +31,8 @@ This policy closes the loop by making runtime path mode an explicit first decisi
 
 ### Mode G (Global runtime, explicit opt-in)
 
-- `IDENTITY_HOME=~/.codex/identity`
-- `IDENTITY_CATALOG=~/.codex/identity/catalog.local.yaml`
+- `IDENTITY_HOME=~/.codex/.identity`
+- `IDENTITY_CATALOG=~/.codex/.identity/catalog.local.yaml`
 - allowed for long-lived personal runtime ops
 - may require escalation in restricted sandbox sessions
 
@@ -105,7 +105,7 @@ Release policy:
 For identity installer actions, runtime target MUST be explicit:
 
 - project-runtime install: `--target-root <external-runtime-root>`
-- global install: `--target-root ~/.codex/identity`
+- global install: `--target-root ~/.codex/.identity`
 
 No implicit target fallback for release-bound runs.
 

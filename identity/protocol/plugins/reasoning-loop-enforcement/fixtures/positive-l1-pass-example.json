@@ -1,0 +1,15 @@
+{
+  "run_id": "sample-run-001",
+  "overall_status": "pass",
+  "reasoning_attempts": [
+    {
+      "attempt": 1,
+      "hypothesis": "baseline mismatch from stale provider binding",
+      "patch": {
+        "action": "refresh_provider_binding_pointer"
+      },
+      "expected_effect": "restore fail-close pass path",
+      "result": "pass"
+    }
+  ]
+}

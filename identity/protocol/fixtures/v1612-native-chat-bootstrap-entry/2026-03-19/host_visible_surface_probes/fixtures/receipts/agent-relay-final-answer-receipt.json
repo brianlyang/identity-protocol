@@ -1,0 +1,11 @@
+{
+  "schema_version": "agent_relay_final_answer_receipt_v1",
+  "relay_surface": "agent_relay_final_answer",
+  "relay_mode": "exact",
+  "target_identity_id": "probe-visible",
+  "question_tag": "host_visible_final::run_ci-probe-receipt::send-time-governed-reply.txt",
+  "source_artifact": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/host_visible_surface_probes/fixtures/send-time-governed-reply.txt",
+  "source_snapshot_ts": "2026-03-21T15:08:50Z",
+  "relay_text": "Identity-Context: actor_id=assistant:ci-probe; identity_id=probe-visible; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project\nSEND_TIME_GATE_PROBE_BODY",
+  "delivery_authority": "identity_instance_output"
+}

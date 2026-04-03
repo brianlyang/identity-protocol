@@ -1,0 +1,10 @@
+{
+  "recovery_status": "PASS_REQUIRED",
+  "attestation_status": "PASS_REQUIRED",
+  "host_visible_runtime_scope": "shadow",
+  "live_runtime_snapshot_unchanged": true,
+  "shadow_runtime_distinct_from_live": true,
+  "shadow_runtime_state_exists": true,
+  "shadow_runtime_post_check_closure_state_exists": true,
+  "shadow_runtime_seeded_receipt_count": 4
+}

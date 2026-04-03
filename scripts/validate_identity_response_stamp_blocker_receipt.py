@@ -62,6 +62,8 @@ def main() -> int:
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument("--receipt", default="")
     ap.add_argument("--force-check", action="store_true", help="run checks even when contract.required is false")
     ap.add_argument("--json-only", action="store_true")
@@ -106,6 +108,8 @@ def main() -> int:
             identity_id=args.identity_id,
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
+            actor_id=args.actor_id,
+            session_id=str(args.session_id or "").strip(),
             explicit_catalog=bool(args.catalog.strip()),
         )
     except Exception as exc:

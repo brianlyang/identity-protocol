@@ -1,0 +1,100 @@
+{
+  "stream_version": "v1.6.12",
+  "topic": "native_chat_bootstrap_entry",
+  "status": "PASS_REQUIRED",
+  "generated_at": "2026-03-20T09:12:30Z",
+  "workspace_root": "workspace-relative:.",
+  "protocol_root": "workspace-relative:identity-protocol-local",
+  "inherits": [
+    "v1.6.1",
+    "v1.6.6",
+    "v1.6.11"
+  ],
+  "freeze_points": [
+    "wrapper_bound_bootstrap_is_standard_entry",
+    "resume_uuid_not_identity_session_tuple",
+    "live_runtime_switch_not_promoted"
+  ],
+  "non_goals": [
+    "do_not_reopen_v1.6.1_renderer_semantics",
+    "do_not_reopen_v1.6.11_exact_relay_semantics",
+    "do_not_equate_governed_continuity_bundle_with_host_runtime_smoke_stability"
+  ],
+  "four_track_alignment": {
+    "t1_roundtable": "docs/governance/roundtable-multi-agent-multi-identity-binding-governance-v1.4.12.md",
+    "t2_execution_runtime": "docs/governance/identity-actor-session-binding-governance-v1.6.0.md",
+    "t3_protocol_kernel": [
+      "identity/protocol/IDENTITY_PROTOCOL.md",
+      "identity/protocol/IDENTITY_RUNTIME.md"
+    ],
+    "t4_replay_bundle": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json"
+  },
+  "fast_audit": {
+    "status": "PASS_REQUIRED",
+    "summary_ref": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_fast/summary.json",
+    "identity_refs": [
+      "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_fast/base-repo-closure-orchestrator.audit.json",
+      "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_fast/base-repo-architect.audit.json"
+    ]
+  },
+  "wrapper_dry_runs": [
+    {
+      "mode": "resume",
+      "identity_id": "base-repo-architect",
+      "status": "PASS_REQUIRED",
+      "ref": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/wrapper_dry_run_resume.architect.txt"
+    },
+    {
+      "mode": "exec",
+      "identity_id": "base-repo-closure-orchestrator",
+      "status": "PASS_REQUIRED",
+      "ref": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/wrapper_dry_run_exec.closure.txt"
+    }
+  ],
+  "workspace_bootstrap_contract": {
+    "status": "PASS_REQUIRED",
+    "entry_model": "wrapper_bound_bootstrap",
+    "unsupported_bypass": "fail_close_non_qualified"
+  },
+  "protocol_authority_resolve": {
+    "status": "PASS_REQUIRED",
+    "identity_id": "base-repo-architect",
+    "resolution_mode": "actor_binding_session_scoped",
+    "ref": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/protocol_authority_resolve.architect.json"
+  },
+  "live_smoke": {
+    "status": "INCONCLUSIVE_HOST_RUNTIME_PANIC",
+    "classification": "HOST_RUNTIME_INCONCLUSIVE_BUNDLE_COMPENSATED",
+    "refs": [
+      "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_live/base-repo-closure-orchestrator.audit.json",
+      "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_live/base-repo-closure-orchestrator.smoke.txt.stderr.log",
+      "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_live/base-repo-architect.smoke.txt.stderr.log"
+    ]
+  },
+  "promotion_unlock_evidence": {
+    "status": "PROMOTION_REVIEW_ELIGIBLE",
+    "tuple_present_status": "PASS_REQUIRED",
+    "authoritative_resolve_status": "PASS_REQUIRED",
+    "final_channel_relay_receipt_status": "PASS_REQUIRED",
+    "controlled_emitter_path_status": "PASS_REQUIRED",
+    "no_silent_headerless_turn_status": "PASS_REQUIRED",
+    "unsupported_bypass_status": "PASS_REQUIRED",
+    "host_visible_surface_probe_manifest_ref": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/host_visible_surface_probes/manifest.host_visible_surface_live.json",
+    "summary": "promotion is review-eligible because the governed host-visible continuity bundle closes no_silent_headerless_turn on the controlled emitter path even while archived host-runtime smoke remains diagnostically inconclusive",
+    "refs": [
+      "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/host_visible_surface_probes/manifest.host_visible_surface_live.json",
+      "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/host_visible_surface_probes/results/protocol_lane_headstamp_continuity_live_receipt_pass.stdout.json",
+      "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_live/base-repo-closure-orchestrator.smoke.txt.stderr.log",
+      "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_live/base-repo-architect.smoke.txt.stderr.log"
+    ],
+    "governed_headstamp_continuity_status": "PASS_REQUIRED",
+    "no_silent_headerless_turn_proof_source": "host_visible_continuity_bundle"
+  },
+  "closure_decision": {
+    "standard_implementation_mode": "assistant_visible_inject",
+    "standard_closure_status": "CLOSED",
+    "promotion_enhancement_mode": "host_final_surface_controlled_display",
+    "promotion_enhancement_status": "READY",
+    "summary": "standard closure remains accepted on machine-verified assistant-visible injection; governed host-visible continuity now closes the stronger sender-side proof boundary while archived host-runtime smoke stays diagnostic only"
+  }
+}

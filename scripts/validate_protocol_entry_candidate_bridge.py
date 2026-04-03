@@ -15,6 +15,7 @@ from protocol_feedback_contract_common import (
     utc_now_z,
     write_json,
 )
+from resolve_identity_context import resolve_repo_catalog_path
 from response_stamp_common import resolve_layer_intent
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
@@ -110,18 +111,18 @@ def _resolve_intent(
             explicit_source_layer=source_layer,
             intent_text=layer_intent_text,
             default_work_layer="instance",
-            default_source_layer="global",
+            default_source_layer="project",
         )
         return {
             "resolved_work_layer": str(resolved.get("resolved_work_layer", "")).strip().lower() or "instance",
-            "resolved_source_layer": str(resolved.get("resolved_source_layer", "")).strip().lower() or "global",
+            "resolved_source_layer": str(resolved.get("resolved_source_layer", "")).strip().lower() or "project",
             "protocol_triggered": bool(resolved.get("protocol_triggered", False)),
             "intent_confidence": float(resolved.get("intent_confidence", 0.0) or 0.0),
             "fallback_reason": str(resolved.get("fallback_reason", "")).strip(),
         }
     return {
         "resolved_work_layer": wl,
-        "resolved_source_layer": str(stamp_doc.get("resolved_source_layer", "")).strip().lower() or "global",
+        "resolved_source_layer": str(stamp_doc.get("resolved_source_layer", "")).strip().lower() or "project",
         "protocol_triggered": bool(stamp_doc.get("protocol_triggered", False)),
         "intent_confidence": float(stamp_doc.get("intent_confidence", 0.0) or 0.0),
         "fallback_reason": str(stamp_doc.get("fallback_reason", "")).strip(),
@@ -129,6 +130,7 @@ def _resolve_intent(
 
 
 def main() -> int:
+    script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(description="Validate protocol-entry candidate clarification bridge.")
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
@@ -151,7 +153,7 @@ def main() -> int:
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=script_ref)
     if not catalog_path.exists():
         print(f"[FAIL] catalog not found: {catalog_path}")
         return 2

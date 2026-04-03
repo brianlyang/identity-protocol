@@ -2,18 +2,32 @@
 from __future__ import annotations
 
 import argparse
-import glob
 import json
 from pathlib import Path
 from typing import Any
 
-import yaml
+from strict_live_evidence_resolution_common import (
+    STATUS_FAIL_REQUIRED,
+    STATUS_PASS_REQUIRED,
+    apply_strict_live_required_gate,
+    canonicalize_strict_live_contract_paths,
+    derive_strict_live_evidence_projection,
+    derive_strict_live_operational_projection,
+    emit_payload,
+    resolve_preferred_strict_live_report,
+    resolve_strict_live_contract_path,
+    resolve_strict_live_glob_paths,
+    resolve_strict_live_pack_task,
+)
 
 REQ_KEYS = [
     "required",
     "priority_order",
     "conflict_rules",
     "trigger_thresholds",
+    "accurate_judgement_enforcement",
+    "route_discovery_enforcement",
+    "feedback_operational_prompt_enforcement",
     "decision_record_required_fields",
     "sample_report_path_pattern",
     "fail_action",
@@ -38,13 +52,9 @@ REQ_DECISION_FIELDS = [
     "rationale",
     "decided_at",
 ]
-
-
-def _load_yaml(path: Path) -> dict[str, Any]:
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(data, dict):
-        raise ValueError(f"YAML root must be object: {path}")
-    return data
+STATUS_FIELD = "capability_arbitration_status"
+ERR_TASK = "IP-CARB-001"
+ERR_REPORT = "IP-CARB-002"
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -52,20 +62,8 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
-    catalog = _load_yaml(catalog_path)
-    identities = catalog.get("identities") or []
-    target = next((x for x in identities if str((x or {}).get("id", "")).strip() == identity_id), None)
-    if not target:
-        raise FileNotFoundError(f"identity id not found in catalog: {identity_id}")
-    pack_path = str((target or {}).get("pack_path", "")).strip()
-    if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
-        if p.exists():
-            return p
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
-    if legacy.exists():
-        return legacy
-    raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
+    _, task_path = resolve_strict_live_pack_task(catalog_path, identity_id)
+    return task_path
 
 
 def _validate_record(rec: dict[str, Any], identity_id: str, *, strict_identity: bool) -> list[str]:
@@ -84,49 +82,122 @@ def _validate_record(rec: dict[str, Any], identity_id: str, *, strict_identity: 
 
 
 def _glob_paths(pattern: str, *, pack_root: Path) -> list[Path]:
-    raw = str(pattern or "").strip()
-    if not raw:
-        return []
-    p = Path(raw).expanduser()
-    has_magic = any(ch in raw for ch in ["*", "?", "["])
-    if p.is_absolute():
-        if has_magic:
-            return sorted(Path(x).resolve() for x in glob.glob(str(p)))
-        return [p.resolve()] if p.exists() else []
-
-    preferred = sorted(pack_root.glob(raw))
-    if preferred:
-        return preferred
-    return sorted(Path(".").glob(raw))
+    return resolve_strict_live_glob_paths(
+        pattern,
+        pack_root=pack_root,
+        identity_id=pack_root.name,
+    )
 
 
 def _resolve_path(path_value: str, *, pack_root: Path) -> Path:
-    raw = str(path_value or "").strip()
-    if not raw:
-        return Path("")
-    p = Path(raw).expanduser()
-    if p.is_absolute():
-        return p
-    candidate = (pack_root / raw).resolve()
-    if candidate.exists():
-        return candidate
-    return (Path.cwd() / raw).resolve()
+    return resolve_strict_live_contract_path(
+        path_value,
+        pack_root=pack_root,
+        identity_id=pack_root.name,
+    )
+
+
+def _build_payload(
+    *,
+    identity_id: str,
+    task_path: Path | None,
+    pack_root: Path | None,
+    contract_doc: dict[str, Any] | None,
+    report_path: Path | None,
+    report_doc: dict[str, Any] | None,
+    selection_meta: dict[str, Any] | None,
+    status: str,
+    stale_reasons: list[str],
+    error_code: str,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "identity_id": identity_id,
+        "task_path": str(task_path) if task_path is not None else "",
+        STATUS_FIELD: status,
+        "error_code": error_code,
+    }
+    if pack_root is not None:
+        if isinstance(selection_meta, dict):
+            payload.update(
+                {
+                    "report_selection_mode": str(selection_meta.get("report_selection_mode", "")).strip() or "missing",
+                    "live_candidate_paths": list(selection_meta.get("live_candidate_paths") or []),
+                    "live_candidate_selected_path": str(selection_meta.get("live_candidate_selected_path", "")).strip(),
+                }
+            )
+        evidence_projection = derive_strict_live_evidence_projection(
+            pack_root=pack_root,
+            contract_doc=contract_doc if isinstance(contract_doc, dict) else {},
+            selected_report_path=report_path,
+            report_doc=report_doc if isinstance(report_doc, dict) else {},
+        )
+        payload.update(evidence_projection)
+        payload.update(
+            derive_strict_live_operational_projection(
+                semantic_status=status,
+                evidence_projection=payload,
+            )
+        )
+    else:
+        payload.update(
+            {
+                "selected_report_path": str(report_path) if report_path is not None else "",
+                "current_run_pointer": "",
+                "current_run_report_path": "",
+                "current_run_id": "",
+                "report_selection_mode": "missing",
+                "live_candidate_paths": [],
+                "live_candidate_selected_path": "",
+                "evidence_origin": "missing",
+                "report_freshness_status": STATUS_FAIL_REQUIRED,
+                "run_id_binding_status": STATUS_FAIL_REQUIRED,
+                "strict_live_proof_status": STATUS_FAIL_REQUIRED,
+                "selected_report_run_ids": [],
+                "selected_report_age_seconds": None,
+            }
+        )
+        payload.update(
+            derive_strict_live_operational_projection(
+                semantic_status=status,
+                evidence_projection=payload,
+            )
+        )
+    payload["stale_reasons"] = sorted(
+        set([str(item).strip() for item in stale_reasons if str(item).strip()] + list(payload.pop("stale_reasons", [])))
+    )
+    return payload
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate capability arbitration contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
     ap.add_argument("--upgrade-report", default="", help="optional execute_identity_upgrade report path")
     ap.add_argument("--metrics-path", default="")
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
     try:
         task_path = _resolve_current_task(Path(args.catalog), args.identity_id)
     except Exception as e:
-        print(f"[FAIL] {e}")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=None,
+            pack_root=None,
+            contract_doc=None,
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=[str(e)],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print(f"[FAIL] {e}")
         return 1
 
     print(f"[INFO] validate capability arbitration for identity: {args.identity_id}")
@@ -135,27 +206,108 @@ def main() -> int:
 
     task = _load_json(task_path)
     c = task.get("capability_arbitration_contract") or {}
+    if isinstance(c, dict):
+        c = canonicalize_strict_live_contract_paths(
+            c,
+            pack_root=pack_root,
+            identity_id=args.identity_id,
+        )
     if not isinstance(c, dict) or not c:
-        print("[FAIL] missing capability_arbitration_contract")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc={},
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["missing_capability_arbitration_contract"],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] missing capability_arbitration_contract")
         return 1
 
     missing = [k for k in REQ_KEYS if k not in c]
     if missing:
-        print(f"[FAIL] capability_arbitration_contract missing fields: {missing}")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=[f"capability_arbitration_contract_missing_fields:{','.join(missing)}"],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print(f"[FAIL] capability_arbitration_contract missing fields: {missing}")
         return 1
 
     if c.get("required") is not True:
-        print("[FAIL] capability_arbitration_contract.required must be true")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["capability_arbitration_contract_not_required"],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] capability_arbitration_contract.required must be true")
         return 1
 
     priority = c.get("priority_order") or []
     if priority != REQ_PRIORITY:
-        print(f"[FAIL] priority_order must equal: {REQ_PRIORITY}")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["priority_order_mismatch"],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print(f"[FAIL] priority_order must equal: {REQ_PRIORITY}")
         return 1
 
     conflicts = c.get("conflict_rules") or {}
     if not isinstance(conflicts, dict):
-        print("[FAIL] conflict_rules must be object")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=None,
+            report_doc=None,
+            selection_meta=None,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["conflict_rules_not_object"],
+            error_code=ERR_TASK,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] conflict_rules must be object")
         return 1
 
     rc = 0
@@ -178,6 +330,172 @@ def main() -> int:
         if not isinstance(v, (int, float)) or v <= 0:
             print(f"[FAIL] trigger_thresholds.{k} must be > 0")
             rc = 1
+
+    judgement = c.get("accurate_judgement_enforcement") or {}
+    if not isinstance(judgement, dict) or not judgement:
+        print("[FAIL] accurate_judgement_enforcement must be non-empty object")
+        rc = 1
+    else:
+        if str(judgement.get("contract_ref", "")).strip() != "rq_034_multimodal_plugin_enforcement_contract_v1":
+            print(
+                "[FAIL] accurate_judgement_enforcement.contract_ref must be "
+                "rq_034_multimodal_plugin_enforcement_contract_v1"
+            )
+            rc = 1
+        if str(judgement.get("validator", "")).strip() != "scripts/validate_multimodal_plugin_enforcement.py":
+            print(
+                "[FAIL] accurate_judgement_enforcement.validator must be "
+                "scripts/validate_multimodal_plugin_enforcement.py"
+            )
+            rc = 1
+        if judgement.get("requires_multimodal_evidence_consistency") is not True:
+            print("[FAIL] accurate_judgement_enforcement.requires_multimodal_evidence_consistency must be true")
+            rc = 1
+        if str(judgement.get("inconsistent_evidence_transition", "")).strip() != "block_done":
+            print("[FAIL] accurate_judgement_enforcement.inconsistent_evidence_transition must be block_done")
+            rc = 1
+
+    reasoning_contract = task.get("reasoning_loop_failclose_contract_v1") or {}
+    reasoning_contract_required = isinstance(reasoning_contract, dict) and reasoning_contract.get("required") is True
+    reasoning_enforcement = c.get("reasoning_loop_enforcement") or {}
+    if reasoning_contract_required or isinstance(reasoning_enforcement, dict):
+        if not isinstance(reasoning_enforcement, dict) or not reasoning_enforcement:
+            print("[WARN] reasoning_loop_enforcement missing; run repair_contract_backfill to materialize arbitration link")
+        else:
+            if str(reasoning_enforcement.get("contract_ref", "")).strip() != "rq_035_reasoning_loop_failclose_contract_v1":
+                print(
+                    "[FAIL] reasoning_loop_enforcement.contract_ref must be "
+                    "rq_035_reasoning_loop_failclose_contract_v1"
+                )
+                rc = 1
+            if str(reasoning_enforcement.get("validator", "")).strip() != "scripts/validate_reasoning_loop_failclose.py":
+                print(
+                    "[FAIL] reasoning_loop_enforcement.validator must be "
+                    "scripts/validate_reasoning_loop_failclose.py"
+                )
+                rc = 1
+            if reasoning_enforcement.get("no_target_reached_cannot_complete") is not True:
+                print("[FAIL] reasoning_loop_enforcement.no_target_reached_cannot_complete must be true")
+                rc = 1
+            if reasoning_enforcement.get("failed_attempt_requires_next_action") is not True:
+                print("[FAIL] reasoning_loop_enforcement.failed_attempt_requires_next_action must be true")
+                rc = 1
+            threshold_requires_escalation = reasoning_enforcement.get(
+                "threshold_requires_escalation",
+                reasoning_enforcement.get("exceed_threshold_requires_escalation"),
+            )
+            if threshold_requires_escalation is not True:
+                print(
+                    "[FAIL] reasoning_loop_enforcement.threshold_requires_escalation "
+                    "(or legacy exceed_threshold_requires_escalation) must be true"
+                )
+                rc = 1
+            if str(reasoning_enforcement.get("reasoning_enforcement_level_field", "")).strip() != "reasoning_enforcement_level":
+                print("[FAIL] reasoning_loop_enforcement.reasoning_enforcement_level_field must be reasoning_enforcement_level")
+                rc = 1
+    else:
+        print("[WARN] reasoning_loop_enforcement not required until reasoning_loop_failclose_contract_v1 is backfilled")
+
+    route_discovery_required = (
+        isinstance(task.get("capability_orchestration_contract"), dict)
+        and (task.get("capability_orchestration_contract") or {}).get("required") is True
+        and isinstance(task.get("knowledge_acquisition_contract"), dict)
+        and (task.get("knowledge_acquisition_contract") or {}).get("required") is True
+    )
+    route_discovery_enforcement = c.get("route_discovery_enforcement") or {}
+    if route_discovery_required or isinstance(route_discovery_enforcement, dict):
+        if not isinstance(route_discovery_enforcement, dict) or not route_discovery_enforcement:
+            print("[WARN] route_discovery_enforcement missing; run repair_contract_backfill to materialize strengthening link")
+        else:
+            if str(route_discovery_enforcement.get("contract_ref", "")).strip() != "route_discovery_convergence_contract_v1":
+                print("[FAIL] route_discovery_enforcement.contract_ref must be route_discovery_convergence_contract_v1")
+                rc = 1
+            if str(route_discovery_enforcement.get("validator", "")).strip() != "scripts/validate_capability_fit_roundtable_evidence.py":
+                print("[FAIL] route_discovery_enforcement.validator must be scripts/validate_capability_fit_roundtable_evidence.py")
+                rc = 1
+            supporting = route_discovery_enforcement.get("supporting_validators") or []
+            expected_supporting = {
+                "scripts/validate_discovery_requiredization.py",
+                "scripts/validate_identity_orchestration_contract.py",
+                "scripts/validate_identity_knowledge_contract.py",
+            }
+            if not expected_supporting.issubset(set(supporting if isinstance(supporting, list) else [])):
+                print(
+                    "[FAIL] route_discovery_enforcement.supporting_validators missing required entries: "
+                    f"{sorted(expected_supporting - set(supporting if isinstance(supporting, list) else []))}"
+                )
+                rc = 1
+            if route_discovery_enforcement.get("candidate_rows_required") is not True:
+                print("[FAIL] route_discovery_enforcement.candidate_rows_required must be true")
+                rc = 1
+            if str(route_discovery_enforcement.get("selected_candidate_field", "")).strip() != "selected_candidate_id":
+                print("[FAIL] route_discovery_enforcement.selected_candidate_field must be selected_candidate_id")
+                rc = 1
+            if str(route_discovery_enforcement.get("selection_basis_field", "")).strip() != "selection_basis":
+                print("[FAIL] route_discovery_enforcement.selection_basis_field must be selection_basis")
+                rc = 1
+            if route_discovery_enforcement.get("serial_convergence_required") is not True:
+                print("[FAIL] route_discovery_enforcement.serial_convergence_required must be true")
+                rc = 1
+            if str(route_discovery_enforcement.get("convergence_status_field", "")).strip() != "convergence_status":
+                print("[FAIL] route_discovery_enforcement.convergence_status_field must be convergence_status")
+                rc = 1
+            if str(route_discovery_enforcement.get("fallback_route_field", "")).strip() != "fallback_route_if_selected_fails":
+                print("[FAIL] route_discovery_enforcement.fallback_route_field must be fallback_route_if_selected_fails")
+                rc = 1
+    else:
+        print("[WARN] route_discovery_enforcement not required until routing/knowledge strengthening is backfilled")
+
+    feedback_contract_required = isinstance(task.get("experience_feedback_contract"), dict) and (
+        task.get("experience_feedback_contract") or {}
+    ).get("required") is True
+    feedback_enforcement = c.get("feedback_operational_prompt_enforcement") or {}
+    if feedback_contract_required or isinstance(feedback_enforcement, dict):
+        if not isinstance(feedback_enforcement, dict) or not feedback_enforcement:
+            print("[WARN] feedback_operational_prompt_enforcement missing; run repair_contract_backfill to materialize strengthening link")
+        else:
+            if str(feedback_enforcement.get("contract_ref", "")).strip() != "feedback_operational_prompt_contract_v1":
+                print("[FAIL] feedback_operational_prompt_enforcement.contract_ref must be feedback_operational_prompt_contract_v1")
+                rc = 1
+            if str(feedback_enforcement.get("validator", "")).strip() != "scripts/validate_identity_experience_feedback_governance.py":
+                print(
+                    "[FAIL] feedback_operational_prompt_enforcement.validator must be "
+                    "scripts/validate_identity_experience_feedback_governance.py"
+                )
+                rc = 1
+            supporting = feedback_enforcement.get("supporting_validators") or []
+            if "scripts/validate_identity_experience_feedback.py" not in (supporting if isinstance(supporting, list) else []):
+                print(
+                    "[FAIL] feedback_operational_prompt_enforcement.supporting_validators must include "
+                    "scripts/validate_identity_experience_feedback.py"
+                )
+                rc = 1
+            if feedback_enforcement.get("rulebook_delta_required") is not True:
+                print("[FAIL] feedback_operational_prompt_enforcement.rulebook_delta_required must be true")
+                rc = 1
+            if str(feedback_enforcement.get("operational_prompt_ref_field", "")).strip() != "operational_prompt_ref":
+                print(
+                    "[FAIL] feedback_operational_prompt_enforcement.operational_prompt_ref_field must be "
+                    "operational_prompt_ref"
+                )
+                rc = 1
+            if str(feedback_enforcement.get("prompt_injection_status_field", "")).strip() != "prompt_injection_status":
+                print(
+                    "[FAIL] feedback_operational_prompt_enforcement.prompt_injection_status_field must be "
+                    "prompt_injection_status"
+                )
+                rc = 1
+            if str(feedback_enforcement.get("replay_status_field", "")).strip() != "replay_status":
+                print("[FAIL] feedback_operational_prompt_enforcement.replay_status_field must be replay_status")
+                rc = 1
+            if feedback_enforcement.get("rollback_prompt_ref_required") is not True:
+                print("[FAIL] feedback_operational_prompt_enforcement.rollback_prompt_ref_required must be true")
+                rc = 1
+            if feedback_enforcement.get("ttl_rounds_required") is not True:
+                print("[FAIL] feedback_operational_prompt_enforcement.ttl_rounds_required must be true")
+                rc = 1
+    else:
+        print("[WARN] feedback_operational_prompt_enforcement not required until experience feedback strengthening is backfilled")
 
     decision_fields = c.get("decision_record_required_fields") or []
     if any(x not in decision_fields for x in REQ_DECISION_FIELDS):
@@ -252,14 +570,53 @@ def main() -> int:
         files = _glob_paths(str(c.get("sample_report_path_pattern", "")), pack_root=pack_root)
         if files:
             report_path = files[-1]
+    selection_meta = resolve_preferred_strict_live_report(
+        pack_root=pack_root,
+        contract_doc=c,
+        fallback_report_path=report_path,
+        explicit_report_path=Path(args.report).expanduser().resolve() if args.report else None,
+    )
+    selected_report_path = selection_meta.get("selected_report_path")
+    if isinstance(selected_report_path, Path):
+        report_path = selected_report_path
     if not report_path.exists():
-        print(f"[FAIL] missing capability arbitration sample report: {report_path}")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=report_path,
+            report_doc=None,
+            selection_meta=selection_meta,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["capability_arbitration_report_missing"],
+            error_code=ERR_REPORT,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print(f"[FAIL] missing capability arbitration sample report: {report_path}")
         return 1
 
     report = _load_json(report_path)
     records = report.get("records") or []
     if not isinstance(records, list) or not records:
-        print("[FAIL] report.records must be non-empty list")
+        payload = _build_payload(
+            identity_id=args.identity_id,
+            task_path=task_path,
+            pack_root=pack_root,
+            contract_doc=c,
+            report_path=report_path,
+            report_doc=report,
+            selection_meta=selection_meta,
+            status=STATUS_FAIL_REQUIRED,
+            stale_reasons=["capability_arbitration_records_missing"],
+            error_code=ERR_REPORT,
+        )
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] report.records must be non-empty list")
         return 1
     for i, rec in enumerate(records):
         if not isinstance(rec, dict):
@@ -377,9 +734,48 @@ def main() -> int:
                 return 1
         print("[OK] arbitration self-test passed")
 
+    status = STATUS_PASS_REQUIRED if rc == 0 else STATUS_FAIL_REQUIRED
+    payload = _build_payload(
+        identity_id=args.identity_id,
+        task_path=task_path,
+        pack_root=pack_root,
+        contract_doc=c,
+        report_path=report_path,
+        report_doc=report,
+        selection_meta=selection_meta,
+        status=status,
+        stale_reasons=[] if rc == 0 else ["capability_arbitration_contract_validation_failed"],
+        error_code="" if rc == 0 else ERR_TASK,
+    )
+    payload = apply_strict_live_required_gate(
+        payload,
+        contract_doc=c,
+        status_field=STATUS_FIELD,
+        strict_live_error_code=ERR_REPORT,
+    )
     if rc:
+        if args.json_only:
+            emit_payload(payload, json_only=True)
         return 1
 
+    if str(payload.get(STATUS_FIELD, "")).strip().upper() != STATUS_PASS_REQUIRED:
+        if args.json_only:
+            emit_payload(payload, json_only=True)
+        else:
+            print("[FAIL] strict-live current-run evidence required but unproven for capability arbitration")
+        return 1
+
+    if args.json_only:
+        emit_payload(payload, json_only=True)
+        return 0
+
+    print(
+        "[INFO] strict-live projection: "
+        f"evidence_origin={payload['evidence_origin']} "
+        f"report_freshness_status={payload['report_freshness_status']} "
+        f"run_id_binding_status={payload['run_id_binding_status']} "
+        f"strict_live_proof_status={payload['strict_live_proof_status']}"
+    )
     print("Capability arbitration contract validation PASSED")
     return 0
 

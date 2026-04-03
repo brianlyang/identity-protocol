@@ -9,6 +9,8 @@ from typing import Any
 
 import yaml
 
+from resolve_identity_context import default_local_catalog_path
+
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -51,6 +53,8 @@ def _materialize_pattern(pattern: str, identity_id: str, ts: int, pack_root: Pat
         return (pack_root / "runtime" / p[len(local_prefix) :]).expanduser()
     if pack_root is not None and p.startswith("identity/runtime/"):
         return (pack_root / "runtime" / p[len("identity/runtime/") :]).expanduser()
+    if pack_root is not None and p.startswith("runtime/"):
+        return (pack_root / p).expanduser()
     return Path(p).expanduser()
 
 
@@ -77,7 +81,7 @@ def _normalize_role_type(identity_id: str, role_type: str, known_identity_tokens
 def main() -> int:
     ap = argparse.ArgumentParser(description="Repair/generate baseline protocol and role-binding evidence for an identity.")
     ap.add_argument("--identity-id", required=True)
-    ap.add_argument("--catalog", default=str((Path.home() / ".codex" / "identity" / "catalog.local.yaml").resolve()))
+    ap.add_argument("--catalog", default=str(default_local_catalog_path(start=Path(__file__).resolve())))
     ap.add_argument("--repair-protocol", action="store_true")
     ap.add_argument("--repair-role-binding", action="store_true")
     ap.add_argument("--apply", action="store_true")

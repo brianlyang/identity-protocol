@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "identity/protocol/plugins/skill/ai-folder-governance-enforcement/plugin.output.schema.json",
+  "title": "AI Folder Governance Skill Plugin Output",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "path_integrity_status",
+    "path_integrity_error_code"
+  ],
+  "properties": {
+    "path_integrity_status": {
+      "type": "string",
+      "enum": [
+        "PASS_REQUIRED",
+        "SKIPPED_NOT_REQUIRED",
+        "FAIL_REQUIRED"
+      ]
+    },
+    "path_integrity_error_code": {
+      "type": "string"
+    },
+    "active_repo_root": {
+      "type": "string"
+    },
+    "active_runtime_root": {
+      "type": "string"
+    },
+    "layout_mode": {
+      "type": "string"
+    }
+  }
+}

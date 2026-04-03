@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "identity/protocol/plugins/schemas/plugin-registry.schema.json",
+  "title": "Plugin Registry (v1.6.2)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "contract_id",
+    "plugins"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "v1.6.2"
+    },
+    "contract_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "plugins": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "plugin_id",
+          "integration_kind",
+          "protocol_contract_root",
+          "instance_runtime_root",
+          "contract_file",
+          "validator_script",
+          "gate_mode",
+          "provider_profiles",
+          "status"
+        ],
+        "properties": {
+          "plugin_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "integration_kind": {
+            "type": "string",
+            "enum": [
+              "skill",
+              "mcp",
+              "api"
+            ]
+          },
+          "protocol_contract_root": {
+            "type": "string",
+            "minLength": 1
+          },
+          "instance_runtime_root": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requirement_key": {
+            "type": "string",
+            "pattern": "^asb16-rq-[0-9]{3}$"
+          },
+          "bundle_target_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{2,127}$"
+          },
+          "gate_mode": {
+            "type": "string",
+            "enum": [
+              "fail_close_strict",
+              "shadow_warn",
+              "report_only"
+            ]
+          },
+          "ssot_mapping_ref": {
+            "type": "string",
+            "pattern": "^identity/protocol/mappings/contract-binding\\.v[0-9]+\\.[0-9]+\\.yaml#asb16-rq-[0-9]{3}$"
+          },
+          "contract_file": {
+            "type": "string",
+            "minLength": 1
+          },
+          "validator_script": {
+            "type": "string",
+            "minLength": 1
+          },
+          "provider_profiles": {
+            "type": "array",
+            "minItems": 0,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{2,63}$"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "active",
+              "deprecated"
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "integration_kind": {
+                  "const": "skill"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "protocol_contract_root": {
+                  "const": "identity/protocol/plugins/skill"
+                },
+                "instance_runtime_root": {
+                  "const": ".identity/{identity_id}/runtime/plugins/skills"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "integration_kind": {
+                  "const": "mcp"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "protocol_contract_root": {
+                  "const": "identity/protocol/plugins/mcp"
+                },
+                "instance_runtime_root": {
+                  "const": ".identity/{identity_id}/runtime/plugins/mcp"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "integration_kind": {
+                  "const": "api"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "protocol_contract_root": {
+                  "const": "identity/protocol/plugins"
+                },
+                "instance_runtime_root": {
+                  "const": ".identity/{identity_id}/runtime/plugins/api"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate_mode": {
+                  "const": "fail_close_strict"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "requirement_key",
+                "bundle_target_name",
+                "ssot_mapping_ref"
+              ],
+              "properties": {
+                "status": {
+                  "const": "active"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reasoning Loop Enforcement Input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "identity_id",
+    "operation",
+    "reasoning_enforcement_level"
+  ],
+  "properties": {
+    "identity_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operation": {
+      "type": "string",
+      "enum": [
+        "activate",
+        "update",
+        "readiness",
+        "e2e",
+        "ci",
+        "validate",
+        "scan",
+        "three-plane",
+        "inspection",
+        "mutation"
+      ]
+    },
+    "reasoning_enforcement_level": {
+      "type": "string",
+      "enum": [
+        "L0",
+        "L1",
+        "L2",
+        "L3"
+      ]
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "report_selected_path": {
+      "type": "string"
+    }
+  }
+}

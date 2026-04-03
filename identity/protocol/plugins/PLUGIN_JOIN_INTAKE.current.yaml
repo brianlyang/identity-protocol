@@ -1,0 +1,7 @@
+schema_version: 1
+governance_version: current
+last_updated_utc: "2026-03-11T00:00:00Z"
+pointer_contract: frozen_versioned_active_carrier
+upgrade_switch_mode: pointer_only
+replay_snapshot_immutable: true
+active_file: identity/protocol/plugins/PLUGIN_JOIN_INTAKE.v1.6.4.yaml

@@ -1,0 +1,32 @@
+schema_version: 1
+baseline_version: v1
+stream_version: v1.6
+updated_at_utc: "2026-03-15T00:00:00Z"
+
+agent_identity:
+  methodology_version: v1.6
+  prompt_version: v1.6
+  json_version: v1.6
+
+scaffold_metadata:
+  protocol_contract_version: v1.6.8
+  required_version_stream: v1.6
+  required_gate_bundle_contract_version: v1.6
+  identity_protocol_version: v1.6
+
+catalog:
+  methodology_version: v1.6
+
+meta:
+  methodology_version: v1.6
+
+policy:
+  enforce_on_operations:
+    - create
+    - install
+    - adopt
+    - update
+    - validate
+    - readiness
+    - ci
+  fail_mode: fail_required

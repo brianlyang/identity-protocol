@@ -1,0 +1,1882 @@
+_meta:
+  mapping_file: identity/protocol/mappings/contract-binding.v1.6.yaml
+  mapping_version: "v1.6"
+  schema_version: 1
+  source_layer: protocol
+  lifecycle_state: phase6_full_requirement_projection
+  last_updated_utc: "2026-03-25T05:16:12Z"
+  row_count: 56
+  notes:
+    - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
+    - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
+    - "Phase-3 extension adds Batch-1 unlock-formula mapping row for ASB16-RQ-001."
+    - "Phase-4 extension adds Batch-1 (RQ-002/003/004/005) and planned rows (RQ-008/026) mapping seeds."
+    - "Phase-5 extension lands Batch-2A/5/4 kernel rows (RQ-006/007/009/010/011/012/013/016/025/029) with executable validators."
+    - "Phase-6 extension completes full requirement projection for P0 rows (RQ-023/024/028/032)."
+    - "Hotfix extension adds RQ-033 execution-target tuple isolation mapping row with lane wiring closure."
+    - "Post-audit alignment: RQ-018 canonical validator path now points to scripts/validate_dedup_monotonicity.py with wrapper compatibility retained."
+    - "v1.6.2 multimodal stream adds RQ-034 multimodal plugin enforcement mapping row with central provider profile governance hooks."
+    - "v1.6.8 path-immutability stream is promoted into motherline rows RQ-036/037/038 to avoid side-chain drift."
+    - "v1.6.5 rebound-absorber lane promotes rows RQ-039/040/041 into the motherline required bundle."
+    - "v1.6.11 relay-final-answer stream adds motherline row RQ-042 for outer-agent exact/summary relay governance."
+    - "v1.6.13 instance-pack-topology stream adds motherline row RQ-043 for canonical pack-root scripts topology governance."
+    - "v1.6.16 context-continuity stream adds motherline rows RQ-044/045/046 for artifact schema, reentry consumption, and continuity receipt-family governance."
+    - "2026-03-22 motherline freeze adds RQ-047 for no-downgrade / no-backstop / no backward-compatibility enforcement."
+    - "2026-03-23 v1.6.18 dialogue-retention landing adds RQ-051 for raw dialogue truth mirroring, delivery-hook bridge, and governed runtime validation."
+    - "2026-03-23 v1.6.18 whole-matrix routing closure adds RQ-052 for protocol-owned artifact-family routing enforcement across the frozen eight-family matrix."
+    - "2026-03-24 v1.6.20 broadcast/transport convergence adds RQ-053 dedicated broadcast-delivery adoption and RQ-054 aggregate identity-communication-transport closure."
+    - "2026-03-24 v1.6.19 weak-live-linkage landing adds RQ-055 for differential audit of contract/artifact/run-binding/consumption closure against false-green families."
+    - "2026-03-25 v1.6.21 terminal-truth-cleanliness landing adds RQ-056 for machine-owned separation of execution closure, clean terminal truth, and canonical publishability veto semantics."
+    - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
+    - "Validator scripts referenced here may be planned-only until implementation commits land."
+
+asb16-rq-001:
+  requirement_id: ASB16-RQ-001
+  kernel_contract_id: rq_001_unlock_formula_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_001_unlock_formula_contract_v1
+  validator_ids:
+    - scripts/validate_unlock_formula.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#85-batch-1-row-level-strengthening-profile-asb16-rq-001005-2026-03-05
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-030---batch-1-asb16-rq-001005-strengthening-normalization
+  report_field_refs:
+    - unlock_formula_status
+    - unlock_allowed
+    - decision_gates
+    - p0_total
+    - p0_done
+    - p0_not_done_refs
+    - audit_signoff_status
+    - env_blockers
+    - protocol_blockers
+    - evidence_refs
+  error_code_refs:
+    - IP-UNLOCK-001
+    - IP-UNLOCK-002
+    - IP-UNLOCK-003
+    - IP-UNLOCK-004
+  mapping_state: phase3_batch1_seed
+
+asb16-rq-002:
+  requirement_id: ASB16-RQ-002
+  kernel_contract_id: rq_002_capability_boundary_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_002_capability_boundary_contract_v1
+  validator_ids:
+    - scripts/validate_capability_boundary_classification.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#85-batch-1-row-level-strengthening-profile-asb16-rq-001005-2026-03-05
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-030---batch-1-asb16-rq-001005-strengthening-normalization
+  report_field_refs:
+    - capability_boundary_status
+    - boundary_classification
+    - classification_source
+    - capability_activation_status
+    - capability_activation_error_code
+  error_code_refs:
+    - IP-CAPBOUND-001
+    - IP-CAPBOUND-002
+    - IP-CAPBOUND-003
+  mapping_state: phase4_batch1_seed
+
+asb16-rq-003:
+  requirement_id: ASB16-RQ-003
+  kernel_contract_id: rq_003_promotion_evidence_pipeline_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_003_promotion_evidence_pipeline_contract_v1
+  validator_ids:
+    - scripts/validate_promotion_pipeline.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#85-batch-1-row-level-strengthening-profile-asb16-rq-001005-2026-03-05
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-030---batch-1-asb16-rq-001005-strengthening-normalization
+  report_field_refs:
+    - promotion_pipeline_status
+    - decision_hash
+    - input_hash
+    - reviewer_role
+    - reviewer_signature_ref
+    - evidence_bundle_refs
+  error_code_refs:
+    - IP-PROMO-001
+    - IP-PROMO-002
+    - IP-PROMO-003
+  mapping_state: phase4_batch1_seed
+
+asb16-rq-004:
+  requirement_id: ASB16-RQ-004
+  kernel_contract_id: rq_004_outlet_matrix_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_004_outlet_matrix_contract_v1
+  validator_ids:
+    - scripts/validate_outlet_matrix.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#85-batch-1-row-level-strengthening-profile-asb16-rq-001005-2026-03-05
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-030---batch-1-asb16-rq-001005-strengthening-normalization
+  report_field_refs:
+    - outlet_matrix_status
+    - matrix_positive_status
+    - matrix_negative_status
+    - cross_cwd_parity_status
+    - send_time_gate_status
+    - governed_outlet_enforced
+    - outlet_channel_id
+    - outlet_bypass_detected
+  error_code_refs:
+    - IP-OUTLET-001
+    - IP-OUTLET-002
+    - IP-OUTLET-003
+  mapping_state: phase4_batch1_seed
+
+asb16-rq-005:
+  requirement_id: ASB16-RQ-005
+  kernel_contract_id: rq_005_sidecar_cwd_invariance_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_005_sidecar_cwd_invariance_contract_v1
+  validator_ids:
+    - scripts/validate_sidecar_cwd_parity.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#85-batch-1-row-level-strengthening-profile-asb16-rq-001005-2026-03-05
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-030---batch-1-asb16-rq-001005-strengthening-normalization
+  report_field_refs:
+    - sidecar_cwd_parity_status
+    - cwd_parity_status
+    - passthrough_digest
+    - sidecar_contract_status
+    - sidecar_error_code
+  error_code_refs:
+    - IP-SIDECWD-001
+    - IP-SIDECWD-002
+    - IP-SIDECWD-003
+  mapping_state: phase4_batch1_seed
+
+asb16-rq-006:
+  requirement_id: ASB16-RQ-006
+  kernel_contract_id: rq_006_release_plane_cloud_evidence_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_006_release_plane_cloud_evidence_contract_v1
+  validator_ids:
+    - scripts/validate_release_plane_cloud_evidence.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#86-batch-2a-row-level-strengthening-profile-asb16-rq-006010-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-strengthening-normalization
+  report_field_refs:
+    - release_plane_cloud_evidence_status
+    - release_plane_status
+    - conditions
+    - target_branch
+    - release_head_sha
+    - required_gates_run_id
+    - run_url
+  error_code_refs:
+    - IP-RCLOUD-001
+    - IP-RCLOUD-002
+    - IP-RCLOUD-003
+  mapping_state: phase5_landed
+
+asb16-rq-007:
+  requirement_id: ASB16-RQ-007
+  kernel_contract_id: rq_007_cross_cwd_absolute_input_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_007_cross_cwd_absolute_input_contract_v1
+  validator_ids:
+    - scripts/validate_cross_cwd_absolute_input.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#86-batch-2a-row-level-strengthening-profile-asb16-rq-006010-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-strengthening-normalization
+  report_field_refs:
+    - cross_cwd_absolute_input_status
+    - cwd_parity_status
+    - repo_catalog_input
+    - repo_catalog_is_absolute
+    - repo_cwd_resolved_repo_catalog
+    - tmp_cwd_resolved_repo_catalog
+  error_code_refs:
+    - IP-CWD-003
+    - IP-CWD-004
+    - IP-CWD-005
+  mapping_state: phase5_landed
+
+asb16-rq-009:
+  requirement_id: ASB16-RQ-009
+  kernel_contract_id: rq_009_run_id_anchored_report_selection_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_009_run_id_anchored_report_selection_contract_v1
+  validator_ids:
+    - scripts/validate_run_id_report_selection.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#86-batch-2a-row-level-strengthening-profile-asb16-rq-006010-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-strengthening-normalization
+  report_field_refs:
+    - run_id_report_selection_status
+    - run_id
+    - selection_strategy
+    - report_selected_path
+    - candidate_count
+  error_code_refs:
+    - IP-RSEL-001
+    - IP-RSEL-002
+  mapping_state: phase5_landed
+
+asb16-rq-010:
+  requirement_id: ASB16-RQ-010
+  kernel_contract_id: rq_010_phase_a_bootstrap_before_strict_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_010_phase_a_bootstrap_before_strict_contract_v1
+  validator_ids:
+    - scripts/validate_phase_bootstrap_before_strict.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#86-batch-2a-row-level-strengthening-profile-asb16-rq-006010-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-strengthening-normalization
+  report_field_refs:
+    - phase_bootstrap_before_strict_status
+    - phase_a_refresh_applied
+    - phase_b_strict_revalidate_status
+    - phase_trace_status
+    - report_path
+  error_code_refs:
+    - IP-PHASE-001
+    - IP-PHASE-002
+    - IP-PHASE-003
+  mapping_state: phase5_landed
+
+asb16-rq-011:
+  requirement_id: ASB16-RQ-011
+  kernel_contract_id: rq_011_tmp_collision_safe_allocator_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_011_tmp_collision_safe_allocator_contract_v1
+  validator_ids:
+    - scripts/validate_tmp_collision_safety.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#89-batch-5-row-level-orchestration-strengthening-profile-asb16-rq-010011012013016-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-034---batch-5-asb16-rq-010011012013016-orchestration-strengthening-normalization
+  report_field_refs:
+    - tmp_collision_safety_status
+    - tmp_root
+    - generated_paths
+    - collision_count
+    - unique_path_count
+    - path_scope_guard_status
+  error_code_refs:
+    - IP-TMP-001
+    - IP-TMP-002
+  mapping_state: phase5_landed
+
+asb16-rq-012:
+  requirement_id: ASB16-RQ-012
+  kernel_contract_id: rq_012_handoff_collab_freshness_autorotation_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_012_handoff_collab_freshness_autorotation_contract_v1
+  validator_ids:
+    - scripts/rotate_handoff_collab_freshness.py
+    - scripts/validate_handoff_collab_freshness_rotation.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#89-batch-5-row-level-orchestration-strengthening-profile-asb16-rq-010011012013016-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-034---batch-5-asb16-rq-010011012013016-orchestration-strengthening-normalization
+  report_field_refs:
+    - handoff_collab_freshness_rotation_status
+    - rotation_applied
+    - freshness_age_days
+    - rotation_receipt_ref
+    - freshness_status
+  error_code_refs:
+    - IP-FRESH-001
+    - IP-FRESH-002
+    - IP-FRESH-003
+  mapping_state: phase5_landed
+
+asb16-rq-013:
+  requirement_id: ASB16-RQ-013
+  kernel_contract_id: rq_013_protocol_feedback_atomic_emit_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_013_protocol_feedback_atomic_emit_contract_v1
+  validator_ids:
+    - scripts/emit_protocol_feedback_atomic.py
+    - scripts/validate_protocol_feedback_atomic_emit.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#89-batch-5-row-level-orchestration-strengthening-profile-asb16-rq-010011012013016-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-034---batch-5-asb16-rq-010011012013016-orchestration-strengthening-normalization
+  report_field_refs:
+    - protocol_feedback_atomic_emit_status
+    - transaction_id
+    - batch_ref
+    - index_ref
+    - receipt_ref
+  error_code_refs:
+    - IP-PFAT-001
+    - IP-PFAT-002
+    - IP-PFAT-003
+    - IP-PFAT-004
+    - IP-PFAT-005
+  mapping_state: phase5_landed
+
+asb16-rq-016:
+  requirement_id: ASB16-RQ-016
+  kernel_contract_id: rq_016_refresh_strict_business_interference_matrix_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_016_refresh_strict_business_interference_matrix_contract_v1
+  validator_ids:
+    - scripts/emit_business_interference_matrix.py
+    - scripts/validate_refresh_strict_business_interference.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#89-batch-5-row-level-orchestration-strengthening-profile-asb16-rq-010011012013016-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-034---batch-5-asb16-rq-010011012013016-orchestration-strengthening-normalization
+  report_field_refs:
+    - refresh_strict_business_interference_status
+    - refresh_receipt_ref
+    - strict_receipt_ref
+    - refresh_status
+    - strict_status
+    - interference_row_count_refresh
+    - interference_row_count_strict
+  error_code_refs:
+    - IP-INTERF-001
+    - IP-INTERF-002
+    - IP-INTERF-003
+  mapping_state: phase5_landed
+
+asb16-rq-025:
+  requirement_id: ASB16-RQ-025
+  kernel_contract_id: rq_025_kernel_canonical_source_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_025_kernel_canonical_source_contract_v1
+  validator_ids:
+    - scripts/validate_kernel_ssot_source.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#87-batch-3b-row-level-strengthening-profile-asb16-rq-024028-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-032---batch-3b-asb16-rq-024028-strengthening-normalization
+  report_field_refs:
+    - kernel_ssot_source_status
+    - canonical_source_paths
+    - missing_source_paths
+    - ssot_validator_rc
+    - ssot_validator_tail
+  error_code_refs:
+    - IP-KSSOT-001
+    - IP-KSSOT-002
+  mapping_state: phase5_landed
+
+asb16-rq-008:
+  requirement_id: ASB16-RQ-008
+  kernel_contract_id: rq_008_docs_bridge_consistency_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_008_docs_bridge_consistency_contract_v1
+  validator_ids:
+    - scripts/validate_docs_bridge_consistency.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#88-batch-4-row-level-strengthening-profile-asb16-rq-029031032007008-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-033---batch-4-asb16-rq-029031032007008-four-track-strengthening-normalization
+  report_field_refs:
+    - bridge_consistency_status
+    - contradiction_pairs
+    - governance_anchor_refs
+    - review_anchor_refs
+  error_code_refs:
+    - IP-DBRIDGE-001
+    - IP-DBRIDGE-002
+  mapping_state: phase4_batch3_seed
+
+asb16-rq-026:
+  requirement_id: ASB16-RQ-026
+  kernel_contract_id: rq_026_kernel_contract_mapping_projection_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_026_kernel_contract_mapping_projection_contract_v1
+  validator_ids:
+    - scripts/validate_contract_mapping_coverage.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#87-batch-3b-row-level-strengthening-profile-asb16-rq-024028-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-032---batch-3b-asb16-rq-024028-strengthening-normalization
+  report_field_refs:
+    - contract_mapping_coverage_status
+    - total_requirements
+    - p0_total
+    - p0_mapped
+    - p0_coverage_rate
+    - orphan_count
+    - unmapped_p0_requirements
+  error_code_refs:
+    - IP-MAP-001
+    - IP-MAP-002
+    - IP-MAP-003
+    - IP-MAP-004
+  mapping_state: phase4_batch3_seed
+
+asb16-rq-029:
+  requirement_id: ASB16-RQ-029
+  kernel_contract_id: rq_029_semantic_single_source_convergence_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_029_semantic_single_source_convergence_contract_v1
+  validator_ids:
+    - scripts/validate_semantic_convergence.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#88-batch-4-row-level-strengthening-profile-asb16-rq-029031032007008-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-033---batch-4-asb16-rq-029031032007008-four-track-strengthening-normalization
+  report_field_refs:
+    - semantic_convergence_status
+    - semantic_convergence_error_code
+    - semantic_tuple_update
+    - semantic_tuple_three_plane
+    - semantic_tuple_full_scan
+    - mismatch_count
+    - mismatch_fields
+  error_code_refs:
+    - IP-SEM-CONV-001
+    - IP-SEM-CONV-002
+  mapping_state: phase5_landed
+
+asb16-rq-014:
+  requirement_id: ASB16-RQ-014
+  kernel_contract_id: rq_014_prompt_bootstrap_capability_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md#rq_014_prompt_bootstrap_capability_contract_v1
+  validator_ids:
+    - scripts/validate_prompt_bootstrap_capability.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#813-prompt-bootstrap-kernel-source-continuity-guard-asb16-rq-014015027031-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-024---protocol-kernel-prompt-import-executable-coupling-self-drive-intake-asb16-rq-031
+  report_field_refs:
+    - capability_driver_required_total
+    - capability_driver_present_total
+    - capability_driver_coverage_rate
+    - missing_capability_drivers
+    - prompt_bootstrap_contract_status
+    - driver_receipt_refs
+    - driver_run_id
+    - driver_projection_digest
+    - current_run_driver_binding_status
+    - requiredization_current_round_linked
+    - evidence_origin
+    - error_code
+  error_code_refs: []
+  mapping_state: phase2_prompt_seed
+
+asb16-rq-015:
+  requirement_id: ASB16-RQ-015
+  kernel_contract_id: rq_015_prompt_capability_matrix_fail_closed_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md#rq_015_prompt_capability_matrix_fail_closed_contract_v1
+  validator_ids:
+    - scripts/validate_prompt_capability_matrix.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#813-prompt-bootstrap-kernel-source-continuity-guard-asb16-rq-014015027031-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-024---protocol-kernel-prompt-import-executable-coupling-self-drive-intake-asb16-rq-031
+  report_field_refs:
+    - capability_driver_required_total
+    - capability_driver_present_total
+    - capability_driver_coverage_rate
+    - missing_capability_drivers
+    - prompt_capability_matrix_status
+    - driver_receipt_refs
+    - driver_run_id
+    - driver_projection_digest
+    - current_run_driver_binding_status
+    - requiredization_current_round_linked
+    - evidence_origin
+    - error_code
+  error_code_refs: []
+  mapping_state: phase2_prompt_seed
+
+asb16-rq-027:
+  requirement_id: ASB16-RQ-027
+  kernel_contract_id: rq_027_derived_prompt_conformance_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md#rq_027_derived_prompt_conformance_contract_v1
+  validator_ids:
+    - scripts/compile_identity_runtime.py
+    - scripts/validate_prompt_derivation_conformance.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#813-prompt-bootstrap-kernel-source-continuity-guard-asb16-rq-014015027031-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-021---kernel-first-baseline-intake-asb16-rq-025028
+  report_field_refs:
+    - kernel_contract_version
+    - kernel_contract_digest
+    - derived_from_contract_ids
+    - overlay_digest
+    - driver_receipt_refs
+    - driver_run_id
+    - driver_projection_digest
+    - current_run_driver_binding_status
+    - requiredization_current_round_linked
+    - evidence_origin
+  error_code_refs: []
+  mapping_state: phase2_prompt_seed
+
+asb16-rq-031:
+  requirement_id: ASB16-RQ-031
+  kernel_contract_id: rq_031_prompt_import_executable_coupling_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md#rq_031_prompt_import_executable_coupling_contract_v1
+  validator_ids:
+    - scripts/validate_prompt_kernel_executable_coupling.py
+    - scripts/validate_work_layer_gate_set_routing.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#813-prompt-bootstrap-kernel-source-continuity-guard-asb16-rq-014015027031-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-024---protocol-kernel-prompt-import-executable-coupling-self-drive-intake-asb16-rq-031
+  report_field_refs:
+    - kernel_contract_ref
+    - validator_ref
+    - evidence_ref
+    - actor_context_explicit
+  error_code_refs:
+    - IP-PROMPT-CONTRACT-001
+    - IP-ACTOR-CTX-001
+  mapping_state: phase2_prompt_seed
+
+asb16-rq-017:
+  requirement_id: ASB16-RQ-017
+  kernel_contract_id: rq_017_multi_track_cross_verification_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_017_multi_track_cross_verification_contract_v1
+  validator_ids:
+    - scripts/validate_intake_evidence_core.py::mode=intake_contract
+    - scripts/validate_v16_intake_evidence_core.py::wrapper_compatibility_optional
+    - scripts/validate_cross_verification_tracks.py
+    - scripts/validate_v16_cross_verification_tracks.py::wrapper_compatibility_optional
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#810-batch-6-row-level-cross-workflow-governance-strengthening-profile-asb16-rq-017018019020021-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-035---batch-6-asb16-rq-017018019020021-cross-workflow-governance-strengthening-normalization
+  report_field_refs:
+    - t1_status
+    - t2_status
+    - t3_status
+    - t4_status
+    - cross_verification_bundle_id
+    - source_url_set
+    - reference_timestamp_utc
+    - conflict_reconciliation_note
+  error_code_refs: []
+  mapping_state: phase1_seed
+
+asb16-rq-018:
+  requirement_id: ASB16-RQ-018
+  kernel_contract_id: rq_018_dedup_monotonic_winner_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_018_dedup_monotonic_winner_contract_v1
+  validator_ids:
+    - scripts/validate_dedup_monotonicity.py
+    - scripts/validate_v16_dedup_monotonicity.py::wrapper_compatibility_optional
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#810-batch-6-row-level-cross-workflow-governance-strengthening-profile-asb16-rq-017018019020021-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-035---batch-6-asb16-rq-017018019020021-cross-workflow-governance-strengthening-normalization
+  report_field_refs:
+    - run_id
+    - earliest_claim_ts
+    - stable_tiebreaker
+    - winner_id
+    - winner_reason
+    - monotonicity_status
+  error_code_refs: []
+  mapping_state: phase1_seed
+
+asb16-rq-019:
+  requirement_id: ASB16-RQ-019
+  kernel_contract_id: rq_019_cross_workflow_evidence_schema_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_019_cross_workflow_evidence_schema_contract_v1
+  validator_ids:
+    - scripts/normalize_cross_workflow_evidence.py
+    - scripts/normalize_v16_cross_workflow_evidence.py::wrapper_compatibility_optional
+    - scripts/validate_cross_workflow_schema.py
+    - scripts/validate_v16_cross_workflow_schema.py::wrapper_compatibility_optional
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#810-batch-6-row-level-cross-workflow-governance-strengthening-profile-asb16-rq-017018019020021-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-035---batch-6-asb16-rq-017018019020021-cross-workflow-governance-strengthening-normalization
+  report_field_refs:
+    - run_id
+    - route_action
+    - quality_meta_state
+    - dedup_state
+    - evidence_hash
+    - schema_version
+  error_code_refs: []
+  mapping_state: phase1_seed
+
+asb16-rq-020:
+  requirement_id: ASB16-RQ-020
+  kernel_contract_id: rq_020_skill_path_integrity_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_020_skill_path_integrity_contract_v1
+  validator_ids:
+    - scripts/validate_skill_path_integrity.py
+    - scripts/validate_v16_skill_path_integrity.py::wrapper_compatibility_optional
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#810-batch-6-row-level-cross-workflow-governance-strengthening-profile-asb16-rq-017018019020021-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-035---batch-6-asb16-rq-017018019020021-cross-workflow-governance-strengthening-normalization
+  report_field_refs:
+    - active_repo_root
+    - active_runtime_root
+    - layout_mode
+    - path_integrity_status
+    - path_integrity_error_code
+  error_code_refs: []
+  mapping_state: phase1_seed
+
+asb16-rq-021:
+  requirement_id: ASB16-RQ-021
+  kernel_contract_id: rq_021_route_workflow_version_pinning_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_021_route_workflow_version_pinning_contract_v1
+  validator_ids:
+    - scripts/emit_route_version_pin_receipt.py
+    - scripts/validate_route_version_pinning.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#810-batch-6-row-level-cross-workflow-governance-strengthening-profile-asb16-rq-017018019020021-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-035---batch-6-asb16-rq-017018019020021-cross-workflow-governance-strengthening-normalization
+  report_field_refs:
+    - route_endpoint
+    - workflow_id
+    - workflow_publish_version
+    - pin_proof_ref
+    - pin_status
+    - pin_error_code
+  error_code_refs: []
+  mapping_state: phase1_seed
+
+asb16-rq-022:
+  requirement_id: ASB16-RQ-022
+  kernel_contract_id: rq_022_fallback_taxonomy_normalization_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_022_fallback_taxonomy_normalization_contract_v1
+  validator_ids:
+    - scripts/validate_fallback_taxonomy_normalization.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#811-batch-7-row-level-closure-profile-asb16-rq-022030-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-036---batch-7-asb16-rq-022030-closure-strengthening-normalization
+  report_field_refs:
+    - fallback_reason_raw
+    - fallback_taxonomy_class
+    - taxonomy_version
+    - normalization_status
+    - normalization_error_code
+  error_code_refs: []
+  mapping_state: phase1_seed
+
+asb16-rq-023:
+  requirement_id: ASB16-RQ-023
+  kernel_contract_id: rq_023_discovery_dual_track_requiredization_activation_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_023_discovery_dual_track_requiredization_activation_contract_v1
+  validator_ids:
+    - scripts/validate_discovery_requiredization.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#412-discovery_dual_track_requiredization_activation_contract_v1-p0
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-020---sra-discovery-dual-track-hardening-intake-asb16-rq-023024
+  report_field_refs:
+    - discovery_requiredization_status
+    - requiredization_triggered
+    - trigger_classes
+    - required_contract_declared
+    - required_contract
+    - requiredization_receipt_path
+  error_code_refs:
+    - IP-DREQ-001
+  mapping_state: phase6_landed
+
+asb16-rq-024:
+  requirement_id: ASB16-RQ-024
+  kernel_contract_id: rq_024_discovery_apply_coverage_fail_closed_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_024_discovery_apply_coverage_fail_closed_contract_v1
+  validator_ids:
+    - scripts/validate_discovery_requiredization.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#87-batch-3b-row-level-strengthening-profile-asb16-rq-024028-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-032---batch-3b-asb16-rq-024028-strengthening-normalization
+  report_field_refs:
+    - discovery_requiredization_status
+    - discovery_required_total
+    - discovery_required_passed
+    - discovery_required_coverage_rate
+    - discovery_required_gate_failed
+    - error_code
+  error_code_refs:
+    - IP-DREQ-002
+    - IP-DREQ-003
+  mapping_state: phase6_landed
+
+asb16-rq-028:
+  requirement_id: ASB16-RQ-028
+  kernel_contract_id: rq_028_instance_write_boundary_lock_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_028_instance_write_boundary_lock_contract_v1
+  validator_ids:
+    - scripts/validate_instance_base_repo_write_boundary.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#87-batch-3b-row-level-strengthening-profile-asb16-rq-024028-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-037---write-boundary-non-starvation-hardening-asb16-rq-028031
+  report_field_refs:
+    - base_repo_write_boundary_status
+    - error_code
+    - violation_path
+    - normalized_violation_path
+    - stale_reasons
+  error_code_refs:
+    - IP-KERNEL-WRITE-001
+  mapping_state: phase6_landed
+
+asb16-rq-032:
+  requirement_id: ASB16-RQ-032
+  kernel_contract_id: rq_032_headstamp_pre_send_hard_gate_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_032_headstamp_pre_send_hard_gate_contract_v1
+  validator_ids:
+    - scripts/validate_send_time_reply_gate.py
+    - scripts/validate_reply_identity_context_first_line.py
+    - scripts/validate_headstamp_recurrence_closure.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-headstamp-egress-governance-v1.6.1.md#22a-first-line-surface-modes-for-validation-and-send-time-2026-03-23
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md#14-hs16-106-send-time-visible-projection-first-line-semantics-2026-03-23
+  report_field_refs:
+    - headstamp_status
+    - error_code
+    - evidence_ref
+    - actor_binding_ref
+    - reply_first_line_surface_mode
+    - pre_send_headstamp_gate_status
+  error_code_refs:
+    - IP-HDSTAMP-001
+    - IP-HDSTAMP-002
+    - IP-HDSTAMP-003
+  mapping_state: phase6_landed
+
+asb16-rq-033:
+  requirement_id: ASB16-RQ-033
+  kernel_contract_id: rq_033_execution_target_tuple_isolation_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_033_execution_target_tuple_isolation_contract_v1
+  validator_ids:
+    - scripts/validate_execution_target_tuple_isolation.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#819-emergency-hotfix-track---execution-target-tuple-isolation-hotfix16-p0-006-2026-03-07
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#hotfix16-p0-006---emergency-hotfix-intake-execution-target-tuple-isolation-for-multi-agent-dispatch
+  report_field_refs:
+    - execution_target_tuple_isolation_status
+    - execution_target_kind
+    - execution_target_key
+    - execution_target_ref
+    - route_conflict_status
+    - route_conflict_error_code
+    - conflict_key_mode
+    - override_non_bypass_status
+    - process_call_support_status
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-XTARGET-001
+    - IP-XTARGET-002
+    - IP-XTARGET-003
+    - IP-XTARGET-004
+  mapping_state: phase6_hotfix_landed
+
+asb16-rq-034:
+  requirement_id: ASB16-RQ-034
+  kernel_contract_id: rq_034_multimodal_plugin_enforcement_contract_v1
+  kernel_source_path: docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md#4-runtime-contract-requiredization
+  validator_ids:
+    - scripts/validate_multimodal_plugin_enforcement.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md#2-decision-freeze-canonical-plugin-topology--ownership
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.2.md#5-protocol-execution-set-v162-state-update
+  report_field_refs:
+    - multimodal_plugin_enforcement_status
+    - multimodal_runtime_evidence_status
+    - multimodal_preflight_status
+    - plugin_registry_status
+    - plugin_naming_status
+    - plugin_schema_status
+    - plugin_threshold_status
+    - plugin_path_status
+    - plugin_copy_policy_status
+    - provider_config_status
+    - runtime_report_path
+    - runtime_report_run_id
+    - multimodal_calls
+    - multimodal_resolved
+    - multimodal_unresolved
+    - multimodal_errors
+    - multimodal_retry_calls
+    - runtime_gate_mode
+    - runtime_gate_required_confidence
+    - multimodal_runtime_evidence_refs
+    - multimodal_strict_skip_policy_status
+    - error_code
+    - evidence_ref
+  error_code_refs:
+    - IP-MM-REG-001
+    - IP-MM-NAME-001
+    - IP-MM-THR-001
+    - IP-MM-PATH-001
+    - IP-MM-COPY-001
+    - IP-MM-CONF-001
+    - IP-MM-CONF-005
+  mapping_state: phase6_v162_multimodal_seed
+
+asb16-rq-035:
+  requirement_id: ASB16-RQ-035
+  kernel_contract_id: rq_035_reasoning_loop_failclose_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#reasoning-loop-canonical-binding-v162-fail-close-stream
+  validator_ids:
+    - scripts/validate_reasoning_loop_failclose.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md#16-round-303-reasoning-loop-fail-close-standardization-addendum-2026-03-09
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.2.md#15-round-303-reasoning-loop-fail-close-protocolization-2026-03-09
+  report_field_refs:
+    - reasoning_loop_failclose_status
+    - reasoning_runtime_evidence_status
+    - reasoning_enforcement_level
+    - reasoning_configured_level
+    - reasoning_effective_level
+    - reasoning_minimum_enforcement_level
+    - reasoning_upgrade_only
+    - reasoning_allow_self_upgrade
+    - reasoning_allow_downgrade
+    - reasoning_downgrade_block_status
+    - reasoning_attempt_trace_status
+    - no_target_done_block_status
+    - terminal_attempt_index
+    - terminal_attempt_target_reached
+    - terminal_attempt_no_target_reached
+    - no_target_completion_mode
+    - done_requires_terminal_target_reached
+    - reasoning_next_action_status
+    - reasoning_escalation_status
+    - escalation_requirement_mode
+    - escalation_signal_accept_nonempty_ref
+    - escalation_signal_nonempty_fields
+    - strict_run_id_binding
+    - runtime_report_selection_mode
+    - reasoning_four_track_status
+    - external_source_freshness_status
+    - plugin_registry_status
+    - runtime_report_path
+    - runtime_report_run_id
+    - reasoning_attempt_count
+    - reasoning_failed_attempt_count
+    - no_target_reached_detected
+    - reasoning_runtime_evidence_refs
+    - error_code
+    - evidence_ref
+  error_code_refs:
+    - IP-RL-REG-001
+    - IP-RL-CONF-001
+    - IP-RL-RUN-001
+    - IP-RL-RUN-002
+    - IP-RL-RUN-003
+    - IP-RL-RUN-004
+    - IP-RL-RUN-005
+    - IP-RL-RUN-006
+    - IP-RL-RUN-007
+    - IP-RL-RUN-008
+  mapping_state: phase6_v162_reasoning_loop_seed
+
+asb16-rq-036:
+  requirement_id: ASB16-RQ-036
+  kernel_contract_id: rq_036_downsink_path_immutability_contract_v1
+  kernel_source_path: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md#10-requirement-mapping-motherline-integration-v168
+  validator_ids:
+    - scripts/validate_protocol_downsink_path_immutability.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md#10-requirement-mapping-motherline-integration-v168
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.8.md#11-requirement-mapping-closure-motherline-v168
+  report_field_refs:
+    - protocol_downsink_path_immutability_status
+    - contract_key
+    - runtime_mirror_contract_path
+    - required_domains
+    - error_code
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-DSPATH-001
+    - IP-DSPATH-002
+    - IP-DSPATH-003
+  mapping_state: phase6_v168_path_immutability_motherline
+
+asb16-rq-037:
+  requirement_id: ASB16-RQ-037
+  kernel_contract_id: rq_037_downsink_path_write_guard_contract_v1
+  kernel_source_path: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md#10-requirement-mapping-motherline-integration-v168
+  validator_ids:
+    - scripts/validate_protocol_downsink_path_write_guard.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md#10-requirement-mapping-motherline-integration-v168
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.8.md#11-requirement-mapping-closure-motherline-v168
+  report_field_refs:
+    - protocol_downsink_path_write_guard_status
+    - contract_key
+    - checked_candidate_count
+    - checked_candidates
+    - registry_rule_count
+    - error_code
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-DSPATH-001
+    - IP-DSPATH-002
+    - IP-DSPATH-004
+  mapping_state: phase6_v168_path_immutability_motherline
+
+asb16-rq-038:
+  requirement_id: ASB16-RQ-038
+  kernel_contract_id: rq_038_downsink_path_literal_lock_contract_v1
+  kernel_source_path: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md#10-requirement-mapping-motherline-integration-v168
+  validator_ids:
+    - scripts/validate_protocol_downsink_path_literal_lock.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md#10-requirement-mapping-motherline-integration-v168
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.8.md#11-requirement-mapping-closure-motherline-v168
+  report_field_refs:
+    - protocol_downsink_path_literal_lock_status
+    - contract_key
+    - scan_file_count
+    - scan_files
+    - scan_globs
+    - registry_rule_count
+    - error_code
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-DSPATH-001
+    - IP-DSPATH-002
+    - IP-DSPATH-005
+  mapping_state: phase6_v168_path_immutability_motherline
+
+asb16-rq-039:
+  requirement_id: ASB16-RQ-039
+  kernel_contract_id: rq_039_skill_installation_supply_chain_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_039_skill_installation_supply_chain_contract_v1
+  validator_ids:
+    - scripts/validate_skill_installation_supply_chain.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md#87-skill-supply-chain-absorber-contract-motherline-rq-039041-mandatory
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.5.md#722-skill-supply-chain-motherline-absorption-under-v165-no-rebound-2026-03-16
+  report_field_refs:
+    - skill_installation_supply_chain_status
+    - dependent_contract_keys
+    - missing_dependent_contract_keys
+    - required_capability_drivers
+    - missing_capability_drivers
+    - skill_path_integrity
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-SSUP-001
+    - IP-SSUP-002
+    - IP-SSUP-003
+  mapping_state: phase6_v165_skill_supply_chain_absorbed
+
+asb16-rq-040:
+  requirement_id: ASB16-RQ-040
+  kernel_contract_id: rq_040_skill_frontmatter_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_040_skill_frontmatter_contract_v1
+  validator_ids:
+    - scripts/validate_skill_frontmatter.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md#87-skill-supply-chain-absorber-contract-motherline-rq-039041-mandatory
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.5.md#722-skill-supply-chain-motherline-absorption-under-v165-no-rebound-2026-03-16
+  report_field_refs:
+    - skill_frontmatter_status
+    - required_frontmatter_fields
+    - frontmatter_rows
+    - missing_frontmatter_skills
+    - missing_required_field_rows
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-SFRONT-001
+    - IP-SFRONT-002
+    - IP-SFRONT-003
+    - IP-SFRONT-004
+  mapping_state: phase6_v165_skill_supply_chain_absorbed
+
+asb16-rq-041:
+  requirement_id: ASB16-RQ-041
+  kernel_contract_id: rq_041_skill_sync_drift_guard_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_041_skill_sync_drift_guard_contract_v1
+  validator_ids:
+    - scripts/validate_skill_sync_drift_guard.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md#87-skill-supply-chain-absorber-contract-motherline-rq-039041-mandatory
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.5.md#722-skill-supply-chain-motherline-absorption-under-v165-no-rebound-2026-03-16
+  report_field_refs:
+    - skill_sync_drift_guard_status
+    - required_skills
+    - drift_roots
+    - skill_sync_rows
+    - drift_skills
+    - missing_skills
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-SDRIFT-001
+    - IP-SDRIFT-002
+    - IP-SDRIFT-003
+  mapping_state: phase6_v165_skill_supply_chain_absorbed
+
+asb16-rq-042:
+  requirement_id: ASB16-RQ-042
+  kernel_contract_id: rq_042_agent_relay_final_answer_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_042_agent_relay_final_answer_contract_v1
+  validator_ids:
+    - scripts/validate_agent_relay_final_answer.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/agent-relay-final-answer-governance-v1.6.11.md#2-non-negotiable-contracts-no-ambiguity
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.11-agent-relay-final-answer.md#3-frozen-implementation-checklist-item-by-item
+  report_field_refs:
+    - agent_relay_final_answer_status
+    - relay_surface
+    - relay_mode
+    - relay_output_classification
+    - delivery_authority
+    - target_identity_id
+    - source_artifact
+    - source_snapshot_ts
+    - source_identity_id
+    - error_code
+    - stale_reasons
+  error_code_refs:
+    - IP-RELAY-001
+    - IP-RELAY-002
+    - IP-RELAY-003
+    - IP-RELAY-004
+    - IP-RELAY-005
+    - IP-RELAY-006
+    - IP-RELAY-007
+  mapping_state: phase6_v1611_agent_relay_motherline
+
+asb16-rq-043:
+  requirement_id: ASB16-RQ-043
+  kernel_contract_id: rq_043_identity_instance_pack_topology_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_043_identity_instance_pack_topology_contract_v1
+  validator_ids:
+    - scripts/validate_identity_instance_pack_topology.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-instance-pack-topology-governance-v1.6.13.md#2-frozen-pack-topology-no-ambiguity
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.13-instance-pack-topology.md#3-frozen-implementation-checklist
+  report_field_refs:
+    - instance_pack_topology_status
+    - pack_root_dir_lock_status
+    - runtime_dir_lock_status
+    - scripts_surface_status
+    - required_contract
+    - contract_key
+    - missing_required_file_rows
+    - missing_required_dir_rows
+    - unknown_dir_rows
+    - forbidden_dir_rows
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-IPACK-001
+    - IP-IPACK-002
+    - IP-IPACK-003
+  mapping_state: phase6_v1613_instance_pack_topology_motherline
+
+asb16-rq-044:
+  requirement_id: ASB16-RQ-044
+  kernel_contract_id: rq_044_identity_context_continuity_artifact_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_044_identity_context_continuity_artifact_contract_v1
+  bundle_target_name: identity_context_continuity
+  bundle_status_field: identity_context_continuity_status
+  bundle_validator_id: scripts/validate_identity_context_continuity.py
+  validator_ids:
+    - scripts/validate_identity_context_continuity.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-context-continuity-governance-v1.6.16.md#28-machine-contract-frozen-in-this-stream
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md#5-shared-implementation-landing-absorbed-after-opening
+  report_field_refs:
+    - identity_context_continuity_status
+    - artifact_kind
+    - generation_reason
+    - trigger_class
+    - source_identity_id
+    - authority_refs
+    - receipt_refs
+    - freshness
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-ICONT-001
+    - IP-ICONT-002
+    - IP-ICONT-003
+    - IP-ICONT-004
+  mapping_state: phase6_v1616_continuity_contract_freeze
+
+asb16-rq-045:
+  requirement_id: ASB16-RQ-045
+  kernel_contract_id: rq_045_identity_reentry_brief_consumption_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_045_identity_reentry_brief_consumption_contract_v1
+  bundle_target_name: identity_reentry_consumption
+  bundle_status_field: identity_reentry_consumption_status
+  bundle_validator_id: scripts/validate_identity_reentry_consumption.py
+  validator_ids:
+    - scripts/validate_identity_reentry_brief.py
+    - scripts/validate_identity_reentry_consumption.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-context-continuity-governance-v1.6.16.md#211-launcher-entry-bind-and-receipt-family-freeze
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md#5-shared-implementation-landing-absorbed-after-opening
+  report_field_refs:
+    - identity_reentry_brief_status
+    - startup_consumption_status
+    - reentry_brief_ref
+    - continuity_lineage_ref
+    - authority_resolution_status
+    - launcher_bind_status
+    - tuple_bootstrap_preserved
+    - consumption_outcome
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-REENTRY-001
+    - IP-REENTRY-002
+    - IP-REENTRY-003
+    - IP-REENTRY-004
+  mapping_state: phase6_v1616_continuity_contract_freeze
+
+asb16-rq-046:
+  requirement_id: ASB16-RQ-046
+  kernel_contract_id: rq_046_identity_context_continuity_receipt_family_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_046_identity_context_continuity_receipt_family_contract_v1
+  bundle_target_name: identity_context_continuity_receipts
+  bundle_status_field: identity_context_continuity_receipt_family_status
+  bundle_validator_id: scripts/validate_identity_context_continuity_receipts.py
+  validator_ids:
+    - scripts/validate_identity_context_continuity_receipts.py
+  gate_surfaces:
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-context-continuity-governance-v1.6.16.md#211-launcher-entry-bind-and-receipt-family-freeze
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md#5-shared-implementation-landing-absorbed-after-opening
+  report_field_refs:
+    - required_contract
+    - auto_required_signal
+    - contract_key
+    - contract_id
+    - contract_derivation_mode
+    - identity_context_continuity_receipt_family_status
+    - checkpoint_receipt_status
+    - migration_handoff_receipt_status
+    - reentry_brief_receipt_status
+    - reentry_consumption_receipt_status
+    - receipt_join_status
+    - route_or_entry_scope
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-ICREC-001
+    - IP-ICREC-002
+    - IP-ICREC-003
+    - IP-ICREC-004
+    - IP-ICREC-005
+  mapping_state: phase6_v1616_continuity_contract_freeze
+
+asb16-rq-030:
+  requirement_id: ASB16-RQ-030
+  kernel_contract_id: rq_030_intake_evidence_quorum_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_030_intake_evidence_quorum_contract_v1
+  validator_ids:
+    - scripts/validate_intake_evidence_core.py::mode=promotion_gate
+    - scripts/validate_v16_intake_evidence_core.py::wrapper_compatibility_optional
+    - scripts/validate_intake_evidence_quorum.py
+    - scripts/validate_v16_intake_evidence_quorum.py::wrapper_compatibility_optional
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#811-batch-7-row-level-closure-profile-asb16-rq-022030-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-036---batch-7-asb16-rq-022030-closure-strengthening-normalization
+  report_field_refs:
+    - t1_roundtable_status
+    - t2_vendor_status
+    - t3_openai_context_status
+    - t4_protocol_spec_status
+    - cross_verification_bundle_id
+    - source_url_set
+    - reference_timestamp_utc
+    - conflict_reconciliation_note
+  error_code_refs: []
+  mapping_state: phase1_seed
+
+asb16-rq-047:
+  requirement_id: ASB16-RQ-047
+  kernel_contract_id: rq_047_protocol_no_downgrade_motherline_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_047_protocol_no_downgrade_motherline_contract_v1
+  validator_ids:
+    - scripts/validate_compatibility_legacy_boundary.py
+    - scripts/validate_strict_actor_entry_semantics.py
+    - scripts/validate_identity_switch_closure_semantics.py
+    - scripts/validate_identity_session_pointer_consistency.py
+    - scripts/validate_identity_runtime_contract.py
+    - scripts/validate_identity_collab_trigger.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#a7-no-downgrade--no-backstop--no-backward-compatibility-motherline-freeze-2026-03-22
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#2026-03-22-closure-addendum---no-downgrade-motherline-freeze
+  report_field_refs:
+    - compatibility_legacy_boundary_status
+    - strict_actor_entry_semantics_status
+    - identity_switch_closure_status
+    - pointer_consistency
+    - compatibility_pointer_identity_authority
+    - violation_count
+    - violations
+    - stale_reasons
+    - error_code
+  error_code_refs: []
+  mapping_state: phase6_v160_no_downgrade_motherline_freeze
+
+
+asb16-rq-048:
+  requirement_id: ASB16-RQ-048
+  kernel_contract_id: route_discovery_convergence_contract_v1
+  kernel_source_path: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md#22-auto-routing-upper-layer-strengthening-third-loop
+  shared_primitive_refs:
+    - roundtable_four_track_cross_validation_contract_v1
+  validator_ids:
+    - scripts/validate_identity_routing_learning_strengthening.py
+    - scripts/validate_discovery_requiredization.py
+    - scripts/validate_capability_fit_roundtable_evidence.py
+  gate_surfaces:
+    - readiness
+    - e2e
+    - ci
+  governance_anchor: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md#61-opening-binding-reference-freeze-asb16-rq-048-asb16-rq-049-2026-03-23
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md#61-opening-binding-intake-asb16-rq-048-asb16-rq-049-2026-03-23
+  report_field_refs:
+    - route_discovery_convergence_status
+    - route_discovery_enforcement
+    - selected_candidate_id
+    - selection_basis
+    - convergence_status
+    - discovery_requiredization_status
+    - parallel_probe_allowed
+    - four_track_cross_validation_required
+    - roundtable_track_status
+    - vendor_track_status
+    - reference_track_status
+    - runtime_probe_status
+    - stale_reasons
+    - error_code
+  error_code_refs:
+    - IP-DREQ-001
+    - IP-DREQ-002
+    - IP-DREQ-003
+  mapping_state: phase6_v1617_routing_strengthening_opening
+
+asb16-rq-049:
+  requirement_id: ASB16-RQ-049
+  kernel_contract_id: feedback_operational_prompt_contract_v1
+  kernel_source_path: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md#23-rule-learning-upper-layer-strengthening-fourth-loop
+  shared_primitive_refs:
+    - roundtable_four_track_cross_validation_contract_v1
+  validator_ids:
+    - scripts/validate_identity_routing_learning_strengthening.py
+    - scripts/validate_identity_experience_feedback.py
+    - scripts/validate_identity_experience_feedback_governance.py
+  gate_surfaces:
+    - readiness
+    - e2e
+    - ci
+  governance_anchor: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md#61-opening-binding-reference-freeze-asb16-rq-048-asb16-rq-049-2026-03-23
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md#61-opening-binding-intake-asb16-rq-048-asb16-rq-049-2026-03-23
+  report_field_refs:
+    - feedback_operational_prompt_status
+    - feedback_operational_prompt_enforcement
+    - rulebook_delta
+    - replay_status
+    - prompt_injection_status
+    - experience_feedback_status
+    - four_track_cross_validation_required
+    - roundtable_track_status
+    - vendor_track_status
+    - reference_track_status
+    - runtime_probe_status
+    - loop_back_to_first_loop_status
+    - stale_reasons
+    - error_code
+  error_code_refs: []
+  mapping_state: phase6_v1617_learning_strengthening_opening
+
+asb16-rq-050:
+  requirement_id: ASB16-RQ-050
+  kernel_contract_id: feedback_to_judgement_loopback_contract_v1
+  kernel_source_path: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md#24-feedback-to-judgement-loopback-bridge-41
+  shared_primitive_refs:
+    - roundtable_four_track_cross_validation_contract_v1
+  validator_ids:
+    - scripts/validate_feedback_to_judgement_loopback.py
+    - scripts/validate_identity_routing_learning_strengthening.py
+    - scripts/validate_identity_experience_feedback.py
+    - scripts/validate_multimodal_plugin_enforcement.py
+  gate_surfaces:
+    - readiness
+    - e2e
+    - ci
+  governance_anchor: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md#62-machine-consumer-closure-asb16-rq-050-2026-03-23
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md#62-machine-consumer-closure-asb16-rq-050-2026-03-23
+  report_field_refs:
+    - feedback_to_judgement_loopback_status
+    - loop_back_to_first_loop_status
+    - loopback_artifact_ref
+    - loopback_artifact_kind
+    - preflight_context_injection_ref
+    - loopback_scope
+    - loopback_ttl_rounds
+    - first_loop_revalidation_required
+    - judgement_reentry_status
+    - adoption_decision
+    - fourth_loop_promotion_status
+    - first_loop_revalidation_status
+    - conflict_demotion_status
+    - conflict_with_current_evidence
+    - demotion_or_rollback_action
+    - negative_feedback_ref
+    - negative_feedback_writeback_status
+    - loopback_roundtrip_status
+    - live_roundtrip_proof_status
+    - stale_reasons
+    - error_code
+  error_code_refs:
+    - IP-RLSTR-002
+  mapping_state: phase6_v1617_loopback_machine_closure
+
+asb16-rq-051:
+  requirement_id: ASB16-RQ-051
+  kernel_contract_id: rq_051_identity_dialogue_retention_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_051_identity_dialogue_retention_contract_v1
+  validator_ids:
+    - scripts/validate_identity_dialogue_retention.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-artifact-family-routing-governance-v1.6.18.md#7-machine-consumer-and-whole-matrix-routing-closure-landed
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md#5-machine-consumer-and-whole-matrix-routing-closure-landed
+  report_field_refs:
+    - protocol_dialogue_retention_status
+    - delivery_hook_status
+    - report_root_status
+    - state_status
+    - sync_receipt_status
+    - mirror_status
+    - delivery_supplement_status
+    - source_snapshot_alignment_status
+    - source_live_alignment_status
+    - source_live_advanced_since_last_sync
+    - source_live_drift_reason
+    - thread_id
+    - source_session_file
+    - mirror_path
+    - receipt_path
+    - evidence_ref
+  error_code_refs:
+    - IP-DRET-001
+    - IP-DRET-002
+    - IP-DRET-003
+    - IP-DRET-004
+    - IP-DRET-005
+  mapping_state: phase6_v1618_dialogue_retention_machine_landing
+
+asb16-rq-052:
+  requirement_id: ASB16-RQ-052
+  kernel_contract_id: rq_052_identity_artifact_family_routing_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_052_identity_artifact_family_routing_contract_v1
+  validator_ids:
+    - scripts/validate_identity_artifact_family_routing.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-artifact-family-routing-governance-v1.6.18.md#7-machine-consumer-and-whole-matrix-routing-closure-landed
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md#5-machine-consumer-and-whole-matrix-routing-closure-landed
+  report_field_refs:
+    - artifact_family_routing_status
+    - contract_status
+    - declaration_gate_boundary_status
+    - family_root_separation_status
+    - pack_rulebook_family_status
+    - pack_task_history_family_status
+    - runtime_dialogue_retention_family_status
+    - runtime_dialogue_governance_family_status
+    - runtime_experience_feedback_family_status
+    - runtime_protocol_feedback_family_status
+    - runtime_continuity_reentry_family_status
+    - runtime_memory_absorption_family_status
+    - family_rows
+    - stale_reasons
+    - error_code
+    - evidence_ref
+  error_code_refs:
+    - IP-AFR-001
+    - IP-AFR-002
+    - IP-AFR-003
+    - IP-AFR-004
+  mapping_state: phase6_v1618_artifact_family_routing_whole_matrix_closure
+asb16-rq-053:
+  requirement_id: ASB16-RQ-053
+  kernel_contract_id: rq_053_identity_broadcast_delivery_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_053_identity_broadcast_delivery_contract_v1
+  validator_ids:
+    - scripts/validate_identity_broadcast_delivery.py
+    - scripts/run_identity_broadcast_delivery.py
+    - scripts/check_identity_broadcast_migration_closure.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - ci
+  governance_anchor: docs/governance/identity-broadcast-communication-convergence-governance-v1.6.20.md#41-asb16-rq-053-broadcast-delivery-machine-closure-landed
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.20-broadcast-communication-convergence.md#21-asb16-rq-053-broadcast-delivery-remediation-landed
+  report_field_refs:
+    - identity_broadcast_delivery_status
+    - broadcast_contract_status
+    - broadcast_runtime_contract_status
+    - broadcast_source_status
+    - broadcast_state_status
+    - broadcast_delivery_sync_status
+    - broadcast_projection_parity_status
+    - broadcast_visible_count
+    - broadcast_unread_count
+    - broadcast_pending_ack_count
+    - broadcast_critical_unacked_count
+    - visible_ids
+    - unread_ids
+    - pending_ack_ids
+    - critical_unacked_ids
+    - broadcast_state_file
+    - broadcast_receipt_path
+    - stale_reasons
+    - error_code
+  error_code_refs:
+    - IP-GATE-BCAST-DELIVERY-001
+    - IP-GATE-BCAST-DELIVERY-002
+    - IP-GATE-BCAST-DELIVERY-003
+  mapping_state: phase6_v1620_broadcast_delivery_machine_closure
+
+asb16-rq-054:
+  requirement_id: ASB16-RQ-054
+  kernel_contract_id: rq_054_identity_communication_transport_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_054_identity_communication_transport_contract_v1
+  validator_ids:
+    - scripts/validate_identity_communication_transport.py
+    - scripts/run_identity_communication_transport.py
+    - scripts/check_identity_communication_transport_closure.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - ci
+  governance_anchor: docs/governance/identity-broadcast-communication-convergence-governance-v1.6.20.md#42-asb16-rq-054-identity-communication-transport-machine-closure-landed
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.20-broadcast-communication-convergence.md#22-asb16-rq-054-identity-communication-transport-remediation-landed
+  report_field_refs:
+    - identity_communication_transport_status
+    - communication_contract_status
+    - communication_runtime_roots_status
+    - handoff_transport_status
+    - collaboration_transport_status
+    - protocol_feedback_reply_transport_status
+    - protocol_feedback_inbox_transport_status
+    - protocol_feedback_atomic_transport_status
+    - broadcast_transport_status
+    - transport_rows
+    - identity_communication_transport_run_status
+    - broadcast_sync_executor_status
+    - atomic_emit_bootstrap_status
+    - transport_projection_status
+    - stale_reasons
+    - error_code
+  error_code_refs:
+    - IP-COMM-001
+    - IP-COMM-002
+    - IP-COMM-003
+    - IP-COMM-004
+    - IP-COMM-005
+  mapping_state: phase6_v1620_communication_transport_machine_closure
+
+asb16-rq-055:
+  requirement_id: ASB16-RQ-055
+  kernel_contract_id: rq_055_identity_weak_live_linkage_differential_audit_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_055_identity_weak_live_linkage_differential_audit_contract_v1
+  shared_primitive_refs:
+    - roundtable_four_track_cross_validation_contract_v1
+  validator_ids:
+    - scripts/validate_identity_weak_live_linkage.py
+    - scripts/validate_prompt_bootstrap_capability.py
+    - scripts/validate_prompt_capability_matrix.py
+    - scripts/validate_prompt_derivation_conformance.py
+    - scripts/validate_identity_capability_arbitration.py
+    - scripts/validate_identity_experience_feedback.py
+    - scripts/validate_identity_knowledge_acquisition.py
+    - scripts/validate_identity_trigger_regression.py
+    - scripts/validate_identity_routing_learning_strengthening.py
+    - scripts/validate_feedback_to_judgement_loopback.py
+    - scripts/validate_capability_fit_roundtable_evidence.py
+    - scripts/validate_identity_experience_feedback_governance.py
+  gate_surfaces:
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-weak-live-linkage-governance-v1.6.19.md#66-machine-law-landing-target-asb16-rq-055-2026-03-24
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.19-weak-live-linkage.md#53-machine-law-landing-target-asb16-rq-055-2026-03-24
+  report_field_refs:
+    - identity_weak_live_linkage_status
+    - weak_live_linkage_contract_status
+    - contract_layer_status
+    - artifact_layer_status
+    - run_binding_layer_status
+    - consumption_layer_status
+    - overall_linkage_status
+    - operational_closure_class
+    - false_green_family
+    - evidence_origin
+    - live_binding_strength
+    - next_hop_consumption_status
+    - semantic_center_status
+    - live_bridge_status
+    - roundtable_alignment_status
+    - selected_candidate_receipt_ref
+    - roundtable_receipt_ref
+    - route_live_binding_status
+    - operational_prompt_receipt_ref
+    - feedback_run_id
+    - preflight_reentry_receipt_ref
+    - loopback_live_binding_status
+    - required_run_id
+    - latest_feedback_run_id_match_status
+    - operational_prompt_run_join_status
+    - philosophy_truth_lifecycle_status
+    - stale_reasons
+    - error_code
+  error_code_refs:
+    - IP-WLL-001
+    - IP-WLL-002
+  mapping_state: phase6_v1619_differential_audit_machine_landing
+
+asb16-rq-056:
+  requirement_id: ASB16-RQ-056
+  kernel_contract_id: rq_056_identity_terminal_truth_cleanliness_contract_v1
+  kernel_source_path: docs/governance/identity-terminal-truth-cleanliness-governance-v1.6.21.md#6-machine-law-landing-target-asb16-rq-056-2026-03-25
+  shared_primitive_refs:
+    - negative_feedback_terminal_veto_contract_v1
+    - canonical_publishable_result_gate_contract_v1
+    - instance_adoption_terminal_truth_probe_contract_v1
+  validator_ids:
+    - scripts/validate_terminal_truth_cleanliness.py
+    - scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh
+    - scripts/validate_post_execution_mandatory.py
+    - scripts/validate_writeback_continuity.py
+  gate_surfaces:
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-terminal-truth-cleanliness-governance-v1.6.21.md#6-machine-law-landing-target-asb16-rq-056-2026-03-25
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.21-terminal-truth-cleanliness.md#5-machine-law-landing-target-asb16-rq-056-2026-03-25
+  report_field_refs:
+    - identity_terminal_truth_cleanliness_status
+    - terminal_truth_contract_status
+    - terminal_state_machine_status
+    - terminal_state_class
+    - terminal_state_basis
+    - terminal_state_conflict_status
+    - requires_review
+    - retry_required
+    - revalidation_required
+    - repair_required
+    - quarantine_required
+    - requires_human
+    - terminal_failure
+    - state_transition_required
+    - state_machine_blockers
+    - terminal_clean_alias_surface_status
+    - terminal_clean_alias_claimed
+    - terminal_clean_alias_claims
+    - terminal_clean_alias_blockers
+    - execution_closure_status
+    - terminal_truth_cleanliness_status
+    - terminal_truth_class
+    - is_terminal_clean
+    - is_terminal_dirty
+    - terminal_truth_basis
+    - terminal_truth_blockers
+    - negative_feedback_terminal_veto_status
+    - negative_feedback_class
+    - feedback_severity
+    - terminal_veto_required
+    - terminal_veto_scope
+    - loopback_required
+    - loopback_target_stage
+    - loopback_reason
+    - pre_terminal_veto_applied
+    - next_state_after_veto
+    - canonical_publishable_result_status
+    - publishable
+    - publish_blockers
+    - canonical_result_eligible
+    - canonical_result_basis
+    - requires_repair_before_publish
+    - instance_adoption_terminal_truth_probe_status
+    - post_execution_mandatory_status
+    - writeback_continuity_status
+    - report_selected_path
+    - support_validator_mode
+    - stale_reasons
+    - error_code
+  error_code_refs:
+    - IP-TTC-001
+    - IP-TTC-002
+  mapping_state: phase6_v1621_terminal_truth_cleanliness_machine_closure
